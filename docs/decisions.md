@@ -45,8 +45,8 @@ Format: ID · date · status — decision, context, alternatives, consequences.
 **Resolution check (2026-09-15, Flutter 3.47.4):** every package above resolves together with `flutter pub get` at its latest version (`pub outdated`: direct dependencies all up to date). media_kit from git main `c533e446755f51cf53c7e57aea873f2aa5355f81` also resolves, but only when **all eight** media_kit packages come from git at that SHA via `dependency_overrides`: media_kit, media_kit_video, media_kit_libs_video, media_kit_libs_linux, media_kit_libs_windows_video, media_kit_libs_android_video, media_kit_libs_ios_video, media_kit_libs_macos_video (paths `media_kit`, `media_kit_video`, `libs/universal/…`, `libs/<platform>/…`). Main needs media_kit_libs_windows_video 1.0.12, which isn't on pub.
 **Consequences:** media_kit stays provisional until Spike A (ADR-003). If we must use media_kit from git, pin that SHA for all eight packages in `pubspec.yaml` and recheck pub releases every phase.
 
-## ADR-003 · 2026-09-15 · In progress (Intel done; NVIDIA, Windows, final decision pending) — Desktop playback spike results
-**Setup:** HP laptop, Ubuntu 22.04.5, kernel 6.8, GNOME on Wayland (X11 runs use XWayland via `GDK_BACKEND=x11`), Intel UHD CometLake-H (iHD 22.3.1), GTX 1650 Ti. Flutter 3.47.4 release build (Impeller, OpenGL ES). media_kit uses the system libmpv 0.34.1 with FFmpeg 4.4.2. Spike: `spike/playback_spike` plays each sample as an endless MPEG-TS stream (`-re -stream_loop -1 -c copy`) over loopback, with the Balanced preset and `hwdec=auto-safe`. Per sample: 5 s warm-up, then a 12 s measuring window (45 s for the codec switch). Results in `spike/playback_spike/results/`; `summarize.py` prints the tables.
+## ADR-003 · 2026-09-15 · In progress (Intel done; NVIDIA done on X11, Wayland pending; Windows deferred) — Desktop playback spike results
+**Setup:** HP laptop, Ubuntu 22.04.5, kernel 6.8, GNOME on Wayland for the first Intel runs (X11 runs there use XWayland via `GDK_BACKEND=x11`); after the NVIDIA driver install and reboot the session was "Ubuntu on Xorg", used for the real-Xorg and NVIDIA runs, Intel UHD CometLake-H (iHD 22.3.1), GTX 1650 Ti. Flutter 3.47.4 release build (Impeller, OpenGL ES). media_kit uses the system libmpv 0.34.1 with FFmpeg 4.4.2. Spike: `spike/playback_spike` plays each sample as an endless MPEG-TS stream (`-re -stream_loop -1 -c copy`) over loopback, with the Balanced preset and `hwdec=auto-safe`. Per sample: 5 s warm-up, then a 12 s measuring window (45 s for the codec switch). Results in `spike/playback_spike/results/`; `summarize.py` prints the tables.
 
 **Finding 1: media_kit #1404 reproduces on every unpatched build.** Both pub 1.2.6 and main@c533e44, on both Wayland and X11, log `VideoOutput: EGL display or context is invalid` and then `S/W rendering`. On Flutter ≥ 3.38 no EGL context is current on the platform thread where the plugin looks for one. Decoding stays on the GPU but only in copy-back mode (`vaapi-copy`), and the CPU draws every frame: 1.1–1.6 cores busy at 50 fps, and 140–530 dropped frames per 12 s on HEVC 1080p50 and HEVC 4K. main's Linux render code is identical to 1.2.6; it only removes the drops on H.264 1080p50.
 
@@ -75,7 +75,9 @@ X11 (unpatched) matches Wayland within noise.
 - VOD first frames took 5.3–5.8 s (Wayland 0.6 s)
 - 14 audio underruns and 4 A/V desync warnings
 - zap p50/p95 425/3261 ms with plain `-re` (349/382 ms with a burst); the first 3 zaps took 3.1–3.5 s
-- the codec switch restarts mpv's video output, which resets `frame-drop-count`; the watchdog must not treat a lower count as an error GTK picks native Wayland by default on this session, so the app isn't affected here; a real Xorg session is untested. Possible fix if we ever need it: on X11, have the patch give mpv a DRM render node instead of the X11 display.
+- the codec switch restarts mpv's video output, which resets `frame-drop-count`; the watchdog must not treat a lower count as an error
+
+Only XWayland is affected: a real Xorg session gets zero-copy (Finding 4), and GTK picks native Wayland inside a Wayland session. Possible fix if we ever need it: on X11, have the patch give mpv a DRM render node instead of the X11 display. (These XWayland results are kept as `results/patched_intel_xwayland.*`.)
 
 **Zap time** (20 alternating opens of h264_1080p50_aac ↔ h264_1080p25_ac3, 0 failures in every run). Measured from `open()` until mpv's `path` is the new URL, `playback-time` is available, and video params are known. Loopback server; excludes the 350 ms banner debounce and real network latency.
 
@@ -93,7 +95,39 @@ Budget ≤ 1.5 s / ≤ 3 s: met with a wide margin. The fake-provider measuremen
 - media_kit sets `subs-fallback`, which 0.34.1 doesn't have; it logs one harmless error.
 - Every open logs `Failed to create file cache`. Phase 3 sets `cache-on-disk=no` explicitly, or a `demuxer-cache-dir`.
 
-**Pending:** NVIDIA runs (driver installed; needs a reboot), a visual check on patched X11, and the Windows PC question. fvp wasn't needed on Intel; decide after the NVIDIA runs whether to compare it.
+**Finding 4: a real Xorg session is fine on Intel.** On "Ubuntu on Xorg", libva-x11's DRI2 path works, so the patched build keeps zero-copy `vaapi` (`hwdec-interop` `vaapi-egl`): 0 drops, ≤ 2.3 % CPU, first frames 0.3–0.8 s, zap p50/p95 378/624 ms (336/383 with a burst), no underruns or desync. CPU is a little above native Wayland (2.3 vs 1.5 % on H.264 1080p50). Frames grabbed from the window show real moving video for h264_1080p50_aac and hevc_2160p25_eac3.
+
+**Finding 5: NVIDIA needs the same patch, and works well with it.** GTX 1650 Ti, driver 595.91.07 (open kernel modules), PRIME render offload (`__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia`, set by `run_matrix.sh`), Xorg session. nvidia-smi 25 s into each run lists the spike process on the GPU (C+G, 180–255 MiB).
+- Unpatched pub 1.2.6 hits #1404 exactly as on Intel (`EGL display or context is invalid` → S/W rendering) and decodes with `nvdec-copy`. The copy-back is fast enough that nothing drops, but CPU is 3.4–9.4 % of all cores (up to 112 % of one core on HEVC 4K) and zap p50/p95 is 525/812 ms.
+- Patched: same EGLDisplay on both threads, H/W rendering, zero-copy `nvdec` (`hwdec-interop` `vaapi-egl,cuda-nvdec`; `hwdec=auto-safe` picks nvdec). Three runs agree within noise (run 3: zap 334/615 ms, per-sample CPU and drops as in runs 1–2).
+- One-off startup messages on NVIDIA with no visible effect: `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION`, and the VA-API probe failing (`Failed to query surface attributes`). GTK also warns `Failed to create OpenGL context: No available configurations for the given RGBA pixel format` at startup on both builds.
+
+NVIDIA, Xorg. Cells: hwdec-current · first frame (ms) · process CPU % of all 12 cores · dropped frames in the window.
+
+| Sample | pub 1.2.6 (S/W render) | **pub + patch, run 1** | **pub + patch, run 2** |
+|---|---|---|---|
+| h264_1080p50_aac | nvdec-copy · 454 · 6.6 · 0 | **nvdec · 632 · 1.1 · 0** | **nvdec · 304 · 1.1 · 0** |
+| h264_1080p25_ac3 | nvdec-copy · 824 · 3.5 · 0 | **nvdec · 808 · 0.7 · 0** | **nvdec · 613 · 0.7 · 0** |
+| h264_1080i50_mp2 | nvdec-copy · 639 · 3.4 · 0 | **nvdec · 498 · 0.7 · 0** | **nvdec · 422 · 0.7 · 0** |
+| hevc_1080p50_aac | nvdec-copy · 506 · 6.9 · 0 | **nvdec · 333 · 1.1 · 0** | **nvdec · 305 · 1.1 · 0** |
+| hevc_2160p25_eac3 | nvdec-copy · 593 · 9.4 · 0 | **nvdec · 412 · 0.7 · 0** | **nvdec · 411 · 0.8 · 0** |
+| mpeg2_576i25_mp2 | no · 737 · 2.7 · 0 | **no · 641 · 0.9 · 0** | **no · 638 · 0.9 · 0** |
+| codec_switch 720p→1080p | nvdec-copy · 433 · 5.4 · 0 | **nvdec · 322 · 1.2 · 4** | **nvdec · 318 · 1.1 · 0** |
+| vod_h264_aac_10min.mp4 | nvdec-copy · 789 · 3.4 · 0 | **nvdec · 404 · 0.7 · 0** | **nvdec · 796 · 0.7 · 0** |
+| vod_h264_ac3_10min.mkv | nvdec-copy · 814 · 3.6 · 0 | **nvdec · 612 · 0.7 · 0** | **nvdec · 603 · 0.7 · 0** |
+| vod_hevc_eac3_subs.mkv | nvdec-copy · 796 · 3.8 · 0 | **nvdec · 661 · 0.7 · 0** | **nvdec · 592 · 0.7 · 0** |
+
+Zap p50/p95 on NVIDIA (plain `-re` / 2 s burst): pub 525/812 · 486/528 ms; patched run 1 336/616 · 326/508 ms; patched run 2 328/614 · 320/334 ms. 0 failures.
+
+**Visual check on NVIDIA:** not confirmed by a frame grab. `x11grab -window_id` failed with BadMatch and wrote nothing, most likely because `grab_frame.sh` took the first window named playback_spike, and GTK also creates an unmapped one with that name (a later run's first match was `IsUnMapped`). A root-region grab of that geometry captured whatever covered the screen instead, so it proves nothing (those images were deleted). `grab_frame.sh` now picks a viewable window and fails when no image is written. Evidence so far: mpv reports `nvdec` with 0 dropped frames, and nvidia-smi lists the process on the GPU. The user confirms the picture by eye during the NVIDIA Wayland runs.
+
+**GPU choice for the app:** without the offload variables the app renders and decodes on Intel, which already meets every budget. NVIDIA is not required; whether to offer "use discrete GPU" (for example `PrefersNonDefaultGPU=true` in the .desktop file) is decided in packaging (Phase 10).
+
+**Decision (user, 2026-09-15): ship the fix as a pinned patched fork of media_kit_video.** The app depends on our fork with `spike/vendor/media_kit_video_egl_display.patch` applied, pinned to a commit, until upstream fixes #1404. We don't post the patch upstream (it would go out under the user's account) unless the user asks. fvp stays the fallback only if Windows fails.
+
+**Windows (user, 2026-09-15):** a real Windows PC exists but isn't available yet. The Windows run is deferred and doesn't block step 4 on Linux.
+
+**Pending:** NVIDIA on native Wayland (needs a Wayland login). fvp isn't needed: Intel and NVIDIA both work with the patch.
 
 ## ADR-004 · pending (Phase 0) — Casting spike results, device model(s), verified LOAD fields
 
