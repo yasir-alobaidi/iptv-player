@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 0 — Environment & spikes. **All six steps done; GO for Linux proposed in ADR-007, waiting for your OK before Phase 1.** Playback: zero-copy hardware decoding on Intel and NVIDIA with our patched media_kit_video, now kept in `third_party/` (ADR-003). Casting: H.264 and HEVC relay-copy, and a plain file with seeks, work on your Chromecast with Google TV (4K); HEVC goes out as one continuous fragmented MP4 (ADR-004). The Windows run is deferred until your PC is available.
+Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; step 1 (project scaffold) done.** Next is step 2 (core/). The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -27,14 +27,16 @@ Phase 0 — Environment & spikes. **All six steps done; GO for Linux proposed in
 - 2026-09-15: Phase 0 step 6, TV tests with you watching: **the 4K HEVC stutter is fixed** by sending HEVC as one continuous fragmented MP4 (smooth), while HLS fMP4 segments still stutter with the same source. The spike's test source now loops MKV remuxes, and the H.264 4K freeze is gone. Cutting a continuous stream makes the TV report FINISHED without reconnecting, so the app re-LOADs (ADR-004 Findings 7–9)
 - 2026-09-15: Patched media_kit_video now lives in this repo (your choice): `third_party/media_kit_video` = media_kit_video 2.0.1 + `third_party/patches/media_kit_video-2.0.1-egl-display.patch` (the spike patch without its debug prints), rebuilt by `tools/vendor_media_kit_video.sh`. The playback spike built against it (`run_matrix.sh vendored`) keeps zero-copy `vaapi`: H.264 1080p50 1.5 % CPU, HEVC 4K 1.9 %, 0 drops
 - 2026-09-15: Phase 0 step 6 docs: **ADR-007 (GO for Linux, proposed)**; ADR-002/003/004 updated; docs/03 (patched fork, `cache-on-disk`, deinterlace Auto, XWayland), docs/04 (HEVC as continuous fMP4, learning max resolution, BUFFERING isn't a stall, `ca` bit 0, re-LOAD after FINISHED, no segment-format fields), docs/06 (MKV looping, CI format scope), docs/01, docs/setup.md (current machine state, Samsung Input Signal Plus), CLAUDE.md
+- 2026-09-15: You accepted the GO decision; ADR-007 is Accepted
+- 2026-09-15: Phase 1 plan approved (steps 1, 2, 3a, 3b, 4–8; stop for review after each). Your decisions, to record in ADR-008 and docs/05: the canvas wins over docs/05 for the shell (64 px top bar, no Search item in the nav rail, focus = 2 px ring + 4 px glow at 25 %); canvas values missing from docs/05 become tokens (radius 10; 12, 14, 17 px text); icons are the canvas SVGs rendered with flutter_svg 2.3.0; application ID `io.github.yasiralobaidi.iptvplayer`
+- 2026-09-15: Phase 1 step 1: Flutter app scaffold (Linux + Windows runners; window title "IPTV Player"), `pubspec.yaml` with every ADR-002 package plus flutter_svg and the `third_party/media_kit_video` override (lockfile confirms the path source), very_good_analysis 11 + riverpod_lint plugin, analyzer excludes `third_party/**` and `spike/**`, `build.yaml` (drift SQLite dialect with FTS5). `pub get`, build_runner, analyze, format, test, and `flutter build linux --debug` pass; the app opens a window. Dart 3.13's `unnecessary_type_name_in_constructor` (on in very_good_analysis 11) means constructors are written `const new(...)`
 
 ## In progress
-- Nothing. Step 6 is done; waiting for your OK on the GO decision (ADR-007) to start Phase 1
+- Phase 1 step 2 (core/: Result/AppFailure, logging and redact(), error handlers, isolates, form factor)
 
 ## Next
-1. You: OK the GO decision (ADR-007)
-2. Phase 1 — Foundation (docs/08). From Phase 0: `dependency_overrides` → `third_party/media_kit_video`; root `analysis_options.yaml` excludes `third_party/**` and `spike/**`; format and CI cover first-party folders only; the fake provider loops MKV remuxes
-3. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. Phase 1 steps 3a–8 (approved plan: docs/plans/phase-1-foundation.md)
+2. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## Open questions
 - Your second Google TV doesn't answer on the network (only "Living Room TV" and a Nest Mini do). Is it on another network, and should later casting tests include it?

@@ -1,0 +1,20 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    # Vendored upstream code and Phase 0 spikes follow their own rules (ADR-003, ADR-007).
+    - third_party/**
+    - spike/**
+    - build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - windows/**
+    - linux/**
+
+plugins:
+  riverpod_lint: ^3.1.9
+
+linter:
+  rules:
+    # An app, not a published package: document what isn't obvious instead of every public member.
+    public_member_api_docs: false

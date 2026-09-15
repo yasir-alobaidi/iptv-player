@@ -215,7 +215,7 @@ x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "H
 - Manual IP only — leaves discovery untested
 **Consequences:** Spike B proves the mDNS query and TXT fields; bonsoir itself (Avahi on Linux, Windows issue #156) is verified in Phase 7. multicast_dns binds UDP 5353 next to avahi-daemon; Spike B records whether both work together.
 
-## ADR-007 · 2026-09-15 · Proposed (awaiting the user's OK) — Phase 0 GO / NO-GO: GO for Linux
+## ADR-007 · 2026-09-15 · Accepted (user OK 2026-09-15) — Phase 0 GO / NO-GO: GO for Linux
 **Decision:** GO. Build the app on the stack in ADR-001 and ADR-002, on Linux first; Windows follows once a real Windows PC confirms hardware decoding.
 
 **Exit criteria** (docs/08, Phase 0):
@@ -246,4 +246,4 @@ x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "H
 - NO-GO or switching to fvp: the patch fixes media_kit on Linux; fvp stays the fallback only if Windows fails
 - Transcoding all HEVC to H.264 for casting: GPU cost and quality loss when a copy path plays smoothly
 
-**Consequences:** Phase 1 starts after the user's OK. Its root `analysis_options.yaml` excludes `third_party/**` and `spike/**`, `pubspec.yaml` points `dependency_overrides` at `third_party/media_kit_video`, and formatting covers first-party folders only (`dart format --set-exit-if-changed lib test integration_test tools`), because upstream media_kit_video isn't formatted to our settings.
+**Consequences:** The user gave the OK on 2026-09-15; Phase 1 starts. Its root `analysis_options.yaml` excludes `third_party/**` and `spike/**`, `pubspec.yaml` points `dependency_overrides` at `third_party/media_kit_video`, and formatting covers first-party folders only (`dart format --set-exit-if-changed lib test integration_test tools`), because upstream media_kit_video isn't formatted to our settings.
