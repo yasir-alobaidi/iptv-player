@@ -1,0 +1,16 @@
+name: cast_spike
+description: Phase 0 Spike B (throwaway) — Cast v2 sender, FFmpeg HLS relay, Range file server.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  multicast_dns: 0.3.3+1
+  protobuf: 6.1.0
+  shelf: 1.4.2
+  shelf_router: 1.1.4
+
+dev_dependencies:
+  protoc_plugin: 25.1.0

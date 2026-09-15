@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback) done on Linux:** Intel and NVIDIA, on native Wayland and Xorg, all play zero-copy with the ~60-line media_kit patch, shipped as a pinned patched fork (ADR-003). The Windows run is deferred until your PC is available. Waiting for your OK before step 5 (casting).
+Phase 0 — Environment & spikes. Steps 1–4 done (step 4 on Linux; the Windows run is deferred until your PC is available). **Step 5 (Spike B, casting) done on one device:** our own Cast v2 client and FFmpeg relay play H.264 and HEVC on your Chromecast with Google TV (4K), and a plain MP4 casts with working seeks (ADR-004). One follow-up: 4K HEVC stutters over HLS fMP4 (an FFmpeg segmenting fault with open-GOP HEVC); the likely fix needs a TV test with your OK. Waiting for your OK before step 6 (GO / NO-GO).
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -21,18 +21,21 @@ Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback)
 - 2026-09-15: You rebooted and pushed step 4 (Intel). Decided: ship the fix as a pinned patched fork of media_kit_video; Windows run deferred (PC not available yet)
 - 2026-09-15: Phase 0 step 4, Xorg session (the login after the reboot was "Ubuntu on Xorg"): **NVIDIA GTX 1650 Ti** (driver 595.91.07, PRIME offload) hits #1404 unpatched (`nvdec-copy`, up to 112 % of one core on HEVC 4K, zap 525/812 ms); **patched: zero-copy `nvdec`, 0 drops, ≤ 1.2 % CPU, zap 328/614 ms**, three runs agree. **Intel on real Xorg, patched: zero-copy `vaapi`, 0 drops, ≤ 2.3 % CPU, zap 378/624 ms**, video confirmed on screen, so only XWayland loses zero-copy. NVIDIA frame grabs failed (the script picked GTK's unmapped window of the same name), so NVIDIA's picture is checked by eye in the Wayland runs; `grab_frame.sh` now picks a viewable window and fails when no image is written
 - 2026-09-15: Phase 0 step 4, native Wayland on **NVIDIA**: unpatched hits #1404 again (`nvdec-copy`, up to 117 % of one core on HEVC 4K, zap 541/823 ms); **patched: zero-copy `nvdec`, 0 drops, ≤ 2.7 % CPU, zap 342/624 ms**, process on the GPU. You watched a short patched run and saw moving video on H.264 1080p50 and HEVC 4K, so NVIDIA's picture is confirmed. ADR-003 is done for Linux
+- 2026-09-15: Git history: Co-Authored-By trailers removed from all 5 commits (you force-pushed); commits carry no trailers from now on
+- 2026-09-15: Phase 0 step 5 (Spike B): `spike/cast_spike` (multicast_dns discovery, own Cast v2 client, shelf relay and Range server, FFmpeg relay with PID files). On "Living Room TV" (Chromecast with Google TV 4K on a Samsung 4K TV), with you watching: **H.264 1080p50 and 1080p25 (AC-3 → AAC) play smoothly over HLS/TS relay-copy; HEVC 1080p plays over HLS/fMP4; `vod_h264_aac_10min.mp4` casts as a plain file with Range, and both seeks and the pause work.** 4K failed with a bare LOAD_FAILED until you turned on Input Signal Plus; then H.264 and HEVC 4K both play, but **4K HEVC stutters**: open-GOP HEVC breaks FFmpeg's HLS fMP4 segments (proven on the laptop; one continuous fragmented MP4 is clean). The receiver (Shaka) ignores `hlsSegmentFormat`, and its BUFFERING reports aren't stalls. Details in ADR-004
+- 2026-09-15: TV testing stopped at your request; any further test on Living Room TV waits for your OK
 
 ## In progress
-- Nothing. Step 4 is done on Linux; waiting for your OK to start step 5
+- Nothing. Step 5 is done; waiting for your OK to start step 6
 
 ## Next
-1. You: OK step 4 and tell me your Google TV model
-2. Phase 0 step 5 — Spike B casting; needs the home network and your Google TV model
-3. Phase 0 step 6 — finish ADR-003, write ADR-004, GO / NO-GO for Linux (set up the pinned patched media_kit_video fork)
+1. You: OK step 5
+2. Phase 0 step 6 — GO / NO-GO for Linux; update docs/03, docs/04 (second HEVC path, 4K learning, BUFFERING, device capability hints), and docs/setup.md (Samsung Input Signal Plus); set up the pinned patched media_kit_video fork
+3. With your OK: cast 4K HEVC as one continuous fragmented MP4 on Living Room TV (the likely stutter fix)
 4. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## Open questions
-- Exact Google TV model (Chromecast with Google TV 4K or HD, Google TV Streamer, or a TV with Google TV built in)
+- Your second Google TV doesn't answer on the network (only "Living Room TV" and a Nest Mini do). Is it on another network, and should later casting tests include it?
 - Windows test machine: a real PC exists but isn't available yet (2026-09-15). The Windows spike run is deferred until it is; the step 6 GO/NO-GO covers Linux only and lists this as open
 - App name and icon (placeholder: "IPTV Player", Dart package `iptv_player`)
 
@@ -45,7 +48,13 @@ Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback)
 - libmpv 0.34.1: `deinterlace` is yes/no only (the app implements Auto from `video-frame-info/interlaced`); media_kit sets `subs-fallback`, which doesn't exist in 0.34.1 (one harmless error); every open logs `Failed to create file cache` (Phase 3: set `cache-on-disk=no`)
 - `hwdec=auto-safe` doesn't GPU-decode MPEG-2 (SD MPEG-2 costs about 1 % CPU)
 - BtbN's `latest` FFmpeg release is rebuilt daily; set `FFMPEG_TAG` to a dated autobuild tag to pin a build before packaging
-- Cast docs show the HLS segment enums only as JS constants (`HlsSegmentFormat.FMP4`); the exact string sent on the wire (`"fmp4"` vs `"FMP4"`) must be confirmed on the device in step 5
+- Open-GOP HEVC (x265's default: CRA keyframes with leading frames) relayed with `-c:v copy` into HLS fMP4 segments gets a duplicated frame time and a two-frame gap at every cut (FFmpeg 8.1.2), which stutters on the TV. HLS TS and one continuous fragmented MP4 are clean; H.264 is unaffected (ADR-004 Finding 7)
+- 4K casting needs the TV's full-bandwidth HDMI mode (Samsung: Input Signal Plus). Without it, the Chromecast refuses every 4K stream with a bare LOAD_FAILED
+- The Chromecast with Google TV 4K reports `md=Chromecast` over mDNS, like 1080p-only Chromecasts, so the model name can't tell whether HEVC or 4K is supported
+- On live HLS the receiver reported BUFFERING 31 % of the time (46 % in an unwatched run) with no visible or audible stall; don't use it as a stall signal
+- Spike test source: `-stream_loop -1` on TS samples with B-frames breaks video timestamps at every loop (a few-second freeze on the TV); the Phase 1 fake provider must loop cleanly
+- Cast spike runs with `--keep-app` leave the Default Media Receiver open on the TV; press Home on the remote to close it
+- Resolved in step 5: `"fmp4"` vs `"FMP4"` for `hlsSegmentFormat` doesn't matter; the current receiver ignores the field
 
 ## Measurements
 | Metric | Budget | Latest | Date |

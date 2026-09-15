@@ -150,7 +150,50 @@ NVIDIA, native Wayland. Cells: hwdec-current · first frame (ms) · process CPU 
 
 **Status:** done for Linux. Intel and NVIDIA play zero-copy with the patch on native Wayland and Xorg; the one exception is XWayland (Finding 3). fvp isn't needed. Still open: the Windows run, when the PC is available. The GO/NO-GO is step 6.
 
-## ADR-004 · pending (Phase 0) — Casting spike results, device model(s), verified LOAD fields
+## ADR-004 · 2026-09-15 · Done for step 5 (one device) — Casting spike results, device model(s), verified LOAD fields
+**Setup:** "Living Room TV", a Chromecast with Google TV (4K) (model from the user; mDNS only says `md=Chromecast`) on a Samsung 4K TV: Android 14 build UTTC.250917.004, cast build 3.72.446070, receiver user agent `Chrome/92.0.4515.0 … CrKey/1.56.500000 DeviceType/AndroidTV`. The laptop is on 5 GHz Wi-Fi (540 Mbit/s, 192.168.1.254/24), the device at 192.168.1.155. The user's second Google TV doesn't answer on the network; they chose to test one device. `spike/cast_spike` is a Dart CLI: multicast_dns discovery, our own Cast v2 client (protobuf `CastMessage`, TLS to port 8009), a shelf relay server on the LAN address (port 38400), and the docs/04 FFmpeg relay (bundled 8.1.2) reading a loopback provider that plays each sample as an endless real-time MPEG-TS stream (`-re -stream_loop -1`). Results in `spike/cast_spike/results/` (gitignored). The user watched the TV and reported picture and sound for the key runs. Testing stopped at the user's request; any further TV test needs their OK first.
+
+**Finding 1: discovery works next to avahi-daemon.** multicast_dns found both Cast devices on the LAN in 5.0 s (the TV and a Nest Mini speaker) with avahi-daemon running, so the two coexist (ADR-006). `md` is just `Chromecast` on this 4K Google TV model, the same string older 1080p Chromecasts use, so docs/04 can't seed HEVC or 4K support from the model name. The `ca` bitmask does separate video devices: bit 0 (video out) is set on the TV (465413) and not on the Nest Mini (198660).
+
+**Finding 2: the Cast v2 sequence works, with two surprises.** CONNECT → GET_STATUS → LAUNCH CC1AD845 → CONNECT transportId → LOAD works against the device's self-signed TLS 1.3 certificate. LAUNCH takes 3.0–5.6 s when the receiver app isn't running (53 ms when it is). The device also sends `LAUNCH_STATUS` (its `status` is a string, `USER_ALLOWED`) and `MULTIZONE_STATUS` on another namespace, and keeps sending after our CLOSE; the spike crashed on each until its parsing was tolerant. After LOAD_FAILED the media session is gone: STOP returns `INVALID_REQUEST` / `INVALID_MEDIA_SESSION_ID`.
+
+**Finding 3: relay-copy results on the device.** Cells: relay output · LOAD → PLAYING · result, with what the user saw and heard where they watched.
+
+| Sample | Relay | Result |
+|---|---|---|
+| h264_1080p50_aac | TS · 3.3–4.0 s | **plays**: smooth moving pattern, steady tone (4 min, 200 MB) |
+| h264_1080p25_ac3 | TS, AC-3 5.1 → AAC stereo · 2.2 s | **plays**: bars and tone steady |
+| h264_1080p25_ac3 | fMP4 · 2.0 s | **plays** (not watched; receiver reports 1920×1080) |
+| hevc_1080p50_aac | fMP4, `-tag:v hvc1` · 1.8–2.3 s | **plays**: bars and tone steady (2 min); also plays with `hlsSegmentFormat` `"FMP4"`, `"bogus"`, or no field (not watched) |
+| hevc_2160p25_eac3 | fMP4 · 3.9 s | before the TV fix: LOAD_FAILED about 1 s after the first segment (also with `"FMP4"`, no field, or `hev1`); after: **plays** at 3840×2160 but **stutters**, tone steady (Finding 7) |
+| h264_2160p25_aac (extra 30 s sample) | TS · 4.0–4.9 s | before the TV fix: LOAD_FAILED the same way; after: **plays** at 3840×2160, smooth except a few-second freeze at the sample's loop point, tone steady (Finding 8) |
+
+The relay lists its first 2 segments 3.6–4.9 s after it starts. Receiver requests carry `Origin: https://www.gstatic.com`, so the CORS headers are needed (not tested without them).
+
+**Finding 4: 4K needs the TV's full-bandwidth HDMI mode.** With Samsung's Input Signal Plus off for the Chromecast's HDMI port, the Chromecast never offered 4K and refused every 4K stream, H.264 and HEVC, with a bare LOAD_FAILED about 1 s after the first segment, while 1080p played. After the user turned it on, both 4K samples play. The app can't see the HDMI mode, so it must learn a device's maximum resolution from this failure (docs/04 learning), fall back to a 1080p transcode, and tell the user that a TV setting may unlock 4K.
+
+**Finding 5: BUFFERING in MEDIA_STATUS isn't a stall.** In the live run the user watched (h264_1080p25_ac3), the receiver reported BUFFERING 31 % of the time and flipped state 12 times a minute, yet bars and tone never stalled and `currentTime` kept pace with the clock; an unwatched run showed 46 % and 22 a minute. It was worst when LOAD went out with 2–3 segments listed and nearly gone (5 %) with about 4 (one run each). The app must not treat BUFFERING as a stall; the relay's segment age and IDLE/ERROR are the signals.
+
+**Finding 6: a plain MP4 with Range (BUFFERED) plays and seeks.** `vod_h264_aac_10min.mp4` served from `/f/<token>/media.mp4`: PLAYING 1.1 s after LOAD. The TV opened `Range: bytes=0-`, then a new request from byte 98,304,000 for SEEK 300 s and from 19,464,192 for SEEK 60 s. Each SEEK was answered in 150–185 ms with PLAYING at the target; PAUSE and PLAY worked; the user saw both jumps and the pause.
+
+**Finding 7: open-GOP HEVC breaks FFmpeg's HLS fMP4 segments.** The 4K HEVC stutter most likely comes from the relay output, not the network or the device: the laptop's link was 540 Mbit/s, the tone never dropped, and playback time kept pace. Joining the relay's fMP4 segments shows a duplicated frame time and a two-frame gap at every segment cut. Checked on the laptop with the same relay command each time:
+
+| Source | Relay output | Frame timing |
+|---|---|---|
+| x265 clip, open GOP (CRA keyframes with leading RASL frames) | HLS fMP4 | 3 duplicates and 3 gaps in 4 segments |
+| the same clip, closed GOP (IDR keyframes only) | HLS fMP4 | clean |
+| hevc_2160p25_eac3, hevc_1080p50_aac (both open GOP) | HLS fMP4 | the same kind of fault |
+| hevc_2160p25_eac3 | HLS TS | clean |
+| hevc_2160p25_eac3 | one continuous fragmented MP4 (docs/04 low-latency mode) | clean |
+| h264_1080p50_aac (with B-frames) | HLS fMP4 | clean |
+
+x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "HEVC → HLS with fMP4 segments" can't be the only HEVC path. Candidate: one continuous fragmented MP4 response for HEVC; it needs a TV test, with the user's OK. The Cast docs say HEVC isn't supported in TS (not tested).
+
+**Finding 8: the spike's looping test source breaks at each loop.** `-stream_loop -1` on a TS sample with B-frames corrupts video timestamps where the file wraps: on the 30 s H.264 4K sample, a 0.76 s jump, 16 lost frames, and 2 decode errors per wrap, while audio stays continuous. The TV's segment requests stalled for 3–4 s at the wraps (around 30 s and 60 s into the run), matching the freeze the user saw. The relay copies the fault unchanged, so it's a test-source problem; the Phase 1 fake provider must loop cleanly (longer samples or re-timestamped loops).
+
+**Verified LOAD fields** (Google Cast docs, checked 2026-09-15; device results above): LOAD carries `media`, `autoplay`, `currentTime`; `media` has `contentId` (the URL; an optional `contentUrl` overrides it), `contentType` (`application/x-mpegurl` for HLS and `video/mp4` for files both played), `streamType` `LIVE` / `BUFFERED`, `metadata` (`metadataType` 0, `title`, `subtitle`), and `hlsSegmentFormat` / `hlsVideoSegmentFormat`, documented as "only required for HLS content playback using MPL". SEEK takes `currentTime` and `resumeState` `PLAYBACK_START`. Shaka Player replaced MPL as the Web Receiver's default HLS player in 2026 (release notes: SDK 3.0.0150, April), and this receiver ignores the segment-format fields: HEVC fMP4 plays with `"fmp4"`, `"FMP4"`, `"bogus"`, or no field. The `"fmp4"` vs `"FMP4"` question doesn't matter on current receivers; step 6 decides whether to send the fields at all.
+
+**Status:** done for step 5 on one device. Still open: a TV test of HEVC as one continuous fragmented MP4, the second Google TV, and a cleanly looping fake provider (Phase 1). GO / NO-GO is step 6.
 
 ## ADR-005 · 2026-09-15 · Accepted — Downloads and local library in v1
 **Decision:** v1 downloads provider movies and episodes and manages a library of the user's own video files; both play offline and cast to Chromecast / Google TV. New Phase 8; settings/polish and packaging move to Phases 9 and 10. Spec: docs/09.
