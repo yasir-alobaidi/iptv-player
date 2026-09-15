@@ -5,8 +5,9 @@
 |---|---|
 | OS / shell | Ubuntu 22.04.5 LTS (kernel 6.8), fish; Secure Boot off; about 700 GB free |
 | git, curl, unzip, zip, xz-utils | installed |
-| FFmpeg | system 4.4.2 — too old for the relay; the app uses a bundled static build |
-| Flutter / Dart | not installed |
+| FFmpeg | system 4.4.2 — too old for the relay and never used. Bundled 8.1.2 (BtbN GPL) in `third_party/ffmpeg/linux-x64/`, fetched by `tools/fetch_ffmpeg.sh` on 2026-09-15 |
+| Flutter / Dart | 3.47.4 / 3.13.3 extracted to `~/develop/flutter` by Claude on 2026-09-15 (no sudo needed). **Not on PATH yet:** run `fish_add_path ~/develop/flutter/bin` |
+| Media samples | generated in `tools/media_samples/out/` (gitignored); regenerate with `tools/media_samples/generate.sh` |
 | Build tools (clang, cmake, ninja, pkg-config, GTK dev headers) | not installed |
 | mpv / libmpv | not installed (apt candidate libmpv-dev 0.34.1) |
 | Intel GPU (UHD 630, Comet Lake-H) | i915 driver; free intel-media-va-driver installed; `vainfo` not installed |
@@ -22,14 +23,17 @@ sudo apt update
 sudo apt install -y curl git unzip xz-utils zip libglu1-mesa \
   clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
   libsecret-1-dev libjsoncpp-dev \
-  libmpv-dev mpv \
+  libmpv-dev mpv libmimalloc-dev \
   vainfo intel-media-va-driver-non-free \
-  avahi-daemon
+  avahi-daemon protobuf-compiler
 ```
 Notes:
 - `intel-media-va-driver-non-free` is in the multiverse repository (`sudo add-apt-repository multiverse` if apt can't find it).
 - `libmpv-dev` on 22.04 is mpv 0.34. Phase 0 checks whether media_kit works well with it; if not, install a newer libmpv and record the choice in docs/decisions.md.
 - `libsecret-1-dev` and `libjsoncpp-dev` are needed by flutter_secure_storage on Linux.
+- `libmimalloc-dev` is listed in media_kit's Linux install instructions.
+- `protobuf-compiler` (`protoc`) is used once to generate the Cast v2 protobuf code (ADR-002).
+- Claude can't run sudo: it needs a password and the session has no terminal. Paste these into your own terminal.
 
 ## 2. GPU drivers (for hardware decode/encode tests)
 ```bash
