@@ -54,3 +54,5 @@ design/iptv-player-ui.html
 *.pid
 logs/
 .env
+# Vendored plugin copies are rebuilt from the pub cache + the .patch next to them
+spike/vendor/*/

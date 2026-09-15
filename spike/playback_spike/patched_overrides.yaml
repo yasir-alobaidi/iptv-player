@@ -1,0 +1,6 @@
+# Copied to pubspec_overrides.yaml by run_matrix.sh for the "patched" variant:
+# pub media_kit 1.2.6, with media_kit_video 2.0.1 + spike/vendor/media_kit_video_egl_display.patch
+# (EGLDisplay from GDK instead of the platform thread's current context, media_kit #1404).
+dependency_overrides:
+  media_kit_video:
+    path: ../vendor/media_kit_video

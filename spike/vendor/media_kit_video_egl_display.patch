@@ -1,0 +1,80 @@
+diff -ru a/media_kit_video/linux/texture_gl.cc media_kit_video/linux/texture_gl.cc
+--- a/media_kit_video/linux/texture_gl.cc	2026-09-15 02:54:58.107535918 -0400
++++ b/media_kit_video/linux/texture_gl.cc	2026-09-15 04:17:40.724103223 -0400
+@@ -149,6 +149,11 @@
+       
+       EGLDisplay egl_display = video_output_get_egl_display(video_output);
+       EGLContext egl_context = video_output_get_egl_context(video_output);
++      if (first_frame) {
++        g_print("media_kit: TextureGL: SPIKE PATCH raster EGLDisplay %p, mpv EGLDisplay %p (%s).\n",
++                flutter_display, egl_display,
++                flutter_display == egl_display ? "same" : "DIFFERENT");
++      }
+       
+       // Switch to mpv's isolated context to create/resize mpv's texture and FBO
+       eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, egl_context);
+diff -ru a/media_kit_video/linux/video_output.cc media_kit_video/linux/video_output.cc
+--- a/media_kit_video/linux/video_output.cc	2026-09-15 02:54:58.106535909 -0400
++++ b/media_kit_video/linux/video_output.cc	2026-09-15 04:17:40.724103223 -0400
+@@ -146,7 +146,29 @@
+     EGLSurface flutter_draw_surface = eglGetCurrentSurface(EGL_DRAW);
+     EGLSurface flutter_read_surface = eglGetCurrentSurface(EGL_READ);
+     
+-    if (flutter_display != EGL_NO_DISPLAY && flutter_context != EGL_NO_CONTEXT) {
++    // SPIKE PATCH (media_kit #1404): since Flutter 3.38 no EGL context is
++    // current on the platform thread. Get the same EGLDisplay Flutter uses
++    // from GDK's native display instead.
++    if (flutter_display == EGL_NO_DISPLAY) {
++      GdkDisplay* gdk_display = gdk_display_get_default();
++      if (GDK_IS_WAYLAND_DISPLAY(gdk_display)) {
++        flutter_display = eglGetPlatformDisplayEXT(
++            EGL_PLATFORM_WAYLAND_EXT,
++            gdk_wayland_display_get_wl_display(gdk_display), NULL);
++      } else if (GDK_IS_X11_DISPLAY(gdk_display)) {
++        flutter_display = eglGetPlatformDisplayEXT(
++            EGL_PLATFORM_X11_EXT, gdk_x11_display_get_xdisplay(gdk_display),
++            NULL);
++      }
++      if (flutter_display != EGL_NO_DISPLAY &&
++          !eglInitialize(flutter_display, NULL, NULL)) {
++        flutter_display = EGL_NO_DISPLAY;
++      }
++      g_print("media_kit: VideoOutput: SPIKE PATCH platform EGLDisplay %p.\n",
++              flutter_display);
++    }
++
++    if (flutter_display != EGL_NO_DISPLAY) {
+       self->egl_display = flutter_display;
+       
+       // Bind OpenGL ES API (Flutter uses OpenGL ES on Linux)
+@@ -156,7 +178,8 @@
+       EGLConfig config = NULL;
+       EGLint config_id = 0;
+       
+-      if (eglQueryContext(self->egl_display, flutter_context, EGL_CONFIG_ID, &config_id)) {
++      if (flutter_context != EGL_NO_CONTEXT &&
++          eglQueryContext(self->egl_display, flutter_context, EGL_CONFIG_ID, &config_id)) {
+         g_print("media_kit: VideoOutput: Flutter's EGL config ID: %d\n", config_id);
+         
+         // Get Flutter's exact config
+@@ -173,7 +196,19 @@
+         g_printerr("media_kit: VideoOutput: Failed to query Flutter's EGL config ID.\n");
+       }
+       
+-      if (config != NULL) {        
++      // SPIKE PATCH: no Flutter context to copy the config from.
++      if (config == NULL) {
++        EGLint attribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
++                            EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8,
++                            EGL_ALPHA_SIZE, 8, EGL_NONE};
++        EGLint num_configs = 0;
++        if (!eglChooseConfig(self->egl_display, attribs, &config, 1, &num_configs) ||
++            num_configs == 0) {
++          config = NULL;
++        }
++      }
++
++      if (config != NULL) {
+         // Create an isolated EGL context (NOT shared with Flutter)
+         // This prevents OpenGL state pollution and resource contention
+         EGLint context_attribs[] = {

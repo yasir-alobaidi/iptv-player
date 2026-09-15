@@ -1,0 +1,17 @@
+name: playback_spike
+description: Phase 0 Spike A (throwaway) — media_kit playback, hwdec, zap time on Linux.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  media_kit: 1.2.6
+  media_kit_video: 2.0.1
+  media_kit_libs_video: 1.0.7
+
+flutter:
+  uses-material-design: true
