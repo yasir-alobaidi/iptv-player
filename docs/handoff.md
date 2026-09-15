@@ -1,42 +1,40 @@
-# Handoff — 2026-09-15 (session 4)
+# Handoff — 2026-09-15 (session 5)
 
 For the next Claude Code session on this project, and for the user starting it.
 
-## Before you start the next session (user, 1 minute)
-1. Log out. On the login screen, click your name, then the gear icon (bottom right), choose **"Ubuntu"** (not "Ubuntu on Xorg"), and log in.
-2. Optional check in a terminal: `echo $XDG_SESSION_TYPE` should print `wayland`.
+## Before you start the next session (user)
+Step 5 (Spike B, casting) needs:
+1. Your OK on step 4 (summary under "Where things stand").
+2. Your exact Google TV model: Chromecast with Google TV 4K or HD, Google TV Streamer, or a TV with Google TV built in.
+3. The Google TV switched on and on the same home network as the laptop.
+
+Either login session works for step 5 ("Ubuntu" or "Ubuntu on Xorg").
 
 ## Start prompt
-Open Claude Code in this folder and paste:
+Open Claude Code in this folder and paste (fill in the model):
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, and docs/progress.md first.
-I'm logged in with the Wayland session. Run the NVIDIA Wayland runs from the handoff, finish step 4, and stop for my OK.
+Step 4 is OK. My Google TV is: <model>. It's on and on the same network as the laptop. Start Phase 0 step 5 (Spike B) and stop for my OK.
 ```
 
 ## Where things stand
-- **Phase 0 steps 1–3 done**; step 4 (Intel) pushed by the user.
-- **Step 4 (Spike A) is done except NVIDIA on native Wayland.** Results in ADR-003 (docs/decisions.md), Findings 1–5.
-- **Decided this session:** the media_kit #1404 fix ships as a **pinned patched fork of media_kit_video** (not posted upstream unless the user asks). A real Windows PC exists but isn't available yet, so the Windows run is deferred and doesn't block step 4.
-- **ADR-006:** Spike B discovery with multicast_dns + manual IP.
-- Step 5 (Spike B, casting) still needs the home network and the Google TV model.
+- **Phase 0 steps 1–4 done on Linux.** Step 4 results are in ADR-003 (docs/decisions.md), Findings 1–5, status "Done for Linux (Windows deferred)".
+- media_kit #1404 hits every unpatched build, on both GPUs and both session types. With `spike/vendor/media_kit_video_egl_display.patch`, Intel (`vaapi`) and NVIDIA (`nvdec`) play zero-copy on native Wayland and Xorg: 0 drops, ≤ 2.7 % CPU, zap p95 ≤ 624 ms. The one exception is Intel under XWayland (Finding 3).
+- Decided: ship the fix as a pinned patched fork of media_kit_video (ADR-003). The Windows run waits for the PC. Spike B discovery uses multicast_dns + manual IP (ADR-006).
 
 ## Done this session (2026-09-15)
-- Reboot confirmed: `nvidia-smi` lists the GTX 1650 Ti, driver 595.91.07. The login after the reboot was **"Ubuntu on Xorg"**. GDM doesn't block Wayland (its udev rules prefer Wayland on hybrid NVIDIA laptops, and no runtime config disables it), so switching back is a login-screen choice, no sudo.
-- NVIDIA, Xorg, PRIME offload: unpatched pub 1.2.6 hits #1404 (S/W rendering, `nvdec-copy`, up to 112 % of one core on HEVC 4K, zap 525/812 ms). Patched: zero-copy `nvdec` (`cuda-nvdec` interop), 0 drops, ≤ 1.2 % CPU, zap 328/614 ms, process on the GPU in nvidia-smi. Three patched runs agree.
-- Intel on a real Xorg session, patched: zero-copy `vaapi`, 0 drops, ≤ 2.3 % CPU, zap 378/624 ms, video confirmed in grabbed frames. Only XWayland (Finding 3) loses zero-copy.
-- NVIDIA frame grabs failed: `grab_frame.sh` took the first window named playback_spike, and GTK also creates an unmapped one (BadMatch). A screen-region attempt captured the user's editor instead; those PNGs were deleted. `grab_frame.sh` now picks a viewable window and fails if no PNG is written. NVIDIA's picture is still unconfirmed.
-- Earlier results that re-runs overwrote are kept as `results/patched_intel_xwayland.*`, `results/patched_nvidia_x11_run1.*`, and `results/patched_nvidia_x11_run2.*`; `results/patched_nvidia_x11.*` is run 3 (all gitignored).
+- Confirmed the "Ubuntu" (Wayland) login: `XDG_SESSION_TYPE=wayland`, `WAYLAND_DISPLAY=wayland-0`.
+- NVIDIA, native Wayland, unpatched pub 1.2.6: #1404 (`EGL display or context is invalid` → S/W rendering), `nvdec-copy`, 0 drops, 3.0–9.7 % CPU (117 % of one core on HEVC 4K), zap 541/823 ms. Matches Xorg.
+- NVIDIA, native Wayland, patched: same EGLDisplay, H/W rendering, zero-copy `nvdec` on every H.264/HEVC sample, 0 drops (8 during the codec switch), 1.4–2.7 % CPU, zap 342/624 ms (327/338 with a burst), process on the GPU in nvidia-smi. CPU is about twice Xorg's (one run each); far under budget, not investigated.
+- NVIDIA picture confirmed by eye. The user missed the window during the full run, so a short patched run (`--auto samples --only h264_1080p50_aac.ts,hevc_2160p25_eac3.ts`) was repeated while they watched; both samples showed moving video. Its results are `results/patched_nvidia_wayland_visual.*`; `results/patched_nvidia_wayland.*` is the full run (all gitignored).
+- ADR-003 finished for Linux; progress.md updated. Spike analyze and format are clean (no spike code changed).
 
 ## Instructions for the next session
-1. Check `echo $XDG_SESSION_TYPE` is `wayland` and `WAYLAND_DISPLAY` is set. If not, tell the user how to pick the "Ubuntu" session and stop. `run_matrix.sh` exits 0 even when the app can't open a display, so always check the log ends with a `done` event.
-2. From `spike/playback_spike`, one at a time (shared build folder; CPU numbers):
-   - `./run_matrix.sh patched nvidia wayland`, then `./run_matrix.sh pub nvidia wayland`
-   - Check the log for `H/W rendering` and `SPIKE PATCH … (same)`. Under PRIME offload on Wayland the EGLDisplay may come from Mesa (Intel) while the NVIDIA offload goes through EGL's vendor dispatch; record `hwdec-current` and `hwdec-interop`, and whether nvidia-smi lists the process. `hwdec-current = no` on HEVC 4K is a blocker.
-   - `python3 summarize.py patched_nvidia_wayland pub_nvidia_wayland patched_nvidia_x11 patched_intel_wayland` prints the tables.
-   - Frame grabs don't work on native Wayland windows. Before `patched nvidia wayland`, ask the user to watch the spike window and confirm the video moves (color bars with a moving diagonal line) on the first sample (H.264 1080p50, 0–18 s) and the 4K sample (about 70–88 s). This is the NVIDIA visual check; record the answer in ADR-003.
-3. Add the Wayland NVIDIA results to ADR-003 (Finding 5), set its status to done for Linux, and stop after step 4 with a summary. Wait for the user's OK before step 5 (needs the Google TV model and the home network).
-4. At the end: analyze/format the spike, update docs/progress.md, overwrite this file, and commit (the user pushes).
+1. Don't start step 5 without the user's OK on step 4 and the Google TV model. If either is missing, ask and stop.
+2. Step 5 is Spike B as written in docs/08-phases-and-prompts.md; read it and docs/04-casting.md first. Discovery follows ADR-006. Confirm on the device the HLS segment format string sent on the wire (`"fmp4"` vs `"FMP4"`, see Known issues in progress.md).
+3. Record results in ADR-004, stop with a summary, and wait for the user's OK before step 6.
+4. At the end: analyze/format, update docs/progress.md, overwrite this file, and commit (the user pushes).
 
 ## Don't reopen without new evidence
 - Flutter + media_kit for desktop, Google TV later (ADR-001); media_kit_video as a pinned patched fork (ADR-003). fvp only if Windows fails.

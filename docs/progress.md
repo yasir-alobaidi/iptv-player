@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback) nearly done:** Intel (Wayland and real Xorg) and NVIDIA (Xorg) all work well with the ~60-line media_kit patch, shipped as a pinned patched fork (ADR-003). Left: NVIDIA on native Wayland (needs a Wayland login). The Windows run is deferred until your PC is available.
+Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback) done on Linux:** Intel and NVIDIA, on native Wayland and Xorg, all play zero-copy with the ~60-line media_kit patch, shipped as a pinned patched fork (ADR-003). The Windows run is deferred until your PC is available. Waiting for your OK before step 5 (casting).
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -20,16 +20,16 @@ Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback)
 - 2026-09-15: Phase 0 step 4, Intel: `spike/playback_spike` (media_kit player, loopback MPEG-TS server, stats overlay, automatic runs; `run_matrix.sh`, `summarize.py`, `grab_frame.sh`). **media_kit #1404 reproduced** on pub 1.2.6 and main@c533e44, Wayland and X11: S/W rendering, `vaapi-copy`, up to 530 dropped frames per 12 s. **`spike/vendor/media_kit_video_egl_display.patch` fixes it:** H/W rendering, zero-copy `vaapi` for H.264, HEVC, and HEVC 4K, 0 drops, ≤ 1.7 % CPU, zap p50/p95 320/597 ms; video confirmed on screen. All docs/03 libmpv names verified. Details in ADR-003
 - 2026-09-15: You rebooted and pushed step 4 (Intel). Decided: ship the fix as a pinned patched fork of media_kit_video; Windows run deferred (PC not available yet)
 - 2026-09-15: Phase 0 step 4, Xorg session (the login after the reboot was "Ubuntu on Xorg"): **NVIDIA GTX 1650 Ti** (driver 595.91.07, PRIME offload) hits #1404 unpatched (`nvdec-copy`, up to 112 % of one core on HEVC 4K, zap 525/812 ms); **patched: zero-copy `nvdec`, 0 drops, ≤ 1.2 % CPU, zap 328/614 ms**, three runs agree. **Intel on real Xorg, patched: zero-copy `vaapi`, 0 drops, ≤ 2.3 % CPU, zap 378/624 ms**, video confirmed on screen, so only XWayland loses zero-copy. NVIDIA frame grabs failed (the script picked GTK's unmapped window of the same name), so NVIDIA's picture is checked by eye in the Wayland runs; `grab_frame.sh` now picks a viewable window and fails when no image is written
+- 2026-09-15: Phase 0 step 4, native Wayland on **NVIDIA**: unpatched hits #1404 again (`nvdec-copy`, up to 117 % of one core on HEVC 4K, zap 541/823 ms); **patched: zero-copy `nvdec`, 0 drops, ≤ 2.7 % CPU, zap 342/624 ms**, process on the GPU. You watched a short patched run and saw moving video on H.264 1080p50 and HEVC 4K, so NVIDIA's picture is confirmed. ADR-003 is done for Linux
 
 ## In progress
-- Phase 0 step 4: NVIDIA on native Wayland (`run_matrix.sh patched nvidia wayland` and `pub nvidia wayland`) after you log in with the "Ubuntu" session. fvp isn't needed
+- Nothing. Step 4 is done on Linux; waiting for your OK to start step 5
 
 ## Next
-1. You: log out, choose "Ubuntu" (not "Ubuntu on Xorg") under the gear on the login screen, log in, start a new session
-2. Spike A on NVIDIA, native Wayland: `spike/playback_spike/run_matrix.sh patched nvidia wayland`, then `pub nvidia wayland` (the script sets the PRIME offload variables)
-3. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
-4. Phase 0 step 5 — Spike B casting; needs the home network and your Google TV model
-5. Phase 0 step 6 — finish ADR-003, write ADR-004, GO / NO-GO (set up the pinned patched media_kit_video fork)
+1. You: OK step 4 and tell me your Google TV model
+2. Phase 0 step 5 — Spike B casting; needs the home network and your Google TV model
+3. Phase 0 step 6 — finish ADR-003, write ADR-004, GO / NO-GO for Linux (set up the pinned patched media_kit_video fork)
+4. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## Open questions
 - Exact Google TV model (Chromecast with Google TV 4K or HD, Google TV Streamer, or a TV with Google TV built in)
@@ -39,7 +39,8 @@ Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback)
 ## Known issues
 - media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11). Our patch fixes it; upstream has no fix yet (NVIDIA too: unpatched falls back to `nvdec-copy` and heavy CPU)
 - Zero-copy VA-API fails under XWayland (`GDK_BACKEND=x11` inside a Wayland session): Ubuntu 22.04's libva-x11 only supports DRI2 and XWayland only DRI3, so mpv uses `vaapi-copy`: dropped frames at 50 fps, audio underruns, VOD first frame about 5.5 s, zap p95 3.3 s. Native Wayland and a real Xorg session are both fine
-- NVIDIA startup logs one `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION` (no visible effect so far)
+- NVIDIA startup logs one `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION`, and the patched build on Wayland logs `Failed to query Flutter's EGL config ID` (no visible effect from either)
+- NVIDIA on native Wayland uses about twice the CPU of Xorg (2.7 vs 1.1 % on H.264 1080p50, one run each); far under budget, not investigated
 - Spike tooling: `run_matrix.sh` exits 0 even when the app can't open a display (seen once after the reboot, when the Wayland run started on an Xorg session); check the log has a `done` event
 - libmpv 0.34.1: `deinterlace` is yes/no only (the app implements Auto from `video-frame-info/interlaced`); media_kit sets `subs-fallback`, which doesn't exist in 0.34.1 (one harmless error); every open logs `Failed to create file cache` (Phase 3: set `cache-on-disk=no`)
 - `hwdec=auto-safe` doesn't GPU-decode MPEG-2 (SD MPEG-2 costs about 1 % CPU)
@@ -53,7 +54,7 @@ Phase 0 — Environment & spikes. Steps 1–3 done. **Step 4 (Spike A, playback)
 | Sync 50k channels + 30k movies | ≤ 60 s | — | — |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
-| H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6 %) | 2026-09-15 |
+| H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |
 | 8 h soak memory growth | ≤ 50 MB | — | — |
 | Library scan, 5,000 new files | ≤ 5 min | — | — |
 | Download speed vs curl | ≥ 90 % | — | — |

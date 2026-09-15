@@ -45,8 +45,8 @@ Format: ID · date · status — decision, context, alternatives, consequences.
 **Resolution check (2026-09-15, Flutter 3.47.4):** every package above resolves together with `flutter pub get` at its latest version (`pub outdated`: direct dependencies all up to date). media_kit from git main `c533e446755f51cf53c7e57aea873f2aa5355f81` also resolves, but only when **all eight** media_kit packages come from git at that SHA via `dependency_overrides`: media_kit, media_kit_video, media_kit_libs_video, media_kit_libs_linux, media_kit_libs_windows_video, media_kit_libs_android_video, media_kit_libs_ios_video, media_kit_libs_macos_video (paths `media_kit`, `media_kit_video`, `libs/universal/…`, `libs/<platform>/…`). Main needs media_kit_libs_windows_video 1.0.12, which isn't on pub.
 **Consequences:** media_kit stays provisional until Spike A (ADR-003). If we must use media_kit from git, pin that SHA for all eight packages in `pubspec.yaml` and recheck pub releases every phase.
 
-## ADR-003 · 2026-09-15 · In progress (Intel done; NVIDIA done on X11, Wayland pending; Windows deferred) — Desktop playback spike results
-**Setup:** HP laptop, Ubuntu 22.04.5, kernel 6.8, GNOME on Wayland for the first Intel runs (X11 runs there use XWayland via `GDK_BACKEND=x11`); after the NVIDIA driver install and reboot the session was "Ubuntu on Xorg", used for the real-Xorg and NVIDIA runs, Intel UHD CometLake-H (iHD 22.3.1), GTX 1650 Ti. Flutter 3.47.4 release build (Impeller, OpenGL ES). media_kit uses the system libmpv 0.34.1 with FFmpeg 4.4.2. Spike: `spike/playback_spike` plays each sample as an endless MPEG-TS stream (`-re -stream_loop -1 -c copy`) over loopback, with the Balanced preset and `hwdec=auto-safe`. Per sample: 5 s warm-up, then a 12 s measuring window (45 s for the codec switch). Results in `spike/playback_spike/results/`; `summarize.py` prints the tables.
+## ADR-003 · 2026-09-15 · Done for Linux (Windows deferred) — Desktop playback spike results
+**Setup:** HP laptop, Ubuntu 22.04.5, kernel 6.8, GNOME on Wayland for the first Intel runs (X11 runs there use XWayland via `GDK_BACKEND=x11`); after the NVIDIA driver install and reboot the session was "Ubuntu on Xorg", used for the real-Xorg and NVIDIA Xorg runs; the NVIDIA Wayland runs used a later "Ubuntu" (Wayland) login; Intel UHD CometLake-H (iHD 22.3.1), GTX 1650 Ti. Flutter 3.47.4 release build (Impeller, OpenGL ES). media_kit uses the system libmpv 0.34.1 with FFmpeg 4.4.2. Spike: `spike/playback_spike` plays each sample as an endless MPEG-TS stream (`-re -stream_loop -1 -c copy`) over loopback, with the Balanced preset and `hwdec=auto-safe`. Per sample: 5 s warm-up, then a 12 s measuring window (45 s for the codec switch). Results in `spike/playback_spike/results/`; `summarize.py` prints the tables.
 
 **Finding 1: media_kit #1404 reproduces on every unpatched build.** Both pub 1.2.6 and main@c533e44, on both Wayland and X11, log `VideoOutput: EGL display or context is invalid` and then `S/W rendering`. On Flutter ≥ 3.38 no EGL context is current on the platform thread where the plugin looks for one. Decoding stays on the GPU but only in copy-back mode (`vaapi-copy`), and the CPU draws every frame: 1.1–1.6 cores busy at 50 fps, and 140–530 dropped frames per 12 s on HEVC 1080p50 and HEVC 4K. main's Linux render code is identical to 1.2.6; it only removes the drops on H.264 1080p50.
 
@@ -119,7 +119,28 @@ NVIDIA, Xorg. Cells: hwdec-current · first frame (ms) · process CPU % of all 1
 
 Zap p50/p95 on NVIDIA (plain `-re` / 2 s burst): pub 525/812 · 486/528 ms; patched run 1 336/616 · 326/508 ms; patched run 2 328/614 · 320/334 ms. 0 failures.
 
-**Visual check on NVIDIA:** not confirmed by a frame grab. `x11grab -window_id` failed with BadMatch and wrote nothing, most likely because `grab_frame.sh` took the first window named playback_spike, and GTK also creates an unmapped one with that name (a later run's first match was `IsUnMapped`). A root-region grab of that geometry captured whatever covered the screen instead, so it proves nothing (those images were deleted). `grab_frame.sh` now picks a viewable window and fails when no image is written. Evidence so far: mpv reports `nvdec` with 0 dropped frames, and nvidia-smi lists the process on the GPU. The user confirms the picture by eye during the NVIDIA Wayland runs.
+**NVIDIA on native Wayland** ("Ubuntu" session, same offload variables, `GDK_BACKEND=wayland`), one run each:
+- Unpatched pub 1.2.6: the same #1404 failure (`EGL display or context is invalid` → S/W rendering), `nvdec-copy`, 0 drops, CPU 3.0–9.7 % of all cores (117 % of one core on HEVC 4K), zap p50/p95 541/823 ms (511/546 with a burst). Within noise of Xorg.
+- Patched: same EGLDisplay on both threads, H/W rendering, zero-copy `nvdec` (`vaapi-egl,cuda-nvdec`) on every H.264 and HEVC sample. 0 drops, except 8 during the codec switch, when mpv restarts its video output (Intel on Wayland had 6). First frames 0.3–0.6 s; zap 342/624 ms (327/338 with a burst), 0 failures. nvidia-smi lists the process on the GPU (C+G, 279 MiB on H.264, 709 MiB on HEVC 4K).
+- CPU is 1.4–2.7 % of all cores, about twice the Xorg figure (0.7–1.1 %). Intel went the other way (H.264 1080p50: Wayland 1.5 %, Xorg 2.3 %). Both are far under the 15 % budget, so this wasn't investigated.
+- Wayland-only startup message on the patched build: `VideoOutput: Failed to query Flutter's EGL config ID`, just before `H/W rendering`, with no visible effect. The GTK `Failed to create OpenGL context` warning seen on Xorg doesn't appear.
+
+NVIDIA, native Wayland. Cells: hwdec-current · first frame (ms) · process CPU % of all 12 cores · dropped frames in the window.
+
+| Sample | pub 1.2.6 (S/W render) | **pub + patch (H/W render)** |
+|---|---|---|
+| h264_1080p50_aac | nvdec-copy · 327 · 7.3 · 0 | **nvdec · 528 · 2.7 · 0** |
+| h264_1080p25_ac3 | nvdec-copy · 817 · 3.9 · 0 | **nvdec · 636 · 1.5 · 0** |
+| h264_1080i50_mp2 | nvdec-copy · 646 · 3.9 · 0 | **nvdec · 431 · 1.5 · 0** |
+| hevc_1080p50_aac | nvdec-copy · 513 · 7.4 · 0 | **nvdec · 323 · 2.7 · 0** |
+| hevc_2160p25_eac3 | nvdec-copy · 609 · 9.7 · 0 | **nvdec · 420 · 1.6 · 0** |
+| mpeg2_576i25_mp2 | no · 746 · 3.0 · 0 | **no · 644 · 1.8 · 0** |
+| codec_switch 720p→1080p | nvdec-copy · 235 · 6.0 · 0 | **nvdec · 349 · 2.6 · 8** |
+| vod_h264_aac_10min.mp4 | nvdec-copy · 805 · 4.0 · 0 | **nvdec · 421 · 1.4 · 0** |
+| vod_h264_ac3_10min.mkv | nvdec-copy · 615 · 4.0 · 0 | **nvdec · 615 · 1.4 · 0** |
+| vod_hevc_eac3_subs.mkv | nvdec-copy · 800 · 3.9 · 0 | **nvdec · 626 · 1.5 · 0** |
+
+**Visual check on NVIDIA:** not confirmed by a frame grab. `x11grab -window_id` failed with BadMatch and wrote nothing, most likely because `grab_frame.sh` took the first window named playback_spike, and GTK also creates an unmapped one with that name (a later run's first match was `IsUnMapped`). A root-region grab of that geometry captured whatever covered the screen instead, so it proves nothing (those images were deleted). `grab_frame.sh` now picks a viewable window and fails when no image is written. **Confirmed by eye on Wayland (user, 2026-09-15):** the user watched a short patched run of h264_1080p50_aac and hevc_2160p25_eac3 (`--auto samples --only …`; results `patched_nvidia_wayland_visual.*`: `nvdec`, 0 drops) and saw moving video on both.
 
 **GPU choice for the app:** without the offload variables the app renders and decodes on Intel, which already meets every budget. NVIDIA is not required; whether to offer "use discrete GPU" (for example `PrefersNonDefaultGPU=true` in the .desktop file) is decided in packaging (Phase 10).
 
@@ -127,7 +148,7 @@ Zap p50/p95 on NVIDIA (plain `-re` / 2 s burst): pub 525/812 · 486/528 ms; patc
 
 **Windows (user, 2026-09-15):** a real Windows PC exists but isn't available yet. The Windows run is deferred and doesn't block step 4 on Linux.
 
-**Pending:** NVIDIA on native Wayland (needs a Wayland login). fvp isn't needed: Intel and NVIDIA both work with the patch.
+**Status:** done for Linux. Intel and NVIDIA play zero-copy with the patch on native Wayland and Xorg; the one exception is XWayland (Finding 3). fvp isn't needed. Still open: the Windows run, when the PC is available. The GO/NO-GO is step 6.
 
 ## ADR-004 · pending (Phase 0) — Casting spike results, device model(s), verified LOAD fields
 
