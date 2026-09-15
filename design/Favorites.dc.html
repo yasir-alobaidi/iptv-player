@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #0A0C10; font-family: Manrope, "Segoe UI", system-ui, sans-serif; color: #F3F5F9; font-variant-numeric: tabular-nums; }
+    a { color: #5B8CFF; } a:hover { color: #86A9FF; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #0A0C10; display: flex; overflow: hidden;">
+
+  <nav style="width: 72px; flex-shrink: 0; background: #11141A; border-right: 1px solid #2A3040; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 8px; box-sizing: border-box;">
+    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #5B8CFF, #3A5FD0); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12-7.5z"/></svg></div>
+    <div title="Home" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div title="Live TV" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 2 4 4 4-4"/></svg></div>
+    <div title="Guide" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+    <div title="Movies" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4M3 12h18"/></svg></div>
+    <div title="Series" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div>
+    <div title="Favorites" style="position: relative; width: 48px; height: 48px; border-radius: 12px; background: #1F2430; display: flex; align-items: center; justify-content: center; color: #5B8CFF;"><div style="position: absolute; left: -12px; top: 12px; width: 3px; height: 24px; border-radius: 3px; background: #5B8CFF;"></div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></div>
+    <div title="Library" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16M8 8v12M12 6v14"/><path d="m16 6 4 14"/></svg></div>
+    <div style="flex-grow: 1;"></div>
+    <div title="Settings" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></div>
+  </nav>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+    <header style="height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 24px; border-bottom: 1px solid #1B2029; box-sizing: border-box;">
+      <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">Favorites</div>
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px; border-radius: 999px; background: #171B23; border: 1px solid #2A3040; font-size: 13px; font-weight: 600; color: #A7AFBD;">
+        <div style="width: 8px; height: 8px; border-radius: 999px; background: #2FD27A;"></div>
+        <span>Home provider</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <div style="width: 380px; height: 40px; border-radius: 10px; background: #11141A; border: 1px solid #2A3040; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px; box-sizing: border-box; color: #6C7485; font-size: 14px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span style="flex-grow: 1;">Search channels, shows, movies</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A7AFBD; padding: 3px 6px; border-radius: 6px; border: 1px solid #2A3040; background: #171B23;">Ctrl K</span>
+      </div>
+      <div title="Cast" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #A7AFBD; border: 1px solid #2A3040; box-sizing: border-box;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M3 12a8 8 0 0 1 8 8M3 16a4 4 0 0 1 4 4"/></svg>
+      </div>
+    </header>
+
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 12px 32px 20px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #A7AFBD; border-bottom: 1px solid #1F2430;">
+        <span style="display: flex; align-items: center; gap: 6px; padding: 12px 4px; color: #F3F5F9; box-shadow: inset 0 -2px 0 #5B8CFF;">Channels<span style="font-size: 12px; font-weight: 600; color: #A7AFBD;">8</span></span>
+        <span style="display: flex; align-items: center; gap: 6px; margin-left: 16px; padding: 12px 4px;">Movies<span style="font-size: 12px; font-weight: 600; color: #6C7485;">6</span></span>
+        <span style="display: flex; align-items: center; gap: 6px; margin-left: 16px; padding: 12px 4px;">Series<span style="font-size: 12px; font-weight: 600; color: #6C7485;">3</span></span>
+        <span style="flex-grow: 1;"></span>
+        <span style="font-size: 13px; font-weight: 600; color: #6C7485;">Drag to reorder</span>
+        <span style="display: flex; align-items: center; gap: 8px; height: 36px; margin-left: 8px; padding: 0 14px; border-radius: 10px; border: 1px solid #2A3040; background: #171B23; color: #F3F5F9; font-size: 13px; font-weight: 700; box-sizing: border-box;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New group</span>
+      </div>
+
+      <section style="flex-grow: 1; min-height: 0; background: #11141A; border-radius: 16px; border: 1px solid #1B2029; display: flex; flex-direction: column; padding: 8px 12px 12px; box-sizing: border-box; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.6px; color: #6C7485;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <span>SPORTS</span><span style="font-weight: 600; letter-spacing: 0;">5</span><span style="flex-grow: 1;"></span><span style="font-weight: 700; letter-spacing: 0;">Rename</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">201</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #2B4C8C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">AS</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Arena Sports 1</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">FHD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Continental Cup · Semi-final</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 62%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">38 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="height: 2px; margin: 2px 14px; border-radius: 2px; background: #5B8CFF;"></div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; margin-left: 16px; margin-right: -4px; padding: 0 14px 0 8px; border-radius: 10px; background: #1F2430; box-shadow: 0 0 0 2px #5B8CFF, 0 12px 32px rgba(0,0,0,0.45);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#5B8CFF" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 700; color: #5B8CFF;">205</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #7A2E4D; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">FN</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 700;">Fight Night</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #2A3040; color: #A7AFBD;">4K</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #C9D0DC; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Undercard · Live from Riverside Arena</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 45%; height: 3px; border-radius: 3px; background: #5B8CFF;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #A7AFBD;">55 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">203</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #A0522D; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">VM</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Velocity Motors</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">FHD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Grand Prix Qualifying</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 80%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">12 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">204</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #1E7A6B; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">CS</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Courtside</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">HD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Harbor Kings vs Ridge City</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 15%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">1 h 52 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">206</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #3D6B2E; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">FW</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Fairway</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">HD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Coastal Classic · Round 3</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 55%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">2 h 5 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; height: 40px; margin-top: 8px; padding: 0 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.6px; color: #6C7485;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <span>NEWS</span><span style="font-weight: 600; letter-spacing: 0;">3</span><span style="flex-grow: 1;"></span><span style="font-weight: 700; letter-spacing: 0;">Rename</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">118</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #1E5E7A; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">HC</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Harbor City Local</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">HD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Evening Bulletin</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 70%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">9 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">147</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #3D5A8C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">HW</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Harborview Weather</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">HD</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; color: #A7AFBD; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Coastal Forecast</span><div style="width: 72px; height: 3px; border-radius: 3px; background: #2A3040;"><div style="width: 35%; height: 3px; border-radius: 3px; background: #6C7485;"></div></div></div>
+          </div>
+          <span style="width: 96px; text-align: right; font-size: 12px; color: #6C7485;">39 min left</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 14px 0 8px; border-radius: 10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#3A4254" style="flex-shrink: 0;"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+          <span style="width: 32px; font-size: 13px; font-weight: 600; color: #6C7485;">112</span>
+          <div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #5A2E7A; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFFFFF;">M2</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 600;">Metro 24</span><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 5px; border-radius: 5px; background: #1F2430; color: #A7AFBD;">SD</span></div>
+            <span style="font-size: 13px; color: #6C7485; font-style: italic;">No guide information</span>
+          </div>
+          <span style="width: 96px;"></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 10px; border-top: 1px solid #1F2430; font-size: 13px; color: #6C7485;">
+          <span>Press</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A7AFBD; padding: 2px 6px; border-radius: 5px; border: 1px solid #2A3040; background: #171B23;">F</span><span>on any channel, movie, or series to add it here or remove it.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

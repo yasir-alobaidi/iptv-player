@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #0A0C10; font-family: Manrope, "Segoe UI", system-ui, sans-serif; color: #F3F5F9; font-variant-numeric: tabular-nums; }
+    a { color: #5B8CFF; } a:hover { color: #86A9FF; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #0A0C10; display: flex; overflow: hidden;">
+  <nav style="position: relative; z-index: 2; width: 72px; background: #11141A; border-right: 1px solid #2A3040; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 8px; box-sizing: border-box; color: #A7AFBD;">
+    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #5B8CFF, #3A5FD0); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12-7.5z"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 2 4 4 4-4"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4M3 12h18"/></svg></div>
+    <div style="position: relative; width: 48px; height: 48px; border-radius: 12px; background: #1F2430; display: flex; align-items: center; justify-content: center; color: #5B8CFF;"><div style="position: absolute; left: -12px; top: 12px; width: 3px; height: 24px; border-radius: 3px; background: #5B8CFF;"></div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></div>
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16M8 8v12M12 6v14"/><path d="m16 6 4 14"/></svg></div>
+  </nav>
+
+  <div style="position: relative; flex-grow: 1; min-width: 0; display: flex;">
+    <div style="position: absolute; left: 0; top: 0; width: 620px; height: 900px; background: radial-gradient(80% 50% at 40% 20%, #2D6E7E 0%, #1B3F55 40%, #0F1A2A 75%, #0A0C10 100%);"></div>
+    <div style="position: absolute; left: 0; top: 0; width: 620px; height: 900px; background: linear-gradient(0deg, #0A0C10 30%, rgba(10,12,16,0.2) 100%), linear-gradient(270deg, #0A0C10 0%, rgba(10,12,16,0) 30%);"></div>
+
+    <div style="position: relative; width: 560px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px; padding: 24px 40px 40px 40px; box-sizing: border-box;">
+      <div style="align-self: flex-start; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border-radius: 999px; background: rgba(17,20,26,0.7); border: 1px solid #2A3040; font-size: 13px; font-weight: 700; color: #C9D0DC;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg><span>Series</span>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <div style="width: 200px; height: 300px; border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 24px 48px rgba(0,0,0,0.5); background: linear-gradient(160deg, #8FD3DD 0%, #2D6E7E 35%, #13304A 70%, #0B1422 100%);">
+        <div style="position: absolute; left: -20%; right: -20%; top: 46%; height: 2px; background: rgba(230,250,255,0.6); transform: rotate(-8deg);"></div>
+        <div style="position: absolute; left: 16px; right: 16px; bottom: 18px; font-size: 24px; line-height: 26px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #E9FBFF;">Glass Tide</div>
+      </div>
+      <div style="font-size: 44px; line-height: 50px; font-weight: 800; letter-spacing: -0.6px;">Glass Tide</div>
+      <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 14px; font-weight: 600; color: #C9D0DC;">
+        <span>2023 – present</span><span style="color: #3A4254;">·</span><span>3 seasons</span><span style="color: #3A4254;">·</span>
+        <span style="display: flex; align-items: center; gap: 5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB547"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>8.4</span><span style="color: #3A4254;">·</span><span>Thriller</span>
+      </div>
+      <p style="margin: 0; font-size: 15px; line-height: 24px; color: #A7AFBD; text-wrap: pretty;">A harbor inspector in a remote northern port follows a trail of falsified tide logs to a smuggling ring that reaches her own family.</p>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="height: 50px; padding: 0 22px; border-radius: 12px; background: #5B8CFF; color: #FFFFFF; display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12-7.5z"/></svg><span>Continue S2 · E4</span>
+        </div>
+        <div title="Favorite" style="width: 50px; height: 50px; border-radius: 12px; background: #171B23; border: 1px solid #2A3040; display: flex; align-items: center; justify-content: center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFB547" stroke="#FFB547" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 32px 40px 32px 8px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #A7AFBD; border-bottom: 1px solid #1F2430;">
+        <span style="padding: 12px 4px;">Season 1</span>
+        <span style="margin-left: 16px; padding: 12px 4px; color: #F3F5F9; box-shadow: inset 0 -2px 0 #5B8CFF;">Season 2</span>
+        <span style="margin-left: 16px; padding: 12px 4px;">Season 3</span>
+        <span style="flex-grow: 1;"></span><span style="font-size: 12px; font-weight: 600; color: #6C7485;">8 episodes</span>
+        <span style="display: flex; align-items: center; gap: 6px; margin-left: 16px; font-size: 13px; font-weight: 700; color: #5B8CFF;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download season</span>
+      </div>
+
+      <div style="display: flex; gap: 18px; padding: 10px; border-radius: 12px;">
+        <div style="position: relative; width: 176px; height: 99px; flex-shrink: 0; border-radius: 8px; background: linear-gradient(135deg, #3E7D8C, #14283A);"><div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #5B8CFF;"></div></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; font-weight: 700; color: #6C7485;">E1</span><span style="font-size: 16px; font-weight: 700; color: #A7AFBD;">Low Water</span><span style="flex-grow: 1;"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2FD27A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+          <span style="font-size: 13px; color: #6C7485;">52 min · Watched</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; padding: 10px; border-radius: 12px;">
+        <div style="position: relative; width: 176px; height: 99px; flex-shrink: 0; border-radius: 8px; background: linear-gradient(135deg, #5B6E8C, #1A2238);"><div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #5B8CFF;"></div></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; font-weight: 700; color: #6C7485;">E2</span><span style="font-size: 16px; font-weight: 700; color: #A7AFBD;">The Keeper's Ledger</span><span style="flex-grow: 1;"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2FD27A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+          <span style="font-size: 13px; color: #6C7485;">48 min · Watched</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; padding: 10px; border-radius: 12px;">
+        <div style="position: relative; width: 176px; height: 99px; flex-shrink: 0; border-radius: 8px; background: linear-gradient(135deg, #7C8C6A, #22301F);"><div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #5B8CFF;"></div></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; font-weight: 700; color: #6C7485;">E3</span><span style="font-size: 16px; font-weight: 700; color: #A7AFBD;">Salt Lines</span><span style="flex-grow: 1;"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2FD27A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+          <span style="font-size: 13px; color: #6C7485;">55 min · Watched</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; padding: 10px; border-radius: 12px; background: #1F2430; box-shadow: 0 0 0 2px #5B8CFF, 0 0 0 6px rgba(91,140,255,0.25);">
+        <div style="position: relative; width: 176px; height: 99px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, #2D6E7E, #0E1C2E);">
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;"><div style="width: 38px; height: 38px; border-radius: 999px; background: rgba(10,12,16,0.65); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12-7.5z"/></svg></div></div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,0.2);"><div style="width: 40%; height: 3px; background: #5B8CFF;"></div></div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px; padding-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; font-weight: 700; color: #5B8CFF;">E4</span><span style="font-size: 16px; font-weight: 800;">Undertow</span><span style="flex-grow: 1;"></span><span style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 3px 7px; border-radius: 6px; background: rgba(47,210,122,0.14); color: #2FD27A;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M5 19h14"/></svg>DOWNLOADED</span><span style="font-size: 13px; color: #A7AFBD;">31 min left</span></div>
+          <p style="margin: 0; font-size: 14px; line-height: 21px; color: #A7AFBD; text-wrap: pretty;">Iris finds the ledger's missing pages aboard the Meridian and realizes someone in the harbor office has been rewriting the tide logs.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; padding: 10px; border-radius: 12px;">
+        <div style="width: 176px; height: 99px; flex-shrink: 0; border-radius: 8px; background: linear-gradient(135deg, #4A4F7A, #151833);"></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 13px; font-weight: 700; color: #6C7485;">E5</span><span style="font-size: 16px; font-weight: 700;">Northbound</span><span style="flex-grow: 1;"></span><div title="Download" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #2A3040; display: flex; align-items: center; justify-content: center; color: #A7AFBD;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></div></div>
+          <span style="font-size: 13px; color: #6C7485;">49 min</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #0A0C10; font-family: Manrope, "Segoe UI", system-ui, sans-serif; color: #F3F5F9; font-variant-numeric: tabular-nums; }
+    a { color: #5B8CFF; } a:hover { color: #86A9FF; }
+  </style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; background: #0A0C10; overflow: hidden; display: flex;">
+  <div style="width: 72px; background: #11141A; border-right: 1px solid #2A3040;"></div>
+  <div style="flex-grow: 1; display: flex; flex-direction: column;">
+    <header style="height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 24px; border-bottom: 1px solid #1B2029; box-sizing: border-box;">
+      <div style="font-size: 22px; font-weight: 700;">Live TV</div>
+      <div style="flex-grow: 1;"></div>
+      <div title="Casting" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(91,140,255,0.16); color: #5B8CFF; border: 1px solid rgba(91,140,255,0.5);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M3 12a8 8 0 0 1 8 8M3 16a4 4 0 0 1 4 4"/><path d="M7 8h10v8h-4"/></svg>
+      </div>
+    </header>
+
+    <div style="flex-grow: 1; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px;">
+      <div style="position: relative; flex-grow: 1; border-radius: 16px; overflow: hidden; background: #11141A; border: 1px solid #1B2029;">
+        <div style="position: absolute; inset: 0; background: radial-gradient(50% 70% at 78% 40%, rgba(43,76,140,0.55) 0%, rgba(43,76,140,0) 70%), radial-gradient(40% 60% at 20% 90%, rgba(47,122,90,0.25) 0%, rgba(47,122,90,0) 70%);"></div>
+
+        <div style="position: absolute; left: 64px; top: 64px; right: 64px; bottom: 64px; display: flex; align-items: center; gap: 64px;">
+          <div style="width: 360px; height: 360px; flex-shrink: 0; border-radius: 28px; background: #2B4C8C; display: flex; align-items: center; justify-content: center; font-size: 110px; font-weight: 800; letter-spacing: -2px; color: #FFFFFF; box-shadow: 0 30px 60px rgba(0,0,0,0.45);">AS</div>
+
+          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 18px; max-width: 640px;">
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; letter-spacing: 0.8px; color: #5B8CFF;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              <span>PLAYING ON LIVING ROOM TV</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 15px; font-weight: 600; color: #A7AFBD;">201 · Arena Sports 1</span>
+              <span style="font-size: 40px; line-height: 48px; font-weight: 800; letter-spacing: -0.6px;">Continental Cup · Semi-final</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; font-size: 14px; color: #A7AFBD;">
+              <span>8:00 PM</span>
+              <div style="flex-grow: 1; height: 5px; border-radius: 5px; background: #2A3040;"><div style="width: 62%; height: 5px; border-radius: 5px; background: #5B8CFF;"></div></div>
+              <span>10:00 PM</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 12px; background: rgba(23,27,35,0.9); border: 1px solid #2A3040;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; padding: 4px 9px; border-radius: 6px; background: rgba(47,210,122,0.14); color: #2FD27A;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg>ORIGINAL QUALITY
+                </span>
+                <span style="font-size: 13px; color: #A7AFBD;">1080p · 50 fps · H.264 · AAC 2.0</span>
+              </div>
+              <span style="font-size: 13px; line-height: 19px; color: #A7AFBD;">Video and audio go to your TV untouched. Nothing is re-encoded.</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
+              <div title="Previous channel" style="width: 48px; height: 48px; border-radius: 12px; background: #1F2430; border: 1px solid #2A3040; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3F5F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></div>
+              <div title="Next channel" style="width: 48px; height: 48px; border-radius: 12px; background: #1F2430; border: 1px solid #2A3040; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3F5F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+              <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border-radius: 12px; background: #1F2430; border: 1px solid #2A3040;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3F5F9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+                <div style="width: 140px; height: 4px; border-radius: 4px; background: #2A3040;"><div style="width: 45%; height: 4px; border-radius: 4px; background: #F3F5F9;"></div></div>
+              </div>
+              <div style="flex-grow: 1;"></div>
+              <div style="height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid rgba(255,92,92,0.5); color: #FF7A7A; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span>Stop casting</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-radius: 14px; background: #171B23; border: 1px solid #2A3040;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #2B4C8C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;">AS</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 14px; font-weight: 700;">Continental Cup · Semi-final</span>
+          <span style="font-size: 12px; color: #A7AFBD;">Casting to Living Room TV · Original quality</span>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #1F2430; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#F3F5F9"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #1F2430; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#FF7A7A"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

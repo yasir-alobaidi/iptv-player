@@ -1,0 +1,181 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Live TV",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Player.dc.html",
+      "title": "Full-screen player",
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Guide.dc.html",
+      "title": "Guide",
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "MovieDetails.dc.html",
+      "title": "Movie details",
+      "x": 0,
+      "y": 1040,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "SeriesDetails.dc.html",
+      "title": "Series details",
+      "x": 1520,
+      "y": 1040,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Onboarding.dc.html",
+      "title": "Onboarding · Connect",
+      "x": 3040,
+      "y": 1040,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "CastPicker.dc.html",
+      "title": "Cast device picker",
+      "x": 0,
+      "y": 2080,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "CastingView.dc.html",
+      "title": "Casting",
+      "x": 1520,
+      "y": 2080,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "TvHome.dc.html",
+      "title": "Google TV · Home (v2)",
+      "x": 0,
+      "y": 3120,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "Home.dc.html",
+      "title": "Home",
+      "x": 0,
+      "y": 4440,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Movies.dc.html",
+      "title": "Movies (Series uses the same grid)",
+      "x": 1520,
+      "y": 4440,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Search.dc.html",
+      "title": "Search (Ctrl+K)",
+      "x": 3040,
+      "y": 4440,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Library.dc.html",
+      "title": "Library",
+      "x": 0,
+      "y": 5480,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Downloads.dc.html",
+      "title": "Library · Downloads",
+      "x": 1520,
+      "y": 5480,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Settings · Downloads and library",
+      "x": 3040,
+      "y": 5480,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Favorites.dc.html",
+      "title": "Favorites",
+      "x": 0,
+      "y": 6520,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "OnboardingSync.dc.html",
+      "title": "Onboarding · Sync",
+      "x": 1520,
+      "y": 6520,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "OnboardingCategories.dc.html",
+      "title": "Onboarding · Pick categories",
+      "x": 3040,
+      "y": 6520,
+      "w": 1440,
+      "h": 900
+    }
+  ],
+  "annotations": [
+    {
+      "id": "direction",
+      "x": 0,
+      "y": -190,
+      "w": 520,
+      "text": "Cinematic Dark — tokens live in docs/05-design-system.md.\nChannel names, programs, and titles are fictional samples."
+    },
+    {
+      "id": "casting-bar",
+      "x": 3040,
+      "y": 2080,
+      "w": 420,
+      "text": "Casting bar (bottom of Casting) stays pinned on every screen while a cast session is active."
+    },
+    {
+      "id": "tv-notes",
+      "x": 2000,
+      "y": 3120,
+      "w": 440,
+      "text": "Google TV: overscan-safe margins (96 px sides, 54 px top/bottom at 1080p), D-pad only.\nFocused tile scales 1.06 with a 4 px ring; the hero always reflects the focused item."
+    },
+    {
+      "id": "app-screens",
+      "x": 0,
+      "y": 4250,
+      "w": 760,
+      "text": "More desktop screens: Home, grids, search, library and downloads, settings, favorites, onboarding steps 3 and 4.\nDownloads and library behavior is specified in docs/09-downloads-and-library.md."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
