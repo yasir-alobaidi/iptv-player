@@ -57,21 +57,25 @@ iptv-player/
 │   ├── fake_provider/              # Dart shelf server: Xtream + M3U + XMLTV + looping streams + VOD files + fault injection
 │   ├── media_samples/              # generate.sh: synthetic test streams via ffmpeg; library_tree.sh: fake library folders (no copyrighted content)
 │   ├── soak/                       # long-run playback + fault script
-│   └── fetch_ffmpeg.sh             # downloads bundled ffmpeg/ffprobe builds
-├── third_party/ffmpeg/             # per-platform binaries (gitignored)
+│   ├── fetch_ffmpeg.sh             # downloads bundled ffmpeg/ffprobe builds
+│   └── vendor_media_kit_video.sh   # rebuilds third_party/media_kit_video from pub.dev + our patch (ADR-003)
+├── third_party/
+│   ├── ffmpeg/                     # per-platform binaries (gitignored)
+│   ├── media_kit_video/            # patched media_kit_video 2.0.1, used through dependency_overrides (committed)
+│   └── patches/                    # patches applied by tools/vendor_media_kit_video.sh
 ├── linux/  windows/  android/      # android/ used in v2
 └── pubspec.yaml
 ```
 
-## Candidate packages (verify in Phase 0: recent releases, platform support, no critical open issues)
+## Packages (chosen in Phase 0; versions in ADR-002)
 | Need | Primary | Fallback |
 |---|---|---|
 | State | flutter_riverpod + riverpod_generator | — |
 | Routing | go_router | — |
-| Database | drift + sqlite3_flutter_libs (FTS5) | — |
+| Database | drift + sqlite3 3.x (FTS5; sqlite3_flutter_libs is end-of-life) | — |
 | HTTP | dio | package:http |
 | Models | freezed + json_serializable | — |
-| Desktop video | media_kit + media_kit_video + media_kit_libs_video | fvp |
+| Desktop video | media_kit + media_kit_video (our patched copy, ADR-003) + media_kit_libs_video | fvp |
 | mDNS discovery | bonsoir | multicast_dns + manual IP |
 | Local HTTP server | shelf + shelf_router | dart:io HttpServer |
 | Cast protobuf | protobuf (generated code committed) | minimal hand-written encoder |

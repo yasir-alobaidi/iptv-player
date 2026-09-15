@@ -22,9 +22,10 @@ Usage (run from spike/cast_spike):
       [--seg-format fmp4|FMP4|none] [--content-type <mime>] [--hold <s>]
       [--seek 300,60] [--keep-app] [--label <suffix>]
       [--hls-time 2] [--min-segments 2] [--start-offset <s behind live>]
-      [--fmp4] [--vtag hvc1|hev1|none]
+      [--fmp4] [--vtag hvc1|hev1|none] [--progressive]
 Cases: h264_1080p50_aac, h264_1080p25_ac3 (HLS/TS relay-copy; --fmp4 for fMP4),
        hevc_2160p25_eac3, hevc_1080p50_aac (HLS/fMP4 relay-copy, -tag:v hvc1),
+       --progressive: any live case as one continuous fragmented MP4 (video/mp4)
        vod_file (plain MP4 over Range, BUFFERED, seek + pause test)
 Stop early: Ctrl+C, SIGTERM, or `touch results/stop`.
 ''';
@@ -135,10 +136,16 @@ Future<int> _cast(Map<String, String> opts) async {
   final fmp4 = isHevc || opts['fmp4'] != null;
   final vtag = opts['vtag'] ?? (isHevc ? 'hvc1' : 'none');
   final segFormat = opts['seg-format'] ?? (fmp4 ? 'fmp4' : 'none');
+  final progressive = !isFile && opts['progressive'] != null;
   final summary = <String, Object?>{
     'case': caseName,
     'label': label,
-    if (!isFile) ...{'fmp4': fmp4, 'vtag': vtag, 'seg_format': segFormat},
+    if (!isFile) ...{
+      'fmp4': fmp4,
+      'vtag': vtag,
+      'seg_format': segFormat,
+      'progressive': progressive,
+    },
   };
 
   final stop = Completer<String>();
@@ -185,7 +192,7 @@ Future<int> _cast(Map<String, String> opts) async {
           ? 'playlist'
           : path.endsWith('.ts') || path.endsWith('.m4s')
           ? 'segment'
-          : path.startsWith('f/')
+          : path.startsWith('f/') || path.startsWith('p/')
           ? 'file'
           : 'init';
       final key = '$kind ${r['method']} ${r['status']}';
@@ -196,7 +203,7 @@ Future<int> _cast(Map<String, String> opts) async {
       summary['receiver_origin'] ??= r['origin'];
       if (n == 1 || kind == 'file' || (r['status'] as int) >= 400) {
         final shown = path.replaceFirstMapped(
-          RegExp('^(r|f)/[0-9a-f]{32}/'),
+          RegExp('^(r|f|p)/[0-9a-f]{32}/'),
           (m) => '${m[1]}/…/',
         );
         log(
@@ -213,6 +220,8 @@ Future<int> _cast(Map<String, String> opts) async {
       'title': 'Spike B · $caseName',
       'subtitle': isFile
           ? 'direct file with Range'
+          : progressive
+          ? 'relay-copy, one continuous fMP4'
           : 'relay-copy HLS/${fmp4 ? 'fMP4' : 'TS'}',
     };
     final Json media;
@@ -221,6 +230,22 @@ Future<int> _cast(Map<String, String> opts) async {
         'contentId': relay.addFile(File('$samples/$sample')),
         'contentType': opts['content-type'] ?? 'video/mp4',
         'streamType': 'BUFFERED',
+        'metadata': metadata,
+      };
+    } else if (progressive) {
+      source = await SourceServer.start(ffmpeg, samples, runDir);
+      media = {
+        'contentId': relay.addProgressive(
+          ffmpeg,
+          progressiveArgs(
+            source.url(sample),
+            videoTag: vtag == 'none' ? null : vtag,
+          ),
+          runDir,
+          log,
+        ),
+        'contentType': opts['content-type'] ?? 'video/mp4',
+        'streamType': 'LIVE',
         'metadata': metadata,
       };
     } else {

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Build and run Spike A for one combination; results go to results/<label>.{jsonl,log}.
-# Usage: run_matrix.sh <pub|git|patched> <intel|nvidia> [wayland|x11] [spike args, default: --auto all]
+# Usage: run_matrix.sh <pub|git|patched|vendored> <intel|nvidia> [wayland|x11] [spike args, default: --auto all]
+# vendored = the app's patched copy in third_party/media_kit_video (tools/vendor_media_kit_video.sh)
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
-variant=${1:?pub|git|patched}
+variant=${1:?pub|git|patched|vendored}
 gpu=${2:?intel|nvidia}
 backend=${3:-wayland}
 shift $(( $# >= 3 ? 3 : 2 ))
@@ -22,7 +23,8 @@ case $variant in
     chmod -R u+w "$vendor/media_kit_video"
     (cd "$vendor" && patch -p1 -s < media_kit_video_egl_display.patch)
     cp patched_overrides.yaml pubspec_overrides.yaml ;;
-  *) echo "variant must be pub, git, or patched" >&2; exit 2 ;;
+  vendored) cp vendored_overrides.yaml pubspec_overrides.yaml ;;
+  *) echo "variant must be pub, git, patched, or vendored" >&2; exit 2 ;;
 esac
 # Switching media_kit sources changes the native plugin code: rebuild from clean.
 if [[ "$(cat build/.variant 2>/dev/null)" != "$variant" ]]; then flutter clean >/dev/null; fi

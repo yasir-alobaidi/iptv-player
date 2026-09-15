@@ -29,14 +29,16 @@ Read it with the Artifact tool (action: read) before building or changing UI.
 
 ## Stack
 Flutter (stable) + Dart 3 · Riverpod (code-gen) · go_router · drift (SQLite + FTS5) · dio ·
-freezed/json_serializable · media_kit (libmpv) for desktop playback · bundled FFmpeg/ffprobe subprocess relay ·
-own Cast v2 client (TLS + protobuf) · bonsoir (mDNS) · shelf (local HTTP) · window_manager · flutter_secure_storage.
-Exact packages and versions are confirmed in Phase 0 and recorded in docs/decisions.md (ADR-002).
+freezed/json_serializable · media_kit (libmpv) for desktop playback, with our patched media_kit_video in `third_party/` (ADR-003) ·
+bundled FFmpeg/ffprobe subprocess relay · own Cast v2 client (TLS + protobuf) · bonsoir (mDNS) · shelf (local HTTP) ·
+window_manager · flutter_secure_storage.
+Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO / NO-GO is ADR-007.
 
 ## Commands
 - `flutter pub get`
 - `dart run build_runner build --delete-conflicting-outputs` (after changing freezed/drift/riverpod/json code)
-- `flutter analyze` · `dart format --set-exit-if-changed .`
+- `flutter analyze` · `dart format --set-exit-if-changed lib test integration_test tools` (never format `third_party/`)
+- `tools/vendor_media_kit_video.sh` (rebuilds the patched media_kit_video after its patch changes)
 - `flutter test` (unit/widget/golden) · `flutter test integration_test` (integration, needs fake provider)
 - `flutter run -d linux` · `flutter run -d windows`
 - `dart run tools/fake_provider/bin/server.dart --port 8899` (fake IPTV server, see docs/06-quality.md)

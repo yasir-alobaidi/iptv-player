@@ -12,7 +12,7 @@ Format: ID · date · status — decision, context, alternatives, consequences.
 - Separate native apps — duplicate work
 **Consequences:** Dart across the codebase; libmpv via media_kit on desktop (fvp fallback); TV engine chosen in TV-0; casting uses our own Dart Cast v2 client and a bundled FFmpeg relay.
 
-## ADR-002 · 2026-09-15 · Accepted (media_kit provisional until ADR-003) — Package selection and versions
+## ADR-002 · 2026-09-15 · Accepted (media_kit settled by ADR-003) — Package selection and versions
 **Decision:** Toolchain Flutter 3.47.4 stable (Dart 3.13.3). Packages below, checked on pub.dev and GitHub on 2026-09-15 (latest version, release date, platform tags, open issues). Constraints use `^` on these versions; `pubspec.lock` is committed.
 
 | Need | Package (version) | Released | Notes |
@@ -22,7 +22,7 @@ Format: ID · date · status — decision, context, alternatives, consequences.
 | Database | drift 2.35.0 · drift_dev 2.35.0 (dev) · sqlite3 3.6.0 | 2026-09-09 / 09-13 | **sqlite3_flutter_libs dropped:** it is end-of-life (0.6.0+eol, does nothing). sqlite3 3.x bundles SQLite through build hooks; the default binaries are compiled with `SQLITE_ENABLE_FTS5`. Linux binaries need glibc ≥ 2.24 |
 | HTTP | dio 5.11.1 | 2026-09-04 | |
 | Models | freezed 4.0.1 (dev) · freezed_annotation 3.1.0 · json_serializable 6.14.1 (dev) · json_annotation 4.12.0 · build_runner 2.16.1 (dev) | 2026-08/09 | |
-| Desktop video | media_kit 1.2.6 · media_kit_video 2.0.1 · media_kit_libs_video 1.0.7 | 2025-12-13 | **Provisional.** Last pub release is 9 months old; main (c533e44, 2026-08-30) has unreleased Linux fixes (#1440 raster-thread block, #1446 memory leaks). Open Linux issue #1404: on Flutter ≥ 3.38 the H/W render path can fall back to S/W rendering (EGL context not current on the platform thread), confirmed by several users on Intel, AMD, NVIDIA. Also #1345 tearing on 3.38+. Spike A tests pub 1.2.6 and main@c533e44 and checks the `VideoOutput` log line; if H/W rendering or hwdec fails, compare **fvp 0.38.1** (2026-08-17). On Linux media_kit uses the system libmpv (Ubuntu 22.04: 0.34.1), which the AppImage must bundle (Phase 10) |
+| Desktop video | media_kit 1.2.6 · media_kit_video 2.0.1 · media_kit_libs_video 1.0.7 | 2025-12-13 | **Settled by ADR-003:** pub 1.2.6 with our patched media_kit_video from `third_party/`. Checked 2026-09-15: the last pub release is 9 months old; main (c533e44, 2026-08-30) has unreleased Linux fixes (#1440 raster-thread block, #1446 memory leaks). Open Linux issue #1404: on Flutter ≥ 3.38 the H/W render path can fall back to S/W rendering (EGL context not current on the platform thread), confirmed by several users on Intel, AMD, NVIDIA. Also #1345 tearing on 3.38+. Spike A tests pub 1.2.6 and main@c533e44 and checks the `VideoOutput` log line; if H/W rendering or hwdec fails, compare **fvp 0.38.1** (2026-08-17). On Linux media_kit uses the system libmpv (Ubuntu 22.04: 0.34.1), which the AppImage must bundle (Phase 10) |
 | mDNS | bonsoir 7.1.5 | 2026-08-11 | Linux uses Avahi over D-Bus. Watch Windows #156 (possible deadlock in `BonsoirDiscovery.stop()`). Fallback multicast_dns 0.3.3+1 + manual IP |
 | Local HTTP | shelf 1.4.2 · shelf_router 1.1.4 | 2024-06 / 2023-05 | Old releases, but dart-lang maintained and stable; no open blockers |
 | Cast protobuf | protobuf 6.1.0 · protoc_plugin 25.1.0 (dev tool, generated code committed) | 2026-09-11 | Needs `protoc` once (apt `protobuf-compiler`). If that's a hassle, the fallback hand-written encoder is small: CastMessage has 7 fields |
@@ -146,11 +146,13 @@ NVIDIA, native Wayland. Cells: hwdec-current · first frame (ms) · process CPU 
 
 **Decision (user, 2026-09-15): ship the fix as a pinned patched fork of media_kit_video.** The app depends on our fork with `spike/vendor/media_kit_video_egl_display.patch` applied, pinned to a commit, until upstream fixes #1404. We don't post the patch upstream (it would go out under the user's account) unless the user asks. fvp stays the fallback only if Windows fails.
 
+**Where the fork lives (user, 2026-09-15, step 6):** in this repo, not on GitHub. `third_party/media_kit_video` is media_kit_video 2.0.1 from pub.dev (without `example/`) plus `third_party/patches/media_kit_video-2.0.1-egl-display.patch`, rebuilt reproducibly by `tools/vendor_media_kit_video.sh`; the repo's commits pin it, and the app points `dependency_overrides` at it (Phase 1). The production patch is the spike patch without its diagnostics: no `SPIKE PATCH` prints, one neutral log line (`No current EGL context; using GDK's EGLDisplay …`), and no misleading `Failed to query Flutter's EGL config ID` error when there's no context to query. Checked with `run_matrix.sh vendored intel wayland`: H/W rendering and zero-copy `vaapi`; H.264 1080p50 first frame 534 ms, 1.5 % CPU, 0 drops; HEVC 4K 392 ms, 1.9 % CPU, 0 drops. Upstream media_kit_video isn't formatted to our settings (`dart format` would change 20 of its files), so the app's format and analyze steps leave `third_party/` out.
+
 **Windows (user, 2026-09-15):** a real Windows PC exists but isn't available yet. The Windows run is deferred and doesn't block step 4 on Linux.
 
-**Status:** done for Linux. Intel and NVIDIA play zero-copy with the patch on native Wayland and Xorg; the one exception is XWayland (Finding 3). fvp isn't needed. Still open: the Windows run, when the PC is available. The GO/NO-GO is step 6.
+**Status:** done for Linux. Intel and NVIDIA play zero-copy with the patch on native Wayland and Xorg; the one exception is XWayland (Finding 3). fvp isn't needed. Still open: the Windows run, when the PC is available. The GO/NO-GO is ADR-007.
 
-## ADR-004 · 2026-09-15 · Done for step 5 (one device) — Casting spike results, device model(s), verified LOAD fields
+## ADR-004 · 2026-09-15 · Done (one device) — Casting spike results, device model(s), verified LOAD fields
 **Setup:** "Living Room TV", a Chromecast with Google TV (4K) (model from the user; mDNS only says `md=Chromecast`) on a Samsung 4K TV: Android 14 build UTTC.250917.004, cast build 3.72.446070, receiver user agent `Chrome/92.0.4515.0 … CrKey/1.56.500000 DeviceType/AndroidTV`. The laptop is on 5 GHz Wi-Fi (540 Mbit/s, 192.168.1.254/24), the device at 192.168.1.155. The user's second Google TV doesn't answer on the network; they chose to test one device. `spike/cast_spike` is a Dart CLI: multicast_dns discovery, our own Cast v2 client (protobuf `CastMessage`, TLS to port 8009), a shelf relay server on the LAN address (port 38400), and the docs/04 FFmpeg relay (bundled 8.1.2) reading a loopback provider that plays each sample as an endless real-time MPEG-TS stream (`-re -stream_loop -1`). Results in `spike/cast_spike/results/` (gitignored). The user watched the TV and reported picture and sound for the key runs. Testing stopped at the user's request; any further TV test needs their OK first.
 
 **Finding 1: discovery works next to avahi-daemon.** multicast_dns found both Cast devices on the LAN in 5.0 s (the TV and a Nest Mini speaker) with avahi-daemon running, so the two coexist (ADR-006). `md` is just `Chromecast` on this 4K Google TV model, the same string older 1080p Chromecasts use, so docs/04 can't seed HEVC or 4K support from the model name. The `ca` bitmask does separate video devices: bit 0 (video out) is set on the TV (465413) and not on the Nest Mini (198660).
@@ -187,13 +189,15 @@ The relay lists its first 2 segments 3.6–4.9 s after it starts. Receiver reque
 | hevc_2160p25_eac3 | one continuous fragmented MP4 (docs/04 low-latency mode) | clean |
 | h264_1080p50_aac (with B-frames) | HLS fMP4 | clean |
 
-x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "HEVC → HLS with fMP4 segments" can't be the only HEVC path. Candidate: one continuous fragmented MP4 response for HEVC; it needs a TV test, with the user's OK. The Cast docs say HEVC isn't supported in TS (not tested).
+x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "HEVC → HLS with fMP4 segments" can't be the only HEVC path. **Confirmed on the TV in step 6**, with the clean-looping source from Finding 8: HLS fMP4 segments still stutter (user), while the same source as one continuous fragmented MP4 response (`/p/<token>/stream.mp4`, `video/mp4`, `LIVE`) plays smoothly (user): PLAYING 3.3 s after LOAD, one HTTP request for the whole 90 s, 3840×2160. MEDIA_STATUS looked alike for both (BUFFERING 2–4 % of the time), so only watching told them apart. The app sends HEVC as one continuous fragmented MP4 (docs/04). The Cast docs say HEVC isn't supported in TS (not tested).
 
-**Finding 8: the spike's looping test source breaks at each loop.** `-stream_loop -1` on a TS sample with B-frames corrupts video timestamps where the file wraps: on the 30 s H.264 4K sample, a 0.76 s jump, 16 lost frames, and 2 decode errors per wrap, while audio stays continuous. The TV's segment requests stalled for 3–4 s at the wraps (around 30 s and 60 s into the run), matching the freeze the user saw. The relay copies the fault unchanged, so it's a test-source problem; the Phase 1 fake provider must loop cleanly (longer samples or re-timestamped loops).
+**Finding 8: the spike's looping test source breaks at each loop.** `-stream_loop -1` on a TS sample with B-frames corrupts video timestamps where the file wraps: on the 30 s H.264 4K sample, a 0.76 s jump, 16 lost frames, and 2 decode errors per wrap, while audio stays continuous. The TV's segment requests stalled for 3–4 s at the wraps (around 30 s and 60 s into the run), matching the freeze the user saw. The relay copies the fault unchanged, so it's a test-source problem. Looping an MKV remux instead removes almost all of it (laptop: all 1500 packets, one gap under 0.1 s, and 4 instead of 102 decode errors per wrap on HEVC 4K), and in step 6 the same H.264 4K cast ran 110 s on the TV with no freeze (user). The spike and docs/06 now loop MKV remuxes.
 
-**Verified LOAD fields** (Google Cast docs, checked 2026-09-15; device results above): LOAD carries `media`, `autoplay`, `currentTime`; `media` has `contentId` (the URL; an optional `contentUrl` overrides it), `contentType` (`application/x-mpegurl` for HLS and `video/mp4` for files both played), `streamType` `LIVE` / `BUFFERED`, `metadata` (`metadataType` 0, `title`, `subtitle`), and `hlsSegmentFormat` / `hlsVideoSegmentFormat`, documented as "only required for HLS content playback using MPL". SEEK takes `currentTime` and `resumeState` `PLAYBACK_START`. Shaka Player replaced MPL as the Web Receiver's default HLS player in 2026 (release notes: SDK 3.0.0150, April), and this receiver ignores the segment-format fields: HEVC fMP4 plays with `"fmp4"`, `"FMP4"`, `"bogus"`, or no field. The `"fmp4"` vs `"FMP4"` question doesn't matter on current receivers; step 6 decides whether to send the fields at all.
+**Finding 9: a continuous stream's end is final.** Step 6 killed the relay FFmpeg 25 s into a continuous fMP4 cast. The HTTP response ended; the TV didn't reconnect, played out about 4 s of buffer, and reported IDLE/FINISHED (the user reported that it kept playing, most likely before the buffer ran out). So on this path a relay restart or provider drop needs a new LOAD from the coordinator, while HLS lets the receiver keep polling a restarted relay (docs/04 Supervisor).
 
-**Status:** done for step 5 on one device. Still open: a TV test of HEVC as one continuous fragmented MP4, the second Google TV, and a cleanly looping fake provider (Phase 1). GO / NO-GO is step 6.
+**Verified LOAD fields** (Google Cast docs, checked 2026-09-15; device results above): LOAD carries `media`, `autoplay`, `currentTime`; `media` has `contentId` (the URL; an optional `contentUrl` overrides it), `contentType` (`application/x-mpegurl` for HLS and `video/mp4` for files both played), `streamType` `LIVE` / `BUFFERED`, `metadata` (`metadataType` 0, `title`, `subtitle`), and `hlsSegmentFormat` / `hlsVideoSegmentFormat`, documented as "only required for HLS content playback using MPL". SEEK takes `currentTime` and `resumeState` `PLAYBACK_START`. Shaka Player replaced MPL as the Web Receiver's default HLS player in 2026 (release notes: SDK 3.0.0150, April), and this receiver ignores the segment-format fields: HEVC fMP4 plays with `"fmp4"`, `"FMP4"`, `"bogus"`, or no field. The `"fmp4"` vs `"FMP4"` question doesn't matter on current receivers, and the app doesn't send the fields (docs/04).
+
+**Status:** done on one device. Step 6 confirmed Findings 7 and 8 on the TV and added Finding 9. Still open: the second Google TV, and a path for HEVC library files (Phase 8). GO / NO-GO: ADR-007.
 
 ## ADR-005 · 2026-09-15 · Accepted — Downloads and local library in v1
 **Decision:** v1 downloads provider movies and episodes and manages a library of the user's own video files; both play offline and cast to Chromecast / Google TV. New Phase 8; settings/polish and packaging move to Phases 9 and 10. Spec: docs/09.
@@ -210,3 +214,36 @@ x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "H
 - Make the cast spike a Flutter app just to use bonsoir — slower to iterate, and discovery isn't the risky part of Spike B
 - Manual IP only — leaves discovery untested
 **Consequences:** Spike B proves the mDNS query and TXT fields; bonsoir itself (Avahi on Linux, Windows issue #156) is verified in Phase 7. multicast_dns binds UDP 5353 next to avahi-daemon; Spike B records whether both work together.
+
+## ADR-007 · 2026-09-15 · Proposed (awaiting the user's OK) — Phase 0 GO / NO-GO: GO for Linux
+**Decision:** GO. Build the app on the stack in ADR-001 and ADR-002, on Linux first; Windows follows once a real Windows PC confirms hardware decoding.
+
+**Exit criteria** (docs/08, Phase 0):
+
+| Criterion | Result |
+|---|---|
+| Hardware decoding for H.264 and HEVC on Linux | met: zero-copy on Intel (`vaapi`) and NVIDIA (`nvdec`), Wayland and Xorg, with our patched media_kit_video (ADR-003); rechecked from `third_party/media_kit_video` |
+| Hardware decoding on Windows | open: no Windows PC yet; not a Linux blocker |
+| Zap time measured | met: p50 / p95 320 / 597 ms over loopback (budget 1.5 / 3 s) |
+| An H.264 sample casts with `-c:v copy`, plus HEVC if the device supports it | met: H.264 1080p50, 1080p25 (AC-3 → AAC), and 4K over HLS/TS; HEVC 1080p and 4K (ADR-004) |
+| A local MP4 casts as a plain file with working seeking | met: Range requests, each seek playing from the target within 200 ms |
+| ADR-002, ADR-003, ADR-004 written | met |
+
+**Choices the app builds on:**
+- media_kit 1.2.6 from pub with our patched media_kit_video 2.0.1 in `third_party/media_kit_video`, rebuilt by `tools/vendor_media_kit_video.sh` (ADR-003)
+- Casting through our own Cast v2 client, the Default Media Receiver, and the bundled FFmpeg relay: H.264 relay-copy as HLS/TS; HEVC relay-copy as one continuous fragmented MP4, because open-GOP HEVC stutters in HLS fMP4 segments; IDLE/FINISHED on a live continuous stream means a new LOAD (docs/04, ADR-004)
+- Device capabilities are learned from failures, not trusted from `md`; a bare LOAD_FAILED on a 4K stream can mean a 1080p HDMI link
+- The fake provider loops MKV remuxes of the samples (docs/06)
+
+**Risks carried forward:**
+- media_kit upstream is quiet (last pub release December 2025) and #1404 is unfixed, so we carry a patch; recheck pub each phase
+- Windows hardware decoding is unverified (Phase 10 at the latest)
+- A relay restart or provider drop restarts a continuous-fMP4 cast visibly, while HLS/TS rides through; Phase 7's matrix measures both
+- HEVC library files need a path other than HLS fMP4 segments (Phase 8)
+- Casting was tested on one device (Chromecast with Google TV 4K); the user's second Google TV and other models weren't
+
+**Alternatives rejected:**
+- NO-GO or switching to fvp: the patch fixes media_kit on Linux; fvp stays the fallback only if Windows fails
+- Transcoding all HEVC to H.264 for casting: GPU cost and quality loss when a copy path plays smoothly
+
+**Consequences:** Phase 1 starts after the user's OK. Its root `analysis_options.yaml` excludes `third_party/**` and `spike/**`, `pubspec.yaml` points `dependency_overrides` at `third_party/media_kit_video`, and formatting covers first-party folders only (`dart format --set-exit-if-changed lib test integration_test tools`), because upstream media_kit_video isn't formatted to our settings.

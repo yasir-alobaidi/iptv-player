@@ -14,14 +14,20 @@ dart run bin/cast_spike.dart cast --case <case> --host <ip> [options]
   segments); `hevc_2160p25_eac3`, `hevc_1080p50_aac` → HLS/fMP4 with `-tag:v hvc1` (`--vtag hev1|none`);
   `vod_file` → `vod_h264_aac_10min.mp4` as a plain file with Range (`BUFFERED`), then seeks (`--seek 300,60`)
   and a pause/resume
+- `--progressive`: any live case as one continuous fragmented MP4 instead of HLS (`/p/<token>/stream.mp4`,
+  `video/mp4`, `LIVE`; the docs/04 low-latency mode). Each request starts its own FFmpeg, killed when the
+  receiver disconnects
 - Options: `--seg-format fmp4|FMP4|none|<any>` (sets `hlsSegmentFormat` and `hlsVideoSegmentFormat`),
   `--content-type`, `--hold <s>`, `--keep-app` (leave the receiver app open for the next run), `--label <suffix>`,
   `--hls-time`, `--min-segments` (LOAD after N segments), `--start-offset` (adds `#EXT-X-START`; not tried on a
   device)
-- HLS cases: a loopback "provider" plays the sample as an endless real-time MPEG-TS stream
-  (`-re -stream_loop -1`; its loop point breaks video timestamps, ADR-004 Finding 8), the relay runs the docs/04
-  FFmpeg command against it over HTTP, and a shelf server on the LAN address serves `/r/<token>/…` and
-  `/f/<token>/media.mp4` with CORS. LOAD goes out once the playlist lists 2 segments
+- Live cases: a loopback "provider" plays the sample as an endless real-time MPEG-TS stream from an MKV remux
+  cached in `results/loop_cache/` (looping the `.ts` itself breaks video timestamps at every wrap, ADR-004
+  Finding 8). The relay runs the docs/04 FFmpeg command against it over HTTP, and a shelf server on the LAN
+  address serves `/r/<token>/…`, `/f/<token>/media.mp4`, and `/p/<token>/stream.mp4` with CORS. HLS LOAD goes
+  out once the playlist lists 2 segments
+- `tool/progressive_smoke.dart <sample.ts> [hvc1]` serves one continuous fMP4 on 127.0.0.1 for checks without
+  a TV (fetch it with curl, inspect with ffprobe)
 - `h264_2160p25_aac.ts` isn't made by `tools/media_samples/generate.sh`. Create it from the repo root with:
   ```bash
   third_party/ffmpeg/linux-x64/ffmpeg -f lavfi -i testsrc2=size=3840x2160:rate=25 \

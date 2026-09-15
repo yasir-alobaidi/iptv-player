@@ -57,7 +57,9 @@ Future<void> _terminate(Process p) async {
 }
 
 /// Loopback stand-in for a provider: a sample as an endless real-time MPEG-TS
-/// stream (`-re -stream_loop -1 -c copy`), one ffmpeg per request.
+/// stream (`-re -stream_loop -1 -c copy`), one ffmpeg per request. It loops an
+/// MKV remux of the sample: looping the TS file itself breaks video timestamps
+/// at every wrap (ADR-004 Finding 8).
 class SourceServer {
   SourceServer._(this._server, this._ffmpeg, this._samplesDir, this._runDir);
 
@@ -91,9 +93,10 @@ class SourceServer {
       await req.response.close();
       return;
     }
+    final loop = await _loopable(file);
     final p = await Process.start(_ffmpeg, [
       ...['-hide_banner', '-loglevel', 'error', '-nostdin'],
-      ...['-re', '-stream_loop', '-1', '-i', file.path],
+      ...['-re', '-stream_loop', '-1', '-i', loop.path],
       ...['-map', '0:v:0', '-map', '0:a:0?', '-c', 'copy', '-f', 'mpegts'],
       'pipe:1',
     ]);
@@ -117,6 +120,25 @@ class SourceServer {
         // Already closed.
       }
     }
+  }
+
+  Future<File> _loopable(File sample) async {
+    final name = sample.uri.pathSegments.last;
+    final base = name.substring(0, name.lastIndexOf('.'));
+    final mkv = File('${_runDir.parent.path}/loop_cache/$base.mkv');
+    if (mkv.existsSync()) return mkv;
+    mkv.parent.createSync(recursive: true);
+    final part = File('${mkv.path}.part');
+    final r = await Process.run(_ffmpeg, [
+      ...['-hide_banner', '-loglevel', 'error', '-nostdin', '-y'],
+      ...['-i', sample.path, '-map', '0:v:0', '-map', '0:a:0?', '-c', 'copy'],
+      ...['-f', 'matroska', part.path],
+    ]);
+    if (r.exitCode != 0) {
+      throw StateError('remuxing $name for looping failed: ${r.stderr}');
+    }
+    part.renameSync(mkv.path);
+    return mkv;
   }
 
   Future<void> close() async {
@@ -193,6 +215,19 @@ class HlsRelay {
   }
 }
 
+/// docs/04 low-latency mode: one continuous fragmented MP4; append `pipe:1`.
+List<String> progressiveArgs(String sourceUrl, {String? videoTag}) => [
+  ...['-hide_banner', '-loglevel', 'warning', '-nostdin'],
+  ...['-user_agent', 'iptv-player cast_spike'],
+  ...['-reconnect', '1', '-reconnect_streamed', '1'],
+  ...['-reconnect_on_network_error', '1', '-reconnect_delay_max', '5'],
+  ...['-fflags', '+genpts+discardcorrupt', '-i', sourceUrl],
+  ...['-map', '0:v:0', '-map', '0:a:0?', '-c:v', 'copy'],
+  ...['-c:a', 'aac', '-b:a', '192k', '-ac', '2'],
+  if (videoTag != null) ...['-tag:v', videoTag],
+  ...['-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov+default_base_moof'],
+];
+
 String mimeFor(String name) =>
     switch (name.substring(name.lastIndexOf('.') + 1).toLowerCase()) {
       'm3u8' => 'application/vnd.apple.mpegurl',
@@ -210,8 +245,9 @@ const _corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 };
 
-/// docs/04 relay server: `/r/<token>/<file>` (HLS session dir) and
-/// `/f/<token>/media.<ext>` (plain file with Range), CORS on everything.
+/// docs/04 relay server: `/r/<token>/<file>` (HLS session dir),
+/// `/f/<token>/media.<ext>` (plain file with Range), and `/p/<token>/stream.mp4`
+/// (one continuous fragmented MP4 per request), CORS on everything.
 class RelayServer {
   RelayServer._(this._server, this.host);
 
@@ -226,6 +262,9 @@ class RelayServer {
       })
       ..get('/f/<token>/<name>', (Request r, String t, String n) {
         return relay._file(r, t, n);
+      })
+      ..get('/p/<token>/<name>', (Request r, String t, String n) {
+        return relay._stream(t, n);
       });
     Handler handler(Handler inner) => (req) async {
       final sw = Stopwatch()..start();
@@ -262,6 +301,12 @@ class RelayServer {
   final _hls = <String, Directory>{};
   final _files = <String, File>{};
   final _startOffsets = <String, double>{};
+  final _streams =
+      <
+        String,
+        ({String ffmpeg, List<String> args, Directory runDir, Log log})
+      >{};
+  final _procs = <Process>{};
 
   String get origin => 'http://$host:${_server.port}';
 
@@ -277,6 +322,62 @@ class RelayServer {
     final token = newToken();
     _files[token] = file;
     return '$origin/f/$token/media${_ext(file.path)}';
+  }
+
+  /// Each GET starts its own `ffmpeg <args> pipe:1` and streams the output; the
+  /// process is killed when the receiver disconnects.
+  String addProgressive(
+    String ffmpeg,
+    List<String> args,
+    Directory runDir,
+    Log log,
+  ) {
+    final token = newToken();
+    _streams[token] = (ffmpeg: ffmpeg, args: args, runDir: runDir, log: log);
+    return '$origin/p/$token/stream.mp4';
+  }
+
+  Future<Response> _stream(String token, String name) async {
+    final s = _streams[token];
+    if (s == null || name != 'stream.mp4') return Response.notFound(null);
+    final p = await Process.start(s.ffmpeg, [...s.args, 'pipe:1']);
+    _procs.add(p);
+    final pidFile = _writePid(s.runDir, 'progressive', p.pid);
+    s.log('progressive: ffmpeg ${p.pid} started');
+    p.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((l) => s.log('[progressive ffmpeg] $l'));
+    void cleanup() {
+      if (!_procs.remove(p)) return;
+      p.kill(ProcessSignal.sigkill);
+      if (pidFile.existsSync()) pidFile.deleteSync();
+      s.log('progressive: ffmpeg ${p.pid} stopped');
+    }
+
+    late final StreamSubscription<List<int>> sub;
+    final out = StreamController<List<int>>();
+    out.onListen = () {
+      sub = p.stdout.listen(
+        out.add,
+        onError: out.addError,
+        onDone: () {
+          cleanup();
+          out.close();
+        },
+      );
+    };
+    out.onPause = () => sub.pause();
+    out.onResume = () => sub.resume();
+    out.onCancel = () {
+      cleanup();
+      return sub.cancel();
+    };
+    return Response.ok(
+      out.stream,
+      headers: {'Content-Type': 'video/mp4', 'Cache-Control': 'no-cache'},
+      context: {'shelf.io.buffer_output': false},
+    );
   }
 
   Response _hlsFile(String token, String name) {
@@ -351,7 +452,12 @@ class RelayServer {
     );
   }
 
-  Future<void> close() => _server.close(force: true);
+  Future<void> close() async {
+    for (final p in _procs.toList()) {
+      p.kill(ProcessSignal.sigkill);
+    }
+    await _server.close(force: true);
+  }
 }
 
 String _ext(String path) => path.substring(path.lastIndexOf('.'));

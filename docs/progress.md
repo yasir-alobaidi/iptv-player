@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 0 — Environment & spikes. Steps 1–4 done (step 4 on Linux; the Windows run is deferred until your PC is available). **Step 5 (Spike B, casting) done on one device:** our own Cast v2 client and FFmpeg relay play H.264 and HEVC on your Chromecast with Google TV (4K), and a plain MP4 casts with working seeks (ADR-004). One follow-up: 4K HEVC stutters over HLS fMP4 (an FFmpeg segmenting fault with open-GOP HEVC); the likely fix needs a TV test with your OK. Waiting for your OK before step 6 (GO / NO-GO).
+Phase 0 — Environment & spikes. **All six steps done; GO for Linux proposed in ADR-007, waiting for your OK before Phase 1.** Playback: zero-copy hardware decoding on Intel and NVIDIA with our patched media_kit_video, now kept in `third_party/` (ADR-003). Casting: H.264 and HEVC relay-copy, and a plain file with seeks, work on your Chromecast with Google TV (4K); HEVC goes out as one continuous fragmented MP4 (ADR-004). The Windows run is deferred until your PC is available.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -23,36 +23,40 @@ Phase 0 — Environment & spikes. Steps 1–4 done (step 4 on Linux; the Windows
 - 2026-09-15: Phase 0 step 4, native Wayland on **NVIDIA**: unpatched hits #1404 again (`nvdec-copy`, up to 117 % of one core on HEVC 4K, zap 541/823 ms); **patched: zero-copy `nvdec`, 0 drops, ≤ 2.7 % CPU, zap 342/624 ms**, process on the GPU. You watched a short patched run and saw moving video on H.264 1080p50 and HEVC 4K, so NVIDIA's picture is confirmed. ADR-003 is done for Linux
 - 2026-09-15: Git history: Co-Authored-By trailers removed from all 5 commits (you force-pushed); commits carry no trailers from now on
 - 2026-09-15: Phase 0 step 5 (Spike B): `spike/cast_spike` (multicast_dns discovery, own Cast v2 client, shelf relay and Range server, FFmpeg relay with PID files). On "Living Room TV" (Chromecast with Google TV 4K on a Samsung 4K TV), with you watching: **H.264 1080p50 and 1080p25 (AC-3 → AAC) play smoothly over HLS/TS relay-copy; HEVC 1080p plays over HLS/fMP4; `vod_h264_aac_10min.mp4` casts as a plain file with Range, and both seeks and the pause work.** 4K failed with a bare LOAD_FAILED until you turned on Input Signal Plus; then H.264 and HEVC 4K both play, but **4K HEVC stutters**: open-GOP HEVC breaks FFmpeg's HLS fMP4 segments (proven on the laptop; one continuous fragmented MP4 is clean). The receiver (Shaka) ignores `hlsSegmentFormat`, and its BUFFERING reports aren't stalls. Details in ADR-004
-- 2026-09-15: TV testing stopped at your request; any further test on Living Room TV waits for your OK
+- 2026-09-15: TV testing stopped at your request; later that day you allowed it again for step 6
+- 2026-09-15: Phase 0 step 6, TV tests with you watching: **the 4K HEVC stutter is fixed** by sending HEVC as one continuous fragmented MP4 (smooth), while HLS fMP4 segments still stutter with the same source. The spike's test source now loops MKV remuxes, and the H.264 4K freeze is gone. Cutting a continuous stream makes the TV report FINISHED without reconnecting, so the app re-LOADs (ADR-004 Findings 7–9)
+- 2026-09-15: Patched media_kit_video now lives in this repo (your choice): `third_party/media_kit_video` = media_kit_video 2.0.1 + `third_party/patches/media_kit_video-2.0.1-egl-display.patch` (the spike patch without its debug prints), rebuilt by `tools/vendor_media_kit_video.sh`. The playback spike built against it (`run_matrix.sh vendored`) keeps zero-copy `vaapi`: H.264 1080p50 1.5 % CPU, HEVC 4K 1.9 %, 0 drops
+- 2026-09-15: Phase 0 step 6 docs: **ADR-007 (GO for Linux, proposed)**; ADR-002/003/004 updated; docs/03 (patched fork, `cache-on-disk`, deinterlace Auto, XWayland), docs/04 (HEVC as continuous fMP4, learning max resolution, BUFFERING isn't a stall, `ca` bit 0, re-LOAD after FINISHED, no segment-format fields), docs/06 (MKV looping, CI format scope), docs/01, docs/setup.md (current machine state, Samsung Input Signal Plus), CLAUDE.md
 
 ## In progress
-- Nothing. Step 5 is done; waiting for your OK to start step 6
+- Nothing. Step 6 is done; waiting for your OK on the GO decision (ADR-007) to start Phase 1
 
 ## Next
-1. You: OK step 5
-2. Phase 0 step 6 — GO / NO-GO for Linux; update docs/03, docs/04 (second HEVC path, 4K learning, BUFFERING, device capability hints), and docs/setup.md (Samsung Input Signal Plus); set up the pinned patched media_kit_video fork
-3. With your OK: cast 4K HEVC as one continuous fragmented MP4 on Living Room TV (the likely stutter fix)
-4. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. You: OK the GO decision (ADR-007)
+2. Phase 1 — Foundation (docs/08). From Phase 0: `dependency_overrides` → `third_party/media_kit_video`; root `analysis_options.yaml` excludes `third_party/**` and `spike/**`; format and CI cover first-party folders only; the fake provider loops MKV remuxes
+3. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## Open questions
 - Your second Google TV doesn't answer on the network (only "Living Room TV" and a Nest Mini do). Is it on another network, and should later casting tests include it?
-- Windows test machine: a real PC exists but isn't available yet (2026-09-15). The Windows spike run is deferred until it is; the step 6 GO/NO-GO covers Linux only and lists this as open
+- Windows test machine: a real PC exists but isn't available yet (2026-09-15). The Windows spike run is deferred until it is; the GO in ADR-007 covers Linux only and lists this as open
 - App name and icon (placeholder: "IPTV Player", Dart package `iptv_player`)
 
 ## Known issues
-- media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11). Our patch fixes it; upstream has no fix yet (NVIDIA too: unpatched falls back to `nvdec-copy` and heavy CPU)
+- media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11), NVIDIA included. Upstream has no fix yet; we carry the patch in `third_party/media_kit_video`
 - Zero-copy VA-API fails under XWayland (`GDK_BACKEND=x11` inside a Wayland session): Ubuntu 22.04's libva-x11 only supports DRI2 and XWayland only DRI3, so mpv uses `vaapi-copy`: dropped frames at 50 fps, audio underruns, VOD first frame about 5.5 s, zap p95 3.3 s. Native Wayland and a real Xorg session are both fine
-- NVIDIA startup logs one `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION`, and the patched build on Wayland logs `Failed to query Flutter's EGL config ID` (no visible effect from either)
+- NVIDIA startup logs one `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION` (no visible effect). The spike patch's `Failed to query Flutter's EGL config ID` message is gone in the `third_party` patch
 - NVIDIA on native Wayland uses about twice the CPU of Xorg (2.7 vs 1.1 % on H.264 1080p50, one run each); far under budget, not investigated
 - Spike tooling: `run_matrix.sh` exits 0 even when the app can't open a display (seen once after the reboot, when the Wayland run started on an Xorg session); check the log has a `done` event
 - libmpv 0.34.1: `deinterlace` is yes/no only (the app implements Auto from `video-frame-info/interlaced`); media_kit sets `subs-fallback`, which doesn't exist in 0.34.1 (one harmless error); every open logs `Failed to create file cache` (Phase 3: set `cache-on-disk=no`)
 - `hwdec=auto-safe` doesn't GPU-decode MPEG-2 (SD MPEG-2 costs about 1 % CPU)
 - BtbN's `latest` FFmpeg release is rebuilt daily; set `FFMPEG_TAG` to a dated autobuild tag to pin a build before packaging
-- Open-GOP HEVC (x265's default: CRA keyframes with leading frames) relayed with `-c:v copy` into HLS fMP4 segments gets a duplicated frame time and a two-frame gap at every cut (FFmpeg 8.1.2), which stutters on the TV. HLS TS and one continuous fragmented MP4 are clean; H.264 is unaffected (ADR-004 Finding 7)
+- Upstream media_kit_video isn't formatted to our `dart format` settings (20 of its files would change): format first-party folders only, never `third_party/`
+- Open-GOP HEVC (x265's default: CRA keyframes with leading frames) relayed with `-c:v copy` into HLS fMP4 segments gets a duplicated frame time and a two-frame gap at every cut (FFmpeg 8.1.2) and stutters on the TV. The app sends HEVC as one continuous fragmented MP4 instead (smooth on the TV). HEVC library files still need a seekable path (Phase 8)
+- A continuous fMP4 cast can't ride through a relay restart or provider drop: the TV plays out about 4 s of buffer and reports FINISHED without reconnecting, so the coordinator re-LOADs (a visible restart). HLS/TS casts keep polling through a restart
 - 4K casting needs the TV's full-bandwidth HDMI mode (Samsung: Input Signal Plus). Without it, the Chromecast refuses every 4K stream with a bare LOAD_FAILED
 - The Chromecast with Google TV 4K reports `md=Chromecast` over mDNS, like 1080p-only Chromecasts, so the model name can't tell whether HEVC or 4K is supported
-- On live HLS the receiver reported BUFFERING 31 % of the time (46 % in an unwatched run) with no visible or audible stall; don't use it as a stall signal
-- Spike test source: `-stream_loop -1` on TS samples with B-frames breaks video timestamps at every loop (a few-second freeze on the TV); the Phase 1 fake provider must loop cleanly
+- On live HLS the receiver reported BUFFERING 31 % of the time (46 % in an unwatched run) with no visible or audible stall, and a stuttering HEVC cast still looked normal in MEDIA_STATUS; don't use it as a stall or quality signal
+- Looping a TS sample with `-stream_loop -1` breaks video timestamps at every wrap. The spike (and docs/06's fake provider) loop MKV remuxes instead; a wrap still leaves one gap under 0.1 s and a few decode errors
 - Cast spike runs with `--keep-app` leave the Default Media Receiver open on the TV; press Home on the remote to close it
 - Resolved in step 5: `"fmp4"` vs `"FMP4"` for `hlsSegmentFormat` doesn't matter; the current receiver ignores the field
 
@@ -63,7 +67,7 @@ Phase 0 — Environment & spikes. Steps 1–4 done (step 4 on Linux; the Windows
 | Sync 50k channels + 30k movies | ≤ 60 s | — | — |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
-| H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |
+| H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |
 | 8 h soak memory growth | ≤ 50 MB | — | — |
 | Library scan, 5,000 new files | ≤ 5 min | — | — |
 | Download speed vs curl | ≥ 90 % | — | — |

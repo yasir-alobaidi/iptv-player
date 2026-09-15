@@ -1,0 +1,5 @@
+# Copied to pubspec_overrides.yaml by run_matrix.sh for the "vendored" variant: pub media_kit 1.2.6
+# with the app's patched copy in third_party/media_kit_video (tools/vendor_media_kit_video.sh, ADR-003).
+dependency_overrides:
+  media_kit_video:
+    path: ../../third_party/media_kit_video

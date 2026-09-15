@@ -26,7 +26,7 @@
 `dart run tools/fake_provider/bin/server.dart --port 8899 --profile default`
 - Xtream endpoints from docs/02 backed by generated data with configurable counts (e.g., 50,000 channels, 30,000 movies, 3,000 series) and quirk toggles (numbers as strings, `info: []`, map vs list episodes, invalid UTF-8)
 - `get.php` M3U output and `xmltv.php` (optional gzip, scalable to 300 MB)
-- Streams: loops generated samples (`ffmpeg -re -stream_loop -1 … -f mpegts pipe:1`) or serves pre-segmented HLS
+- Streams: loops generated samples (`ffmpeg -re -stream_loop -1 -i <sample>.mkv -c copy -f mpegts pipe:1`) or serves pre-segmented HLS. Loop an MKV remux of each sample, never the `.ts` itself: looping a TS file with B-frames breaks video timestamps at every wrap (on HEVC 4K about 100 decode errors per wrap and a few-second freeze on the TV; ADR-004 Finding 8). Even from MKV a wrap leaves one short gap (under 0.1 s) and a few decode errors, so tests don't assert on frames around a wrap
 - VOD files: movie and episode URLs serve the VOD samples with Range, ETag, and Last-Modified; `vod_as_hls` serves them as HLS playlists; `size_mb` pads a sample to any size for download benchmarks
 - Fault injection per profile or query: `drop_after_s`, `stall_after_s`, `slow_start_ms`, `http_status` (401/403/404/429/500), `max_connections`, `redirect_with_expiring_token`, `codec_switch_after_s`; for VOD files `ignore_range`, `drop_after_bytes`, `throttle_kbps`, `change_etag`, `wrong_content_length`
 - Admin endpoint to change faults at runtime during integration tests
@@ -54,7 +54,7 @@ Live samples are 30–120 s long and the fake provider loops them; VOD samples a
 | Memory growth during a 4 GB download | ≤ 30 MB |
 
 ## CI (GitHub Actions)
-Matrix ubuntu-22.04 + windows-latest: `flutter pub get` → build_runner (fail on diff) → `flutter analyze` → `dart format --set-exit-if-changed .` → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb. Upload release builds as CI artifacts.
+Matrix ubuntu-22.04 + windows-latest: `flutter pub get` → build_runner (fail on diff) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb. Upload release builds as CI artifacts.
 
 ## Definition of done (every feature)
 1. Spec behavior implemented, including loading/empty/error/offline states
