@@ -1,0 +1,56 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+/build/
+**/build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+*.ipr
+*.iws
+.idea/
+coverage/
+pubspec_overrides.yaml
+
+# Generated platform files
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/android/.gradle/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.jks
+
+# Golden test failure output
+**/test/**/failures/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Bundled FFmpeg binaries (tools/fetch_ffmpeg.sh)
+third_party/ffmpeg/
+
+# Generated media samples (tools/media_samples/generate.sh)
+tools/media_samples/out/
+
+# Spike outputs (spike code is tracked; results and builds are not)
+spike/**/out/
+spike/**/*.log
+spike/**/results/
+
+# Generated design bundle (rebuilt from design/*.dc.html and design/canvas.json)
+design/iptv-player-ui.html
+
+# Runtime leftovers
+*.part
+*.pid
+logs/
+.env
