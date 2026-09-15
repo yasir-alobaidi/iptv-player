@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; step 1 (project scaffold) done.** Next is step 2 (core/). The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
+Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; steps 1 (project scaffold) and 2 (core/) done.** Next is step 3a (design/ foundations). The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -30,12 +30,14 @@ Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approve
 - 2026-09-15: You accepted the GO decision; ADR-007 is Accepted
 - 2026-09-15: Phase 1 plan approved (steps 1, 2, 3a, 3b, 4–8; stop for review after each). Your decisions, to record in ADR-008 and docs/05: the canvas wins over docs/05 for the shell (64 px top bar, no Search item in the nav rail, focus = 2 px ring + 4 px glow at 25 %); canvas values missing from docs/05 become tokens (radius 10; 12, 14, 17 px text); icons are the canvas SVGs rendered with flutter_svg 2.3.0; application ID `io.github.yasiralobaidi.iptvplayer`
 - 2026-09-15: Phase 1 step 1: Flutter app scaffold (Linux + Windows runners; window title "IPTV Player"), `pubspec.yaml` with every ADR-002 package plus flutter_svg and the `third_party/media_kit_video` override (lockfile confirms the path source), very_good_analysis 11 + riverpod_lint plugin, analyzer excludes `third_party/**` and `spike/**`, `build.yaml` (drift SQLite dialect with FTS5). `pub get`, build_runner, analyze, format, test, and `flutter build linux --debug` pass; the app opens a window. Dart 3.13's `unnecessary_type_name_in_constructor` (on in very_good_analysis 11) means constructors are written `const new(...)`
+- 2026-09-15: You don't need `gh` (the repo is public, so CI results come from GitHub's API with curl) or the Google Drive connector
+- 2026-09-15: Phase 1 step 2 (core/): sealed `Result<T>` and `AppFailure` (network, auth, not found, parse, storage, timeout, cancelled, unexpected; details redacted on creation); `redact()` for Xtream stream paths, credential query parameters, URL user-info, auth headers, JSON and printed-map credential fields, plus exact secrets from a `SecretRegistry` (also URL-encoded); `AppLog` on logger 2.8.0, redacting message, error, and stack; our own `RotatingFileOutput` (5 × 5 MB, exact rotation; logger's `AdvancedFileOutput` only checks size once a minute); `ErrorReporter` on `FlutterError.onError` and `PlatformDispatcher.onError` (no `runZonedGuarded`, which Flutter warns about) publishing failures for the shell's toast; `runInBackground` / `startBackgroundJob` (isolate with progress, timeout, and cancel that kill it); `detectFormFactor`; `AppPaths`; Riverpod providers overridden in `bootstrap()`. `meta` is now a direct dependency (`@immutable` on `Result`). 61 tests pass (38 redaction cases). Running the app writes `~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log`
 
 ## In progress
-- Phase 1 step 2 (core/: Result/AppFailure, logging and redact(), error handlers, isolates, form factor)
+- Phase 1 step 3a (design/: fonts, tokens, theme, focus system, basic components, Component Gallery)
 
 ## Next
-1. Phase 1 steps 3a–8 (approved plan: docs/plans/phase-1-foundation.md)
+1. Phase 1 steps 3b–8 (approved plan: docs/plans/phase-1-foundation.md)
 2. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## Open questions
