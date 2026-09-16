@@ -62,86 +62,88 @@ class ChannelRow extends StatelessWidget {
       semanticLabel: name,
       builder: (context, states) => SizedBox(
         height: height,
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
-              child: Row(
-                children: [
-                  if (number != null) ...[
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        '$number',
-                        style: tokens.text.caption.copyWith(
-                          color: selected
-                              ? colors.accentBase
-                              : colors.textTertiary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: tokens.spacing.s4),
-                  ],
-                  ChannelLogo(name: name, image: image),
-                  SizedBox(width: tokens.spacing.s12 + 2),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                name,
-                                overflow: TextOverflow.ellipsis,
-                                style: tokens.text.bodyStrong.copyWith(
-                                  color: colors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            for (final badge in badges) ...[
-                              SizedBox(width: tokens.spacing.s8 - 2),
-                              badge,
-                            ],
-                          ],
-                        ),
-                        SizedBox(height: tokens.spacing.s4 - 2),
-                        Text(
-                          nowTitle ?? 'No guide data',
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.text.caption.copyWith(
-                            color: nowTitle == null
-                                ? colors.textTertiary
-                                : colors.textSecondary,
-                          ),
-                        ),
-                      ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
+          child: Row(
+            children: [
+              if (number != null) ...[
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    '$number',
+                    style: tokens.text.caption.copyWith(
+                      color: selected ? colors.accentBase : colors.textTertiary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (onToggleFavorite != null) ...[
-                    SizedBox(width: tokens.spacing.s8),
-                    _FavoriteStar(
-                      isFavorite: isFavorite,
-                      onPressed: onToggleFavorite!,
-                      visible: states.highlighted || isFavorite,
+                ),
+                SizedBox(width: tokens.spacing.s4),
+              ],
+              ChannelLogo(name: name, image: image),
+              SizedBox(width: tokens.spacing.s12 + 2),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.text.bodyStrong.copyWith(
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        for (final badge in badges) ...[
+                          SizedBox(width: tokens.spacing.s8 - 2),
+                          badge,
+                        ],
+                      ],
+                    ),
+                    SizedBox(height: tokens.spacing.s4 - 2),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            nowTitle ?? 'No guide data',
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.text.caption.copyWith(
+                              color: nowTitle == null
+                                  ? colors.textTertiary
+                                  : colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        // The canvas puts the programme's progress on
+                        // this line, after the title: a 72 px bar with
+                        // a 10 px gap. It rode the row's bottom edge
+                        // until the step 7 golden showed it striking
+                        // through the title in both densities.
+                        if (progress != null) ...[
+                          SizedBox(width: tokens.spacing.s8 + 2),
+                          SizedBox(
+                            width: 72,
+                            child: ProgressBar(value: progress),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-            // The programme's progress rides the bottom edge instead of
-            // sitting in the text column, so a row still fits the compact
-            // density (44 px).
-            if (progress != null)
-              Positioned(
-                left: tokens.spacing.s12 + 2,
-                right: tokens.spacing.s12 + 2,
-                bottom: tokens.spacing.s8 - 2,
-                child: ProgressBar(value: progress, height: 2),
-              ),
-          ],
+              if (onToggleFavorite != null) ...[
+                SizedBox(width: tokens.spacing.s8),
+                _FavoriteStar(
+                  isFavorite: isFavorite,
+                  onPressed: onToggleFavorite!,
+                  visible: states.highlighted || isFavorite,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

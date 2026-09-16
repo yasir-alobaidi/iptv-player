@@ -1,0 +1,8 @@
+# Tags used by `flutter test`. Declaring them here keeps the runner from
+# warning about an unknown tag and documents what each one selects.
+tags:
+  golden:
+    description: >-
+      Golden image tests. Linux only: text rasterizes differently on
+      Windows, so the reference images are recorded and checked on Linux
+      (ADR-008). CI runs `flutter test --exclude-tags golden` on Windows.
