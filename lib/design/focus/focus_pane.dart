@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 /// one of these per pane.
 class FocusPaneController extends ChangeNotifier {
   FocusNode? _lastFocused;
+  FocusNode? _pane;
 
   /// The item that had focus when the pane was last left, if it is still
   /// in the tree.
@@ -14,6 +15,14 @@ class FocusPaneController extends ChangeNotifier {
     return node;
   }
 
+  /// The pane's focusable items, in tree order. Empty until the
+  /// [FocusPane] is built.
+  Iterable<FocusNode> get items =>
+      _pane?.traversalDescendants ?? const <FocusNode>[];
+
+  /// True while focus is somewhere inside the pane.
+  bool get hasFocus => _pane?.hasFocus ?? false;
+
   /// Focuses the remembered item. Returns false when there is nothing to
   /// return to, so the caller can fall back to the first item.
   bool focusLast() {
@@ -21,6 +30,26 @@ class FocusPaneController extends ChangeNotifier {
     if (node == null || !node.canRequestFocus) return false;
     node.requestFocus();
     return true;
+  }
+
+  /// Focuses the pane's first item. Returns false when the pane has
+  /// nothing to focus, so the caller can leave focus where it is.
+  bool focusFirst() {
+    for (final node in items) {
+      if (!node.canRequestFocus) continue;
+      node.requestFocus();
+      return true;
+    }
+    return false;
+  }
+
+  /// Focuses the remembered item, or the first one. Left/Right between
+  /// panes uses this (docs/05).
+  bool focusPane() => focusLast() || focusFirst();
+
+  /// Drops the pane reference when that [FocusPane] goes away.
+  void _forget(FocusNode pane) {
+    if (identical(_pane, pane)) _pane = null;
   }
 
   void _remember(FocusNode? node) {
@@ -71,6 +100,7 @@ class _FocusPaneState extends State<FocusPane> {
   @override
   void initState() {
     super.initState();
+    widget.controller?._pane = _marker;
     // Listening to the manager rather than the marker's onFocusChange:
     // that only fires when the pane is entered or left, so it would
     // remember the first item instead of the one focus left from.
@@ -78,8 +108,18 @@ class _FocusPaneState extends State<FocusPane> {
   }
 
   @override
+  void didUpdateWidget(FocusPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._forget(_marker);
+      widget.controller?._pane = _marker;
+    }
+  }
+
+  @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocusChanged);
+    widget.controller?._forget(_marker);
     _marker.dispose();
     super.dispose();
   }

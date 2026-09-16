@@ -91,5 +91,72 @@ void main() {
 
       expect(controller.focusLast(), isFalse);
     });
+
+    testWidgets('focusFirst takes the pane from the top', (tester) async {
+      final controller = FocusPaneController();
+      addTearDown(controller.dispose);
+
+      await pumpDesign(
+        tester,
+        FocusPane(controller: controller, child: _buttons('a', 3)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.focusFirst(), isTrue);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppButton).first,
+          matching: find.byType(Focus),
+        ),
+        findsWidgets,
+      );
+      expect(controller.hasFocus, isTrue);
+      expect(controller.lastFocused, isNotNull);
+    });
+
+    testWidgets('focusPane falls back from last to first', (tester) async {
+      final controller = FocusPaneController();
+      addTearDown(controller.dispose);
+
+      await pumpDesign(
+        tester,
+        FocusPane(controller: controller, child: _buttons('a', 2)),
+      );
+      await tester.pumpAndSettle();
+
+      // Nothing was ever focused here, so this is the fallback path the
+      // shell's Left/Right relies on.
+      expect(controller.focusLast(), isFalse);
+      expect(controller.focusPane(), isTrue);
+      await tester.pumpAndSettle();
+
+      final first = FocusManager.instance.primaryFocus;
+
+      FocusManager.instance.primaryFocus!.unfocus();
+      await tester.pumpAndSettle();
+
+      expect(controller.focusPane(), isTrue, reason: 'now it remembers');
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus, first);
+    });
+
+    testWidgets('an empty pane reports that it has nothing to focus', (
+      tester,
+    ) async {
+      final controller = FocusPaneController();
+      addTearDown(controller.dispose);
+
+      await pumpDesign(
+        tester,
+        FocusPane(controller: controller, child: const Text('nothing here')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.items, isEmpty);
+      expect(controller.focusFirst(), isFalse);
+      expect(controller.focusPane(), isFalse);
+    });
   });
 }

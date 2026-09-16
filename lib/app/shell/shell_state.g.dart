@@ -1,0 +1,356 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'shell_state.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+
+@ProviderFor(shellSource)
+final shellSourceProvider = ShellSourceProvider._();
+
+final class ShellSourceProvider
+    extends $FunctionalProvider<ShellSource?, ShellSource?, ShellSource?>
+    with $Provider<ShellSource?> {
+  ShellSourceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellSourceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellSource?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShellSource? create(Ref ref) {
+    return shellSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellSource? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellSource?>(value),
+    );
+  }
+}
+
+String _$shellSourceHash() => r'7b940a828fc9d63eaf504776e1e5bb737706e966';
+
+@ProviderFor(shellSyncStatus)
+final shellSyncStatusProvider = ShellSyncStatusProvider._();
+
+final class ShellSyncStatusProvider
+    extends
+        $FunctionalProvider<
+          ShellSyncStatus?,
+          ShellSyncStatus?,
+          ShellSyncStatus?
+        >
+    with $Provider<ShellSyncStatus?> {
+  ShellSyncStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellSyncStatusProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellSyncStatusHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellSyncStatus?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShellSyncStatus? create(Ref ref) {
+    return shellSyncStatus(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellSyncStatus? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellSyncStatus?>(value),
+    );
+  }
+}
+
+String _$shellSyncStatusHash() => r'07f28207321a310224c34732501b27859aa517f5';
+
+@ProviderFor(shellDownloads)
+final shellDownloadsProvider = ShellDownloadsProvider._();
+
+final class ShellDownloadsProvider
+    extends
+        $FunctionalProvider<ShellDownloads?, ShellDownloads?, ShellDownloads?>
+    with $Provider<ShellDownloads?> {
+  ShellDownloadsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellDownloadsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellDownloadsHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellDownloads?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShellDownloads? create(Ref ref) {
+    return shellDownloads(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellDownloads? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellDownloads?>(value),
+    );
+  }
+}
+
+String _$shellDownloadsHash() => r'8423a0ac8dc67b8d03aa3ef058ef44983cb0842a';
+
+@ProviderFor(shellCastSession)
+final shellCastSessionProvider = ShellCastSessionProvider._();
+
+final class ShellCastSessionProvider
+    extends
+        $FunctionalProvider<
+          ShellCastSession?,
+          ShellCastSession?,
+          ShellCastSession?
+        >
+    with $Provider<ShellCastSession?> {
+  ShellCastSessionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellCastSessionProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellCastSessionHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellCastSession?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ShellCastSession? create(Ref ref) {
+    return shellCastSession(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellCastSession? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellCastSession?>(value),
+    );
+  }
+}
+
+String _$shellCastSessionHash() => r'a1331391f0e90e13e6e274b32594ca3c9fa2591f';
+
+/// Whether the nav rail is expanded to 240 px. The shell still collapses
+/// it on a narrow window; this is what the user asked for.
+///
+/// Step 5 persists it in the `settings` table.
+
+@ProviderFor(RailExpanded)
+final railExpandedProvider = RailExpandedProvider._();
+
+/// Whether the nav rail is expanded to 240 px. The shell still collapses
+/// it on a narrow window; this is what the user asked for.
+///
+/// Step 5 persists it in the `settings` table.
+final class RailExpandedProvider extends $NotifierProvider<RailExpanded, bool> {
+  /// Whether the nav rail is expanded to 240 px. The shell still collapses
+  /// it on a narrow window; this is what the user asked for.
+  ///
+  /// Step 5 persists it in the `settings` table.
+  RailExpandedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'railExpandedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$railExpandedHash();
+
+  @$internal
+  @override
+  RailExpanded create() => RailExpanded();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$railExpandedHash() => r'4a6efb55d35819e862061b4321d46fb5bcefc424';
+
+/// Whether the nav rail is expanded to 240 px. The shell still collapses
+/// it on a narrow window; this is what the user asked for.
+///
+/// Step 5 persists it in the `settings` table.
+
+abstract class _$RailExpanded extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Non-fatal errors the global handlers caught, shown as toasts by the
+/// shell (step 2's `ErrorReporter`).
+
+@ProviderFor(nonFatalErrors)
+final nonFatalErrorsProvider = NonFatalErrorsProvider._();
+
+/// Non-fatal errors the global handlers caught, shown as toasts by the
+/// shell (step 2's `ErrorReporter`).
+
+final class NonFatalErrorsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<AppFailure>,
+          AppFailure,
+          Stream<AppFailure>
+        >
+    with $FutureModifier<AppFailure>, $StreamProvider<AppFailure> {
+  /// Non-fatal errors the global handlers caught, shown as toasts by the
+  /// shell (step 2's `ErrorReporter`).
+  NonFatalErrorsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'nonFatalErrorsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$nonFatalErrorsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<AppFailure> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<AppFailure> create(Ref ref) {
+    return nonFatalErrors(ref);
+  }
+}
+
+String _$nonFatalErrorsHash() => r'9bf39c8246816e3448d74e675308ca78f2aaccee';
+
+/// Where the window's size and position are kept. Step 5 overrides this
+/// with the settings-table implementation.
+
+@ProviderFor(windowBoundsStore)
+final windowBoundsStoreProvider = WindowBoundsStoreProvider._();
+
+/// Where the window's size and position are kept. Step 5 overrides this
+/// with the settings-table implementation.
+
+final class WindowBoundsStoreProvider
+    extends
+        $FunctionalProvider<
+          WindowBoundsStore,
+          WindowBoundsStore,
+          WindowBoundsStore
+        >
+    with $Provider<WindowBoundsStore> {
+  /// Where the window's size and position are kept. Step 5 overrides this
+  /// with the settings-table implementation.
+  WindowBoundsStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'windowBoundsStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$windowBoundsStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<WindowBoundsStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  WindowBoundsStore create(Ref ref) {
+    return windowBoundsStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WindowBoundsStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WindowBoundsStore>(value),
+    );
+  }
+}
+
+String _$windowBoundsStoreHash() => r'1d04b4325983e3d121761b96a46d46b9c719b2be';

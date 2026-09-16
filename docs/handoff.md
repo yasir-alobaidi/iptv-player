@@ -1,20 +1,30 @@
-# Handoff — 2026-09-15 (session 8)
+# Handoff — 2026-09-16 (session 9)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-Nothing is blocked. Phase 1 steps 1, 2, 3a and 3b are done and committed
-locally (`fa39217`, `e9efe17`, `9d2ad8b` and the step 1 commit); **they are
-not pushed yet** — push when you're ready. Step 4 (the app shell) needs no
-hardware and no TV.
+Nothing is blocked. Phase 1 steps 1, 2, 3a, 3b and 4 are done and committed
+locally; **nothing is pushed yet** — five commits are waiting (step 2 through
+this one). Step 5 (the drift database skeleton) needs no hardware and no TV.
+
+One thing only you can check: **window_manager #585, the crash when the window
+is closed.** This laptop is on Wayland and nothing here can close a window from
+a script, so it is still unverified. Run the app, close it with the title-bar
+X, and see whether it exits quietly:
+
+```
+flutter run -d linux            # then close the window with the mouse
+tail ~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log
+```
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, and docs/progress.md first.
-Phase 1 steps 1–3b are done. Do step 4 (app/: router, shell, window, shortcuts) as written in
-docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
+Phase 1 steps 1–4 are done. Do step 5 (data/db: drift schema v1, sources and settings tables,
+SettingsRepository, migrations) as written in docs/plans/phase-1-foundation.md, and stop for my
+review when it's finished.
 ```
 
 ## Where things stand
@@ -28,45 +38,58 @@ docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
   and the Component Gallery.
 - **Phase 1 step 3b:** the canvas icon set and the media, overlay, casting and
   download components.
-- 156 tests pass; `flutter analyze`, the format check and
-  `flutter build linux --debug` are clean. The app runs and shows the gallery.
+- **Phase 1 step 4:** the router, the desktop shell, the global shortcuts, the
+  placeholder screens and the window plumbing.
+- 208 tests pass; `flutter analyze`, the format check and
+  `flutter build linux --debug` are clean. The app runs and shows the shell.
 
-## Done this session (2026-09-15)
-- Step 3a: fonts (`Manrope[wght]`, `JetBrainsMono[wght]` + OFL, registered in
-  `LicenseRegistry`), `lib/design/tokens.dart`, `theme.dart`,
-  `focus/` (FocusableSurface, FocusPane, AppShortcuts, FocusRing), 13 basic
-  components, and the keyboard-navigable gallery with live accent / density /
-  reduce-motion switches
-- Step 3b: `tools/extract_icons.dart` → `assets/icons/` (50 icons),
-  `AppIcon` + `AppIcons`, 18 media and overlay components, and the gallery
-  sections for them
-- Two real bugs found by running the app and by the tests, both fixed:
-  the focus ring drawn as a box shadow filled transparent ghost buttons
-  (it strokes outside the control now), and `FocusPane` as a `FocusScope`
-  trapped Tab inside a pane
-- `docs/progress.md` updated, including the running ADR-008 list
+## Done this session (2026-09-16)
+- `lib/app/destinations.dart`: the eight rail destinations with their icons
+  and shortcut labels. `index` is the enum's own index, which is also the
+  router's branch order.
+- `lib/app/router.dart`: `StatefulShellRoute.indexedStack`, one branch per
+  destination, `/search` as a non-opaque overlay route, `/dev/gallery` behind
+  `galleryEnabled`. `buildRouter()` makes its navigator keys locally, so a
+  test can build more than one router.
+- `lib/app/shell/`: `DesktopShell`, `NavRail` (72/240, app mark, active
+  indicator bar, collapse toggle), `ShellTopBar` (64 px, title, source chip,
+  search field, sync and download slots, cast button), `ToastHost` and
+  `shell_state.dart`.
+- `lib/app/shortcuts.dart`: Ctrl+1…7, Ctrl+, , Ctrl+K, `/`, Esc — wrapped
+  around the router's navigator so they work on every route.
+- `lib/app/placeholder_screen.dart` and `lib/features/*/presentation/`:
+  a screen for every destination, each an `EmptyState` saying which phase
+  builds it, with "Add a source" as the next step.
+- `lib/app/failure_message.dart`: `AppFailure` → the human line from docs/05.
+- `lib/core/platform/window_bounds.dart` and `lib/app/window_setup.dart`:
+  the bounds model, the store interface, `resolveStartupBounds()`, and the
+  window_manager wiring (1024 × 640 minimum, debounced saves).
+- `FocusPaneController` gained `focusFirst()`, `focusPane()`, `items` and
+  `hasFocus`, which is what Left/Right between panes uses.
+- `docs/progress.md` updated, including the running ADR-008 list.
 
 ## Instructions for the next session
-1. Step 4 is written in `docs/plans/phase-1-foundation.md`. Stop for review
+1. Step 5 is written in `docs/plans/phase-1-foundation.md`. Stop for review
    when it is finished, as with every numbered step.
-2. **The gallery is currently the app's home** (`lib/app/app.dart`). Step 4
-   moves it to the `/dev/gallery` route and puts the shell in its place;
-   `galleryEnabled` in `lib/design/gallery/gallery_availability.dart` already
-   gates it to debug builds and `--dart-define=GALLERY=true`.
-3. Build the shell out of the existing components — the nav rail, top bar,
-   search field and casting-bar slot all have their pieces already. Read the
-   canvas first (`design/*.dc.html`; `Main.dc.html` is the shell), not just
-   docs/05: the canvas wins where they disagree.
-4. `FocusPane` takes a `FocusPaneController`. Step 4's Left/Right between
-   panes should use `controller.focusLast()`, falling back to the first item
-   when it returns false.
-5. The toast host in the shell is fed by `ErrorReporter` from step 2;
-   `AppToast.defaultDuration` is the three seconds docs/05 asks for.
-6. Icons: add to the `AppIcons` enum only what `tools/extract_icons.dart`
-   produces. If the canvas gains an icon, re-run the tool and add its hash to
-   `_names`; the tool fails loudly if a mapped icon disappears.
-7. Commit messages carry no trailers. Commit locally; the user pushes.
-8. At the end: analyze, format check, `flutter test`, update
+2. **Two things are waiting for step 5's settings table:**
+   `windowBoundsStoreProvider` in `lib/app/shell/shell_state.dart` (override
+   it in `bootstrap()` the way the in-memory one is overridden now, and the
+   window size starts being remembered), and `railExpandedProvider`, which
+   resets to collapsed on every launch until it is persisted.
+3. The shell's other slots — `shellSourceProvider`, `shellSyncStatusProvider`,
+   `shellDownloadsProvider`, `shellCastSessionProvider` — are deliberately
+   empty. Override the provider in the phase that owns the data rather than
+   changing the shell.
+4. `test/app/app_harness.dart` pumps the real app with a silent log and an
+   uninstalled `ErrorReporter`; `pumpApp(tester, overrides: [...])` is how a
+   test fills a shell slot, and `findByLabel('…')` finds an icon-only
+   control. Don't call `pumpApp` twice in one test — Riverpod refuses a
+   change in the number of overrides.
+5. The placeholder screens are meant to be replaced, not extended. When a
+   phase builds its real screen, delete the `PlaceholderScreen` call and keep
+   the file and route.
+6. Commit messages carry no trailers. Commit locally; the user pushes.
+7. At the end: analyze, format check, `flutter test`, update
    `docs/progress.md`, overwrite this file, and commit.
 
 ## Don't reopen without new evidence
@@ -81,6 +104,10 @@ docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
 - The focus ring is stroked outside the control, not a box shadow, and it
   inverts to the primary text colour on accent-filled surfaces.
 - `FocusPane` is a traversal group, not a `FocusScope`.
+- Global shortcuts wrap the router's navigator, not the shell: the shell's
+  own `Shortcuts` would never fire over the search overlay.
+- Search is a route, not a dialog, so Ctrl+K, Esc and back agree with each
+  other.
 - The canvas beats docs/05 on token values; docs/05 gets corrected at the end
   of the phase along with ADR-008.
 

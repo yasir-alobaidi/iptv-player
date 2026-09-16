@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/design/gallery/gallery_availability.dart';
-import 'package:iptv_player/design/gallery/gallery_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/design/theme.dart';
 
-/// Root widget. Phase 1 step 4 replaces the home with the desktop shell
-/// and moves the gallery to the `/dev/gallery` route; until then the
-/// gallery is the app's only screen, so the design system can be used and
-/// checked by hand.
-class IptvPlayerApp extends StatelessWidget {
+/// Root widget: the theme, the router, and the shortcuts that work
+/// everywhere.
+///
+/// The shortcuts wrap the router's navigator rather than the shell, so
+/// they also fire on top of the search overlay and the gallery.
+class IptvPlayerApp extends ConsumerWidget {
   const new({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
       title: 'IPTV Player',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: galleryEnabled ? const GalleryScreen() : const Scaffold(),
+      routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          AppGlobalShortcuts(child: child ?? const SizedBox.shrink()),
     );
   }
 }
