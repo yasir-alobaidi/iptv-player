@@ -1,58 +1,54 @@
-# Handoff — 2026-09-16 (session 12)
+# Handoff — 2026-09-16 (session 13)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-Nothing is blocked. Phase 1 steps 1–7 are done and committed locally;
-**nothing is pushed yet** — six commits are waiting (step 3b, the session 9
-handoff, step 4, step 5, step 6 and step 7). `origin/main` is still at step 3a
-(`e9efe17`). Step 8 (CI) needs no hardware and no TV, but CI only turns green
-once you push.
-
-**The two keyboard questions are decided and built** (you said to make the
-best of it; the rules are in docs/05 and the reasoning is in the ADR-008 list
-in docs/progress.md):
-1. A destination **shortcut** takes focus with it — Ctrl+1…7 and Ctrl+, land
-   on the first control of the screen they open. Enter or Space on a **rail
-   item** keeps focus on the item, so ↑ ↓ keep walking the rail.
-2. **Esc leaves what you stepped into**: close what is open, else return
-   focus from the chrome to the screen, else do nothing. It never navigates.
-
-Worth a minute of your own hands on the keyboard to confirm it feels right —
-that is the one thing tests can't tell you.
-
-Two things only you can check, and one run covers both. This is the same
-check that was open last session; it is still open:
-
-1. **window_manager #585, the crash when the window is closed.** This laptop
-   is on Wayland, and neither closing a window nor taking a screenshot works
-   from a script here — `org.gnome.Shell.Screenshot` answers `Access denied`
-   — so it needs one manual close.
-2. **The window size and the rail's expanded state are remembered**
-   (step 5). They are written on the first run and restored on the second,
-   so the check needs two launches.
+**Phase 1 steps 1–8 are all done and committed locally. Eight commits are
+waiting to be pushed, and pushing is now the one thing that moves the phase
+forward:** step 8 added the CI workflow, and CI cannot be green — or red —
+until GitHub sees it. `origin/main` is still at step 3a (`e9efe17`).
 
 ```
-flutter run -d linux       # resize the window, expand the rail, close with the X
+git push
+# then read the run (public repo, no gh CLI needed):
+curl -s 'https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=1' \
+  | grep -E '"name"|"status"|"conclusion"|"html_url"'
+```
+
+Everything the workflow does was verified locally on Linux, step by step, so
+the Linux job should pass. **The Windows job has never run anywhere** — no
+Windows machine has touched this project yet. If it fails, the two likely
+places are `media_kit_libs_video` (it downloads libmpv at build time) and the
+vendored `third_party/media_kit_video`; the patch itself only touches
+`linux/video_output.cc`, so it cannot be the cause.
+
+Two things still only you can do, and one run covers both:
+
+1. **window_manager #585, the crash when the window is closed.** Still
+   unverified: this laptop is on Wayland, and neither closing a window nor
+   taking a screenshot works from a script here.
+2. **The window size and the rail's expanded state are remembered** — they
+   are written on the first run and restored on the second.
+
+```
+flutter run -d linux       # resize, expand the rail, close with the X
 tail ~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log
 flutter run -d linux       # same size, rail still expanded
 ```
 
-The database file is
-`~/.local/share/io.github.yasiralobaidi.iptvplayer/iptv_player.sqlite`;
-deleting it is safe and gives a clean first run.
+While that window is open, the new keyboard rules are worth ten seconds of
+your own hands, because tests cannot tell you how they feel: **Ctrl+3** (focus
+should land in the guide, ring visible), **Tab** from there, **Esc** (focus
+should step back from the chrome into the screen), and arrowing the rail with
+**↑ ↓** then **Enter** (focus should stay on the rail).
 
 **PID 42684 is still open** — the session 9 build with the in-memory store.
-Close it before the run above rather than reading anything into its
-behaviour.
+Close it first rather than reading anything into its behaviour.
 
-Optional, and fun to look at rather than necessary: the fake provider now
-runs, so you can point the app at a provider before any of the provider code
-exists.
+The fake provider runs if you want to see real data move:
 
 ```
 dart run tools/fake_provider/bin/server.dart --port 8899
-curl -s 'http://127.0.0.1:8899/player_api.php?username=test&password=test'
 mpv 'http://127.0.0.1:8899/live/test/test/1.ts'
 ```
 
@@ -61,8 +57,9 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, and docs/progress.md first.
-Phase 1 steps 1-7 are done. Do step 8 (CI on GitHub Actions) as written in
-docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
+Phase 1 steps 1-8 are done and I have pushed. Check the CI run, fix anything red,
+then write the Phase 1 exit docs (ADR-008 from the running list in progress.md, and the
+docs/05 corrections). Stop for my review when it's finished.
 ```
 
 ## Where things stand
@@ -84,54 +81,37 @@ docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
   the fault stub.
 - **Phase 1 step 7:** real fonts in tests, four goldens, the full keyboard
   matrix, and the integration smoke test.
+- **Phase 1 step 8:** `.github/workflows/ci.yml` — Linux + Windows, every
+  step verified locally except the Windows job, which needs a push.
 - 259 app tests and 81 fake-provider tests pass; `flutter analyze`, the format
   check over `lib test integration_test tools` and `flutter build linux
   --debug` are clean.
 
 ## Done this session (2026-09-16)
-Step 7, written by three agents in parallel and verified here:
+Step 8, the CI workflow, plus the keyboard/focus decisions from the session
+before it.
 
-- `test/flutter_test_config.dart` loads the bundled variable fonts with
-  `FontLoader` for every test under `test/`, keyed off `AppFonts` so the
-  family names can't drift. No existing test needed changing.
-- `test/golden/`: two component sheets at 1280×800 and the shell at 1280×800
-  and 1920×1080. `@Tags(['golden'])` at library level (`group()` has no
-  `tags`), declared in a root `dart_test.yaml`, skipped off-Linux with a
-  reason. Re-recording twice is byte-identical.
-- `test/app/shell_keyboard_test.dart` is 13 tests now: the top bar walked
-  with Tab and with arrows, a focus ring asserted at **every** stop from the
-  rail through the top bar to the screen, Shift+Tab back out, Esc on a
-  top-bar control, and focus after a destination change. One pre-existing
-  test was vacuous — it tabbed against `Cast` while the disabled button's
-  label is its tooltip — and now asserts the real thing.
-- `integration_test/app_launch_test.dart` launches the real `IptvPlayerApp`
-  with bootstrap's non-disk overrides, renders the shell and navigates.
-  Verified under `xvfb-run -a flutter test integration_test -d linux`.
-- **`ChannelRow` fixed** (`lib/design/`): the first golden showed the 2 px
-  progress bar striking through the programme title in both densities. The
-  canvas draws a 72 px bar *on the title line* after an ellipsized title, so
-  that is what it does now. This supersedes the step 3b ADR-008 note.
+`.github/workflows/ci.yml`: one matrix job over ubuntu-22.04 and
+windows-latest, Flutter pinned to 3.47.4, on push to main, on pull requests
+and on demand, with in-progress runs superseded per ref. In order: apt
+dependencies → `flutter pub get` and `dart pub get
+--directory=tools/fake_provider` → `build_runner` then `git diff
+--exit-code` → `flutter analyze` → the format check → `flutter test` (Linux)
+or `flutter test --exclude-tags golden` (Windows) → the fake provider's
+`dart test` → the integration test under xvfb → release bundles, uploaded as
+artifacts.
 
-Then the keyboard/focus rules above, and the two bugs that came out of
-building them:
-
-- `_RailSlot` drew the active-indicator bar as a **conditional `Stack`
-  child**. Every selection change therefore changed the child count, moved
-  the item's subtree by one index, rebuilt its element and destroyed the
-  `FocusNode` that held the keyboard focus. The bar is always in the tree
-  now, transparent when unselected, and animates in. **Never put a
-  conditional sibling next to a focusable subtree in a `Stack`.**
-- `late int _branch = widget.navigationShell.currentIndex` ran its
-  initializer on first *read*, which was inside `didUpdateWidget`, after the
-  index had already changed — so every branch change compared equal and the
-  hook never fired. It is read in `initState` now.
-- A branch switch pulls focus into the new route's own scope, so the rail
-  case has to **restore** focus, not merely leave it alone.
+Each step was run here before being written down: `dart pub get --directory=`
+works, `build_runner` leaves the tree clean, analyze and format are clean,
+259 + 81 tests pass, the integration test passes under xvfb, and `flutter
+build linux --release` produces exactly the `build/linux/x64/release/bundle`
+path the workflow uploads.
 
 ## Instructions for the next session
 1. Step 8 is written in `docs/plans/phase-1-foundation.md`. Stop for review
    when it is finished, as with every numbered step.
-2. The CI matrix needs three things this repo now proves: `dart pub get` in
+2. CI is written; if a job is red, these are the three things that were
+   easy to get wrong and are already handled — don't "fix" them away: `dart pub get` in
    `tools/fake_provider` **before** the root `flutter analyze`; `flutter test
    --exclude-tags golden` on the Windows job (goldens are Linux-only); and
    `xvfb-run -a flutter test integration_test -d linux` with `GDK_BACKEND=x11`
