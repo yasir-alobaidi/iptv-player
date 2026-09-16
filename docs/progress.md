@@ -51,13 +51,17 @@ Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approve
 
 - 2026-09-16: Phase 1 exit docs: **ADR-008 written and Accepted** (docs/decisions.md) — the whole running list, organized by theme: identity, where the canvas beats docs/05, the design system, focus and keyboard, core, data, window, testing and CI, with the alternatives that were rejected and why. **docs/05 corrected to match what shipped:** 64 px top bar (it said 56), a nav rail with no Search item and a collapse toggle, the focus ring as a 2 px ring with a 4 px glow at 25 % stroked *outside* the control, radius `control` 10, h2 and bodyStrong at 700, the 17/14/12 px styles, the 380 × 40 search field, and `ChannelRow`'s progress bar on the title line. **docs/01 and ADR-002** gained flutter_svg 2.3.0 (with `crypto` as a dev dependency for the icon extractor), and **docs/06** now records that goldens are Linux-only, how they are tagged and skipped, that the Windows job excludes them, and that CI must `pub get` the fake provider before analyzing. The running list in this file is replaced by a pointer to the ADR, so there is one source of truth
 
+- 2026-09-16: **Phase 2 plan written and proposed** (`docs/plans/phase-2-providers-and-data.md`): eight steps — schema v2 with the catalogue tables and FTS, the credential store and source repository, the Xtream client with one fixture per docs/02 quirk, the M3U parser plus `get.php` on the fake provider, the sync engine in a background isolate, onboarding, Settings → Sources with the categories manager and the shell's source slots, then integration and the phase exit. It names the one real unknown (drift with its own connection in an isolate, spiked at the start of step 5, not discovered at the end), the fact that CI has no keyring so flutter_secure_storage is only ever exercised by hand here, and four decisions plus three layout sketches (Welcome, Settings → Sources, Categories manager) that need your approval, since docs/05 has no artboard for them. Also corrected: the fake provider's README said Phase 2 owned the XMLTV parser — docs/08 gives XMLTV to Phase 4
+
 ## In progress
+- **Phase 2 plan awaiting your approval** (four decisions, three layout sketches)
 - Phase 1 exit: **only CI green is left, and it needs you to push.** The unverified window-close check (window_manager #585) is also still open, and Phase 2 can start without either
 
 ## Next
-1. Push the eight waiting commits, then read the Actions run (public repo, no `gh` needed):
+1. **Approve (or change) the Phase 2 plan: `docs/plans/phase-2-providers-and-data.md`** — it has four decisions and three layout sketches waiting on you
+2. Push the waiting commits, then read the Actions run (public repo, no `gh` needed):
    `curl -s https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=1`
-2. Phase 2 (providers and data: the Xtream client, the M3U and XMLTV parsers, the sync engine — docs/02), against the fake provider from step 6
+3. Phase 2 itself, once the plan is approved (the Xtream client, the M3U parser, the sync engine — docs/02; XMLTV is Phase 4)
 2. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008

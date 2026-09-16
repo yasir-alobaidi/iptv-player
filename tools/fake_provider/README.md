@@ -106,8 +106,9 @@ the repo root includes it).
 
 By design — each arrives with the phase that tests it (docs/06):
 
-- `get.php` (M3U output) and `xmltv.php`, including gzip and a 300 MB EPG —
-  Phase 2, which owns the M3U and XMLTV parsers.
+- `get.php` (M3U output) — Phase 2, which owns the M3U parser.
+- `xmltv.php`, including gzip and a 300 MB EPG — Phase 4, which owns the
+  XMLTV parser and the guide.
 - VOD files over HTTP with Range, ETag and `Last-Modified`, `vod_as_hls`,
   and `size_mb` padding — the download and library phases. `/movie/…` and
   `/series/…` answer 501 until then.

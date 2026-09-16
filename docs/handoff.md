@@ -57,9 +57,9 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md and
-docs/decisions.md (ADR-008) first. Phase 1 is done and I have pushed. Check the CI run and
-fix anything red, then plan Phase 2 (providers and data, docs/02) and stop for my approval
-of the plan before building.
+docs/decisions.md (ADR-008) first. Phase 1 is done and I have pushed. Check the CI run and fix anything red. The Phase 2 plan
+is in docs/plans/phase-2-providers-and-data.md — here are my answers to its four questions:
+<answer them, or say "your recommendations are fine">. Then do step 1 and stop for my review.
 ```
 
 ## Where things stand
@@ -121,7 +121,11 @@ Linux-only, how they are tagged and skipped, and the fake provider's `pub get`
 before analyze).
 
 ## Instructions for the next session
-1. **Phase 1 is done.** Read ADR-008 before changing anything it covers: the
+1. **Phase 1 is done and the Phase 2 plan is written** —
+   `docs/plans/phase-2-providers-and-data.md`, proposed, not approved. It
+   asks four questions and offers three layout sketches; don't start step 1
+   until the user has answered them. Read ADR-008 before changing anything it
+   covers: the
    choices in it are the ones later phases must not relitigate without new
    evidence. Phase 2 (providers and data, docs/02) is next, and the fake
    provider from step 6 is what it gets tested against.
