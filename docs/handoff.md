@@ -9,16 +9,17 @@ handoff, step 4, step 5, step 6 and step 7). `origin/main` is still at step 3a
 (`e9efe17`). Step 8 (CI) needs no hardware and no TV, but CI only turns green
 once you push.
 
-**Two design decisions are waiting on you** (both in docs/progress.md under
-Open questions, both small):
-1. **Where focus should land after Ctrl+1…7 / Ctrl+,.** Today the branch
-   changes but focus is placed nowhere, so the next Tab restarts the cycle
-   instead of continuing from the new destination, and the old control keeps
-   its focus ring for one frame. The fix is one change — move focus with the
-   branch switch — but whether it goes to the new rail item or into the
-   screen is your call.
-2. **What Esc should do with focus in the top bar.** It currently does
-   nothing at all when the router can't pop.
+**The two keyboard questions are decided and built** (you said to make the
+best of it; the rules are in docs/05 and the reasoning is in the ADR-008 list
+in docs/progress.md):
+1. A destination **shortcut** takes focus with it — Ctrl+1…7 and Ctrl+, land
+   on the first control of the screen they open. Enter or Space on a **rail
+   item** keeps focus on the item, so ↑ ↓ keep walking the rail.
+2. **Esc leaves what you stepped into**: close what is open, else return
+   focus from the chrome to the screen, else do nothing. It never navigates.
+
+Worth a minute of your own hands on the keyboard to confirm it feels right —
+that is the one thing tests can't tell you.
 
 Two things only you can check, and one run covers both. This is the same
 check that was open last session; it is still open:
@@ -83,7 +84,7 @@ docs/plans/phase-1-foundation.md, and stop for my review when it's finished.
   the fault stub.
 - **Phase 1 step 7:** real fonts in tests, four goldens, the full keyboard
   matrix, and the integration smoke test.
-- 256 app tests and 81 fake-provider tests pass; `flutter analyze`, the format
+- 259 app tests and 81 fake-provider tests pass; `flutter analyze`, the format
   check over `lib test integration_test tools` and `flutter build linux
   --debug` are clean.
 
@@ -110,6 +111,22 @@ Step 7, written by three agents in parallel and verified here:
   progress bar striking through the programme title in both densities. The
   canvas draws a 72 px bar *on the title line* after an ellipsized title, so
   that is what it does now. This supersedes the step 3b ADR-008 note.
+
+Then the keyboard/focus rules above, and the two bugs that came out of
+building them:
+
+- `_RailSlot` drew the active-indicator bar as a **conditional `Stack`
+  child**. Every selection change therefore changed the child count, moved
+  the item's subtree by one index, rebuilt its element and destroyed the
+  `FocusNode` that held the keyboard focus. The bar is always in the tree
+  now, transparent when unselected, and animates in. **Never put a
+  conditional sibling next to a focusable subtree in a `Stack`.**
+- `late int _branch = widget.navigationShell.currentIndex` ran its
+  initializer on first *read*, which was inside `didUpdateWidget`, after the
+  index had already changed — so every branch change compared equal and the
+  hook never fired. It is read in `initState` now.
+- A branch switch pulls focus into the new route's own scope, so the rail
+  case has to **restore** focus, not merely leave it alone.
 
 ## Instructions for the next session
 1. Step 8 is written in `docs/plans/phase-1-foundation.md`. Stop for review

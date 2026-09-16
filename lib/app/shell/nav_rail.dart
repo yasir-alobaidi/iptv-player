@@ -231,19 +231,27 @@ class _RailSlot extends StatelessWidget {
       height: NavRail.itemHeight,
       child: Stack(
         children: [
-          if (selected)
-            Positioned(
-              left: 0,
-              top: tokens.spacing.s12,
-              bottom: tokens.spacing.s12,
-              child: Container(
-                width: 3,
-                decoration: BoxDecoration(
-                  color: tokens.colors.accentBase,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+          // The indicator is always in the tree, transparent when the
+          // item is not selected, and never `if (selected)`. A
+          // conditional child changes the Stack's child count, so the
+          // item below it moves index, its element is rebuilt and its
+          // focus node — with the keyboard focus — is thrown away on
+          // every destination change. Animating the colour also lets the
+          // bar slide in rather than appear.
+          Positioned(
+            left: 0,
+            top: tokens.spacing.s12,
+            bottom: tokens.spacing.s12,
+            child: AnimatedContainer(
+              duration: tokens.motion.fast,
+              curve: tokens.motion.fastCurve,
+              width: 3,
+              decoration: BoxDecoration(
+                color: selected ? tokens.colors.accentBase : Colors.transparent,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
+          ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
             child: child,

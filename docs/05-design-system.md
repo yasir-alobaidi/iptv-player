@@ -70,6 +70,10 @@ Tabular figures for times, channel numbers, durations.
 - `FocusableSurface` wraps every interactive element: 2 px accent ring + 2 px outer glow (accent at 35 %); tiles/cards scale to 1.03 (rows stay 1.0); surface lightens one step
 - Directional navigation with `FocusTraversalGroup` and directional focus intents; each pane is a group; Left/Right moves between panes; each pane remembers its last focused item
 - Enter/Space activate · Esc back/close · Menu key or Shift+F10 opens the item menu
+- **Where focus goes after a destination change** — the gesture decides, because switching a branch pulls focus into the new route's scope and it has to be placed deliberately either way:
+  - a destination *shortcut* (Ctrl+1 … Ctrl+7, Ctrl+,) means "take me there", so focus lands on the first control of the screen that opened. Nobody should have to Tab back into the content after asking to go somewhere
+  - Enter or Space on a **nav rail item** is the opposite gesture — the user is working in the rail and wants to keep browsing it — so the item they pressed keeps focus, and ↑ ↓ still walk the rail
+- **Esc means "leave what you stepped into", in this order:** close whatever is open (search overlay, dialog, menu) → if focus is in the chrome (nav rail or top bar), return it to where the user was in the screen → if focus is already in the screen, do nothing. Esc never navigates to another destination: a keyboard user who is only exploring the chrome must not lose their place
 - Mouse hover shows the hover style without stealing keyboard focus
 
 ## Core components (lib/design/components/)
@@ -151,8 +155,8 @@ Left sub-navigation: Sources (list; add, edit, refresh, remove; account details)
 | G | Guide |
 | C | Cast |
 | D | Download (movie or episode) |
-| Ctrl+1 … Ctrl+7 | Home / Live TV / Guide / Movies / Series / Favorites / Library |
-| Ctrl+, | Settings |
+| Ctrl+1 … Ctrl+7 | Home / Live TV / Guide / Movies / Series / Favorites / Library (focus follows into the screen) |
+| Ctrl+, | Settings (focus follows into the screen) |
 
 ## States & microcopy
 - Loading: skeletons that match the final layout

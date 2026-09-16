@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/app/placeholder_screen.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/design/components.dart';
 
@@ -37,6 +38,14 @@ bool _hasFocusRing(WidgetTester tester, String label) => tester
     .map((paint) => paint.foregroundPainter)
     .whereType<FocusRingPainter>()
     .isNotEmpty;
+
+/// The `debugLabel` of the innermost [FocusPane] around whatever has
+/// focus — how a test tells "in the guide" from "in the home screen",
+/// since every placeholder screen offers the same action.
+String? _focusedPaneLabel() {
+  final context = FocusManager.instance.primaryFocus?.context;
+  return context?.findAncestorWidgetOfExactType<FocusPane>()?.debugLabel;
+}
 
 Future<void> _tab(WidgetTester tester, {bool shift = false}) async {
   if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shift);
@@ -91,6 +100,12 @@ void main() {
     await settleApp(tester);
 
     expect(app.location, AppDestination.guide.path);
+    // Activating from the rail is "I am browsing the rail", so focus
+    // stays on the item and Up/Down keep working. A destination
+    // *shortcut* is the opposite gesture and moves focus into the screen
+    // (see 'a destination shortcut takes focus with it').
+    expect(_focusedLabel(tester), AppDestination.guide.label);
+    expect(_hasFocusRing(tester, AppDestination.guide.label), isTrue);
   });
 
   testWidgets('Space activates too', (tester) async {
@@ -324,7 +339,7 @@ void main() {
     }
   });
 
-  testWidgets('Esc on a top bar control leaves focus and route alone', (
+  testWidgets('Esc steps out of the top bar and back into the screen', (
     tester,
   ) async {
     final app = await pumpApp(tester);
@@ -333,49 +348,85 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settleApp(tester);
 
-    // Nothing is open, so Esc has nothing to close; it must not drop the
-    // user's place in the top bar either (docs/05: Esc is back/close).
-    expect(_focusedLabel(tester), 'Source: No source');
-    expect(_hasFocusRing(tester, 'Source: No source'), isTrue);
+    // Esc means "leave what you stepped into" everywhere (docs/05).
+    // Nothing is open, so what it leaves is the chrome.
+    expect(_focusedLabel(tester), _screenActionLabel);
+    expect(_hasFocusRing(tester, _screenActionLabel), isTrue);
+    expect(_hasFocusRing(tester, 'Source: No source'), isFalse);
+    // It steps out; it does not navigate.
     expect(app.location, AppDestination.home.path);
   });
 
-  testWidgets('a destination change leaves focus inside the new screen', (
-    tester,
-  ) async {
+  testWidgets('Esc steps out of the rail too', (tester) async {
+    final app = await pumpApp(tester);
+
+    await _tabTo(tester, AppDestination.movies.label);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settleApp(tester);
+
+    expect(_focusedLabel(tester), _screenActionLabel);
+    // Leaving the rail is not the same as choosing a destination.
+    expect(app.location, AppDestination.home.path);
+  });
+
+  testWidgets('Esc inside the screen does nothing', (tester) async {
+    final app = await pumpApp(tester);
+
+    await _tabTo(tester, _screenActionLabel);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settleApp(tester);
+
+    // The user is already as far out as Esc goes. Navigating from here
+    // would take them somewhere they did not ask for.
+    expect(_focusedLabel(tester), _screenActionLabel);
+    expect(_hasFocusRing(tester, _screenActionLabel), isTrue);
+    expect(app.location, AppDestination.home.path);
+  });
+
+  testWidgets('a destination shortcut takes focus with it', (tester) async {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, 'Source: No source');
     await _pressCtrl(tester, LogicalKeyboardKey.digit3);
-    // The branch switch moves focus one frame after the route changes,
-    // so the ring's fade starts in the frame after that: a second settle
-    // is what makes this test independent of that ordering.
-    await settleApp(tester);
 
     expect(app.location, AppDestination.guide.path);
+    // Ctrl+3 means "take me to the guide", so focus is already there —
+    // no Tab walk back into the content, and no ring left behind.
+    expect(_focusedLabel(tester), _screenActionLabel);
+
+    // The move waits for the new branch to be laid out before it can
+    // find anything to focus, so the ring is painted in the frame after
+    // that — about 16 ms for a user, one more settle for a test.
+    await settleApp(tester);
+
+    expect(_hasFocusRing(tester, _screenActionLabel), isTrue);
     expect(
       _hasFocusRing(tester, 'Source: No source'),
       isFalse,
       reason: 'no stale ring on the control the jump left behind',
     );
-
-    await _tab(tester);
-
-    expect(
-      _focusedLabel(tester),
-      _screenActionLabel,
-      reason: 'Tab continues in the destination the shortcut opened',
+    // The on-stage placeholder names its own pane, so this asks the
+    // destination that is showing rather than assuming its title.
+    final screen = tester.widget<PlaceholderScreen>(
+      find.byType(PlaceholderScreen),
     );
     expect(
-      find.descendant(
-        of: find.byWidgetPredicate(
-          (widget) => widget is FocusPane && widget.debugLabel == 'content',
-        ),
-        matching: findByLabel(_screenActionLabel),
-      ),
-      findsOneWidget,
-      reason: 'that stop is in the screen, not in the shell chrome',
+      _focusedPaneLabel(),
+      'screen-${screen.title}',
+      reason: 'the screen the shortcut opened, not the one it left',
     );
-    expect(_hasFocusRing(tester, _screenActionLabel), isTrue);
+  });
+
+  testWidgets('a destination shortcut from the rail leaves focus there', (
+    tester,
+  ) async {
+    final app = await pumpApp(tester);
+
+    await _tabTo(tester, AppDestination.movies.label);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit3);
+
+    expect(app.location, AppDestination.guide.path);
+    // The user is working in the rail; Up/Down must keep working.
+    expect(_focusedLabel(tester), AppDestination.movies.label);
   });
 }
