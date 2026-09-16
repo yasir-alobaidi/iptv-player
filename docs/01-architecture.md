@@ -82,6 +82,7 @@ iptv-player/
 | Window control | window_manager | — |
 | Secrets | flutter_secure_storage (libsecret on Linux, Credential Manager on Windows) | encrypted file |
 | Images | extended_image or cached_network_image | — |
+| Vector icons | flutter_svg (the canvas's SVGs via the `AppIcons` enum) | — |
 | XML | xml (event/streaming API) | custom streaming tokenizer |
 | File and folder pickers | file_selector | file_picker |
 | Drag and drop | desktop_drop | pickers only |

@@ -29,6 +29,7 @@ Format: ID · date · status — decision, context, alternatives, consequences.
 | Window | window_manager 0.5.2 | 2026-07-04 | Linux issues to check in Phase 1: #585 crash on exit (Fedora KDE X11), #561 title bar on KDE Wayland |
 | Secrets | flutter_secure_storage 11.1.1 | 2026-09-11 | libsecret on Linux; no open Linux issues |
 | Images | **extended_image 10.1.0** | 2026-07-12 | Chosen over cached_network_image 4.0.0, which depends on flutter_cache_manager → sqflite (no native desktop backend) and limits its disk cache by object count, not bytes. docs/06 needs a 500 MB disk cap: we add a small size-based cache sweeper |
+| Vector icons | **flutter_svg 2.3.0** | 2026-09-15 | Added in Phase 1 (ADR-008): the icon set is the design canvas's own SVGs, extracted by `tools/extract_icons.dart` and addressed through the `AppIcons` enum. `crypto` joins the dev dependencies for the extractor's markup hashes |
 | XML | xml 7.0.1 | 2026-04-25 | Event/streaming API for XMLTV |
 | Pickers | file_selector 1.1.0 | 2025-11-21 | flutter.dev package; fallback file_picker 13.0.0 |
 | Drag and drop | desktop_drop 0.8.4 | 2026-09-01 | |
@@ -247,3 +248,62 @@ x265 defaults to open GOP and real HEVC channels may use it too, so docs/04's "H
 - Transcoding all HEVC to H.264 for casting: GPU cost and quality loss when a copy path plays smoothly
 
 **Consequences:** The user gave the OK on 2026-09-15; Phase 1 starts. Its root `analysis_options.yaml` excludes `third_party/**` and `spike/**`, `pubspec.yaml` points `dependency_overrides` at `third_party/media_kit_video`, and formatting covers first-party folders only (`dart format --set-exit-if-changed lib test integration_test tools`), because upstream media_kit_video isn't formatted to our settings.
+
+## ADR-008 · 2026-09-16 · Accepted — Phase 1 foundation choices
+**Decision:** the app is built on the structure, tokens, focus model, data layer, test tooling and CI below. Everything here was decided while building Phase 1 steps 1–8; where a choice contradicts an earlier plan or doc, this ADR wins and the doc has been corrected.
+
+**Identity:** application ID `io.github.yasiralobaidi.iptvplayer`, Dart package `iptv_player`, window title "IPTV Player" (a placeholder — the real name and icon are still open).
+
+### The canvas beats docs/05
+docs/05 was written before the design canvas existed. Where they disagree, the canvas is what the app implements and docs/05 has been corrected: the top bar is **64 px** (docs/05 said 56), the nav rail has **no Search item** (search is the top bar field plus Ctrl+K and `/`), the focus ring is a **2 px ring with a 4 px glow at 25 %**, and h2 / bodyStrong are **700**, not 600. Canvas values that docs/05 had no token for became tokens: **radius `control` = 10** for buttons, inputs and rows, and the **17 / 14 / 12 px** text styles (`titleSmall`, `label`/`buttonSmall`, `labelSmall`), plus `button` 15/800.
+
+Two additions the canvas does not draw: the rail's **collapse toggle** (docs/05 asks for one; it sits above Settings, where it disturbs the drawn layout least) and, in the design system, everything docs/05 specifies that the canvas has no artboard for.
+
+### Design system
+- **Variable fonts, bundled:** `Manrope[wght]` and `JetBrainsMono[wght]`, registered with `LicenseRegistry`. Variable weights render correctly on Linux, so no static instances are shipped. A variable font takes its weight from `fontVariations`, so `copyWith(fontWeight:)` alone does nothing — the nav rail marks the selected item by colour, not by weight, for that reason.
+- **Icons are the canvas's own SVGs**, extracted by `tools/extract_icons.dart` into `assets/icons/` and addressed through the `AppIcons` enum, rendered with **flutter_svg 2.3.0** (added to the ADR-002 package table; `crypto` is a new dev dependency for the extractor's hashes). Each icon is identified by a hash of its markup, so redrawing one fails loudly instead of silently dropping it, and a missing icon is a compile error rather than an empty box.
+- **`AppTokens` is a `ThemeExtension`** with accent, density and reduce-motion switchable at runtime. Design tokens only outside `lib/design/` (hard rule 9).
+- **The focus ring is stroked outside the control** (`FocusRing` + a `CustomPainter`), not a box shadow: a shadow is a filled rectangle behind the box, so on a transparent ghost button it fills the control instead of outlining it. On accent-filled surfaces the ring inverts to `textPrimary` with a 5 px glow at 35 %, since accent-on-accent is invisible.
+- **`ChannelRow` draws the programme's progress on the title line** — a 72 px bar after the ellipsized title, as the canvas does. Riding the row's bottom edge (the step 3b choice) strikes through the title in both densities; the step 7 golden is what showed it.
+- `EmptyState` and `ErrorState` scroll rather than overflow a short pane; `SurfaceStateOverride` forces hover/focus/pressed for the gallery and goldens.
+
+### Focus and keyboard (also the Google TV foundation)
+- **`FocusPane` is a `FocusTraversalGroup`, not a `FocusScope`.** A scope remembers its focused child for free, but it traps Tab — focus could never leave the nav rail. The memory is explicit instead (`FocusPaneController`, with `focusLast`/`focusFirst`/`focusPane`/`items`/`hasFocus`), and both behaviours are tested.
+- The shell has **three panes** — rail, top bar, screen. Left/Right between them go through `FocusPaneController.focusPane()` (the remembered item, else the pane's first). The rail binds Right and the screen pane binds Left; a screen with its own horizontal movement binds Left first and wins, because `Shortcuts` resolves from the focused node outwards.
+- **Global shortcuts wrap the router's navigator, not the shell**, so they also fire over the search overlay. `/` is an `Action` that disables itself while a text field has focus, which makes `Shortcuts` pass the key through instead of eating it. **Search is a non-opaque route, not a dialog**, so Ctrl+K, Esc and Back agree with each other.
+- **A destination shortcut takes focus with it; Enter on a rail item does not.** Ctrl+1 … Ctrl+7 and Ctrl+, mean "take me there", so focus lands on the first control of the screen that opens; Enter or Space on a rail item means "I am browsing the rail", so the item keeps focus and ↑ ↓ keep working. Switching a branch pulls focus into the new route's own scope, so both cases place focus deliberately, in a post-frame callback — the new branch is only traversable once laid out, which costs one frame (~16 ms) before the ring appears.
+- **Esc means "leave what you stepped into"**, in order: close what is open → return focus from the chrome to where the user was in the screen → with focus already in the screen, do nothing. It never navigates to another destination. The shell's `CloseTopIntent` action shadows the global one while focus is inside the shell, so it pops as well: `Actions` resolves outwards from the focused node and does **not** fall through to an outer action when the nearest one is disabled.
+- **Never write a conditional sibling next to a focusable subtree in a `Stack`.** The rail's active indicator was `if (selected) Positioned(…)`, so every selection change altered the child count, moved the item's subtree by one index, rebuilt its element and destroyed the `FocusNode` holding the keyboard focus. Indicators stay in the tree and go transparent instead.
+
+### Core
+- **Our own log rotation** (`RotatingFileOutput`, 5 × 5 MB, exact): logger's `AdvancedFileOutput` only checks size once a minute.
+- **No `runZonedGuarded`** — Flutter warns when it wraps `runApp`, and `FlutterError.onError` plus `PlatformDispatcher.onError` cover the same errors. This supersedes the step 2 plan.
+- `Result<T>` and `AppFailure` are sealed; details are redacted when a failure is created. `redact()` covers Xtream stream paths, credential query parameters, URL user-info, auth headers, JSON and printed-map credential fields, and exact secrets from a `SecretRegistry`, URL-encoded forms included.
+- `meta` is a direct dependency (`@immutable`). Dart 3.13's `unnecessary_type_name_in_constructor` means the unnamed constructor is written `new(...)` / `const new(...)`; a **named generative const constructor cannot be written that way at all**, so those become `static const` fields.
+
+### Data
+- **`DateTime` columns are ISO-8601 UTC text** (`store_date_time_values_as_text: true`). drift's other option is unix seconds, which it reads back as *local* time, so `DateTime.utc(...)` does not survive the round trip — a DAO test caught it. EPG times stay integer epoch ms in their own columns (docs/02).
+- The `settings` table holds **one JSON document per key**, and readers fall back instead of throwing, so one corrupt row cannot stop the app from starting.
+- **`sources` has no password column** — only `credential_ref`, the flutter_secure_storage key — and a test asserts it.
+- The database is opened through a `LazyDatabase` over `NativeDatabase.createInBackground`, so neither opening the file nor any query touches the UI isolate. `bootstrap()` falls back to an in-memory database with a logged error rather than refusing to start.
+- **Narrow interfaces keep drift out of the UI** (hard rule 6): `WindowBoundsStore` and `UiPreferences` live in `lib/core/`, their settings-table implementations in `lib/data/`. `railExpanded` is a plain getter read once in `bootstrap()`, so the first frame draws the remembered rail instead of flipping a frame later.
+- `build.yaml` needs its `databases:` entry before `drift_dev make-migrations` will run at all. `sqlite3_flutter_libs` stays dropped: an FTS5 smoke test proves the `sqlite3` package's binaries are enough, which ADR-002 had only assumed.
+
+### Window
+Size and position are saved debounced and restored on the next launch, through the settings table. Minimum window 1024 × 640. **Two things are still unverified on this machine:** window_manager #585 (a crash when the window is closed) and whether the compositor honours a restored position on Wayland — neither can be tested from a script here, because closing a window and taking a screenshot both fail on this Wayland session.
+
+### Testing
+- **Goldens are recorded on Linux only** — text rasterizes differently on Windows, so the same widget is a different image. The mechanism is `@Tags(['golden'])` at library level (`group()` takes no `tags` parameter), the tag declared in a root `dart_test.yaml`, and `skip:` with a reason off-Linux; Windows CI runs `flutter test --exclude-tags golden`. Images live in `test/golden/images/`. A green golden only means nothing changed — read the PNG after re-recording.
+- `test/flutter_test_config.dart` loads the bundled variable fonts with `FontLoader` for every test under `test/`, from disk rather than `rootBundle`, so no asset manifest is needed. The debug banner is suppressed for goldens with Flutter's own `debugAllowBannerOverride`, leaving `lib/` alone.
+- **`tools/fake_provider` is its own package** with its own `pubspec.yaml` and an `analysis_options.yaml` that includes very_good_analysis, so it carries the app's lints. The root `flutter analyze` **does** reach into it, which is why CI must `pub get` it first. Its data is deterministic and lazily generated from **index-addressable** draws (splitmix64 over seed, a per-kind salt and the index), not a sequential `Random(seed)`: item N must not depend on N−1 having been built. Value quirks are baked in by the generator, representation quirks applied at serialization by `JsonShape`, so one generated row can be served either way. Streams loop an **MKV remux**, never the `.ts`, and every ffmpeg process has a PID file, a kill on disconnect and a startup sweep that only signals a pid whose `/proc/<pid>/cmdline` still matches (hard rule 8).
+- `integration_test/app_launch_test.dart` pumps the real `IptvPlayerApp` with `bootstrap()`'s non-disk overrides. `bootstrap()` itself takes no overrides and resolves `AppPaths` on its own, so driving it from a test would write a log and a database into the user's real app-support directory and take over `FlutterError.onError`; a deeper launch test needs an injectable seam first.
+
+### CI
+One matrix job over **ubuntu-22.04** and windows-latest, with Flutter pinned to **3.47.4** (the version the goldens were recorded on). 22.04 rather than `ubuntu-latest`: it matches the development laptop and the AppImage target (libmpv 0.34.1), and 24.04 would silently change the mpv the app is tested against (ADR-003). `git config --global core.autocrlf false` runs **before** checkout, or Windows checks out CRLF and `git diff --exit-code` after `build_runner` reports every generated file as modified. CI installs no VA-API driver, no avahi and no protoc — it builds and tests, it never plays or casts — and the fake provider's ffmpeg tests skip themselves because neither the binaries nor the generated samples are committed.
+
+**Alternatives rejected:**
+- Following docs/05 where the canvas disagrees: the canvas is the drawn design and the thing the user approved; docs/05 was written first and has been corrected instead.
+- `FocusScope` for panes (traps Tab), a box-shadow focus ring (fills transparent controls), unix-seconds `DateTime` columns (loses UTC), a sequential `Random(seed)` in the generator (breaks lazy per-id generation), one component sheet golden (one 1280 × 800 viewport would only ever show the buttons), and two separate CI jobs (each step would be written twice).
+- Leaving focus where it was on a destination shortcut: it costs a keyboard user a Tab walk back into the content every single time.
+
+**Consequences:** Phase 1 is complete in code — 259 app tests, 81 fake-provider tests, analyze and the format check clean, release bundles building on Linux. **Still open:** CI green on both OSes (needs a push; the Windows job has never run anywhere), the window_manager #585 check, Windows playback (ADR-007), and the app's real name and icon. The rules above are the ones later phases must not relitigate without new evidence; docs/05, docs/01 and docs/06 have been corrected to match.

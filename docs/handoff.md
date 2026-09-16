@@ -1,12 +1,12 @@
-# Handoff — 2026-09-16 (session 13)
+# Handoff — 2026-09-16 (session 14)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Phase 1 steps 1–8 are all done and committed locally. Eight commits are
-waiting to be pushed, and pushing is now the one thing that moves the phase
-forward:** step 8 added the CI workflow, and CI cannot be green — or red —
-until GitHub sees it. `origin/main` is still at step 3a (`e9efe17`).
+**Phase 1 is finished except for CI going green. Nine commits are waiting to
+be pushed, and pushing is the one thing left:** the workflow cannot run — and
+ADR-008's last open item cannot close — until GitHub sees it. `origin/main` is
+still at step 3a (`e9efe17`).
 
 ```
 git push
@@ -56,10 +56,10 @@ mpv 'http://127.0.0.1:8899/live/test/test/1.ts'
 Open Claude Code in this folder and paste:
 
 ```
-Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, and docs/progress.md first.
-Phase 1 steps 1-8 are done and I have pushed. Check the CI run, fix anything red,
-then write the Phase 1 exit docs (ADR-008 from the running list in progress.md, and the
-docs/05 corrections). Stop for my review when it's finished.
+Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md and
+docs/decisions.md (ADR-008) first. Phase 1 is done and I have pushed. Check the CI run and
+fix anything red, then plan Phase 2 (providers and data, docs/02) and stop for my approval
+of the plan before building.
 ```
 
 ## Where things stand
@@ -83,13 +83,14 @@ docs/05 corrections). Stop for my review when it's finished.
   matrix, and the integration smoke test.
 - **Phase 1 step 8:** `.github/workflows/ci.yml` — Linux + Windows, every
   step verified locally except the Windows job, which needs a push.
+- **Phase 1 exit docs:** ADR-008 written and Accepted; docs/05, docs/01,
+  ADR-002 and docs/06 corrected to match what shipped.
 - 259 app tests and 81 fake-provider tests pass; `flutter analyze`, the format
   check over `lib test integration_test tools` and `flutter build linux
   --debug` are clean.
 
 ## Done this session (2026-09-16)
-Step 8, the CI workflow, plus the keyboard/focus decisions from the session
-before it.
+Step 8 (the CI workflow) and the Phase 1 exit docs.
 
 `.github/workflows/ci.yml`: one matrix job over ubuntu-22.04 and
 windows-latest, Flutter pinned to 3.47.4, on push to main, on pull requests
@@ -99,17 +100,31 @@ dependencies → `flutter pub get` and `dart pub get
 --exit-code` → `flutter analyze` → the format check → `flutter test` (Linux)
 or `flutter test --exclude-tags golden` (Windows) → the fake provider's
 `dart test` → the integration test under xvfb → release bundles, uploaded as
-artifacts.
+artifacts. Each step was run here first: `dart pub get --directory=` works,
+`build_runner` leaves the tree clean, analyze and format are clean, 259 + 81
+tests pass, the integration test passes under xvfb, and `flutter build linux
+--release` produces exactly the bundle path the workflow uploads.
 
-Each step was run here before being written down: `dart pub get --directory=`
-works, `build_runner` leaves the tree clean, analyze and format are clean,
-259 + 81 tests pass, the integration test passes under xvfb, and `flutter
-build linux --release` produces exactly the `build/linux/x64/release/bundle`
-path the workflow uploads.
+**ADR-008 is written and Accepted** (docs/decisions.md): every Phase 1 choice,
+organized by theme rather than by step — identity, where the canvas beats
+docs/05, the design system, focus and keyboard, core, data, window, testing,
+CI, the rejected alternatives, and what is still open. The running list in
+docs/progress.md is now a pointer to it, so there is one source of truth.
+
+Docs corrected to match what shipped: **docs/05** (64 px top bar, a rail with
+no Search item and a collapse toggle, the focus ring as a 2 px ring with a
+4 px glow at 25 % stroked outside the control, radius `control` 10, h2 and
+bodyStrong at 700, the 17/14/12 px styles, the 380 × 40 search field,
+`ChannelRow`'s progress on the title line), **docs/01 and ADR-002**
+(flutter_svg 2.3.0, `crypto` for the icon extractor), **docs/06** (goldens are
+Linux-only, how they are tagged and skipped, and the fake provider's `pub get`
+before analyze).
 
 ## Instructions for the next session
-1. Step 8 is written in `docs/plans/phase-1-foundation.md`. Stop for review
-   when it is finished, as with every numbered step.
+1. **Phase 1 is done.** Read ADR-008 before changing anything it covers: the
+   choices in it are the ones later phases must not relitigate without new
+   evidence. Phase 2 (providers and data, docs/02) is next, and the fake
+   provider from step 6 is what it gets tested against.
 2. CI is written; if a job is red, these are the three things that were
    easy to get wrong and are already handled — don't "fix" them away: `dart pub get` in
    `tools/fake_provider` **before** the root `flutter analyze`; `flutter test

@@ -42,18 +42,25 @@ User-selectable accent: Blue #5B8CFF (default), Violet #8B6CFF, Teal #22C3B5, Am
 |---|---|---|---|
 | display | 40 / 48 | 700 | details page titles |
 | h1 | 28 / 36 | 700 | screen titles |
-| h2 | 22 / 30 | 600 | section headers |
+| h2 | 22 / 30 | 700, −0.2 tracking | section headers |
 | h3 | 18 / 26 | 600 | card and dialog titles |
+| titleSmall | 17 / 24 | 800 | rail and card titles on the canvas |
 | body | 15 / 22 | 400 | general text |
-| bodyStrong | 15 / 22 | 600 | list primary text |
+| bodyStrong | 15 / 22 | 700 | list primary text |
+| button | 15 / 22 | 800 | buttons |
+| label | 14 / 20 | 600 | field labels, nav rail labels |
+| buttonSmall | 14 / 20 | 800 | small buttons |
 | caption | 13 / 18 | 500 | metadata |
+| labelSmall | 12 / 16 | 600 | chips, dense metadata |
 | micro | 11 / 14 | 600, +0.4 tracking, uppercase | badges |
 | mono | 13 / 18 | 500 | stream info, diagnostics |
+
+h2 and bodyStrong are 700, not 600, and the 17 / 14 / 12 px styles exist at all, because the canvas draws them that way (ADR-008). A variable font takes its weight from `fontVariations`, so `copyWith(fontWeight:)` alone changes nothing — go through the token.
 Tabular figures for times, channel numbers, durations.
 
 ### Spacing, radius, elevation, density
 - Spacing: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64
-- Radius: xs 6 (badges) · sm 8 (inputs, rows) · md 12 (cards) · lg 16 (dialogs, player) · pill 999
+- Radius: xs 6 (badges) · sm 8 (inputs, rows) · **control 10 (buttons, inputs, rows — the canvas's radius; ADR-008)** · md 12 (cards) · lg 16 (dialogs, player) · pill 999
 - Elevation: surface steps + 1 px borders; shadows only on floating menus/dialogs (0 12 32 rgba(0,0,0,.45))
 - Density: Comfortable (default, row 56) / Compact (row 44)
 
@@ -67,7 +74,7 @@ Tabular figures for times, channel numbers, durations.
 "Reduce motion" setting: durations 0–80 ms, no scale effects, no shimmer.
 
 ## Focus system (keyboard now, TV remote later)
-- `FocusableSurface` wraps every interactive element: 2 px accent ring + 2 px outer glow (accent at 35 %); tiles/cards scale to 1.03 (rows stay 1.0); surface lightens one step
+- `FocusableSurface` wraps every interactive element: a **2 px accent ring with a 4 px glow at 25 %** (the canvas's values; ADR-008), **stroked outside the control** rather than drawn as a box shadow — a shadow is a filled rectangle behind the box, so on a transparent ghost button it fills the control instead of outlining it. On accent-filled surfaces the ring inverts to `textPrimary` with a 5 px glow at 35 %, because accent-on-accent is invisible. Tiles/cards scale to 1.03 (rows stay 1.0); the surface lightens one step
 - Directional navigation with `FocusTraversalGroup` and directional focus intents; each pane is a group; Left/Right moves between panes; each pane remembers its last focused item
 - Enter/Space activate · Esc back/close · Menu key or Shift+F10 opens the item menu
 - **Where focus goes after a destination change** — the gesture decides, because switching a branch pulls focus into the new route's scope and it has to be placed deliberately either way:
@@ -77,11 +84,11 @@ Tabular figures for times, channel numbers, durations.
 - Mouse hover shows the hover style without stealing keyboard focus
 
 ## Core components (lib/design/components/)
-AppButton (primary/secondary/ghost/danger; S/M/L; leading icon) · IconButton (tooltip with shortcut hint) · TextField (clear, validation, password reveal) · SearchField (Ctrl+K hint) · Chip / FilterChip · Badge (LIVE, SD/HD/FHD/4K, Original/Converted audio/Transcoded, NEW, Catch-up, Downloaded) · ChannelLogo (logo or generated monogram tile: initials on a color derived from the name hash) · ChannelRow (number, logo, name, now title, thin progress, favorite star) · PosterCard (2:3, rating, progress, focus scale) · LandscapeCard (16:9 for episodes and continue watching) · SectionHeader (title + See all) · HorizontalRail (virtualized, edge arrows on hover) · Skeletons (row, poster, card, text; reduced-motion aware) · EmptyState · ErrorState (human message, Retry, Details disclosure) · Banner (info/warning/error) · Toast (bottom center, 3 s, optional action) · Dialog / Sheet · Menu / ContextMenu · SegmentedControl · Slider (volume; seek with time bubble) · ProgressBar (3 px, rounded) · Kbd (keycap) · Tooltip · CastingBar · QualityBadge · ReconnectingPill · DownloadButton (Download → Queued → progress ring with % → Downloaded ✓; Paused and Failed states; menu: pause, cancel, delete download) · DownloadRow (artwork, title, S · E, progress bar, speed, time left, size, state; pause/resume/cancel/retry, Show in folder) · StorageMeter (downloads size and free disk space)
+AppButton (primary/secondary/ghost/danger; S/M/L; leading icon) · IconButton (tooltip with shortcut hint) · TextField (clear, validation, password reveal) · SearchField (Ctrl+K hint) · Chip / FilterChip · Badge (LIVE, SD/HD/FHD/4K, Original/Converted audio/Transcoded, NEW, Catch-up, Downloaded) · ChannelLogo (logo or generated monogram tile: initials on a color derived from the name hash) · ChannelRow (number, logo, name, now title, a 72 px progress bar **on the title line** after the ellipsized title as the canvas draws it — on the row's bottom edge it strikes through the title, favorite star) · PosterCard (2:3, rating, progress, focus scale) · LandscapeCard (16:9 for episodes and continue watching) · SectionHeader (title + See all) · HorizontalRail (virtualized, edge arrows on hover) · Skeletons (row, poster, card, text; reduced-motion aware) · EmptyState · ErrorState (human message, Retry, Details disclosure) · Banner (info/warning/error) · Toast (bottom center, 3 s, optional action) · Dialog / Sheet · Menu / ContextMenu · SegmentedControl · Slider (volume; seek with time bubble) · ProgressBar (3 px, rounded) · Kbd (keycap) · Tooltip · CastingBar · QualityBadge · ReconnectingPill · DownloadButton (Download → Queued → progress ring with % → Downloaded ✓; Paused and Failed states; menu: pause, cancel, delete download) · DownloadRow (artwork, title, S · E, progress bar, speed, time left, size, state; pause/resume/cancel/retry, Show in folder) · StorageMeter (downloads size and free disk space)
 
 ## App shell (desktop)
-- **Nav rail** (72 px collapsed / 240 px expanded, remembered): app mark, Home, Live TV, Guide, Movies, Series, Favorites, Library, Search, spacer, Settings; active item gets an accent indicator bar
-- **Top bar** (56 px): screen title · source switcher (chip with source name + account status dot) · global search (Ctrl+K) · sync status ("Syncing channels · 12,340") · download indicator (while downloads run: "↓ 2 · 34 %"; opens Library → Downloads) · cast button
+- **Nav rail** (72 px collapsed / 240 px expanded, remembered across restarts): app mark, Home, Live TV, Guide, Movies, Series, Favorites, Library, spacer, collapse toggle, Settings; active item gets a 3 px accent indicator bar at the rail's edge. **There is no Search item in the rail** — the canvas has none, and search is the top bar's field plus Ctrl+K / `/` (ADR-008). The collapse toggle is an addition to the canvas, which draws none; it sits above Settings. The indicator is always in the tree and transparent when unselected: a conditional sibling next to a focusable subtree destroys its focus node on every selection change
+- **Top bar** (64 px, per the canvas; ADR-008): screen title · source switcher (chip with source name + account status dot) · global search (380 × 40 field, radius 10, with a Ctrl+K keycap) · sync status ("Syncing channels · 12,340") · download indicator (while downloads run: "↓ 2 · 34 %"; opens Library → Downloads) · cast button
 - **Casting bar** (64 px, bottom; only while casting)
 - Minimum window 1024 × 640. Below 1280 px: rail collapses and preview details compress. At 1600 px and above: wider preview pane.
 

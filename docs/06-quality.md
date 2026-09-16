@@ -16,7 +16,7 @@
 | Fixtures | test_fixtures/ | real-world-shaped JSON/M3U/XMLTV with every quirk in docs/02, plus malformed files (truncated, wrong encoding, huge); filename corpus for NameParser (docs/09) |
 | Database | drift in-memory + schema verifier | DAOs, FTS queries, migrations |
 | Widget | flutter_test | every screen in loading/empty/error/content states; focus traversal order; shortcuts |
-| Golden | matchesGoldenFile (fonts loaded) | core components and key screens at 1280×800 and 1920×1080 |
+| Golden | matchesGoldenFile (bundled fonts loaded by `test/flutter_test_config.dart`) | core components and key screens at 1280×800 and 1920×1080. **Linux only** — text rasterizes differently on Windows, so the same widget is a different image: they carry `@Tags(['golden'])` (declared in the root `dart_test.yaml`), skip off-Linux with a reason, and the Windows CI job runs `flutter test --exclude-tags golden` (ADR-008). Images live in `test/golden/images/`; after re-recording with `--update-goldens`, look at the PNG — a green golden only means nothing changed |
 | Integration | integration_test + fake provider | onboarding → sync → play → zap → fault recovery; VOD resume; search; guide; download → kill app → relaunch → resume → play offline; library scan → play → resume |
 | Cast protocol | fake receiver (Dart TLS server speaking Cast v2) | connect, launch, load, status, errors, heartbeat loss |
 | Soak | tools/soak | 8 h live playback with random faults; memory/CPU logged every minute |
@@ -54,7 +54,7 @@ Live samples are 30–120 s long and the fake provider loops them; VOD samples a
 | Memory growth during a 4 GB download | ≤ 30 MB |
 
 ## CI (GitHub Actions)
-Matrix ubuntu-22.04 + windows-latest: `flutter pub get` → build_runner (fail on diff) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb. Upload release builds as CI artifacts.
+Matrix ubuntu-22.04 + windows-latest (`.github/workflows/ci.yml`): `flutter pub get` **and `dart pub get --directory=tools/fake_provider`, without which the root `flutter analyze` cannot resolve that package's imports** → build_runner (fail on diff; `core.autocrlf false` is set before checkout so Windows does not fail on line endings) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb. Upload release builds as CI artifacts.
 
 ## Definition of done (every feature)
 1. Spec behavior implemented, including loading/empty/error/offline states
