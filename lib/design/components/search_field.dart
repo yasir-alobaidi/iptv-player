@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/kbd.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -129,7 +130,7 @@ class _SearchFieldState extends State<SearchField> {
       ),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, size: 18, color: colors.textTertiary),
+          AppIcon(AppIcons.search, size: 18, color: colors.textTertiary),
           SizedBox(width: tokens.spacing.s8 + 2),
           Expanded(child: body),
           if (widget.shortcut != null) ...[

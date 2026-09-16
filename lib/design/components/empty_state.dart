@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_button.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -17,7 +18,7 @@ class EmptyState extends StatelessWidget {
 
   final String title;
   final String? message;
-  final IconData? icon;
+  final AppIcons? icon;
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -47,8 +48,8 @@ class EmptyState extends StatelessWidget {
                   borderRadius: tokens.radii.mdAll,
                   border: Border.all(color: colors.border),
                 ),
-                child: Icon(
-                  icon,
+                child: AppIcon(
+                  icon!,
                   size: compact ? 20 : 24,
                   color: colors.textTertiary,
                 ),

@@ -10,15 +10,11 @@ void main() {
     testWidgets('shows its label and leading icon', (tester) async {
       await pumpDesign(
         tester,
-        AppButton(
-          label: 'Play',
-          icon: Icons.play_arrow_rounded,
-          onPressed: () {},
-        ),
+        AppButton(label: 'Play', icon: AppIcons.play, onPressed: () {}),
       );
 
       expect(find.text('Play'), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(find.byType(AppIcon), findsOneWidget);
     });
 
     testWidgets('activates on tap and on Enter', (tester) async {

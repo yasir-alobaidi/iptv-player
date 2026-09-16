@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/design/gallery/gallery_media_sections.dart';
 import 'package:iptv_player/design/gallery/gallery_section.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -91,7 +92,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     states: entry.value,
                     child: AppButton(
                       label: 'Play',
-                      icon: Icons.play_arrow_rounded,
+                      icon: AppIcons.play,
                       variant: variant,
                       onPressed: () {},
                     ),
@@ -100,7 +101,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   label: '${variant.name} · disabled',
                   child: AppButton(
                     label: 'Play',
-                    icon: Icons.play_arrow_rounded,
+                    icon: AppIcons.play,
                     variant: variant,
                   ),
                 ),
@@ -141,7 +142,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   label: entry.key,
                   states: entry.value,
                   child: AppIconButton(
-                    icon: Icons.cast_rounded,
+                    icon: AppIcons.cast,
                     tooltip: 'Cast',
                     shortcut: 'C',
                     onPressed: () {},
@@ -150,7 +151,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               Specimen(
                 label: 'Selected',
                 child: AppIconButton(
-                  icon: Icons.star_rounded,
+                  icon: AppIcons.starFilled,
                   tooltip: 'Favorite',
                   shortcut: 'F',
                   selected: true,
@@ -159,12 +160,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
               const Specimen(
                 label: 'Disabled',
-                child: AppIconButton(icon: Icons.cast_rounded, tooltip: 'Cast'),
+                child: AppIconButton(icon: AppIcons.cast, tooltip: 'Cast'),
               ),
               Specimen(
                 label: 'Bordered',
                 child: AppIconButton(
-                  icon: Icons.cast_rounded,
+                  icon: AppIcons.cast,
                   tooltip: 'Cast',
                   bordered: true,
                   onPressed: () {},
@@ -401,7 +402,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       borderRadius: tokens.radii.mdAll,
                     ),
                     child: EmptyState(
-                      icon: Icons.download_rounded,
+                      icon: AppIcons.download,
                       title: 'Nothing downloading',
                       message:
                           'Press D on a movie or episode to '
@@ -435,6 +436,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
         ],
       ),
+      ...mediaSections(context),
       GallerySection(
         title: 'Focus ring',
         description: 'Rows keep scale 1.0; tiles and cards grow to 1.03.',
@@ -580,7 +582,7 @@ class _Toolbar extends StatelessWidget {
                     SizedBox(width: tokens.spacing.s12),
                     AppChip(
                       label: 'Reduce motion',
-                      icon: Icons.motion_photos_off_rounded,
+                      icon: AppIcons.eye,
                       selected: reduceMotion,
                       onPressed: () => onReduceMotion(!reduceMotion),
                     ),

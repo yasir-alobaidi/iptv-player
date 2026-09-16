@@ -12,7 +12,7 @@ void main() {
       await pumpDesign(
         tester,
         EmptyState(
-          icon: Icons.download_rounded,
+          icon: AppIcons.download,
           title: 'Nothing downloading',
           message: 'Press D on a movie or episode to download it.',
           actionLabel: 'Open Movies',
@@ -21,7 +21,7 @@ void main() {
       );
 
       expect(find.text('Nothing downloading'), findsOneWidget);
-      expect(find.byIcon(Icons.download_rounded), findsOneWidget);
+      expect(find.byType(AppIcon), findsOneWidget);
 
       await tester.tap(find.text('Open Movies'));
       await tester.pump();

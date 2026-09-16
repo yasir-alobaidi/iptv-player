@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -38,7 +39,7 @@ class AppButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final AppButtonVariant variant;
   final AppButtonSize size;
-  final IconData? icon;
+  final AppIcons? icon;
 
   /// Shows a spinner in place of the leading icon and blocks activation.
   final bool loading;
@@ -108,7 +109,7 @@ class AppButton extends StatelessWidget {
                 ),
               )
             else if (icon != null)
-              Icon(icon, size: 18, color: foreground),
+              AppIcon(icon!, size: 18, color: foreground),
             if (loading || icon != null) SizedBox(width: size.gap),
             Text(label, style: textStyle),
           ],

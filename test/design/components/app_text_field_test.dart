@@ -5,6 +5,10 @@ import 'package:iptv_player/design/components.dart';
 
 import '../design_harness.dart';
 
+Finder _icon(AppIcons icon) => find.byWidgetPredicate(
+  (widget) => widget is AppIcon && widget.icon == icon,
+);
+
 void main() {
   group('AppTextField', () {
     testWidgets('shows the label, hint and helper text', (tester) async {
@@ -56,13 +60,13 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.close_rounded), findsNothing);
+      expect(_icon(AppIcons.close), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'Home provider');
       await tester.pump();
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(_icon(AppIcons.close), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(_icon(AppIcons.close));
       await tester.pump();
       expect(controller.text, isEmpty);
     });
@@ -81,7 +85,7 @@ void main() {
         isTrue,
       );
 
-      await tester.tap(find.byIcon(Icons.visibility_outlined));
+      await tester.tap(_icon(AppIcons.eye));
       await tester.pump();
 
       expect(

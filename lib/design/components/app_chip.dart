@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -24,7 +25,7 @@ class AppChip extends StatelessWidget {
 
   /// Optional trailing count, e.g. the number of channels in a category.
   final int? count;
-  final IconData? icon;
+  final AppIcons? icon;
 
   /// Shows a remove affordance (active filters).
   final VoidCallback? onRemove;
@@ -62,7 +63,7 @@ class AppChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: foreground),
+                AppIcon(icon!, size: 14, color: foreground),
                 SizedBox(width: tokens.spacing.s4 + 2),
               ],
               Text(
@@ -83,7 +84,7 @@ class AppChip extends StatelessWidget {
               ],
               if (onRemove != null) ...[
                 SizedBox(width: tokens.spacing.s4 + 2),
-                Icon(Icons.close_rounded, size: 14, color: foreground),
+                AppIcon(AppIcons.close, size: 14, color: foreground),
               ],
             ],
           ),

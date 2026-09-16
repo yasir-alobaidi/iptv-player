@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_tooltip.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -21,7 +22,7 @@ class AppIconButton extends StatelessWidget {
     super.key,
   });
 
-  final IconData icon;
+  final AppIcons icon;
   final String tooltip;
   final VoidCallback? onPressed;
 
@@ -62,7 +63,7 @@ class AppIconButton extends StatelessWidget {
               borderRadius: tokens.radii.controlAll,
               border: bordered ? Border.all(color: colors.border) : null,
             ),
-            child: Icon(
+            child: AppIcon(
               icon,
               size: iconSize,
               color: selected ? colors.accentBase : colors.textSecondary,

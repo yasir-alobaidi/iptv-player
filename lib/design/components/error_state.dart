@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_button.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -53,8 +54,8 @@ class _ErrorStateState extends State<ErrorState> {
                 color: colors.danger.withValues(alpha: 0.12),
                 borderRadius: tokens.radii.mdAll,
               ),
-              child: Icon(
-                Icons.error_outline_rounded,
+              child: AppIcon(
+                AppIcons.alertCircle,
                 size: widget.compact ? 20 : 24,
                 color: colors.danger,
               ),
@@ -84,7 +85,7 @@ class _ErrorStateState extends State<ErrorState> {
                 if (widget.onRetry != null)
                   AppButton(
                     label: widget.retryLabel,
-                    icon: Icons.refresh_rounded,
+                    icon: AppIcons.retry,
                     onPressed: widget.onRetry,
                   ),
                 if (widget.onRetry != null && widget.details != null)

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Single-line text input (canvas: 48 px tall, radius 10, surface1 on a
@@ -38,7 +39,7 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final bool autofocus;
   final bool showClear;
-  final IconData? leading;
+  final AppIcons? leading;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -145,13 +146,17 @@ class _AppTextFieldState extends State<AppTextField> {
             child: Row(
               children: [
                 if (widget.leading != null) ...[
-                  Icon(widget.leading, size: 18, color: colors.textTertiary),
+                  AppIcon(
+                    widget.leading!,
+                    size: 18,
+                    color: colors.textTertiary,
+                  ),
                   SizedBox(width: tokens.spacing.s8 + 2),
                 ],
                 Expanded(child: field),
                 if (widget.showClear && _controller.text.isNotEmpty)
                   _FieldAction(
-                    icon: Icons.close_rounded,
+                    icon: AppIcons.close,
                     tooltip: 'Clear',
                     onPressed: () {
                       _controller.clear();
@@ -160,9 +165,10 @@ class _AppTextFieldState extends State<AppTextField> {
                   ),
                 if (widget.obscure)
                   _FieldAction(
-                    icon: _revealed
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
+                    // The canvas has one eye icon, so the revealed
+                    // state is shown with the accent color.
+                    icon: AppIcons.eye,
+                    active: _revealed,
                     tooltip: _revealed ? 'Hide' : 'Show',
                     onPressed: () => setState(() => _revealed = !_revealed),
                   ),
@@ -189,11 +195,13 @@ class _FieldAction extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.active = false,
   });
 
-  final IconData icon;
+  final AppIcons icon;
   final String tooltip;
   final VoidCallback onPressed;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +213,13 @@ class _FieldAction extends StatelessWidget {
         radius: 16,
         child: Padding(
           padding: EdgeInsets.all(tokens.spacing.s4),
-          child: Icon(icon, size: 18, color: tokens.colors.textTertiary),
+          child: AppIcon(
+            icon,
+            size: 18,
+            color: active
+                ? tokens.colors.accentBase
+                : tokens.colors.textTertiary,
+          ),
         ),
       ),
     );

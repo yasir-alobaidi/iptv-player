@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; steps 1 (project scaffold), 2 (core/) and 3a (design/ foundations) done.** Next is step 3b (media and overlay components, canvas SVG icons). The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
+Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; steps 1 (project scaffold), 2 (core/), 3a (design/ foundations) and 3b (media and overlay components, icons) done.** Next is step 4 (app/: router, shell, window, shortcuts). The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -35,16 +35,19 @@ Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approve
 
 - 2026-09-15: Phase 1 step 3a (design/): bundled variable fonts (`Manrope[wght]`, `JetBrainsMono[wght]` + OFL, registered with `LicenseRegistry`) — **variable weights render correctly on Linux, so no static instances are needed** (risk closed); `AppTokens` as a `ThemeExtension` (colors, spacing, radii incl. the canvas's 10, typography, motion, focus, density, elevation) with accent / density / reduce motion switchable at runtime; `buildAppTheme()`; `FocusableSurface` (Enter/Space, Menu and Shift+F10, hover separate from focus, 1.03 tile scale) + `FocusPane` + `AppShortcuts`; components AppButton, AppIconButton, AppTextField, SearchField, AppChip, AppBadge, Kbd, AppTooltip, ProgressBar, Skeleton/SkeletonRow/SkeletonPoster, EmptyState, ErrorState, SegmentedControl; keyboard-navigable Component Gallery with live accent / density / reduce-motion switches. 119 tests pass (58 new). `flutter build linux --debug` and the app run confirmed on screen: fonts, focus ring, and every button variant
 
+- 2026-09-15: Phase 1 step 3b (design/ media and overlay): `tools/extract_icons.dart` pulls the canvas SVGs into `assets/icons/` (50 icons, deduplicated, colors swapped for `currentColor`, identified by a hash of their markup so a redraw fails loudly); `AppIcon` + the `AppIcons` enum render them with flutter_svg. Components: ChannelLogo (monogram and color from the name), ChannelRow, PosterCard, LandscapeCard, SectionHeader, HorizontalRail (virtualized, hover arrows), AppSlider (buffered range, time bubble), AppBanner, AppToast, AppDialog, AppSheet, AppMenu, CastingBar, QualityBadge, ReconnectingPill, DownloadButton (6 states), DownloadRow, StorageMeter. The step 3a components were switched from Material icons to the canvas set, so `AppButton.icon`, `AppIconButton.icon`, `AppChip.icon`, `AppTextField.leading` and `EmptyState.icon` now take `AppIcons`. **`FocusPane` was rewritten:** it was a `FocusScope`, which traps Tab inside the pane — focus could never leave the nav rail. It is a `FocusTraversalGroup` now, and the "remembers its last item" behaviour is explicit (`FocusPaneController`), tested both ways. 156 tests pass (37 new). Checked in the running Linux build
+
 ## In progress
-- Phase 1 step 3b (design/: media and overlay components, canvas SVG icons) — not started; waiting for your OK
+- Phase 1 step 4 (app/: router, shell, window, shortcuts) — not started; waiting for your OK
 
 ## Next
-1. Phase 1 steps 3b–8 (approved plan: docs/plans/phase-1-foundation.md)
+1. Phase 1 steps 4–8 (approved plan: docs/plans/phase-1-foundation.md)
 2. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## For ADR-008 (written at the end of the phase)
 Collected as each step lands, so nothing is lost:
 - Step 2: our own log rotation (logger's `AdvancedFileOutput` only checks size once a minute); no `runZonedGuarded` (Flutter warns when it wraps `runApp`; the two global hooks cover the same errors) — this **supersedes** the `runZonedGuarded` line in the step 2 plan; `const new(...)` constructor syntax (Dart 3.13 `unnecessary_type_name_in_constructor`); `meta` as a direct dependency
+- Step 3b: `FocusPane` is a `FocusTraversalGroup`, not a `FocusScope` — a scope remembers its focused child for free but traps Tab, which would strand the user in the nav rail; the memory is explicit instead (`FocusPaneController`). Canvas icons are extracted by `tools/extract_icons.dart` and addressed through the `AppIcons` enum, so a missing icon fails at build rather than rendering nothing; `crypto` is a new dev dependency for the extractor's hashes. The design system uses only canvas icons, so the component icon parameters take `AppIcons`, not `IconData`. `ChannelRow` draws the programme progress on its bottom edge rather than in the text column, because the stacked version does not fit the 44 px compact row
 - Step 3a: the focus ring is **stroked outside the control** (`FocusRing` + `CustomPainter`), not a box shadow — a shadow is a filled rect behind the box, so on a transparent ghost button it fills the control instead of outlining it; on accent-filled surfaces the ring inverts to `textPrimary` with a 5 px glow at 35 % (canvas), since accent-on-accent is invisible; canvas weights beat docs/05 where they disagree (h2 700 not 600, bodyStrong 700 not 600) and add `button` 15/800 and `buttonSmall` 14/800; `EmptyState` and `ErrorState` scroll instead of overflowing a short pane; `SurfaceStateOverride` forces hover/focus/pressed for the gallery and goldens; the gallery is the app's home until step 4 moves it to `/dev/gallery`
 
 ## Open questions
