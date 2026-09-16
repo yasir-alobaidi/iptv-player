@@ -71,6 +71,8 @@ http://example/live/u/p/123.ts
 ## Database (drift)
 All provider items are keyed by `(source_id, remote_key)` so user data survives re-syncs.
 
+`DateTime` columns are stored as ISO-8601 UTC text (`store_date_time_values_as_text: true` in `build.yaml`): drift's other option is unix seconds, and it reads those back as *local* time, so a UTC value does not survive a round trip. EPG times stay integer epoch ms in their own columns, as above.
+
 | Table | Columns |
 |---|---|
 | sources | id, type, name, server_url, username, credential_ref, m3u_url, epg_url_override, user_agent, live_format, epg_offset_min, refresh_hours, max_connections_override, account_json, exp_date, last_synced_at, sort_order |
@@ -90,6 +92,8 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | FTS5 | channels_fts, movies_fts, series_fts, programs_fts |
 
 Every schema change: bump the schema version, write a migration, add a migration test (drift schema dumps + verifier).
+
+The flow is `dart run drift_dev make-migrations`, which writes the dump for the current version into `drift_schemas/app/` (committed), followed by `dart run drift_dev schema generate drift_schemas/app/ test/data/db/generated/` for the verifier's helpers. `test/data/db/schema_v1_test.dart` checks the live schema against the committed dump; `test/data/db/generated/` is excluded from the analyzer because drift_dev owns it.
 
 Downloads and the local library (tables `library_folders`, `library_items`, `downloads`, `library_fts`) are specified in docs/09 and added by a migration in Phase 8. `favorites` and `watch_history` also hold local files (`item_type = local`, `remote_key` = quick hash).
 

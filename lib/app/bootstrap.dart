@@ -10,7 +10,12 @@ import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
-import 'package:iptv_player/core/platform/window_bounds.dart';
+import 'package:iptv_player/core/settings/ui_preferences.dart';
+import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/settings/db_ui_preferences.dart';
+import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
+import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
 import 'package:logger/logger.dart';
 
@@ -21,9 +26,10 @@ Future<void> bootstrap() async {
 
   final secrets = SecretRegistry();
   final outputs = <LogOutput>[if (kDebugMode) ConsoleOutput()];
+  AppPaths? paths;
   Object? logDirError;
   try {
-    final paths = await AppPaths.resolve();
+    paths = await AppPaths.resolve();
     outputs.add(RotatingFileOutput(directory: paths.logs));
   } on Object catch (error) {
     // Keep running without a log file rather than failing to start.
@@ -41,9 +47,11 @@ Future<void> bootstrap() async {
   final errors = ErrorReporter(log)..install();
   log.info('bootstrap', 'Starting IPTV Player');
 
-  // Step 5 swaps this for the settings-table store; until then the
-  // window opens at its default size every run.
-  final windowBounds = InMemoryWindowBoundsStore();
+  final database = await _openDatabase(paths, log);
+  final settings = SettingsRepository(database);
+  final windowBounds = DbWindowBoundsStore(settings);
+  final uiPreferences = await _loadUiPreferences(settings, log);
+
   try {
     await AppWindow(store: windowBounds, log: log).setUp();
   } on Object catch (error, stackTrace) {
@@ -63,9 +71,55 @@ Future<void> bootstrap() async {
         appLogProvider.overrideWithValue(log),
         secretRegistryProvider.overrideWithValue(secrets),
         errorReporterProvider.overrideWithValue(errors),
+        appDatabaseProvider.overrideWithValue(database),
         windowBoundsStoreProvider.overrideWithValue(windowBounds),
+        uiPreferencesProvider.overrideWithValue(uiPreferences),
       ],
       child: const IptvPlayerApp(),
     ),
   );
+}
+
+/// Opens the database file, or falls back to a temporary in-memory one so
+/// a broken file can't stop the app from starting (hard rule 1). The file
+/// itself is left untouched, so the next launch can still recover it.
+Future<AppDatabase> _openDatabase(AppPaths? paths, AppLog log) async {
+  if (paths == null) {
+    log.warning('bootstrap', 'No app directory; nothing will be saved');
+    return AppDatabase.memory();
+  }
+  try {
+    final database = AppDatabase(openAppDatabase(paths.root));
+    // LazyDatabase opens on the first query. Running one here means a
+    // broken file is reported now, not during the first frame.
+    await database.settingsDao.read(SettingsKeys.windowBounds);
+    return database;
+  } on Object catch (error, stackTrace) {
+    log.error(
+      'bootstrap',
+      'Could not open the database; nothing will be saved',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return AppDatabase.memory();
+  }
+}
+
+/// Reads the remembered UI choices before the first frame, so the shell
+/// draws the right rail immediately instead of flipping after a frame.
+Future<UiPreferences> _loadUiPreferences(
+  SettingsRepository settings,
+  AppLog log,
+) async {
+  try {
+    return await DbUiPreferences.load(settings);
+  } on Object catch (error, stackTrace) {
+    log.warning(
+      'bootstrap',
+      'Could not read the saved UI preferences',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return InMemoryUiPreferences();
+  }
 }

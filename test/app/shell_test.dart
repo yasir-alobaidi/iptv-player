@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components.dart';
 
 import 'app_harness.dart';
@@ -55,6 +56,33 @@ void main() {
       );
 
       expect(_railWidth(tester), NavRail.collapsedWidth);
+    });
+
+    testWidgets('opens expanded when that is what was remembered', (
+      tester,
+    ) async {
+      final preferences = InMemoryUiPreferences();
+      await preferences.setRailExpanded(expanded: true);
+
+      await pumpApp(
+        tester,
+        overrides: [uiPreferencesProvider.overrideWithValue(preferences)],
+      );
+
+      expect(_railWidth(tester), NavRail.expandedWidth);
+    });
+
+    testWidgets('the toggle writes the choice through', (tester) async {
+      final preferences = InMemoryUiPreferences();
+
+      await pumpApp(
+        tester,
+        overrides: [uiPreferencesProvider.overrideWithValue(preferences)],
+      );
+      await tester.tap(findByLabel('Expand menu'));
+      await settleApp(tester);
+
+      expect(preferences.railExpanded, isTrue);
     });
 
     testWidgets('a rail item switches destination', (tester) async {

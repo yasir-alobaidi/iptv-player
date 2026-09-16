@@ -3,6 +3,14 @@ targets:
     builders:
       drift_dev:
         options:
+          # DateTime columns as ISO-8601 UTC text, not unix seconds:
+          # drift reads an int column back as *local* time, which loses the
+          # UTC flag a round trip has to keep (ADR-008).
+          store_date_time_values_as_text: true
+          # `dart run drift_dev make-migrations` needs to know which class
+          # to dump: it writes drift_schemas/app/ and the migration tests.
+          databases:
+            app: lib/data/db/app_database.dart
           sql:
             dialect: sqlite
             options:

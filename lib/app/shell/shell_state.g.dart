@@ -187,21 +187,15 @@ String _$shellCastSessionHash() => r'a1331391f0e90e13e6e274b32594ca3c9fa2591f';
 
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.
-///
-/// Step 5 persists it in the `settings` table.
 
 @ProviderFor(RailExpanded)
 final railExpandedProvider = RailExpandedProvider._();
 
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.
-///
-/// Step 5 persists it in the `settings` table.
 final class RailExpandedProvider extends $NotifierProvider<RailExpanded, bool> {
   /// Whether the nav rail is expanded to 240 px. The shell still collapses
   /// it on a narrow window; this is what the user asked for.
-  ///
-  /// Step 5 persists it in the `settings` table.
   RailExpandedProvider._()
     : super(
         from: null,
@@ -229,12 +223,10 @@ final class RailExpandedProvider extends $NotifierProvider<RailExpanded, bool> {
   }
 }
 
-String _$railExpandedHash() => r'4a6efb55d35819e862061b4321d46fb5bcefc424';
+String _$railExpandedHash() => r'4133d791b4d22cb40a5b1be919e3815d88168f11';
 
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.
-///
-/// Step 5 persists it in the `settings` table.
 
 abstract class _$RailExpanded extends $Notifier<bool> {
   bool build();
@@ -300,14 +292,16 @@ final class NonFatalErrorsProvider
 
 String _$nonFatalErrorsHash() => r'9bf39c8246816e3448d74e675308ca78f2aaccee';
 
-/// Where the window's size and position are kept. Step 5 overrides this
-/// with the settings-table implementation.
+/// Where the window's size and position are kept. `bootstrap()`
+/// overrides this with the settings-table implementation; the in-memory
+/// default keeps widget tests free of a database.
 
 @ProviderFor(windowBoundsStore)
 final windowBoundsStoreProvider = WindowBoundsStoreProvider._();
 
-/// Where the window's size and position are kept. Step 5 overrides this
-/// with the settings-table implementation.
+/// Where the window's size and position are kept. `bootstrap()`
+/// overrides this with the settings-table implementation; the in-memory
+/// default keeps widget tests free of a database.
 
 final class WindowBoundsStoreProvider
     extends
@@ -317,8 +311,9 @@ final class WindowBoundsStoreProvider
           WindowBoundsStore
         >
     with $Provider<WindowBoundsStore> {
-  /// Where the window's size and position are kept. Step 5 overrides this
-  /// with the settings-table implementation.
+  /// Where the window's size and position are kept. `bootstrap()`
+  /// overrides this with the settings-table implementation; the in-memory
+  /// default keeps widget tests free of a database.
   WindowBoundsStoreProvider._()
     : super(
         from: null,
@@ -354,3 +349,52 @@ final class WindowBoundsStoreProvider
 }
 
 String _$windowBoundsStoreHash() => r'1d04b4325983e3d121761b96a46d46b9c719b2be';
+
+/// Small UI choices that survive a restart. Overridden in `bootstrap()`
+/// with the settings-table implementation, for the same reason.
+
+@ProviderFor(uiPreferences)
+final uiPreferencesProvider = UiPreferencesProvider._();
+
+/// Small UI choices that survive a restart. Overridden in `bootstrap()`
+/// with the settings-table implementation, for the same reason.
+
+final class UiPreferencesProvider
+    extends $FunctionalProvider<UiPreferences, UiPreferences, UiPreferences>
+    with $Provider<UiPreferences> {
+  /// Small UI choices that survive a restart. Overridden in `bootstrap()`
+  /// with the settings-table implementation, for the same reason.
+  UiPreferencesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'uiPreferencesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$uiPreferencesHash();
+
+  @$internal
+  @override
+  $ProviderElement<UiPreferences> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  UiPreferences create(Ref ref) {
+    return uiPreferences(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UiPreferences value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UiPreferences>(value),
+    );
+  }
+}
+
+String _$uiPreferencesHash() => r'75a81a30b7f655892740696c0c7fd527bf9f9a93';

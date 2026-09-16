@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'shell_state.g.dart';
@@ -81,14 +84,17 @@ ShellCastSession? shellCastSession(Ref ref) => null;
 
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.
-///
-/// Step 5 persists it in the `settings` table.
 @riverpod
 class RailExpanded extends _$RailExpanded {
   @override
-  bool build() => false;
+  bool build() => ref.read(uiPreferencesProvider).railExpanded;
 
-  void toggle() => state = !state;
+  void toggle() {
+    state = !state;
+    // The rail moves now; the write is not worth waiting for, and a
+    // failed one only costs the choice on the next launch.
+    unawaited(ref.read(uiPreferencesProvider).setRailExpanded(expanded: state));
+  }
 }
 
 /// Non-fatal errors the global handlers caught, shown as toasts by the
@@ -97,7 +103,13 @@ class RailExpanded extends _$RailExpanded {
 Stream<AppFailure> nonFatalErrors(Ref ref) =>
     ref.watch(errorReporterProvider).nonFatalErrors;
 
-/// Where the window's size and position are kept. Step 5 overrides this
-/// with the settings-table implementation.
+/// Where the window's size and position are kept. `bootstrap()`
+/// overrides this with the settings-table implementation; the in-memory
+/// default keeps widget tests free of a database.
 @Riverpod(keepAlive: true)
 WindowBoundsStore windowBoundsStore(Ref ref) => InMemoryWindowBoundsStore();
+
+/// Small UI choices that survive a restart. Overridden in `bootstrap()`
+/// with the settings-table implementation, for the same reason.
+@Riverpod(keepAlive: true)
+UiPreferences uiPreferences(Ref ref) => InMemoryUiPreferences();
