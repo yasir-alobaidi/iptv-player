@@ -63,3 +63,13 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+
+  # Variable fonts (wght axis). Weights are selected with FontVariation('wght')
+  # alongside FontWeight; see lib/design/tokens.dart.
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope[wght].ttf
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono[wght].ttf
