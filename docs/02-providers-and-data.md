@@ -128,8 +128,12 @@ Triggers are derived state: drift's versioned schemas leave them out, and its sc
 Downloads and the local library (tables `library_folders`, `library_items`, `downloads`, `library_fts`) are specified in docs/09 and added by a migration in Phase 8. `favorites` and `watch_history` also hold local files (`item_type = local`, `remote_key` = quick hash).
 
 ## Sync engine
-- Runs in a background isolate with its own DB connection; emits progress events (stage, counts) to the UI
-- Order: account → categories → live → movies → series; EPG runs separately at lower priority
-- Upsert by `(source_id, remote_key)`; mark-and-sweep removes items not seen in this run; hidden flags, renames, favorites, history, and mappings are preserved
-- Triggers: after onboarding; on app start when `last_synced_at` is older than `refresh_hours` (default 12); manual refresh
-- One sync per source at a time; a failed sync keeps the previous data and shows a non-blocking banner with Retry
+- Runs in a background isolate connected straight to the database isolate (`serializableConnection()`, which is why `openAppDatabase` returns drift's `createBackgroundConnection` and not a `LazyDatabase`); emits progress events to the UI: the stage, a count per list, the current list's total once it has arrived, and the account (ADR-009)
+- Order: account → categories → live → movies → series for Xtream; an M3U playlist is one stage. EPG runs separately at lower priority (Phase 4)
+- Upsert by `(source_id, remote_key)` in batches of 5,000; mark-and-sweep removes items not seen in this run, only after the run succeeded; hidden flags, renames, favorites, history, and mappings are preserved
+- **The sync isolate writes only in single batches, never in a transaction**, so cancel and timeout can simply kill it: a killed isolate's open transaction would block the database for everyone. The run's start and its finish (sweep, outcome, `last_synced_at`, in one transaction) happen on the UI isolate's connection
+- An Xtream list that comes back empty keeps the previous one (and its categories, with the user's hidden flags) instead of sweeping it; an M3U playlist with no entries fails the run
+- A missing or dangling `category_id` is stored as a null `category_id`; the UI files those items under "Uncategorized". There is no synthetic category row
+- M3U: categories come from `group-title` per kind; episodes are grouped into series by `(group, series name)` (`seriesIdentity`); an episode whose name has no numbering joins a series named after its group, numbered in playlist order; with no group either, it is filed as a movie. M3U episodes are upserted and swept with the run; Xtream episodes are fetched lazily and replaced as a set. The playlist header's EPG URLs go to the secure store
+- Triggers: after onboarding; on app start (after the first frame and 2 s) when `last_synced_at` is older than `refresh_hours` (default 12), one source after another, once interrupted runs are marked failed; manual refresh
+- One sync per source at a time (a second request joins the first); a failed sync keeps the previous data and shows a non-blocking banner with Retry

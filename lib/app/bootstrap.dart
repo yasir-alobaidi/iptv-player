@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,7 @@ import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
+import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:logger/logger.dart';
 
 /// Sets up logging and the global error handlers, then starts the app.
@@ -66,21 +69,42 @@ Future<void> bootstrap() async {
     );
   }
 
+  final container = ProviderContainer(
+    overrides: [
+      appLogProvider.overrideWithValue(log),
+      secretRegistryProvider.overrideWithValue(secrets),
+      errorReporterProvider.overrideWithValue(errors),
+      appDatabaseProvider.overrideWithValue(database),
+      credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
+      windowBoundsStoreProvider.overrideWithValue(windowBounds),
+      uiPreferencesProvider.overrideWithValue(uiPreferences),
+    ],
+  );
   runApp(
-    ProviderScope(
-      overrides: [
-        appLogProvider.overrideWithValue(log),
-        secretRegistryProvider.overrideWithValue(secrets),
-        errorReporterProvider.overrideWithValue(errors),
-        appDatabaseProvider.overrideWithValue(database),
-        credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
-        windowBoundsStoreProvider.overrideWithValue(windowBounds),
-        uiPreferencesProvider.overrideWithValue(uiPreferences),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const IptvPlayerApp(),
     ),
   );
+  _syncAfterLaunch(container);
 }
+
+/// Waits for the first frame and a moment after it, so starting up never
+/// competes with a sync, then records runs the last session left
+/// unfinished and refreshes sources older than their `refresh_hours`
+/// (docs/02). The sync itself runs in a background isolate.
+void _syncAfterLaunch(ProviderContainer container) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(
+      Future<void>.delayed(
+        _launchSyncDelay,
+        () => container.read(syncServiceProvider).startUp(),
+      ),
+    );
+  });
+}
+
+const _launchSyncDelay = Duration(seconds: 2);
 
 /// Opens the database file, or falls back to a temporary in-memory one so
 /// a broken file can't stop the app from starting (hard rule 1). The file
@@ -91,7 +115,7 @@ Future<AppDatabase> _openDatabase(AppPaths? paths, AppLog log) async {
     return AppDatabase.memory();
   }
   try {
-    final database = AppDatabase(openAppDatabase(paths.root));
+    final database = AppDatabase(await openAppDatabase(paths.root));
     // LazyDatabase opens on the first query. Running one here means a
     // broken file is reported now, not during the first frame.
     await database.settingsDao.read(SettingsKeys.windowBounds);

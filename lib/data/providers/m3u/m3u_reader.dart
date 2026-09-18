@@ -30,8 +30,10 @@ final class M3uUrlInput extends M3uInput {
 }
 
 /// Reads and parses [input] in the calling isolate, handing each entry to
-/// [onEntry]. The sync engine calls this inside its own isolate; the UI
-/// uses [readM3uInBackground].
+/// [onEntry]. A future from [onEntry] pauses reading until it completes
+/// (`parseM3u`); an error it ends with fails the read like any other.
+/// The sync engine calls this inside its own isolate; the UI uses
+/// [readM3uInBackground].
 ///
 /// The credentials in a playlist URL's query become placeholders in every
 /// stream URL (`playlistSecrets`, `templateUrl`). Never throws: a missing
@@ -40,7 +42,7 @@ final class M3uUrlInput extends M3uInput {
 /// `TimeoutFailure`, and so on.
 Future<Result<M3uSummary>> readM3u(
   M3uInput input,
-  void Function(M3uEntry entry) onEntry, {
+  FutureOr<void> Function(M3uEntry entry) onEntry, {
   Duration idleTimeout = const Duration(seconds: 30),
 }) async {
   HttpClient? client;

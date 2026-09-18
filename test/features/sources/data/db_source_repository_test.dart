@@ -8,6 +8,7 @@ import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/sync/sync_engine.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:logger/logger.dart';
@@ -468,6 +469,50 @@ void main() {
     }
     await disk.repository.reorder([tokenList.id, playlist.id, xtream.id]);
     await disk.repository.remove(playlist.id);
+
+    // Two real syncs: an Xtream-style export that repeats the password in
+    // every stream path and in its EPG header, and a playlist whose URL
+    // hides a token in its path.
+    HttpOverrides.global = null;
+    final lists = await _servePlaylists();
+    final synced = <String>[
+      for (final source in [
+        await disk.add(
+          SourceDraft(
+            type: SourceType.m3uUrl,
+            name: 'Export',
+            url:
+                '${lists.origin}/get.php?username=viewer'
+                '&password=$_password&type=m3u_plus',
+          ),
+        ),
+        await disk.add(
+          SourceDraft(
+            type: SourceType.m3uUrl,
+            name: 'Token list',
+            url: '${lists.origin}/p/$_playlistToken/list.m3u',
+          ),
+        ),
+      ])
+        source.id,
+    ];
+    final engine = SyncEngine(
+      database: disk.database,
+      sources: disk.repository,
+      log: disk.log,
+    );
+    for (final id in synced) {
+      final report = (await engine.sync(id)).valueOrNull!;
+      expect(report.channels + report.movies + report.episodes, 3);
+    }
+    await engine.dispose();
+    await lists.close();
+    // The header's EPG URL went to the keyring, credentials and all.
+    expect(
+      disk.store.values['source.${synced.first}'],
+      contains('xmltv.php?username=viewer&password=$_password'),
+    );
+
     await disk.log.close();
     await disk.database.close();
 
@@ -484,4 +529,28 @@ void main() {
       expect(log, isNot(contains(secret)));
     }
   });
+}
+
+/// Serves the two playlists the hard-rule test syncs, until closed.
+Future<({String origin, Future<void> Function() close})>
+_servePlaylists() async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  final origin = 'http://127.0.0.1:${server.port}';
+  server.listen((request) async {
+    final export = request.uri.path == '/get.php';
+    final auth = export ? 'viewer/$_password/' : '';
+    request.response.write(
+      [
+        '#EXTM3U url-tvg="$origin/xmltv.php?username=viewer&password=$_password"',
+        '#EXTINF:-1 group-title="News",News',
+        '$origin/live/${auth}1.ts',
+        '#EXTINF:-1 group-title="Films",Film',
+        '$origin/movie/${auth}2.mkv',
+        '#EXTINF:-1 group-title="Shows",Show S01 E01',
+        '$origin/series/${auth}3.mkv',
+      ].join('\n'),
+    );
+    await request.response.close();
+  });
+  return (origin: origin, close: () => server.close(force: true));
 }

@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–4 are done (schema v2; credentials and sources; the Xtream client; M3U and `get.php`); step 4 is waiting for your review.** Step 5 (the sync engine) is next.
+Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–5 are done (schema v2; credentials and sources; the Xtream client; M3U and `get.php`; the sync engine); step 5 is waiting for your review.** Step 6 (onboarding) is next.
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
 - 2026-09-14: Design canvas (Cinematic Dark, 9 screens): https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -64,12 +64,14 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 
 - 2026-09-18: **Phase 2 step 4 (M3U and `get.php`):** a streaming M3U parser (`lib/data/providers/m3u/`): gzip found by its magic bytes, tolerant UTF-8 and attribute scanning, `#EXTVLCOPT`/`#EXTGRP`, classification by path and by video extension, episode numbering from names, credential placeholders in every stream URL, and a pinned FNV-1a identity that survives a password change. `readM3u` for files and URLs (with the cheap idle watchdog, now shared as `IdleTimeout` in `lib/core/streams/`), and `readM3uInBackground` with batches of 5,000. Fixtures in `test_fixtures/m3u/`, byte-exact through a new `.gitattributes`. The fake provider gained `get.php` and a `messyM3u` quirk (6 new tests there). **Measured with the new `benchmark` tag:** 50 MB / 221k entries in 3.8 s in the background, worst UI-isolate gap 17 ms. Caught on the way: identities printed as negative hex for half of all entries (`toUnsigned(64)` doesn't work on a signed VM int); fixed and cross-checked against Python. 44 new app tests plus the skipped benchmark; 426 app tests and 87 fake-provider tests pass
 
+- 2026-09-18: **Phase 2 step 5 (the sync engine):** spiked drift from a background isolate first. It works, but Phase 1's `LazyDatabase` opener hid the database isolate, so drift relayed every sync write through a proxy on the UI isolate (worst gap 23 ms against 9 ms direct); `openAppDatabase` now returns drift's `createBackgroundConnection`. The spike also showed that killing an isolate inside a transaction blocks the database, so the sync isolate writes only in single batches and is simply killed on cancel or timeout; the run's finish (sweep, outcome, `last_synced_at`) is one transaction on the UI side. `SyncService` and its progress, report and status types in the domain; `SyncEngine`, `XtreamSync`, `M3uSync` in `lib/data/sync/`; account → categories → live → movies → series, 5,000-row batches, run-id mark-and-sweep only after a success; dangling categories are a null `category_id`; an empty Xtream list keeps the last one; M3U categories from groups and series from episode names (unnumbered → a series named after the group, no group → a movie); the playlist's EPG URLs to the keyring; parser backpressure; `failInterrupted` and stale-source syncs 2 s after the first frame. Tests: the engine end to end on a file database, **a real SIGKILL mid-sync** of a separate `dart` process, and the hard-rule-3 test now syncs credential-bearing playlists. **Measured: the `large` profile syncs in 6.5 s (re-sync 3.9 s) against the 60 s budget**, worst UI-isolate gap 31 ms; a 200k-entry playlist in 16.2 s. 23 new tests and 2 benchmarks; 449 app tests pass (3 benchmarks skipped) and 87 fake-provider tests
+
 ## In progress
-- **Phase 2 step 4 is waiting for your review** (commit "Phase 2 step 4: …"; steps 1–3 were reviewed)
+- **Phase 2 step 5 is waiting for your review** (commit "Phase 2 step 5: …"; steps 1–4 were reviewed)
 
 ## Next
-1. Phase 2 step 5: the sync engine. Spike drift in a background isolate with its own connection first. Then: account → categories → live → movies → series, with progress events; Xtream through `XtreamClient` and M3U through `readM3u`, both **inside** the sync isolate; upsert in 5,000-row batches with run-id mark-and-sweep; dangling categories → "Uncategorized"; M3U episodes grouped into series by `seriesName`; `failInterrupted()` on launch; `pruneOrphanedSecrets()` after the keyring is first used; the preserve-user-data and kill-mid-sync tests; the 60 s budget on the `large` profile
-2. Steps 6–8 as in the plan: onboarding, Settings → Sources and the categories manager, integration and the phase exit
+1. Phase 2 step 6: onboarding — Welcome (approved sketch) → type → credentials with Test connection → result card → sync progress (`syncStatusProvider`) → Pick what you watch → Home; every state, keyboard only; then **you run it against your real provider**
+2. Steps 7–8 as in the plan: Settings → Sources (cancel a source's sync before removing it) and the categories manager, integration and the phase exit (re-measure the sync's UI-isolate gap in profile mode)
 3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009
@@ -105,7 +107,7 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 | Metric | Budget | Latest | Date |
 |---|---|---|---|
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s | 320 / 597 ms — spike over loopback, Intel, patched media_kit (fake provider not built yet) | 2026-09-15 |
-| Sync 50k channels + 30k movies | ≤ 60 s | — (step 5). Parts so far: M3U 50 MB / 221k entries parsed in 3.8 s (background isolate, worst UI gap 17 ms); Xtream fetch + parse 50k channels 0.7 s, 30k movies 0.57 s, 3k series 0.09 s (fake provider in its own process, loopback); 50k channel upserts in 5,000-row batches 2.0 s first time, 1.0 s re-sync with unchanged names (FTS triggers included; in-memory DB) | 2026-09-18 |
+| Sync 50k channels + 30k movies | ≤ 60 s; no UI frame > 32 ms | **6.5 s first sync, 3.9 s re-sync** (`large` profile + 3k series, fake provider in its own process, file DB, debug JIT); worst UI-isolate gap 31 / 26 ms; DB 24 MB. M3U file 27 MB / 200k entries: 16.2 s, worst gap 20 ms, peak RSS 234 MB. `flutter test --tags benchmark --run-skipped test/data/sync/sync_benchmark_test.dart` | 2026-09-18 |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
 | H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |

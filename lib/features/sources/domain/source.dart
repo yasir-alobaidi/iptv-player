@@ -79,13 +79,25 @@ abstract class SourceDraft with _$SourceDraft {
 /// the password, and this one prints only what is safe.
 @immutable
 final class SourceCredentials {
-  const new({required this.url, this.username, this.password, this.epgUrl});
+  const new({
+    required this.url,
+    this.username,
+    this.password,
+    this.epgUrl,
+    this.advertisedEpgUrls = const [],
+  });
 
   /// The Xtream server, playlist URL, or file path, unmasked.
   final String url;
   final String? username;
   final String? password;
+
+  /// The user's EPG override.
   final String? epgUrl;
+
+  /// The EPG URLs the playlist's own header names (`url-tvg`), as the
+  /// last sync found them.
+  final List<String> advertisedEpgUrls;
 
   @override
   bool operator ==(Object other) =>
@@ -93,10 +105,17 @@ final class SourceCredentials {
       other.url == url &&
       other.username == username &&
       other.password == password &&
-      other.epgUrl == epgUrl;
+      other.epgUrl == epgUrl &&
+      _sameList(other.advertisedEpgUrls, advertisedEpgUrls);
 
   @override
-  int get hashCode => Object.hash(url, username, password, epgUrl);
+  int get hashCode => Object.hash(
+    url,
+    username,
+    password,
+    epgUrl,
+    Object.hashAll(advertisedEpgUrls),
+  );
 
   @override
   String toString() =>
@@ -132,6 +151,11 @@ abstract interface class SourceRepository {
 
   Future<Result<SourceCredentials>> credentialsFor(String id);
 
+  /// Keeps the EPG URLs an M3U playlist's header names with the source's
+  /// other secrets: they usually carry the same credentials as the
+  /// playlist URL. Writes to the keyring only when they changed.
+  Future<Result<void>> setAdvertisedEpgUrls(String id, List<String> urls);
+
   /// Deletes stored secrets that no source refers to any more, left behind
   /// when a removal could not reach the keyring. Call it right after the
   /// keyring was used successfully (the sync engine does, once a session),
@@ -139,4 +163,12 @@ abstract interface class SourceRepository {
   /// unlock it, and an app that prompts for a password on every start,
   /// with nothing to sync, is broken.
   Future<Result<int>> pruneOrphanedSecrets();
+}
+
+bool _sameList(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

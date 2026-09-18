@@ -47,6 +47,20 @@ class SourcesDao extends DatabaseAccessor<AppDatabase> with _$SourcesDaoMixin {
   Future<void> remove(String id) =>
       (delete(sources)..where((t) => t.id.equals(id))).go();
 
+  /// What the latest sign-in said about the account. [accountJson] must
+  /// already be free of credentials (`XtreamAccount.toStoredJson()`).
+  Future<void> saveAccount(
+    String id, {
+    required String accountJson,
+    required DateTime? expiresAt,
+  }) => patch(
+    id,
+    SourcesCompanion(
+      accountJson: Value(accountJson),
+      expiresAt: Value(expiresAt),
+    ),
+  );
+
   Future<void> markSynced(String id, DateTime at) => patch(
     id,
     SourcesCompanion(lastSyncedAt: Value(at), updatedAt: Value(at)),

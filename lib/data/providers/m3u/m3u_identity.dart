@@ -35,11 +35,22 @@ String entryIdentity({
   required String? tvgId,
   required String name,
   required String streamUrl,
-}) {
+}) => _fnv1a64('${tvgId ?? ''}\n$name\n${identityPath(streamUrl)}');
+
+/// The `remote_key` of a series an M3U sync builds from its episodes: the
+/// group and the series name, case and spacing folded, so "Dark" and
+/// "DARK " in one group are one series, while the same title in two
+/// groups (a dubbed and a subtitled copy) stays two. Prefixed so it can
+/// never equal an [entryIdentity].
+String seriesIdentity({required String? group, required String name}) {
+  String fold(String text) =>
+      text.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  return 's${_fnv1a64('series\n${fold(group ?? '')}\n${fold(name)}')}';
+}
+
+String _fnv1a64(String text) {
   var hash = _fnvOffset;
-  for (final byte in utf8.encode(
-    '${tvgId ?? ''}\n$name\n${identityPath(streamUrl)}',
-  )) {
+  for (final byte in utf8.encode(text)) {
     hash ^= byte;
     hash *= _fnvPrime;
   }

@@ -18,6 +18,7 @@
 | Widget | flutter_test | every screen in loading/empty/error/content states; focus traversal order; shortcuts |
 | Golden | matchesGoldenFile (bundled fonts loaded by `test/flutter_test_config.dart`) | core components and key screens at 1280×800 and 1920×1080. **Linux only** — text rasterizes differently on Windows, so the same widget is a different image: they carry `@Tags(['golden'])` (declared in the root `dart_test.yaml`), skip off-Linux with a reason, and the Windows CI job runs `flutter test --exclude-tags golden` (ADR-008). Images live in `test/golden/images/`; after re-recording with `--update-goldens`, look at the PNG — a green golden only means nothing changed |
 | Integration | integration_test + fake provider | onboarding → sync → play → zap → fault recovery; VOD resume; search; guide; download → kill app → relaunch → resume → play offline; library scan → play → resume |
+| Crash | a real process killed with SIGKILL | a sync killed part-way leaves the database file intact, the previous catalogue whole and the user's choices kept, and the next launch fails the dead run as interrupted (`test/data/sync/sync_kill_test.dart`: `dart run`s `support/sync_victim.dart` and kills it after 5,000 rows). POSIX only, so skipped on Windows; skipped with a reason when there is no `dart` on PATH |
 | Cast protocol | fake receiver (Dart TLS server speaking Cast v2) | connect, launch, load, status, errors, heartbeat loss |
 | Soak | tools/soak | 8 h live playback with random faults; memory/CPU logged every minute |
 | Manual | checklists | casting matrix and library casting matrix (docs/04); Linux Intel + NVIDIA; Windows |
@@ -39,6 +40,8 @@ Live samples are 30–120 s long and the fake provider loops them; VOD samples a
 `tools/media_samples/library_tree.sh <dir> <count>` builds a fake library (movies, episodes, junk release names, subtitles, nested seasons) from short low-resolution clips, each with a unique title tag so quick hashes differ; fictional names only. Tests lower the scanner's 20 MB minimum file size.
 
 ## Performance budgets (profile mode, dev laptop)
+Measured by tests tagged `benchmark`, which are skipped unless run with `flutter test --tags benchmark --run-skipped` (timings on shared CI runners are noise); the numbers go in docs/progress.md. The sync budget: `test/data/sync/sync_benchmark_test.dart`, with the fake provider in its own process.
+
 | Metric | Budget |
 |---|---|
 | Cold start to interactive Home (cached data) | ≤ 2.0 s |

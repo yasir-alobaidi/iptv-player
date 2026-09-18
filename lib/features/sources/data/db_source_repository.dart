@@ -132,8 +132,13 @@ final class DbSourceRepository implements SourceRepository {
     if (previous case Err(:final failure)) return Err(failure);
     final old = previous.valueOrNull!;
 
-    // A blank password in the form means "keep the one I have".
-    final secret = _SourceSecret.from(draft, keepPassword: old.password);
+    // A blank password in the form means "keep the one I have". What the
+    // playlist advertised isn't in the form, so it is kept too.
+    final secret = _SourceSecret.from(
+      draft,
+      keepPassword: old.password,
+      advertisedEpgUrls: old.advertisedEpgUrls,
+    );
     if (draft.type == SourceType.xtream && secret.password == null) {
       return Err(InvalidInputFailure('password'));
     }
@@ -236,7 +241,41 @@ final class DbSourceRepository implements SourceRepository {
         username: row.username,
         password: secret.password,
         epgUrl: secret.epgUrl ?? row.epgUrl,
+        advertisedEpgUrls: secret.advertisedEpgUrls,
       ),
+    );
+  }
+
+  @override
+  Future<Result<void>> setAdvertisedEpgUrls(
+    String id,
+    List<String> urls,
+  ) async {
+    final existing = await _guard('read', () => _dao.byId(id));
+    final row = existing.valueOrNull;
+    if (row == null) {
+      return Err(existing.failureOrNull ?? NotFoundFailure('source $id'));
+    }
+    final stored = await _readSecret(row);
+    if (stored case Err(:final failure)) return Err(failure);
+    final old = stored.valueOrNull!;
+    if (_sameUrls(old.advertisedEpgUrls, urls)) return const Ok(null);
+
+    final secret = old.withAdvertisedEpgUrls(urls);
+    _register(row.username, secret);
+    final ref = row.credentialRef ?? '$sourceSecretPrefix$id';
+    if (secret.isEmpty) {
+      if (row.credentialRef != null) await _deleteSecret(ref, id);
+    } else {
+      final written = await _store.write(ref, secret.encode());
+      if (written case Err(:final failure)) return Err(failure);
+    }
+    final newRef = secret.isEmpty ? null : ref;
+    if (newRef == row.credentialRef) return const Ok(null);
+    // A playlist file with no EPG override had no secret until now.
+    return await _guard(
+      'update',
+      () => _dao.patch(id, SourcesCompanion(credentialRef: Value(newRef))),
     );
   }
 
@@ -286,8 +325,11 @@ final class DbSourceRepository implements SourceRepository {
       secret.password,
       secret.url,
       secret.epgUrl,
+      ...secret.advertisedEpgUrls,
       ..._credentialQueryValues(secret.url),
       ..._credentialQueryValues(secret.epgUrl),
+      for (final url in secret.advertisedEpgUrls)
+        ..._credentialQueryValues(url),
     ]) {
       if (value != null) _secrets.add(value);
     }
@@ -411,14 +453,27 @@ Iterable<String> _credentialQueryValues(String? url) {
 
 /// The JSON document kept in the secure store for one source.
 final class _SourceSecret {
-  const new({this.password, this.url, this.epgUrl});
+  const new({
+    this.password,
+    this.url,
+    this.epgUrl,
+    this.advertisedEpgUrls = const [],
+  });
 
-  factory from(SourceDraft draft, {String? keepPassword}) => _SourceSecret(
+  factory from(
+    SourceDraft draft, {
+    String? keepPassword,
+    List<String> advertisedEpgUrls = const [],
+  }) => _SourceSecret(
     password: draft.type == SourceType.xtream
         ? _blankToNull(draft.password) ?? keepPassword
         : null,
     url: draft.type == SourceType.m3uUrl ? draft.url.trim() : null,
     epgUrl: _blankToNull(draft.epgUrl),
+    // An Xtream panel's guide comes from its server, never a header.
+    advertisedEpgUrls: draft.type == SourceType.xtream
+        ? const []
+        : advertisedEpgUrls,
   );
 
   /// A missing or unreadable document reads as empty rather than failing:
@@ -430,10 +485,14 @@ final class _SourceSecret {
       if (map is! Map<String, Object?>) return const _SourceSecret();
       String? field(String key) =>
           map[key] is String ? map[key]! as String : null;
+      final advertised = map['advertisedEpgUrls'];
       return _SourceSecret(
         password: field('password'),
         url: field('url'),
         epgUrl: field('epgUrl'),
+        advertisedEpgUrls: advertised is List
+            ? advertised.whereType<String>().toList()
+            : const [],
       );
     } on FormatException {
       return const _SourceSecret();
@@ -443,12 +502,31 @@ final class _SourceSecret {
   final String? password;
   final String? url;
   final String? epgUrl;
+  final List<String> advertisedEpgUrls;
 
-  bool get isEmpty => password == null && url == null && epgUrl == null;
+  bool get isEmpty =>
+      password == null &&
+      url == null &&
+      epgUrl == null &&
+      advertisedEpgUrls.isEmpty;
 
-  String encode() =>
-      jsonEncode({'password': ?password, 'url': ?url, 'epgUrl': ?epgUrl});
+  _SourceSecret withAdvertisedEpgUrls(List<String> urls) => _SourceSecret(
+    password: password,
+    url: url,
+    epgUrl: epgUrl,
+    advertisedEpgUrls: List.unmodifiable(urls),
+  );
+
+  String encode() => jsonEncode({
+    'password': ?password,
+    'url': ?url,
+    'epgUrl': ?epgUrl,
+    if (advertisedEpgUrls.isNotEmpty) 'advertisedEpgUrls': advertisedEpgUrls,
+  });
 }
+
+bool _sameUrls(List<String> a, List<String> b) =>
+    a.length == b.length && a.indexed.every((e) => e.$2 == b[e.$1]);
 
 DateTime _utcNow() => DateTime.now().toUtc();
 

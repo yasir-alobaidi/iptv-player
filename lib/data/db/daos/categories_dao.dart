@@ -27,14 +27,19 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
     ),
   );
 
-  /// Deletes the source's categories that sync run [runId] did not see.
-  /// Items in them fall back to "Uncategorized"; the sync engine sweeps
-  /// items first, so in practice none are left.
-  Future<int> sweep(String sourceId, int runId) =>
+  /// Deletes the source's categories that sync run [runId] did not see,
+  /// of the [kinds] given (all when null): a run that kept a list it could
+  /// not refresh keeps that list's categories too. Items in them fall back
+  /// to "Uncategorized"; the sync engine sweeps items first, so in
+  /// practice none are left.
+  Future<int> sweep(String sourceId, int runId, {Set<CatalogueKind>? kinds}) =>
       (delete(categories)..where(
             (t) =>
                 t.sourceId.equals(sourceId) &
-                (t.seenRun.isNull() | t.seenRun.equals(runId).not()),
+                (t.seenRun.isNull() | t.seenRun.equals(runId).not()) &
+                (kinds == null
+                    ? const Constant(true)
+                    : t.kind.isInValues(kinds)),
           ))
           .go();
 

@@ -204,6 +204,24 @@ void main() {
       expect(row.displayName, isNull);
     });
 
+    test('a sweep limited to some kinds leaves the others', () async {
+      await db.categoriesDao.upsertAll([
+        _category('1', run: 1),
+        _category('1', kind: CatalogueKind.movie, run: 1),
+        _category('1', kind: CatalogueKind.series, run: 1),
+      ]);
+
+      final removed = await db.categoriesDao.sweep(
+        's1',
+        2,
+        kinds: {CatalogueKind.live, CatalogueKind.series},
+      );
+
+      expect(removed, 2);
+      final left = await db.select(db.categories).get();
+      expect(left.map((c) => c.kind), [CatalogueKind.movie]);
+    });
+
     test('item counts per category, uncategorized under null', () async {
       await db.categoriesDao.upsertAll([_category('a'), _category('b')]);
       final ids = await db.categoriesDao.idsByRemoteKey(
@@ -423,6 +441,52 @@ void main() {
       expect(row!.id, id);
       expect(row.episodesFetchedAt, _now);
       expect(await db.seriesDao.episodesOf(id), hasLength(1));
+    });
+
+    test('ids by remote key: only those asked for, in this source', () async {
+      await db.seriesDao.upsertAll([
+        show(),
+        SeriesCompanion.insert(sourceId: 's1', remoteKey: '6', name: 'Lost'),
+        SeriesCompanion.insert(sourceId: 's2', remoteKey: '5', name: 'Dark'),
+      ]);
+
+      final ids = await db.seriesDao.idsByRemoteKey('s1', ['5', '7']);
+
+      expect(ids.keys, ['5']);
+      expect(ids['5'], (await db.seriesDao.byRemoteKey('s1', '5'))!.id);
+    });
+
+    test('M3U episodes: upserted in place, then swept by run', () async {
+      await db.seriesDao.upsertAll([show(run: 1)]);
+      await db.seriesDao.upsertAll([
+        SeriesCompanion.insert(sourceId: 's2', remoteKey: '5', name: 'Dark'),
+      ]);
+      final id = (await db.seriesDao.byRemoteKey('s1', '5'))!.id;
+      final other = (await db.seriesDao.byRemoteKey('s2', '5'))!.id;
+      EpisodesCompanion seen(int series, String key, int run, String title) =>
+          EpisodesCompanion.insert(
+            seriesId: series,
+            remoteKey: key,
+            season: 1,
+            episode: 1,
+            title: title,
+            seenRun: Value(run),
+          );
+      await db.seriesDao.upsertEpisodes([
+        seen(id, 'a', 1, 'A'),
+        seen(id, 'b', 1, 'B'),
+        seen(other, 'a', 1, 'Other source'),
+      ]);
+      final before = (await db.seriesDao.episodesOf(id)).first.id;
+
+      await db.seriesDao.upsertEpisodes([seen(id, 'a', 2, 'A renamed')]);
+      final removed = await db.seriesDao.sweepEpisodes('s1', 2);
+
+      expect(removed, 1);
+      final episodes = await db.seriesDao.episodesOf(id);
+      expect(episodes.map((e) => (e.id, e.title)), [(before, 'A renamed')]);
+      expect(await db.seriesDao.episodesOf(other), hasLength(1));
+      expect(await db.seriesDao.episodeCountFor('s1'), 1);
     });
 
     test('a swept series takes its episodes with it', () async {

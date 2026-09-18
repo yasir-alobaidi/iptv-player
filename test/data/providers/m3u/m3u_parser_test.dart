@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -157,6 +158,44 @@ void main() {
 
     test('positions count entries, not lines', () {
       expect(entries.map((e) => e.position), [0, 1, 2, 3, 4, 5]);
+    });
+  });
+
+  group('a caller that writes as it reads', () {
+    String lines(int count) => [
+      '#EXTM3U',
+      for (var i = 0; i < count; i++) '#EXTINF:-1,C$i\nhttp://s.test/$i.ts',
+    ].join('\n');
+
+    test('a future from onEntry holds back the next entries', () async {
+      final received = <String>[];
+      final release = Completer<void>();
+      final parsing = parseM3u(Stream.value(lines(5).codeUnits), (entry) {
+        received.add(entry.name);
+        // The second entry "writes a batch".
+        return entry.name == 'C1' ? release.future : null;
+      });
+
+      await pumpEventQueue();
+      expect(received, ['C0', 'C1']);
+
+      release.complete();
+      final summary = await parsing;
+      expect(received, ['C0', 'C1', 'C2', 'C3', 'C4']);
+      expect(summary.entries, 5);
+    });
+
+    test('an error from that future ends the parse with it', () async {
+      final received = <String>[];
+      final parsing = parseM3u(Stream.value(lines(5).codeUnits), (entry) {
+        received.add(entry.name);
+        return entry.name == 'C1'
+            ? Future<void>.error(StateError('disk full'))
+            : null;
+      });
+
+      await expectLater(parsing, throwsA(isA<StateError>()));
+      expect(received, ['C0', 'C1']);
     });
   });
 

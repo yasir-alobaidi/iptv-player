@@ -1,24 +1,26 @@
-# Handoff — 2026-09-18 (session 15, after step 4)
+# Handoff — 2026-09-18 (session 15, after step 5)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 step 4 (M3U playlists, and `get.php` on the fake
-provider).** Four local commits are waiting on top of what you pushed:
-steps 1–3 (reviewed) and step 4. Still nothing visible in the app. Worth
-your eyes: "M3U and get.php (step 4)" in ADR-009, and the list under
-docs/02's M3U section. Two things there are choices you might want to
-weigh in on: a playlist line ending in `.mp4`/`.mkv` counts as a movie
-even without `/movie/` in its path, and a per-line CDN token that the
-playlist URL doesn't carry can't be recognized, so it's stored as sent.
+**Review Phase 2 step 5 (the sync engine).** Five local commits are waiting
+on top of what you pushed: steps 1–4 (reviewed) and step 5. Still nothing
+visible in the app — the sync runs, but no screen shows it until step 6.
+Worth your eyes: "The sync engine (step 5)" in ADR-009 and docs/02's "Sync
+engine" section. Three choices there you might want to weigh in on:
+- an Xtream list that comes back empty keeps the previous one rather than
+  wiping it (a panel's hiccup is likelier than a provider dropping every
+  movie; the cost is that a truly dropped kind lingers);
+- an M3U episode with no numbering in its name joins a series named after
+  its group; with no group either, it becomes a movie;
+- on launch, stale sources sync 2 s after the first frame, which reads the
+  keyring and so may ask you to unlock it.
 Push when you're happy with it.
 
 If you have an M3U playlist of your own, give me its path (or URL) next
-session and I'll run it through the parser: nothing is stored, and a real
-playlist will find quirks the fixtures don't have.
+session and I'll run it through the parser: nothing is stored.
 
-The window checks from Phase 1 are still yours to do when convenient; they
-don't block Phase 2:
+The window checks from Phase 1 are still yours to do when convenient:
 
 ```
 flutter run -d linux       # resize, expand the rail, close with the X
@@ -32,58 +34,54 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for my review.
+Step 5 is reviewed <or: here is what to change>. Do Phase 2 step 6 and stop for my review.
 ```
 
 ## Where things stand
 - **Phase 1 is complete** (ADR-008), and CI is green on both OSes.
-- **Phase 2 plan approved 2026-09-18** — the recommendation on all four
-  questions and the three layout sketches (recorded at the top of the plan
-  and in ADR-009).
-- **Phase 2 step 1 done:** schema v2 — the catalogue tables, FTS5 search
-  kept current by triggers, the v1 → v2 migration, and the catalogue DAOs.
-- **Phase 2 step 2 done:** `CredentialStore` (`lib/core/secure/`), the
-  keyring implementation (`lib/data/secure/`), and `SourceRepository`
-  (`lib/features/sources/{domain,data}`), with `credentialStoreProvider`
-  overridden in `bootstrap()`.
-- **Phase 2 step 3 done:** `XtreamClient` and its tolerant parsers
-  (`lib/data/providers/xtream/`), shared text cleanup
-  (`lib/data/providers/provider_text.dart`), fixtures in
-  `test_fixtures/xtream/`, and the fake provider as a path dev-dependency.
-- **Phase 2 step 4 done:** the streaming M3U parser and reader
-  (`lib/data/providers/m3u/`), `IdleTimeout` (`lib/core/streams/`),
-  fixtures in `test_fixtures/m3u/`, `get.php` and the `messyM3u` quirk on
-  the fake provider, and a skipped-by-default `benchmark` test tag.
-- 426 app tests (plus one skipped benchmark) and 87 fake-provider tests
+- **Phase 2 plan approved 2026-09-18.** Steps 1–4 done and reviewed:
+  schema v2, `CredentialStore` and `SourceRepository`, `XtreamClient`,
+  the streaming M3U parser and the fake provider's `get.php`.
+- **Phase 2 step 5 done:** the sync engine (`lib/data/sync/`,
+  `lib/features/sources/domain/sync.dart`), wired into `bootstrap()`
+  (launch check) and `syncServiceProvider` / `syncStatusProvider`.
+- 449 app tests (plus 3 skipped benchmarks) and 87 fake-provider tests
   pass; `flutter analyze`, the format check and `flutter build linux
-  --debug` are clean.
+  --debug` are clean; the built app starts cleanly on the real database.
+- **Sync budget met:** `large` profile 6.5 s (re-sync 3.9 s) against 60 s;
+  worst UI-isolate gap 31 ms (budget 32 ms, re-measure in profile mode in
+  step 8).
 
 ## Done this session (2026-09-18)
-- Read the first CI run: green on both OSes; Windows built for the first
-  time. Marked the plan approved.
-- Steps 1–4: schema v2, credentials and sources, the Xtream client, M3U.
-  The decisions and measurements are in ADR-009; the short version is
-  below.
-- Checked the real keyring by hand: GNOME Keyring round-trips through the
-  real plugin (recorded in ADR-009).
+- Steps 1–5 of Phase 2. The decisions and measurements are in ADR-009.
+- Step 5's spike: drift works from a background isolate once the app opens
+  its database with `createBackgroundConnection`; killing an isolate inside
+  a transaction blocks the database, so the sync never opens one.
 
 ## Instructions for the next session
-1. **Step 5 is next: the sync engine** (see the plan and progress.md
-   "Next"). **Spike drift in a background isolate with its own connection
-   first** — the phase's one real unknown. Inside the sync isolate: Xtream
-   through `XtreamClient`, M3U through `readM3u` (not
-   `readM3uInBackground`: the sync isolate *is* the background). Upserts
-   through the DAOs' `upsertAll` in 5,000-row batches, then `sweep` items
-   before categories, only after a succeeded run. A dangling or missing
-   category → a synthetic "Uncategorized" category or a null
-   `category_id` (decide, and record in ADR-009). M3U: `remote_key` is
-   `M3uEntry.identity`; `stream_url` is `M3uEntry.streamUrl` (already
-   templated); the per-entry `#EXTVLCOPT` and catch-up fields go in
-   `extras_json`; episodes are grouped into series by `seriesName`, and
-   those without one need a rule (by group?). The account goes into
-   `account_json` as `XtreamAccount.toStoredJson()`; `exp_date` into
-   `expires_at`. M3U header EPG URLs carry credentials: they go to the
-   secure store with the source's other secrets, never the database.
+1. **Step 6 is next: onboarding** (plan step 6; the canvas's `Onboarding`,
+   `OnboardingSync`, `OnboardingCategories`, and the approved Welcome
+   sketch). Read the canvas with the Artifact tool first. The sync screen
+   follows `syncStatusProvider(sourceId)`: `SyncRunning.progress` has the
+   stage, a count per list, `stageTotal` once a list is in ("8,021 of
+   about 13,800") and `account` (the Account line). Start the sync with
+   `syncServiceProvider.sync(id)`; Cancel is `cancel(id)`; a failure is
+   `SyncFailed.failure` for `failureMessage()`. "Test connection" is
+   `XtreamClient.account(retry: false)` on the UI isolate (small body),
+   mapped with `toProviderAccount()`. Pick-categories writes through
+   `CategoriesDao.setHidden`/`setAllHidden`; counts from `itemCounts` (the
+   null key is "Uncategorized"). **At the end of step 6 the user runs it
+   against their real provider.**
+1g. **The sync engine (step 5):** the sync isolate writes **only single
+   batches, never a transaction** — a killed isolate's open transaction
+   blocks the database for everyone (spiked). Start and finish happen on
+   the UI isolate; the finish is one transaction. `openAppDatabase` must
+   stay a `createBackgroundConnection` (not a `LazyDatabase`), or sync
+   writes go through a proxy on the UI isolate; `app_database_open_test`
+   guards it. A closure sent to an isolate must be built in a top-level
+   function (`startSyncJob`), or it drags its enclosing scope along.
+   Removing a source mid-sync isn't coordinated yet: step 7 should cancel
+   first. The kill test needs `dart` on PATH and is skipped on Windows.
 1f. **M3U (step 4):** credentials in stream URLs are `{username}`,
    `{password}`, `{token}` placeholders; `fillUrl(template,
    playlistSecrets(realPlaylistUrl))` rebuilds the real URL at play time
@@ -119,9 +117,9 @@ Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for 
    test and CI; there is no keyring there. The hard-rule-3 test in
    `test/features/sources/data/db_source_repository_test.dart` scans the
    real database file — extend it rather than writing a second one.
-1b. **`pruneOrphanedSecrets()` must run after a successful keyring use**
-   (step 5: at the start of a sync, once a session), never at launch on its
-   own: listing a locked keyring prompts for its password.
+1b. **`pruneOrphanedSecrets()` runs after a successful keyring use** — the
+   engine does it once a session after the first credentials read — never
+   at launch on its own: listing a locked keyring prompts for its password.
 2. **Sync writes go through the DAOs' `upsertAll` and `sweep`.** Upserts
    rewrite only provider-owned columns — never `display_name`, `is_hidden`,
    a category's `sort_order`, or `episodes_fetched_at`. If a new column is
@@ -130,7 +128,8 @@ Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for 
 3. **Mark-and-sweep uses the run id:** `SyncRunsDao.start()` returns the id,
    every upserted row carries it in `seen_run`, and only a *succeeded* run
    sweeps. Sweep the items before the categories. Call
-   `SyncRunsDao.failInterrupted()` once on launch (step 5 wires it in).
+   `SyncRunsDao.failInterrupted()` once on launch (`SyncService.startUp()`
+   does, from `bootstrap()`).
 4. Categories are unique per `(source_id, kind, remote_key)`; items per
    `(source_id, remote_key)`. `idsByRemoteKey(source, kind)` maps a
    provider's category id to the row id items need.
@@ -158,7 +157,8 @@ Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for 
     `/proc/<pid>/cmdline`.
 11. The shell's slots — `shellSourceProvider`, `shellSyncStatusProvider`,
     `shellDownloadsProvider`, `shellCastSessionProvider` — stay empty until
-    the phase that owns the data overrides them (step 7 for the first two).
+    the phase that owns the data overrides them (step 7 for the first two;
+    `syncStatusProvider` is what the sync slot will read).
 12. `test/app/app_harness.dart`: `pumpApp(tester, overrides: [...])`,
     `findByLabel('…')`; don't call `pumpApp` twice in one test.
 13. Re-recording a golden: `flutter test --tags golden --update-goldens`,
@@ -209,6 +209,11 @@ Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for 
 - Secrets only in the keyring, no file fallback; playlist and EPG URLs in
   the database as their origin only, not masked; orphan pruning after a
   sync, never at launch (ADR-009).
+- The sync isolate connects straight to the database isolate
+  (`serializableConnection()` over `createBackgroundConnection`), writes
+  only in batches, and is killed on cancel; FTS triggers stay (sync costs
+  ~75 µs a row with them, far inside the budget); dangling categories are
+  a null `category_id`; an empty Xtream list keeps the last one (ADR-009).
 
 ## Open questions for the user
 - The second Google TV doesn't answer on the network. Is it on another

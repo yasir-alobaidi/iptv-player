@@ -51,6 +51,70 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         .getSingle();
   }
 
+  /// Remote key → row id for [remoteKeys] (those the source has), for
+  /// filing the episodes an M3U sync upserts right after their series.
+  Future<Map<String, int>> idsByRemoteKey(
+    String sourceId,
+    Iterable<String> remoteKeys,
+  ) async {
+    final query = selectOnly(series)
+      ..addColumns([series.remoteKey, series.id])
+      ..where(
+        series.sourceId.equals(sourceId) & series.remoteKey.isIn(remoteKeys),
+      );
+    return {
+      for (final row in await query.get())
+        row.read(series.remoteKey)!: row.read(series.id)!,
+    };
+  }
+
+  /// M3U only: episodes arrive with the playlist, so they are upserted and
+  /// swept like every other item. One batch is one transaction. Xtream
+  /// episodes use [replaceEpisodes] instead.
+  Future<void> upsertEpisodes(List<EpisodesCompanion> rows) => batch(
+    (b) => b.insertAll(
+      episodes,
+      rows,
+      onConflict: DoUpdate<$EpisodesTable, EpisodeRow>.withExcluded(
+        (old, excluded) => EpisodesCompanion.custom(
+          season: excluded.season,
+          episode: excluded.episode,
+          title: excluded.title,
+          ext: excluded.ext,
+          durationSeconds: excluded.durationSeconds,
+          plot: excluded.plot,
+          stillUrl: excluded.stillUrl,
+          streamUrl: excluded.streamUrl,
+          extrasJson: excluded.extrasJson,
+          seenRun: excluded.seenRun,
+        ),
+        target: [episodes.seriesId, episodes.remoteKey],
+      ),
+    ),
+  );
+
+  /// M3U only: deletes the source's episodes that sync run [runId] did
+  /// not see. Never call it for an Xtream source — its fetched episodes
+  /// carry no run and would all go.
+  Future<int> sweepEpisodes(String sourceId, int runId) => customUpdate(
+    'DELETE FROM episodes '
+    'WHERE series_id IN (SELECT id FROM series WHERE source_id = ?) '
+    'AND (seen_run IS NULL OR seen_run != ?)',
+    variables: [Variable.withString(sourceId), Variable.withInt(runId)],
+    updates: {episodes},
+    updateKind: UpdateKind.delete,
+  );
+
+  Future<int> episodeCountFor(String sourceId) async {
+    final row = await customSelect(
+      'SELECT COUNT(*) AS n FROM episodes '
+      'WHERE series_id IN (SELECT id FROM series WHERE source_id = ?)',
+      variables: [Variable.withString(sourceId)],
+      readsFrom: {episodes, series},
+    ).getSingle();
+    return row.read<int>('n');
+  }
+
   Future<SeriesRow?> byRemoteKey(String sourceId, String remoteKey) =>
       (select(series)..where(
             (t) => t.sourceId.equals(sourceId) & t.remoteKey.equals(remoteKey),

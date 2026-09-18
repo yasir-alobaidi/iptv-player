@@ -100,12 +100,22 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
   },
 );
 
-/// Opens the database file lazily, on a background isolate, so neither
-/// opening it nor any later query touches the UI isolate (hard rule 2).
+/// Opens the database file on a background isolate, so neither opening
+/// it nor any later query touches the UI isolate (hard rule 2).
 ///
-/// [directory] is created when it does not exist yet.
-QueryExecutor openAppDatabase(Directory directory) => LazyDatabase(() async {
+/// A `createBackgroundConnection` rather than a `LazyDatabase` around
+/// `createInBackground`: the connection keeps the `DriftIsolate` it talks
+/// to, which is what lets the sync isolate connect to the same database
+/// directly (`serializableConnection()`). Behind a `LazyDatabase` drift
+/// can't see that isolate, and relays every sync write through a proxy
+/// on the UI isolate instead (ADR-009, step 5 spike).
+///
+/// [directory] is created when it does not exist yet; that is the one
+/// step that can throw here. A file SQLite can't open fails the first
+/// query instead.
+Future<DatabaseConnection> openAppDatabase(Directory directory) async {
   await directory.create(recursive: true);
-  final file = File(p.join(directory.path, appDatabaseFileName));
-  return NativeDatabase.createInBackground(file);
-});
+  return NativeDatabase.createBackgroundConnection(
+    File(p.join(directory.path, appDatabaseFileName)),
+  );
+}

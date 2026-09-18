@@ -22,20 +22,51 @@ import 'package:iptv_player/data/providers/provider_text.dart';
 /// all read or ignored. An `#EXTINF` with no URL, a URL that isn't one,
 /// and a repeated identity are counted in [M3uSummary.skipped].
 ///
+/// When [onEntry] returns a future, reading pauses until it completes, so
+/// a caller writing entries to the database in batches holds one batch,
+/// not the whole playlist. An error from that future ends the parse with
+/// the same error.
+///
 /// [secrets] are replaced by placeholders in every stream URL
 /// (`templateUrl`). Throws [FormatException] only when the body is plainly
 /// not a playlist — an HTML or JSON error page — and passes on whatever
 /// error [bytes] ends with.
 Future<M3uSummary> parseM3u(
   Stream<List<int>> bytes,
-  void Function(M3uEntry entry) onEntry, {
+  FutureOr<void> Function(M3uEntry entry) onEntry, {
   Map<String, String> secrets = const {},
 }) async {
   final state = _ParseState(secrets, onEntry);
   final lines = gunzipIfNeeded(bytes)
       .transform(const Utf8Decoder(allowMalformed: true))
       .transform(const LineSplitter());
-  await lines.forEach(state.line);
+  final done = Completer<void>();
+  late final StreamSubscription<String> subscription;
+  void fail(Object error, StackTrace stackTrace) {
+    unawaited(subscription.cancel());
+    if (!done.isCompleted) done.completeError(error, stackTrace);
+  }
+
+  subscription = lines.listen(
+    (line) {
+      final Future<void>? pending;
+      try {
+        pending = state.line(line);
+      } on Object catch (error, stackTrace) {
+        fail(error, stackTrace);
+        return;
+      }
+      // Not `await for`: most lines complete synchronously, and a paused
+      // subscription costs nothing until a batch is actually written.
+      if (pending != null) subscription.pause(pending.catchError(fail));
+    },
+    onError: fail,
+    onDone: () {
+      if (!done.isCompleted) done.complete();
+    },
+    cancelOnError: true,
+  );
+  await done.future;
   return state.finish();
 }
 
@@ -69,7 +100,7 @@ final class _ParseState {
   new(this.secrets, this.onEntry);
 
   final Map<String, String> secrets;
-  final void Function(M3uEntry entry) onEntry;
+  final FutureOr<void> Function(M3uEntry entry) onEntry;
 
   var _first = true;
   var _entries = 0;
@@ -85,7 +116,9 @@ final class _ParseState {
   String? _userAgent;
   String? _referrer;
 
-  void line(String raw) {
+  /// A future while [onEntry] is still handling the entry this line
+  /// completed; null otherwise.
+  Future<void>? line(String raw) {
     var line = raw.trim();
     if (_first && line.isNotEmpty) {
       if (line.startsWith('\ufeff')) line = line.substring(1).trimLeft();
@@ -95,18 +128,18 @@ final class _ParseState {
         throw const FormatException('not an M3U playlist');
       }
     }
-    if (line.isEmpty) return;
+    if (line.isEmpty) return null;
     if (line.length > _maxLineLength) {
       _skipped++;
       _reset();
-      return;
+      return null;
     }
 
     if (line.startsWith('#')) {
       _directive(line);
-    } else {
-      _url(line);
+      return null;
     }
+    return _url(line);
   }
 
   void _directive(String line) {
@@ -143,12 +176,12 @@ final class _ParseState {
     // Anything else (#KODIPROP, #EXT-X-…, comments) is ignored.
   }
 
-  void _url(String line) {
+  Future<void>? _url(String line) {
     final uri = Uri.tryParse(line);
     if (uri == null || !uri.hasScheme || !line.contains('://')) {
       _skipped++;
       _reset();
-      return;
+      return null;
     }
     final info = _info;
     final position = _entries;
@@ -167,13 +200,13 @@ final class _ParseState {
     if (!_seen.add(identity)) {
       _skipped++;
       _reset();
-      return;
+      return null;
     }
 
     final kind = classify(line);
     final numbering = kind == M3uKind.episode ? parseEpisodeName(name) : null;
     final attributes = info?.attributes ?? const {};
-    onEntry(
+    final pending = onEntry(
       M3uEntry(
         identity: identity,
         kind: kind,
@@ -207,6 +240,7 @@ final class _ParseState {
         _episodes++;
     }
     _reset();
+    return pending is Future<void> ? pending : null;
   }
 
   void _reset() {
