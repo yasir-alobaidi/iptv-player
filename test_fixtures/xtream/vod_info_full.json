@@ -1,0 +1,22 @@
+{
+  "info": {
+    "movie_image": "http://img.test/heat.jpg",
+    "plot": "A crew of thieves &amp; the detective chasing them.",
+    "cast": "Al Pacino, Robert De Niro",
+    "director": "Michael Mann",
+    "genre": "Crime",
+    "releasedate": "1995-12-15",
+    "rating": "8.3",
+    "duration_secs": "10260",
+    "duration": "02:51:00",
+    "backdrop_path": [
+      "",
+      "http://img.test/heat_bg.jpg"
+    ]
+  },
+  "movie_data": {
+    "stream_id": 501,
+    "name": "Heat",
+    "container_extension": "MKV"
+  }
+}

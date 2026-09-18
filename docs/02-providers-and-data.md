@@ -42,6 +42,17 @@ Stream URLs:
 - Rate limiting or blocking of rapid calls / unknown User-Agents → serialize requests, back off on 429/5xx, configurable UA
 - Very large responses (50k+ items) → decode in an isolate
 
+How the client (`lib/data/providers/xtream/`) meets these, and the few found while building it: fixtures live in `test_fixtures/xtream/`, one per quirk.
+- **Rows keyed by id** (`{"101": {...}, "102": {...}}`) instead of an array are read as their values; a list body that is not a list or an object is no rows, not an error.
+- **A row is dropped only when it can't be identified** (not an object, no id, a repeated id — the first wins); a bad field loses the field, not the row. Every parse returns the count of dropped rows, for the sync to log.
+- A dangling `category_id` passes through the client untouched; the sync, which knows the categories, files it under "Uncategorized".
+- **Ratings** of `0`, `""` or over 10 read as unrated; `"7,4"` reads as 7.4. **Years** come from `year`, then `releaseDate`, then a trailing `(1995)` in the name. **Extensions** are lower-cased and must look like one (`MKV` → `mkv`, `m k v` → none).
+- `get_short_epg` text is base64, decoded strictly: plain text such as `News` is valid base64 too, and what gives it away is that its bytes aren't UTF-8. Times come from the unix timestamps, never the formatted strings (those are in the panel's zone).
+- The account keeps an allow-list of fields, so the `username` and `password` a panel echoes back in `user_info` never reach `sources.account_json`.
+- **The default User-Agent is `VLC/3.0.20 LibVLC/3.0.20`**; a source can override it.
+- **Retries:** 429 and 5xx back off 1 s, 2 s (±20 %), or `Retry-After` capped at 30 s, three attempts in all; a body cut off or silent for 30 s mid-transfer is retried too. A refused connection is not retried, and the onboarding check (`account(retry: false)`) never retries — the user is waiting. 401 and 403 are auth failures; 404 is not found.
+- **Bodies over 256 KB are decoded and parsed in a background isolate.** dio's `receiveTimeout` is not used: it replaces a `Timer` on every chunk, which blocked the UI isolate for ~1 s on a 50k-row list; the client reads the body as a stream with one watchdog timer per request instead.
+
 ## M3U
 ```
 #EXTM3U url-tvg="http://example/epg.xml.gz"

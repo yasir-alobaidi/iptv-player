@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Listed",
+    "stream_id": 1,
+    "category_id": "7"
+  },
+  {
+    "name": "Null",
+    "stream_id": 2,
+    "category_id": null
+  },
+  {
+    "name": "Empty",
+    "stream_id": 3,
+    "category_id": ""
+  },
+  {
+    "name": "Missing",
+    "stream_id": 4
+  },
+  {
+    "name": "Dangling",
+    "stream_id": 5,
+    "category_id": "99999"
+  }
+]

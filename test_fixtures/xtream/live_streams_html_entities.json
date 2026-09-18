@@ -1,0 +1,27 @@
+[
+  {
+    "name": "  Tom &amp; Jerry  ",
+    "stream_id": 1
+  },
+  {
+    "name": "Rock&#39;n&#x27;Roll\t\tTV",
+    "stream_id": 2
+  },
+  {
+    "name": "&lt;UK&gt; Sports&nbsp;&nbsp;1",
+    "stream_id": 3
+  },
+  {
+    "name": "Caf&#233; &quot;Noir&quot;",
+    "stream_id": 4
+  },
+  {
+    "name": "Unknown &bogus; stays",
+    "stream_id": 5
+  },
+  {
+    "name": "   ",
+    "stream_id": 6,
+    "num": 6
+  }
+]

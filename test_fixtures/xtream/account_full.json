@@ -1,0 +1,26 @@
+{
+  "user_info": {
+    "username": "viewer",
+    "password": "Pw-7f3a9c1e",
+    "message": "",
+    "auth": "1",
+    "status": "Active",
+    "exp_date": "1762128000",
+    "is_trial": "1",
+    "active_cons": "1",
+    "created_at": "1718000000",
+    "max_connections": "2",
+    "allowed_output_formats": [
+      "TS"
+    ]
+  },
+  "server_info": {
+    "url": "panel.test",
+    "port": "8080",
+    "https_port": "443",
+    "server_protocol": "http",
+    "timezone": "America/New_York",
+    "timestamp_now": "1726650000",
+    "time_now": "2026-09-18 05:00:00"
+  }
+}

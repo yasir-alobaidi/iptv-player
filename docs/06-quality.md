@@ -30,6 +30,7 @@
 - VOD files: movie and episode URLs serve the VOD samples with Range, ETag, and Last-Modified; `vod_as_hls` serves them as HLS playlists; `size_mb` pads a sample to any size for download benchmarks
 - Fault injection per profile or query: `drop_after_s`, `stall_after_s`, `slow_start_ms`, `http_status` (401/403/404/429/500), `max_connections`, `redirect_with_expiring_token`, `codec_switch_after_s`; for VOD files `ignore_range`, `drop_after_bytes`, `throttle_kbps`, `change_etag`, `wrong_content_length`
 - Admin endpoint to change faults at runtime during integration tests
+- **Tests start it in-process.** It is a path dev-dependency of the app (`fake_provider: {path: tools/fake_provider}`), so a test calls `FakeProviderServer.start(state: …, port: 0)` and gets a free port. Two traps: flutter_test's binding answers every `HttpClient` request with a 400, so a test that talks to a real server sets `HttpOverrides.global = null` in `setUpAll`; and an in-process server shares the test's isolate, so **a timing or UI-jank measurement must run the server as a separate process** (`dart run tools/fake_provider/bin/server.dart --profile large`), or the server's own JSON encoding shows up as the client's jank
 
 ## Media samples (tools/media_samples/generate.sh)
 Synthetic sources only (`testsrc2`, `smptehdbars`, `sine`):

@@ -1,0 +1,24 @@
+[
+  {
+    "num": "",
+    "name": "Channel 4",
+    "stream_id": "105",
+    "stream_icon": "",
+    "epg_channel_id": "",
+    "added": "",
+    "category_id": "",
+    "tv_archive": "",
+    "tv_archive_duration": ""
+  },
+  {
+    "num": null,
+    "name": null,
+    "stream_id": 106,
+    "stream_icon": null,
+    "epg_channel_id": null,
+    "added": null,
+    "category_id": null,
+    "tv_archive": null,
+    "tv_archive_duration": null
+  }
+]

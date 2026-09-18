@@ -1,0 +1,40 @@
+{
+  "seasons": [],
+  "info": {
+    "name": "Dark"
+  },
+  "episodes": {
+    "2": [
+      {
+        "id": "9101",
+        "episode_num": "1",
+        "title": "Beginnings and Endings",
+        "container_extension": "mkv",
+        "info": {
+          "duration_secs": "0"
+        }
+      }
+    ],
+    "1": [
+      {
+        "id": "9001",
+        "episode_num": "1",
+        "title": "Secrets",
+        "container_extension": "mp4",
+        "info": {
+          "duration_secs": "3100",
+          "plot": "A boy goes missing.",
+          "movie_image": "http://img.test/e1.jpg"
+        },
+        "season": "1"
+      },
+      {
+        "id": "9002",
+        "episode_num": 2,
+        "title": "Lies",
+        "container_extension": "mp4",
+        "info": []
+      }
+    ]
+  }
+}

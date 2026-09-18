@@ -1,0 +1,45 @@
+[
+  {
+    "num": 1,
+    "name": "Heat (1995)",
+    "stream_type": "movie",
+    "stream_id": "501",
+    "stream_icon": "http://img.test/heat.jpg",
+    "rating": "8.3",
+    "added": "1726000000",
+    "category_id": "20",
+    "container_extension": "mkv"
+  },
+  {
+    "num": "2",
+    "name": "Arrival",
+    "stream_id": 502,
+    "rating": "7,4",
+    "year": "2016",
+    "container_extension": ".MP4",
+    "category_id": 20
+  },
+  {
+    "name": "Unrated",
+    "stream_id": 503,
+    "rating": "0",
+    "container_extension": "mp4"
+  },
+  {
+    "name": "Blank rating",
+    "stream_id": 504,
+    "rating": "",
+    "container_extension": ""
+  },
+  {
+    "name": "Nonsense rating [2001]",
+    "stream_id": 505,
+    "rating": "12",
+    "container_extension": "m k v"
+  },
+  {
+    "name": "Release date",
+    "stream_id": 506,
+    "releaseDate": "2019-03-01"
+  }
+]

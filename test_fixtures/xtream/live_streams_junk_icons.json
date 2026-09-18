@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Good",
+    "stream_id": 1,
+    "stream_icon": "https://logos.test/a.png"
+  },
+  {
+    "name": "Not a URL",
+    "stream_id": 2,
+    "stream_icon": "logo.png"
+  },
+  {
+    "name": "No host",
+    "stream_id": 3,
+    "stream_icon": "http:///x.png"
+  },
+  {
+    "name": "FTP",
+    "stream_id": 4,
+    "stream_icon": "ftp://logos.test/a.png"
+  },
+  {
+    "name": "Bare host",
+    "stream_id": 5,
+    "stream_icon": "http://logos.test/"
+  },
+  {
+    "name": "Whitespace",
+    "stream_id": 6,
+    "stream_icon": "   "
+  },
+  {
+    "name": "Garbage",
+    "stream_id": 7,
+    "stream_icon": "N/A"
+  }
+]

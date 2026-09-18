@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1 (schema v2) and 2 (credentials and the source repository) are done; step 2 is waiting for your review.** Step 3 (the Xtream client) is next.
+Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–3 are done (schema v2; credentials and sources; the Xtream client); step 3 is waiting for your review.** Step 4 (M3U and the fake provider's `get.php`) is next.
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
 - 2026-09-14: Design canvas (Cinematic Dark, 9 screens): https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -60,12 +60,14 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 
 - 2026-09-18: **Phase 2 step 2 (credentials and sources):** `CredentialStore` (`lib/core/secure/`) with `SecureCredentialStore` over flutter_secure_storage and `InMemoryCredentialStore` for tests; a new `SecureStorageFailure` with its own message; `Source`, `SourceDraft`, `SourceCredentials` and the `SourceRepository` interface in `lib/features/sources/domain`, `DbSourceRepository` and its providers in `lib/features/sources/data`; `credentialStoreProvider` overridden in `bootstrap()`. One JSON secret per source in the keyring; the database keeps the Xtream server without credentials and **only the origin of playlist and EPG URLs**. That last rule came from the hard-rule-3 test: a playlist URL with a token in its path went through `redact()` unchanged and into the database file on the first attempt. Orphaned secrets are pruned after a sync, never at launch, so a locked keyring never prompts on start. **The real keyring was checked by hand on this machine:** a throwaway integration test through the real plugin round-tripped a key (non-ASCII included) and left nothing behind. docs/01 (Windows keeps an encrypted file keyed from Credential Manager; no plain-file fallback) and docs/02 (the `sources` columns and where secrets live) corrected. 43 new tests; 327 app tests pass
 
+- 2026-09-18: **Phase 2 step 3 (the Xtream client):** `XtreamClient`, tolerant readers and parsers, and freezed models in `lib/data/providers/xtream/`, with text and image-URL cleanup in `lib/data/providers/provider_text.dart` for the M3U parser to share. 23 fixtures in `test_fixtures/xtream/` with one test per docs/02 quirk, plus a few found on the way (rows keyed by id, `"7,4"` ratings, unencoded short-EPG text). HTTP behaviour tested against scripted local servers: auth, 401/403/404, 429 with `Retry-After`, 5xx exhaustion, one request at a time, redirects never remembered, cancel, dropped and stalled bodies, and credentials never in failure text. Then the whole API against the fake provider's `default` and `quirky` profiles in-process (it is now a path dev-dependency). **Found and fixed while measuring the `large` profile:** dio's `receiveTimeout` replaces a Timer on every chunk and blocked the UI isolate for ~1 s on 50k channels; the client now reads bodies as a stream with its own idle watchdog. 50k channels take 0.7 s end to end (was 1.3–2.6 s), with worst main-isolate gaps of 16–32 ms. 50 new tests; 382 app tests pass
+
 ## In progress
-- **Phase 2 step 2 is waiting for your review** (commit "Phase 2 step 2: …"; step 1 was reviewed)
+- **Phase 2 step 3 is waiting for your review** (commit "Phase 2 step 3: …"; steps 1 and 2 were reviewed)
 
 ## Next
-1. Phase 2 step 3: the Xtream client on dio (`lib/data/providers/xtream/`), tolerant DTOs with one fixture test per docs/02 quirk plus a run against the fake provider's `quirky` profile, serialized requests with backoff, big bodies decoded in an isolate. Strip `user_info.username`/`password` before anything reaches `account_json`
-2. Steps 4–8 as in the plan: M3U and `get.php`, the sync engine (drift-in-an-isolate spiked first; it calls `pruneOrphanedSecrets()` and `SyncRunsDao.failInterrupted()`), onboarding, Settings → Sources and the categories manager, integration and the phase exit
+1. Phase 2 step 4: the streaming M3U parser in an isolate (URL and file, gzip, 50 MB+), `#EXTVLCOPT`, classification by URL path, the stable identity hash, credential placeholders in `stream_url`; `get.php` on the fake provider. Reuse `cleanText`/`cleanImageUrl` from `lib/data/providers/provider_text.dart`
+2. Steps 5–8 as in the plan: the sync engine (drift-in-an-isolate spiked first; it runs the Xtream client inside its isolate, calls `pruneOrphanedSecrets()` and `SyncRunsDao.failInterrupted()`, and strips nothing from the account because `XtreamAccount.toStoredJson()` is already an allow-list), onboarding, Settings → Sources and the categories manager, integration and the phase exit
 3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009
@@ -101,7 +103,7 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 | Metric | Budget | Latest | Date |
 |---|---|---|---|
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s | 320 / 597 ms — spike over loopback, Intel, patched media_kit (fake provider not built yet) | 2026-09-15 |
-| Sync 50k channels + 30k movies | ≤ 60 s | — (step 5). Parts so far: 50k channel upserts in 5,000-row batches 2.0 s first time, 1.0 s re-sync with unchanged names (FTS triggers included; in-memory DB) | 2026-09-18 |
+| Sync 50k channels + 30k movies | ≤ 60 s | — (step 5). Parts so far: fetch + parse 50k channels 0.7 s, 30k movies 0.57 s, 3k series 0.09 s (fake provider in its own process, loopback); 50k channel upserts in 5,000-row batches 2.0 s first time, 1.0 s re-sync with unchanged names (FTS triggers included; in-memory DB) | 2026-09-18 |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
 | H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |

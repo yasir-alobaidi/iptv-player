@@ -1,16 +1,16 @@
-# Handoff — 2026-09-18 (session 15, after step 2)
+# Handoff — 2026-09-18 (session 15, after step 3)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 step 2 (credentials and the source repository)** — two
-local commits are waiting on top of what you pushed: step 1 (which you've
-already seen) and step 2. Still nothing visible in the app: step 2 is where
-passwords go and how sources are stored. Worth your eyes: the "Credentials
-and sources (step 2)" part of ADR-009, and one behaviour change — **playlist
-and EPG URLs now show only their origin** (`http://host/…`) wherever the app
-displays them, because a masked URL turned out not to be safe to store.
-Push when you're happy with it.
+**Review Phase 2 step 3 (the Xtream client).** Three local commits are
+waiting on top of what you pushed: steps 1 and 2 (already reviewed) and
+step 3. Nothing visible in the app yet: this is the code that talks to your
+provider. Worth your eyes: "The Xtream client (step 3)" in ADR-009, and the
+list under docs/02's quirks section, which records how each quirk is handled
+and a few found on the way. One finding stands out — dio's receive timeout
+was freezing the UI isolate for about a second on a 50k-channel list; that's
+fixed and measured. Push when you're happy with it.
 
 The window checks from Phase 1 are still yours to do when convenient; they
 don't block Phase 2:
@@ -27,7 +27,7 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 2 is reviewed <or: here is what to change>. Do Phase 2 step 3 and stop for my review.
+Step 3 is reviewed <or: here is what to change>. Do Phase 2 step 4 and stop for my review.
 ```
 
 ## Where things stand
@@ -41,26 +41,51 @@ Step 2 is reviewed <or: here is what to change>. Do Phase 2 step 3 and stop for 
   keyring implementation (`lib/data/secure/`), and `SourceRepository`
   (`lib/features/sources/{domain,data}`), with `credentialStoreProvider`
   overridden in `bootstrap()`.
-- 327 app tests and 81 fake-provider tests pass; `flutter analyze`, the
+- **Phase 2 step 3 done:** `XtreamClient` and its tolerant parsers
+  (`lib/data/providers/xtream/`), shared text cleanup
+  (`lib/data/providers/provider_text.dart`), fixtures in
+  `test_fixtures/xtream/`, and the fake provider as a path dev-dependency.
+- 382 app tests and 81 fake-provider tests pass; `flutter analyze`, the
   format check and `flutter build linux --debug` are clean.
 
 ## Done this session (2026-09-18)
 - Read the first CI run: green on both OSes; Windows built for the first
   time. Marked the plan approved.
-- Step 1 (schema v2), then step 2 (credentials and sources). The decisions
-  and measurements are in ADR-009; the short version is below.
+- Steps 1, 2 and 3: schema v2, credentials and sources, the Xtream client.
+  The decisions and measurements are in ADR-009; the short version is
+  below.
 - Checked the real keyring by hand: GNOME Keyring round-trips through the
   real plugin (recorded in ADR-009).
 
 ## Instructions for the next session
-1. **Step 3 is next:** the Xtream client in `lib/data/providers/xtream/`
-   (see the plan). Get credentials only through
-   `SourceRepository.credentialsFor()` — it registers every value with the
-   log's `SecretRegistry` — and never put `SourceCredentials` in a
-   long-lived object. **Strip `user_info.username` and `password` from the
-   account payload** before anything is written to `account_json`.
-   Failures map onto `AppFailure`: 401/`auth: 0` → `AuthFailure`, 404 →
-   `NotFoundFailure`, the rest by `AppFailure.fromError`.
+1. **Step 4 is next:** the streaming M3U parser and the fake provider's
+   `get.php` (see the plan). Reuse `cleanText` and `cleanImageUrl` from
+   `lib/data/providers/provider_text.dart`. Put fixtures in
+   `test_fixtures/m3u/`, one per quirk, as `test_fixtures/xtream/` does.
+   `stream_url` must hold the credentials as placeholders, never the real
+   values (hard rule 3; the hard-rule test in
+   `test/features/sources/data/db_source_repository_test.dart` is the
+   pattern for proving it on the database file).
+1c. **The Xtream client (step 3):** get credentials only through
+   `SourceRepository.credentialsFor()`, and never keep `SourceCredentials`
+   in a long-lived object. `XtreamAccount.toStoredJson()` is an allow-list
+   and already free of the echoed username and password, so store exactly
+   that in `account_json`. In step 5 the client runs **inside** the sync
+   isolate. **Don't set dio's `receiveTimeout`** anywhere: it replaces a
+   Timer per chunk and froze the UI isolate for ~1 s on 50k rows; the
+   client's own idle watchdog (`idleTimeout`) replaces it.
+1d. **Tests that talk to a real server** (the fake provider in-process, or
+   a scripted `HttpServer`) need `setUpAll(() => HttpOverrides.global =
+   null)`: flutter_test's binding otherwise answers every request with a
+   400. **Timing and jank measurements need the fake provider in its own
+   process** (`dart run tools/fake_provider/bin/server.dart --profile large
+   --port …`): in-process, its JSON encoding shows up as the client's jank.
+   To test a connection dropped mid-body, use a raw `ServerSocket`;
+   `HttpServer.detachSocket()` leaves it open.
+1e. **Write invisible characters as escapes** (`'\ufeff'`, `'\ufffd'`,
+   `\u00a0`). The file-writing tool turned escapes into the literal
+   characters more than once this session; grep for them before
+   committing.
 1a. **Secrets (step 2):** the keyring holds one JSON document per source
    under `source.<id>`; the database never holds a password, and holds
    playlist and EPG URLs as their origin only (`displayOrigin()`), because
@@ -153,6 +178,9 @@ Step 2 is reviewed <or: here is what to change>. Do Phase 2 step 3 and stop for 
 - Categories are unique per kind; mark-and-sweep compares a run id, not a
   timestamp; FTS is maintained by triggers with a `WHEN` guard (ADR-009, with
   the measurements).
+- Hand-written tolerant readers rather than json_serializable for provider
+  data; no dio `receiveTimeout`; one request at a time per source; URLs
+  always rebuilt from the source's server (ADR-009).
 - Secrets only in the keyring, no file fallback; playlist and EPG URLs in
   the database as their origin only, not masked; orphan pruning after a
   sync, never at launch (ADR-009).

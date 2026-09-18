@@ -90,6 +90,13 @@ run is cleaned up at startup (hard rule 8). `max_connections` is enforced;
 past the limit a stream answers **403** with `MAX_CONNECTIONS_REACHED`, and
 `user_info.active_cons` reports the current count.
 
+## Used by the app's tests
+
+The app depends on this package as a path dev-dependency, and its tests
+start the server in-process on port 0 (see docs/06, which also has the two
+traps: flutter_test's fake `HttpClient`, and jank measurements needing the
+server in its own process).
+
 ## Tests
 
 ```bash

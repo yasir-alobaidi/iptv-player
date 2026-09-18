@@ -47,6 +47,9 @@ dev_dependencies:
   # tools/extract_icons.dart identifies canvas icons by an md5 of their markup.
   crypto: ^3.0.6
   drift_dev: ^2.35.0
+  # Tests start the fake Xtream panel in-process on a free port (docs/06).
+  fake_provider:
+    path: tools/fake_provider
   flutter_test:
     sdk: flutter
   freezed: ^4.0.1

@@ -1,0 +1,10 @@
+{
+  "101": {
+    "name": "BBC One",
+    "stream_id": 101
+  },
+  "102": {
+    "name": "BBC Two",
+    "stream_id": 102
+  }
+}

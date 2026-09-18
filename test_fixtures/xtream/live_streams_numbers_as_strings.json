@@ -1,0 +1,22 @@
+[
+  {
+    "num": "12",
+    "name": "ITV1",
+    "stream_id": "103",
+    "stream_icon": "http://logos.test/itv.png",
+    "epg_channel_id": "itv1.uk",
+    "added": "1726000200",
+    "category_id": 7,
+    "tv_archive": "1",
+    "tv_archive_duration": "3"
+  },
+  {
+    "num": "12.0",
+    "name": "ITV2",
+    "stream_id": " 104 ",
+    "added": 1726000300,
+    "category_id": "7",
+    "tv_archive": "0",
+    "tv_archive_duration": "5"
+  }
+]

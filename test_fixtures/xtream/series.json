@@ -1,0 +1,26 @@
+[
+  {
+    "num": 1,
+    "name": "Dark",
+    "series_id": "601",
+    "cover": "http://img.test/dark.jpg",
+    "plot": "A missing boy &amp; a cave.",
+    "genre": "Sci-Fi",
+    "releaseDate": "2017-12-01",
+    "last_modified": "1726000000",
+    "rating": "8.7",
+    "category_id": "30"
+  },
+  {
+    "num": "2",
+    "name": "Broadchurch (2013)",
+    "series_id": 602,
+    "cover": "",
+    "rating": "",
+    "last_modified": "0",
+    "category_id": ""
+  },
+  {
+    "name": "No id"
+  }
+]

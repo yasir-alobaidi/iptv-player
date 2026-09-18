@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Kept",
+    "stream_id": 1
+  },
+  "not an object",
+  null,
+  42,
+  {
+    "name": "No id"
+  },
+  {
+    "name": "Empty id",
+    "stream_id": ""
+  },
+  {
+    "name": "Duplicate",
+    "stream_id": 1
+  },
+  {
+    "name": "Also kept",
+    "stream_id": 2,
+    "num": {
+      "nested": "junk"
+    },
+    "added": [
+      1,
+      2
+    ],
+    "tv_archive": "maybe"
+  }
+]
