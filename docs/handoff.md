@@ -1,24 +1,32 @@
-# Handoff — 2026-09-18 (session 15, after step 5)
+# Handoff — 2026-09-18 (session 16, after step 6)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 step 5 (the sync engine).** Five local commits are waiting
-on top of what you pushed: steps 1–4 (reviewed) and step 5. Still nothing
-visible in the app — the sync runs, but no screen shows it until step 6.
-Worth your eyes: "The sync engine (step 5)" in ADR-009 and docs/02's "Sync
-engine" section. Three choices there you might want to weigh in on:
-- an Xtream list that comes back empty keeps the previous one rather than
-  wiping it (a panel's hiccup is likelier than a provider dropping every
-  movie; the cost is that a truly dropped kind lingers);
-- an M3U episode with no numbering in its name joins a series named after
-  its group; with no group either, it becomes a movie;
-- on launch, stale sources sync 2 s after the first frame, which reads the
-  keyring and so may ask you to unlock it.
-Push when you're happy with it.
+**Run onboarding against your real provider, and review step 6.** Seven
+local commits are waiting on top of what you pushed: steps 1–5, the step 5
+gap fixes, and step 6 (onboarding).
 
-If you have an M3U playlist of your own, give me its path (or URL) next
-session and I'll run it through the parser: nothing is stored.
+```
+flutter run -d linux
+```
+
+Your database has no sources yet, so the app opens on Welcome. Go through
+it with the keyboard only (Tab, arrows, Enter, Space, Esc): add your
+provider, Test connection, Start sync, pick your categories, Finish. Then
+tell me what broke or felt wrong. If you paste an error or a log line,
+check it has no password or token in it first; the app's own log already
+masks them. Try a wrong password once too, and Cancel during a sync.
+
+What I decided without asking (docs/05 "As built" has the full list; say
+if you want any of them changed):
+- no "TV guide" row on the sync screen until Phase 4 brings the guide;
+- the sync screen never moves on by itself; Pick categories gets the focus;
+- pasting a `get.php?username=…&password=…` link into the server field
+  fills in all three fields;
+- an account that isn't Active can still be synced, with a warning;
+- an empty movie (or channel, series) list keeps the old one once, and is
+  cleared if the next sync finds it empty again.
 
 The window checks from Phase 1 are still yours to do when convenient:
 
@@ -34,44 +42,55 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 5 is reviewed <or: here is what to change>. Do Phase 2 step 6 and stop for my review.
+Step 6 is reviewed; my real-provider run <went fine | broke like this: …>.
+Fix what broke, then do Phase 2 step 7 and stop for my review.
 ```
 
 ## Where things stand
 - **Phase 1 is complete** (ADR-008), and CI is green on both OSes.
-- **Phase 2 plan approved 2026-09-18.** Steps 1–4 done and reviewed:
-  schema v2, `CredentialStore` and `SourceRepository`, `XtreamClient`,
-  the streaming M3U parser and the fake provider's `get.php`.
-- **Phase 2 step 5 done:** the sync engine (`lib/data/sync/`,
-  `lib/features/sources/domain/sync.dart`), wired into `bootstrap()`
-  (launch check) and `syncServiceProvider` / `syncStatusProvider`.
-- 449 app tests (plus 3 skipped benchmarks) and 87 fake-provider tests
+- **Phase 2 plan approved 2026-09-18.** Steps 1–5 done and reviewed.
+- **Step 5's gaps filled** after review: two empty runs in a row sweep a
+  list; `SyncService.removeSource()` stops the sync first.
+- **Phase 2 step 6 done:** onboarding (Welcome → Connect → Sync → Pick
+  categories → Home), the app opening on Welcome with no source.
+- 630 app tests (plus 3 skipped benchmarks) and 87 fake-provider tests
   pass; `flutter analyze`, the format check and `flutter build linux
-  --debug` are clean; the built app starts cleanly on the real database.
-- **Sync budget met:** `large` profile 6.5 s (re-sync 3.9 s) against 60 s;
-  worst UI-isolate gap 31 ms (budget 32 ms, re-measure in profile mode in
-  step 8).
+  --debug` are clean; the built app, started on an empty data folder,
+  opens on Welcome with a clean log.
+- **Not done by me:** a keyboard walk of the real app (no input
+  automation on this Wayland session) and the real-provider run — both
+  yours, per the plan.
 
 ## Done this session (2026-09-18)
-- Steps 1–5 of Phase 2. The decisions and measurements are in ADR-009.
-- Step 5's spike: drift works from a background isolate once the app opens
-  its database with `createBackgroundConnection`; killing an isolate inside
-  a transaction blocks the database, so the sync never opens one.
+- The step 5 gaps, then step 6. Decisions in ADR-009 "Onboarding (step
+  6)"; the screens' rules in docs/05 "As built".
 
 ## Instructions for the next session
-1. **Step 6 is next: onboarding** (plan step 6; the canvas's `Onboarding`,
-   `OnboardingSync`, `OnboardingCategories`, and the approved Welcome
-   sketch). Read the canvas with the Artifact tool first. The sync screen
-   follows `syncStatusProvider(sourceId)`: `SyncRunning.progress` has the
-   stage, a count per list, `stageTotal` once a list is in ("8,021 of
-   about 13,800") and `account` (the Account line). Start the sync with
-   `syncServiceProvider.sync(id)`; Cancel is `cancel(id)`; a failure is
-   `SyncFailed.failure` for `failureMessage()`. "Test connection" is
-   `XtreamClient.account(retry: false)` on the UI isolate (small body),
-   mapped with `toProviderAccount()`. Pick-categories writes through
-   `CategoriesDao.setHidden`/`setAllHidden`; counts from `itemCounts` (the
-   null key is "Uncategorized"). **At the end of step 6 the user runs it
-   against their real provider.**
+1. **Step 7 is next: Settings → Sources, the categories manager, and the
+   shell's source and sync slots** (plan step 7; the two approved sketches).
+   Remove a source only through `SyncService.removeSource()`. Add a source
+   by pushing `addSourceRoutePath` (`/add-source`): Connect, Sync and Pick
+   categories already work for a second source, but Connect's Back falls
+   back to Home only when it can't pop, and Sync's Cancel returns to
+   `/add-source`. Decide how the flow ends when it started from Settings
+   (Finish currently goes Home). The categories manager reuses
+   `CategoryRepository` / `categoryListProvider` and `groupCategories`; it
+   needs rename and reorder, which the DAO has (`rename`, `reorder`) but the
+   repository doesn't expose yet. `shellSourceProvider` and
+   `shellSyncStatusProvider` get overridden by this feature (ADR-008).
+1h. **Onboarding (step 6):** screens in `lib/features/onboarding/presentation/`;
+   the domain they use in `lib/features/sources/domain/` (`SourceChecker`,
+   `CategoryRepository`, `validateDraft`, `groupCategories`). The app opens on
+   Welcome when the sources table is empty (`startLocationProvider`, set in
+   `bootstrap()`). Widget tests run against the fakes in
+   `test/features/onboarding/onboarding_fakes.dart`; **a future a fake hands
+   out must be made inside the test body**, not in `setUp`, or the fake clock
+   never delivers it. `focusIsOn(tester, finder)` there checks keyboard focus.
+   Set text weights with `TextStyle.withWeight()`, never
+   `copyWith(fontWeight:)` alone (it doesn't change a variable font's weight;
+   older components still do it, see Known issues). `layering_test.dart`
+   fails when presentation or design code imports drift, dio, media_kit,
+   sqlite3, `dart:io`, `dart:isolate` or `lib/data/`.
 1g. **The sync engine (step 5):** the sync isolate writes **only single
    batches, never a transaction** — a killed isolate's open transaction
    blocks the database for everyone (spiked). Start and finish happen on
@@ -80,8 +99,9 @@ Step 5 is reviewed <or: here is what to change>. Do Phase 2 step 6 and stop for 
    writes go through a proxy on the UI isolate; `app_database_open_test`
    guards it. A closure sent to an isolate must be built in a top-level
    function (`startSyncJob`), or it drags its enclosing scope along.
-   Removing a source mid-sync isn't coordinated yet: step 7 should cancel
-   first. The kill test needs `dart` on PATH and is skipped on Windows.
+   `removeSource()` stops a sync before removing its source; an empty Xtream
+   list is swept only when the previous successful run had it empty too
+   (`counts_json` `"empty"`). The kill test needs `dart` on PATH and is skipped on Windows.
 1f. **M3U (step 4):** credentials in stream URLs are `{username}`,
    `{password}`, `{token}` placeholders; `fillUrl(template,
    playlistSecrets(realPlaylistUrl))` rebuilds the real URL at play time
@@ -214,6 +234,11 @@ Step 5 is reviewed <or: here is what to change>. Do Phase 2 step 6 and stop for 
   only in batches, and is killed on cancel; FTS triggers stay (sync costs
   ~75 µs a row with them, far inside the budget); dangling categories are
   a null `category_id`; an empty Xtream list keeps the last one (ADR-009).
+
+- Onboarding (ADR-009 step 6): the sync page is reached with `go`, so Esc
+  can't abandon a first sync; a source is added at Start sync, not at the
+  test; the typed draft is kept in memory only; categories cluster over
+  the whole list and the filter only hides entries.
 
 ## Open questions for the user
 - The second Google TV doesn't answer on the network. Is it on another

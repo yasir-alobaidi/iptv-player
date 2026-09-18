@@ -3,7 +3,8 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–5 are done (schema v2; credentials and sources; the Xtream client; M3U and `get.php`; the sync engine); step 5 is waiting for your review.** Step 6 (onboarding) is next.
+Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–6 are done (schema v2; credentials and sources; the Xtream client; M3U and `get.php`; the sync engine; onboarding); step 6 is waiting for your review and your run against your real provider.** Step 7 (Settings → Sources and the categories manager) is next.
+
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
 - 2026-09-14: Design canvas (Cinematic Dark, 9 screens): https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -66,13 +67,18 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 
 - 2026-09-18: **Phase 2 step 5 (the sync engine):** spiked drift from a background isolate first. It works, but Phase 1's `LazyDatabase` opener hid the database isolate, so drift relayed every sync write through a proxy on the UI isolate (worst gap 23 ms against 9 ms direct); `openAppDatabase` now returns drift's `createBackgroundConnection`. The spike also showed that killing an isolate inside a transaction blocks the database, so the sync isolate writes only in single batches and is simply killed on cancel or timeout; the run's finish (sweep, outcome, `last_synced_at`) is one transaction on the UI side. `SyncService` and its progress, report and status types in the domain; `SyncEngine`, `XtreamSync`, `M3uSync` in `lib/data/sync/`; account → categories → live → movies → series, 5,000-row batches, run-id mark-and-sweep only after a success; dangling categories are a null `category_id`; an empty Xtream list keeps the last one; M3U categories from groups and series from episode names (unnumbered → a series named after the group, no group → a movie); the playlist's EPG URLs to the keyring; parser backpressure; `failInterrupted` and stale-source syncs 2 s after the first frame. Tests: the engine end to end on a file database, **a real SIGKILL mid-sync** of a separate `dart` process, and the hard-rule-3 test now syncs credential-bearing playlists. **Measured: the `large` profile syncs in 6.5 s (re-sync 3.9 s) against the 60 s budget**, worst UI-isolate gap 31 ms; a 200k-entry playlist in 16.2 s. 23 new tests and 2 benchmarks; 449 app tests pass (3 benchmarks skipped) and 87 fake-provider tests
 
+- 2026-09-18: **Step 5's gaps, after review:** an Xtream list that comes back empty twice in a row is now taken at its word and swept (the run records empty kinds in `counts_json`); `SyncService.removeSource()` stops a source's sync before removing it, tested mid-write. The keyring prompt at launch is kept (libsecret can't tell whether it is locked without asking). ADR-009, docs/02.
+
+- 2026-09-18: **Phase 2 step 6 (onboarding):** Welcome → Connect (type cards, inline validation, Test connection with a result card for every outcome, a pasted `get.php` link filled in, Advanced options) → Sync (the canvas's stage rows with live counts, Retry, Cancel / Change details that remove the half-added source) → Pick categories (country clusters, group checkboxes, filter, Select all/none, optimistic switches) → Home. The app opens on Welcome when there is no source. New domain pieces (`SourceChecker`, `CategoryRepository`, `validateDraft`, `groupCategories`) and design components (`StepIndicator`, `ChoiceCard`, `AppCheckbox`, `AppMark`, `AppBackdrop`). 630 app tests (3 benchmarks skipped) and 87 fake-provider tests pass, with goldens for Welcome and Pick categories and a new layering test for hard rule 6. The built app opens on Welcome on an empty data folder. ADR-009 "Onboarding (step 6)", docs/05 "As built".
+
 ## In progress
-- **Phase 2 step 5 is waiting for your review** (commit "Phase 2 step 5: …"; steps 1–4 were reviewed)
+- **Phase 2 step 6 is waiting for your review, and for your run against your real provider** (commits "Sync gaps: …" and "Phase 2 step 6: …"; step 5 was reviewed)
 
 ## Next
-1. Phase 2 step 6: onboarding — Welcome (approved sketch) → type → credentials with Test connection → result card → sync progress (`syncStatusProvider`) → Pick what you watch → Home; every state, keyboard only; then **you run it against your real provider**
-2. Steps 7–8 as in the plan: Settings → Sources (cancel a source's sync before removing it) and the categories manager, integration and the phase exit (re-measure the sync's UI-isolate gap in profile mode)
-3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. **You:** run onboarding against your real provider (`flutter run -d linux`; your database has no sources, so it opens on Welcome) and walk it with the keyboard only. Tell me what broke; paste nothing with a password in it
+2. Phase 2 step 7: Settings → Sources (add/edit/remove through `SyncService.removeSource`, refresh, reorder), the categories manager (reusing the Pick-categories layout), and the shell's source and sync slots
+3. Step 8: integration test (onboarding → sync → picker → Home against the fake provider), the phase exit, re-measuring the sync's UI-isolate gap in profile mode
+4. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009
 **Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (In progress)** is written straight into docs/decisions.md as each step lands, rather than collected here first, so there is one source of truth all the way through; it moves to Accepted at the phase exit.
@@ -85,6 +91,8 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 - App name and icon (placeholder: "IPTV Player", Dart package `iptv_player`)
 
 ## Known issues
+- Older components set a text weight with `copyWith(fontWeight:)` alone, which leaves the token's variable-font `wght` axis in place, so the weight doesn't change at all (measured: a 13 px caption set to w700 that way lays out exactly as wide as the w500 token; `withWeight(700)` is 3 % wider). Affected: section header, download button, poster card, search field, segmented control. New code uses `TextStyle.withWeight()`; the old calls get fixed with the phase's docs pass, re-recording any golden that changes
+- The onboarding backdrop's radial glow shows faint banding rings on this laptop's display
 - media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11), NVIDIA included. Upstream has no fix yet; we carry the patch in `third_party/media_kit_video`
 - Zero-copy VA-API fails under XWayland (`GDK_BACKEND=x11` inside a Wayland session): Ubuntu 22.04's libva-x11 only supports DRI2 and XWayland only DRI3, so mpv uses `vaapi-copy`: dropped frames at 50 fps, audio underruns, VOD first frame about 5.5 s, zap p95 3.3 s. Native Wayland and a real Xorg session are both fine
 - NVIDIA startup logs one `libmpv_render: after creating texture: OpenGL error INVALID_OPERATION` (no visible effect). The spike patch's `Failed to query Flutter's EGL config ID` message is gone in the `third_party` patch

@@ -232,3 +232,268 @@ final class SyncStatusFamily extends $Family
   @override
   String toString() => r'syncStatusProvider';
 }
+
+/// One source, kept current; null once it is removed.
+
+@ProviderFor(sourceById)
+final sourceByIdProvider = SourceByIdFamily._();
+
+/// One source, kept current; null once it is removed.
+
+final class SourceByIdProvider
+    extends $FunctionalProvider<AsyncValue<Source?>, Source?, Stream<Source?>>
+    with $FutureModifier<Source?>, $StreamProvider<Source?> {
+  /// One source, kept current; null once it is removed.
+  SourceByIdProvider._({
+    required SourceByIdFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'sourceByIdProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$sourceByIdHash();
+
+  @override
+  String toString() {
+    return r'sourceByIdProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<Source?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<Source?> create(Ref ref) {
+    final argument = this.argument as String;
+    return sourceById(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SourceByIdProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$sourceByIdHash() => r'93aa0cefc1a90d16c3357d504496cd4a9c7a8f08';
+
+/// One source, kept current; null once it is removed.
+
+final class SourceByIdFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<Source?>, String> {
+  SourceByIdFamily._()
+    : super(
+        retry: null,
+        name: r'sourceByIdProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// One source, kept current; null once it is removed.
+
+  SourceByIdProvider call(String sourceId) =>
+      SourceByIdProvider._(argument: sourceId, from: this);
+
+  @override
+  String toString() => r'sourceByIdProvider';
+}
+
+/// "Test connection" in onboarding.
+
+@ProviderFor(sourceChecker)
+final sourceCheckerProvider = SourceCheckerProvider._();
+
+/// "Test connection" in onboarding.
+
+final class SourceCheckerProvider
+    extends $FunctionalProvider<SourceChecker, SourceChecker, SourceChecker>
+    with $Provider<SourceChecker> {
+  /// "Test connection" in onboarding.
+  SourceCheckerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sourceCheckerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sourceCheckerHash();
+
+  @$internal
+  @override
+  $ProviderElement<SourceChecker> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SourceChecker create(Ref ref) {
+    return sourceChecker(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SourceChecker value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SourceChecker>(value),
+    );
+  }
+}
+
+String _$sourceCheckerHash() => r'8c187c5080f4e28ab2b6e1b6429a1aab1021e8a1';
+
+@ProviderFor(categoryRepository)
+final categoryRepositoryProvider = CategoryRepositoryProvider._();
+
+final class CategoryRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CategoryRepository,
+          CategoryRepository,
+          CategoryRepository
+        >
+    with $Provider<CategoryRepository> {
+  CategoryRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'categoryRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$categoryRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<CategoryRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CategoryRepository create(Ref ref) {
+    return categoryRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CategoryRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CategoryRepository>(value),
+    );
+  }
+}
+
+String _$categoryRepositoryHash() =>
+    r'e8fc300e2462a69cee8351abc287a91a76e48c76';
+
+/// A source's categories of one kind with their item counts, for the
+/// pickers.
+
+@ProviderFor(categoryList)
+final categoryListProvider = CategoryListFamily._();
+
+/// A source's categories of one kind with their item counts, for the
+/// pickers.
+
+final class CategoryListProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CategoryList>,
+          CategoryList,
+          Stream<CategoryList>
+        >
+    with $FutureModifier<CategoryList>, $StreamProvider<CategoryList> {
+  /// A source's categories of one kind with their item counts, for the
+  /// pickers.
+  CategoryListProvider._({
+    required CategoryListFamily super.from,
+    required (String, CatalogueKind) super.argument,
+  }) : super(
+         retry: null,
+         name: r'categoryListProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$categoryListHash();
+
+  @override
+  String toString() {
+    return r'categoryListProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<CategoryList> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<CategoryList> create(Ref ref) {
+    final argument = this.argument as (String, CatalogueKind);
+    return categoryList(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CategoryListProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$categoryListHash() => r'0362094b90880d31916a340c7a03e69d13103988';
+
+/// A source's categories of one kind with their item counts, for the
+/// pickers.
+
+final class CategoryListFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          Stream<CategoryList>,
+          (String, CatalogueKind)
+        > {
+  CategoryListFamily._()
+    : super(
+        retry: null,
+        name: r'categoryListProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A source's categories of one kind with their item counts, for the
+  /// pickers.
+
+  CategoryListProvider call(String sourceId, CatalogueKind kind) =>
+      CategoryListProvider._(argument: (sourceId, kind), from: this);
+
+  @override
+  String toString() => r'categoryListProvider';
+}

@@ -112,22 +112,6 @@ class _AppMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final colors = tokens.colors;
-
-    final mark = Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: tokens.radii.mdAll,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [colors.accentBase, colors.accentDeep],
-        ),
-      ),
-      child: AppIcon(AppIcons.play, size: 18, color: colors.onAccent),
-    );
 
     // The same 12 px gutter the items use, so the mark lines up with
     // the icons below it. The rail's 1 px border eats into the 72 px, so
@@ -139,20 +123,10 @@ class _AppMark extends StatelessWidget {
             ? MainAxisAlignment.start
             : MainAxisAlignment.center,
         children: [
-          mark,
-          if (expanded) ...[
-            SizedBox(width: tokens.spacing.s12),
-            Expanded(
-              child: Text(
-                'IPTV Player',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.bodyStrong.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ],
+          if (expanded)
+            const Expanded(child: AppMark(showName: true))
+          else
+            const AppMark(),
         ],
       ),
     );

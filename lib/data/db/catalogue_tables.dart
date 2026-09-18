@@ -1,10 +1,8 @@
 import 'package:drift/drift.dart';
+import 'package:iptv_player/core/catalogue_kind.dart';
 import 'package:iptv_player/data/db/tables.dart';
 
-/// Which part of a provider's catalogue a category belongs to. Xtream
-/// numbers live, VOD and series categories independently, so the same
-/// remote key can appear once per kind.
-enum CatalogueKind { live, movie, series }
+export 'package:iptv_player/core/catalogue_kind.dart';
 
 /// How a sync run ended. A run that is still `running` when the app
 /// starts was interrupted, and is treated as failed.

@@ -12,6 +12,11 @@ import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/library/presentation/library_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/movies/presentation/movies_screen.dart';
+import 'package:iptv_player/features/onboarding/presentation/connect_screen.dart';
+import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
+import 'package:iptv_player/features/onboarding/presentation/pick_categories_screen.dart';
+import 'package:iptv_player/features/onboarding/presentation/sync_screen.dart';
+import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/series/presentation/series_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
@@ -27,9 +32,27 @@ const searchRoutePath = '/search';
 /// `--dart-define=GALLERY=true`.
 const galleryRoutePath = '/dev/gallery';
 
+/// Onboarding (docs/05): Welcome, then Connect pushed on top of it, so
+/// Back and Esc return to Welcome.
+const welcomeRoutePath = '/welcome';
+const addSourceRoutePath = '/add-source';
+
+/// The first sync of a source just added. Reached with `go`, so there is
+/// nothing to pop back to: Esc can't leave a sync half-way, only Cancel.
+String sourceSyncPath(String sourceId) => '/source-setup/$sourceId';
+
+/// Pick categories, on top of the finished sync.
+String pickCategoriesPath(String sourceId) =>
+    '/source-setup/$sourceId/categories';
+
+/// Where the app opens: Home, or Welcome when no source is configured yet.
+/// `bootstrap()` decides before the first frame.
+@Riverpod(keepAlive: true)
+String startLocation(Ref ref) => '/';
+
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
-  final router = buildRouter();
+  final router = buildRouter(initialLocation: ref.read(startLocationProvider));
   ref.onDispose(router.dispose);
   return router;
 }
@@ -71,6 +94,31 @@ GoRouter buildRouter({String initialLocation = '/'}) {
           SearchOverlay(onClose: () => closeSearch(context)),
           key: state.pageKey,
         ),
+      ),
+      GoRoute(
+        path: welcomeRoutePath,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: addSourceRoutePath,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            ConnectScreen(preset: state.extra as ConnectPreset?),
+      ),
+      GoRoute(
+        path: '/source-setup/:sourceId',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            SyncScreen(sourceId: state.pathParameters['sourceId']!),
+        routes: [
+          GoRoute(
+            path: 'categories',
+            builder: (context, state) => PickCategoriesScreen(
+              sourceId: state.pathParameters['sourceId']!,
+            ),
+          ),
+        ],
       ),
       if (galleryEnabled)
         GoRoute(

@@ -5,11 +5,14 @@ import 'package:iptv_player/design/tokens.dart';
 /// One option in a [SegmentedControl].
 @immutable
 class SegmentOption<T> {
-  const new({required this.value, required this.label, this.icon});
+  const new({required this.value, required this.label, this.icon, this.count});
 
   final T value;
   final String label;
   final IconData? icon;
+
+  /// A quieter figure after the label (canvas: "Live TV 412").
+  final String? count;
 }
 
 /// A small group of mutually exclusive options (canvas: the No. / A–Z
@@ -82,7 +85,9 @@ class _Segment<T> extends StatelessWidget {
       background: selected ? colors.border : null,
       hoverBackground: selected ? colors.border : colors.surface3,
       borderRadius: tokens.radii.xsAll,
-      semanticLabel: option.label,
+      semanticLabel: option.count == null
+          ? option.label
+          : '${option.label}, ${option.count}',
       builder: (context, states) => Container(
         padding: EdgeInsets.symmetric(
           horizontal: tokens.spacing.s8 + 2,
@@ -106,6 +111,15 @@ class _Segment<T> extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            if (option.count != null) ...[
+              SizedBox(width: tokens.spacing.s4 + 2),
+              Text(
+                option.count!,
+                style: tokens.text.labelSmall.copyWith(
+                  color: selected ? colors.textSecondary : colors.textTertiary,
+                ),
+              ),
+            ],
           ],
         ),
       ),

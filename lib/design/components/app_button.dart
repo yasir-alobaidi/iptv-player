@@ -28,6 +28,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.size = AppButtonSize.m,
     this.icon,
+    this.trailingIcon,
     this.loading = false,
     this.expand = false,
     this.autofocus = false,
@@ -40,6 +41,9 @@ class AppButton extends StatelessWidget {
   final AppButtonVariant variant;
   final AppButtonSize size;
   final AppIcons? icon;
+
+  /// After the label: the canvas's "Start sync →" for a step forward.
+  final AppIcons? trailingIcon;
 
   /// Shows a spinner in place of the leading icon and blocks activation.
   final bool loading;
@@ -112,6 +116,10 @@ class AppButton extends StatelessWidget {
               AppIcon(icon!, size: 18, color: foreground),
             if (loading || icon != null) SizedBox(width: size.gap),
             Text(label, style: textStyle),
+            if (trailingIcon != null) ...[
+              SizedBox(width: size.gap),
+              AppIcon(trailingIcon!, size: 16, color: foreground),
+            ],
           ],
         );
 

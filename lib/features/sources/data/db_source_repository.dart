@@ -9,6 +9,7 @@ import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/daos/sources_dao.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/sources/domain/source_form.dart';
 
 /// Secure-store keys for sources start with this, which is how orphans
 /// are told apart from anything else the app may keep there later.
@@ -67,8 +68,8 @@ final class DbSourceRepository implements SourceRepository {
 
   @override
   Future<Result<Source>> add(SourceDraft draft) async {
-    final problem = _validate(draft, requirePassword: true);
-    if (problem != null) return Err(InvalidInputFailure(problem));
+    final problem = _problem(draft, requirePassword: true);
+    if (problem != null) return Err(problem);
 
     final id = _newId();
     final secret = _SourceSecret.from(draft);
@@ -116,8 +117,8 @@ final class DbSourceRepository implements SourceRepository {
 
   @override
   Future<Result<Source>> update(String id, SourceDraft draft) async {
-    final problem = _validate(draft, requirePassword: false);
-    if (problem != null) return Err(InvalidInputFailure(problem));
+    final problem = _problem(draft, requirePassword: false);
+    if (problem != null) return Err(problem);
 
     final existing = await _guard('read', () => _dao.byId(id));
     final row = existing.valueOrNull;
@@ -370,62 +371,15 @@ String _storedUrl(SourceDraft draft) => switch (draft.type) {
   SourceType.m3uFile => draft.url.trim(),
 };
 
-/// The display form of a playlist or EPG URL: its origin and an
-/// ellipsis, `http://lists.example/…`. Not `redact()`: a token in a path
-/// (`/p/9c2e81d4/list.m3u`) matches no pattern, so a masked URL can still
-/// carry the secret, and only dropping everything after the host is sure.
-String displayOrigin(String url) {
-  final uri = Uri.tryParse(url.trim());
-  if (uri == null || uri.host.isEmpty) return '…';
-  final port = uri.hasPort ? ':${uri.port}' : '';
-  return '${uri.scheme}://${uri.host}$port/…';
-}
-
-/// The server part of an Xtream URL: scheme, host, port and any base path,
-/// without user-info, query or fragment, and without a trailing slash.
-/// `http://` is assumed when no scheme is given. Null when there is no
-/// usable host, or the scheme is not http(s).
-String? normalizeServerUrl(String input) {
-  var text = input.trim();
-  if (text.isEmpty) return null;
-  if (!text.contains('://')) text = 'http://$text';
-  final uri = Uri.tryParse(text);
-  if (uri == null || uri.host.isEmpty) return null;
-  if (uri.scheme != 'http' && uri.scheme != 'https') return null;
-  final path = uri.path.replaceAll(RegExp(r'/+$'), '');
-  return Uri(
-    scheme: uri.scheme,
-    host: uri.host,
-    port: uri.hasPort ? uri.port : null,
-    path: path,
-  ).toString();
-}
-
-/// Why [draft] can't be saved, naming the field; null when it can.
-String? _validate(SourceDraft draft, {required bool requirePassword}) {
-  final name = draft.name.trim();
-  if (name.isEmpty || name.length > 200) return 'name';
-  if (draft.refreshHours < 1) return 'refresh hours';
-  if (draft.epgOffsetMinutes.abs() > 24 * 60) return 'EPG offset';
-  if ((draft.maxConnectionsOverride ?? 1) < 1) return 'connection limit';
-  switch (draft.type) {
-    case SourceType.xtream:
-      if (normalizeServerUrl(draft.url) == null) return 'server';
-      if (_blankToNull(draft.username) == null) return 'username';
-      if (requirePassword && _blankToNull(draft.password) == null) {
-        return 'password';
-      }
-    case SourceType.m3uUrl:
-      final uri = Uri.tryParse(draft.url.trim());
-      if (uri == null ||
-          uri.host.isEmpty ||
-          (uri.scheme != 'http' && uri.scheme != 'https')) {
-        return 'playlist URL';
-      }
-    case SourceType.m3uFile:
-      if (draft.url.trim().isEmpty) return 'file';
-  }
-  return null;
+/// The backstop behind the form's inline checks: names the first bad
+/// field, never its value.
+InvalidInputFailure? _problem(
+  SourceDraft draft, {
+  required bool requirePassword,
+}) {
+  final problems = validateDraft(draft, requirePassword: requirePassword);
+  if (problems.isEmpty) return null;
+  return InvalidInputFailure(problems.keys.first.name);
 }
 
 String? _blankToNull(String? value) {

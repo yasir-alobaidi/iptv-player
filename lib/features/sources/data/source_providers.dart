@@ -1,8 +1,12 @@
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/sync_engine.dart';
+import 'package:iptv_player/features/sources/data/db_category_repository.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
+import 'package:iptv_player/features/sources/data/provider_source_checker.dart';
+import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/sources/domain/source_check.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -38,3 +42,27 @@ SyncService syncService(Ref ref) {
 @riverpod
 Stream<SyncStatus> syncStatus(Ref ref, String sourceId) =>
     ref.watch(syncServiceProvider).watch(sourceId);
+
+/// One source, kept current; null once it is removed.
+@riverpod
+Stream<Source?> sourceById(Ref ref, String sourceId) => ref
+    .watch(sourceRepositoryProvider)
+    .watchAll()
+    .map((all) => all.where((s) => s.id == sourceId).firstOrNull);
+
+/// "Test connection" in onboarding.
+@Riverpod(keepAlive: true)
+SourceChecker sourceChecker(Ref ref) => ProviderSourceChecker();
+
+@Riverpod(keepAlive: true)
+CategoryRepository categoryRepository(Ref ref) =>
+    DbCategoryRepository(ref.watch(appDatabaseProvider));
+
+/// A source's categories of one kind with their item counts, for the
+/// pickers.
+@riverpod
+Stream<CategoryList> categoryList(
+  Ref ref,
+  String sourceId,
+  CatalogueKind kind,
+) => ref.watch(categoryRepositoryProvider).watch(sourceId, kind);

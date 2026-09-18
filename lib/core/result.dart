@@ -73,9 +73,10 @@ final class Err<T> extends Result<T> {
 }
 
 /// Why an operation failed. The UI picks its human message from the type;
+/// a stream reports one as its error, hence [Exception].
 /// [detail] is technical text with credentials removed, used only in logs
 /// and behind a "Details" disclosure.
-sealed class AppFailure {
+sealed class AppFailure implements Exception {
   new([String? detail]) : detail = detail == null ? null : redact(detail);
 
   /// Maps an error thrown by Dart or dart:io to a failure type.

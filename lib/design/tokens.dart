@@ -192,11 +192,20 @@ class AppTypography {
   /// 40/48 — details page titles.
   TextStyle get display => _font(AppFonts.sans, 40, 48, 700);
 
+  /// 34/42 — onboarding step titles (canvas).
+  TextStyle get hero => _font(AppFonts.sans, 34, 42, 800, letterSpacing: -0.5);
+
   /// 28/36 — screen titles on wide layouts.
   TextStyle get h1 => _font(AppFonts.sans, 28, 36, 700);
 
   /// 22/30 — the shell's screen title (canvas weight 700, not docs/05 600).
   TextStyle get h2 => _font(AppFonts.sans, 22, 30, 700, letterSpacing: -0.2);
+
+  /// 22/30 — a figure that leads a summary ("17 of 412 on", canvas).
+  TextStyle get stat => _font(AppFonts.sans, 22, 30, 800);
+
+  /// 20/28 — a result card's verdict ("Connected", canvas).
+  TextStyle get titleLarge => _font(AppFonts.sans, 20, 28, 800);
 
   /// 18/26 — card and dialog titles.
   TextStyle get h3 => _font(AppFonts.sans, 18, 26, 600);
@@ -368,6 +377,17 @@ class AppTokens extends ThemeExtension<AppTokens> {
     if (other == null || t < 0.5) return this;
     return other;
   }
+}
+
+/// Changes a token style's weight on both axes the bundled variable
+/// fonts need: [FontWeight] for fallback fonts and the `wght` variation
+/// for the variable ones (ADR-008). `copyWith(fontWeight:)` alone leaves
+/// the old variation in place.
+extension AppTextStyleWeight on TextStyle {
+  TextStyle withWeight(int weight) => copyWith(
+    fontWeight: FontWeight.values.firstWhere((w) => w.value == weight),
+    fontVariations: [FontVariation('wght', weight.toDouble())],
+  );
 }
 
 /// `context.tokens` — the only way presentation code reads design values.

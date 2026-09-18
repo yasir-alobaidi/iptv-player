@@ -236,6 +236,7 @@ extension XtreamAccountDomain on XtreamAccount {
     isTrial: isTrial,
     activeConnections: activeConnections,
     maxConnections: maxConnections,
+    allowedFormats: allowedOutputFormats,
     serverTimezone: serverTimezone,
   );
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/app.dart';
+import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/window_setup.dart';
 import 'package:iptv_player/core/core_providers.dart';
@@ -55,6 +56,7 @@ Future<void> bootstrap() async {
   final settings = SettingsRepository(database);
   final windowBounds = DbWindowBoundsStore(settings);
   final uiPreferences = await _loadUiPreferences(settings, log);
+  final firstRun = await _hasNoSources(database, log);
 
   try {
     await AppWindow(store: windowBounds, log: log).setUp();
@@ -78,6 +80,9 @@ Future<void> bootstrap() async {
       credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
       windowBoundsStoreProvider.overrideWithValue(windowBounds),
       uiPreferencesProvider.overrideWithValue(uiPreferences),
+      startLocationProvider.overrideWithValue(
+        firstRun ? welcomeRoutePath : '/',
+      ),
     ],
   );
   runApp(
@@ -128,6 +133,23 @@ Future<AppDatabase> _openDatabase(AppPaths? paths, AppLog log) async {
       stackTrace: stackTrace,
     );
     return AppDatabase.memory();
+  }
+}
+
+/// True when no source is configured, so the app opens on Welcome rather
+/// than an empty Home (docs/05). Read before the first frame, so the
+/// window never shows one and then jumps to the other.
+Future<bool> _hasNoSources(AppDatabase database, AppLog log) async {
+  try {
+    return (await database.sourcesDao.all()).isEmpty;
+  } on Object catch (error, stackTrace) {
+    log.warning(
+      'bootstrap',
+      'Could not read the sources',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return false;
   }
 }
 

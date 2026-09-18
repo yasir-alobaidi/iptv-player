@@ -17,6 +17,9 @@ abstract class ProviderAccount with _$ProviderAccount {
     int? activeConnections,
     int? maxConnections,
 
+    /// The live formats the panel offers, lower case: `ts`, `m3u8`, `rtmp`.
+    @Default(<String>[]) List<String> allowedFormats,
+
     /// The panel's time zone name, e.g. `Europe/London`.
     String? serverTimezone,
   }) = _ProviderAccount;

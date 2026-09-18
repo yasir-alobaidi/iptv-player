@@ -103,6 +103,13 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
         CategoriesCompanion(isHidden: Value(hidden)),
       );
 
+  /// A country group's checkbox in the pickers: one statement, so the
+  /// list redraws once.
+  Future<void> setHiddenMany(Iterable<int> ids, {required bool hidden}) =>
+      (update(categories)..where((t) => t.id.isIn(ids))).write(
+        CategoriesCompanion(isHidden: Value(hidden)),
+      );
+
   /// The pickers' "Select all" and "Select none".
   Future<void> setAllHidden(
     String sourceId,

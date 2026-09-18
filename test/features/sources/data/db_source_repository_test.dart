@@ -180,21 +180,31 @@ void main() {
       expect(source.name, 'Spaced');
     });
 
-    for (final (field, draft) in [
-      ('name', _xtream.copyWith(name: '   ')),
-      ('server', _xtream.copyWith(url: 'ftp://northwind.test')),
-      ('server', _xtream.copyWith(url: '')),
-      ('username', _xtream.copyWith(username: ' ')),
-      ('password', _xtream.copyWith(password: null)),
-      ('refresh hours', _xtream.copyWith(refreshHours: 0)),
-      ('connection limit', _xtream.copyWith(maxConnectionsOverride: 0)),
+    for (final (what, field, draft) in [
+      ('name', 'name', _xtream.copyWith(name: '   ')),
+      ('server', 'url', _xtream.copyWith(url: 'ftp://northwind.test')),
+      ('missing server', 'url', _xtream.copyWith(url: '')),
+      ('username', 'username', _xtream.copyWith(username: ' ')),
+      ('password', 'password', _xtream.copyWith(password: null)),
+      ('EPG URL', 'epgUrl', _xtream.copyWith(epgUrl: 'guide.xml')),
+      ('refresh interval', 'refreshHours', _xtream.copyWith(refreshHours: 0)),
+      (
+        'connection limit',
+        'connectionLimit',
+        _xtream.copyWith(maxConnectionsOverride: 0),
+      ),
       (
         'playlist URL',
+        'url',
         const SourceDraft(type: SourceType.m3uUrl, name: 'x', url: 'not a url'),
       ),
-      ('file', const SourceDraft(type: SourceType.m3uFile, name: 'x', url: '')),
+      (
+        'file',
+        'url',
+        const SourceDraft(type: SourceType.m3uFile, name: 'x', url: ''),
+      ),
     ]) {
-      test('refuses a draft with a bad $field, and stores nothing', () async {
+      test('refuses a draft with a bad $what, and stores nothing', () async {
         final result = await h.repository.add(draft);
 
         expect(result.failureOrNull, isA<InvalidInputFailure>());

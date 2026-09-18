@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/placeholder_screen.dart';
@@ -9,11 +10,35 @@ import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
+import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 
 import 'app_harness.dart';
 
 void main() {
+  test('the router opens where bootstrap says', () {
+    final container = ProviderContainer(
+      overrides: [startLocationProvider.overrideWithValue(welcomeRoutePath)],
+    );
+    addTearDown(container.dispose);
+
+    // The state resolves once the router is in a widget tree; its
+    // route information is set from the start.
+    expect(
+      container.read(routerProvider).routeInformationProvider.value.uri.path,
+      welcomeRoutePath,
+    );
+  });
+
+  testWidgets('Welcome is a page of its own, outside the shell', (
+    tester,
+  ) async {
+    await pumpApp(tester, initialLocation: welcomeRoutePath);
+
+    expect(find.byType(WelcomeScreen), findsOneWidget);
+    expect(find.byType(DesktopShell), findsNothing);
+  });
+
   testWidgets('starts on Home inside the shell', (tester) async {
     final app = await pumpApp(tester);
 
