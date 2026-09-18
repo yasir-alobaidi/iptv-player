@@ -10,7 +10,7 @@ analyzer:
     - "**/*.freezed.dart"
     # drift_dev writes these from drift_schemas/; they are regenerated,
     # never edited (`dart run drift_dev schema generate`).
-    - test/data/db/generated/**
+    - test/drift/app/generated/**
     - windows/**
     - linux/**
 

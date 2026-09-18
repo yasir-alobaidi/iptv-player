@@ -1,0 +1,84 @@
+-- Full-text search over the catalogue (docs/02; queried from Phase 6).
+--
+-- External-content FTS5 tables: the text lives once, in the catalogue
+-- tables, and these hold only the index. Triggers keep them current, so no
+-- writer can forget to. The update triggers fire only when an indexed
+-- column really changed: a re-sync rewrites every row, and most of them
+-- come back with the same name.
+--
+-- unicode61 folds case and diacritics; the prefix index makes type-ahead
+-- queries (`spo*`) cheap. Changing either is a drop-and-rebuild from the
+-- content tables, not a data migration.
+
+import 'catalogue_tables.dart';
+
+CREATE VIRTUAL TABLE channels_fts USING fts5(
+  name, display_name,
+  content='channels', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2', prefix='2 3'
+);
+
+CREATE TRIGGER channels_fts_insert AFTER INSERT ON channels BEGIN
+  INSERT INTO channels_fts(rowid, name, display_name)
+    VALUES (new.id, new.name, new.display_name);
+END;
+
+CREATE TRIGGER channels_fts_delete AFTER DELETE ON channels BEGIN
+  INSERT INTO channels_fts(channels_fts, rowid, name, display_name)
+    VALUES ('delete', old.id, old.name, old.display_name);
+END;
+
+CREATE TRIGGER channels_fts_update AFTER UPDATE OF name, display_name ON channels
+  WHEN old.name IS NOT new.name OR old.display_name IS NOT new.display_name
+BEGIN
+  INSERT INTO channels_fts(channels_fts, rowid, name, display_name)
+    VALUES ('delete', old.id, old.name, old.display_name);
+  INSERT INTO channels_fts(rowid, name, display_name)
+    VALUES (new.id, new.name, new.display_name);
+END;
+
+CREATE VIRTUAL TABLE movies_fts USING fts5(
+  name,
+  content='movies', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2', prefix='2 3'
+);
+
+CREATE TRIGGER movies_fts_insert AFTER INSERT ON movies BEGIN
+  INSERT INTO movies_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE TRIGGER movies_fts_delete AFTER DELETE ON movies BEGIN
+  INSERT INTO movies_fts(movies_fts, rowid, name)
+    VALUES ('delete', old.id, old.name);
+END;
+
+CREATE TRIGGER movies_fts_update AFTER UPDATE OF name ON movies
+  WHEN old.name IS NOT new.name
+BEGIN
+  INSERT INTO movies_fts(movies_fts, rowid, name)
+    VALUES ('delete', old.id, old.name);
+  INSERT INTO movies_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE VIRTUAL TABLE series_fts USING fts5(
+  name,
+  content='series', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2', prefix='2 3'
+);
+
+CREATE TRIGGER series_fts_insert AFTER INSERT ON series BEGIN
+  INSERT INTO series_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE TRIGGER series_fts_delete AFTER DELETE ON series BEGIN
+  INSERT INTO series_fts(series_fts, rowid, name)
+    VALUES ('delete', old.id, old.name);
+END;
+
+CREATE TRIGGER series_fts_update AFTER UPDATE OF name ON series
+  WHEN old.name IS NOT new.name
+BEGIN
+  INSERT INTO series_fts(series_fts, rowid, name)
+    VALUES ('delete', old.id, old.name);
+  INSERT INTO series_fts(rowid, name) VALUES (new.id, new.name);
+END;

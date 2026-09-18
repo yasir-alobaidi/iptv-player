@@ -3,8 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approved; steps 1–8 all done (scaffold, core/, design/ foundations and components, app/ shell, data/db, fake provider, goldens and keyboard tests, CI).** Next is the phase exit: the closing docs (ADR-008, docs/05) and **CI green on both OSes, which needs you to push**. The plan and your decisions are summarized under Done; the Windows run is still deferred until your PC is available.
-
+Phase 2 — Sources, onboarding, sync. **Phase 1 is complete: CI ran for the first time on 2026-09-18 and both jobs passed**, including the first Windows build this project has ever had. The Phase 2 plan is approved (all four recommendations, and the three layout sketches). **Step 1 (schema v2) is done and waiting for your review**; step 2 (credentials and the source repository) is next.
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
 - 2026-09-14: Design canvas (Cinematic Dark, 9 screens): https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -53,19 +52,22 @@ Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approve
 
 - 2026-09-16: **Phase 2 plan written and proposed** (`docs/plans/phase-2-providers-and-data.md`): eight steps — schema v2 with the catalogue tables and FTS, the credential store and source repository, the Xtream client with one fixture per docs/02 quirk, the M3U parser plus `get.php` on the fake provider, the sync engine in a background isolate, onboarding, Settings → Sources with the categories manager and the shell's source slots, then integration and the phase exit. It names the one real unknown (drift with its own connection in an isolate, spiked at the start of step 5, not discovered at the end), the fact that CI has no keyring so flutter_secure_storage is only ever exercised by hand here, and four decisions plus three layout sketches (Welcome, Settings → Sources, Categories manager) that need your approval, since docs/05 has no artboard for them. Also corrected: the fake provider's README said Phase 2 owned the XMLTV parser — docs/08 gives XMLTV to Phase 4
 
+- 2026-09-18: **CI's first run: Linux and Windows both green** (run 35312720884, commit 2e1affd). On Windows this is the first time the project has been built or tested anywhere: analyze, the format check, `flutter test --exclude-tags golden`, the fake provider's tests and `flutter build windows --release` all passed, with the patched `third_party/media_kit_video` and `media_kit_libs_video`'s libmpv download. Windows **playback** is still unverified (ADR-007) — CI builds, it never plays
+
+- 2026-09-18: **Phase 2 plan approved** — your recommendation on all four decisions (you run onboarding against your real provider at the end of step 6; `favorites`/`watch_history` wait for their phases; M3U file and URL together; sync duration asserted in CI, frame times measured by a manual benchmark), and the three layout sketches
+
+- 2026-09-18: **Phase 2 step 1 (schema v2):** `lib/data/db/catalogue_tables.dart` — `sync_runs`, `categories`, `channels`, `movies`, `movie_details`, `series`, `episodes`, all cascading from `sources`; `lib/data/db/search.drift` — external-content FTS5 tables for channels, movies and series, kept current by triggers that skip unchanged names; the v1 → v2 step plus a recreate-all-triggers pass after every upgrade; DAOs for every table (`SyncRunsDao`, `CategoriesDao`, `ChannelsDao`, `MoviesDao`, `SeriesDao`) whose batched upserts rewrite only provider-owned columns, so renames, hidden flags, the user's category order, movie details and fetched episodes survive a re-sync, plus run-id mark-and-sweep. Findings (ADR-009): **drift's schema verifier does not compare triggers**, so a search test on a migrated database is the only thing that catches a missing trigger — proven by removing the step and watching only that test fail; categories must be unique per *kind* because Xtream numbers each kind separately; FTS triggers cost ~1 s per 50k new or renamed rows and nothing on an unchanged re-sync. The migration tests moved to drift's own `test/drift/app/` layout, which `make-migrations` regenerates, and Phase 1's stale copy in `test/data/db/generated/` is gone. docs/02's schema table and migration flow now match the code. 22 new DAO tests, 4 migration tests; 284 app tests pass
+
 ## In progress
-- **Phase 2 plan awaiting your approval** (four decisions, three layout sketches)
-- Phase 1 exit: **only CI green is left, and it needs you to push.** The unverified window-close check (window_manager #585) is also still open, and Phase 2 can start without either
+- **Phase 2 step 1 is waiting for your review** (commit "Phase 2 step 1: …")
 
 ## Next
-1. **Approve (or change) the Phase 2 plan: `docs/plans/phase-2-providers-and-data.md`** — it has four decisions and three layout sketches waiting on you
-2. Push the waiting commits, then read the Actions run (public repo, no `gh` needed):
-   `curl -s https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=1`
-3. Phase 2 itself, once the plan is approved (the Xtream client, the M3U parser, the sync engine — docs/02; XMLTV is Phase 4)
-2. Windows spike run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. Phase 2 step 2: `CredentialStore` (flutter_secure_storage, plus an in-memory fake for tests and CI) and `SourceRepository`; a test that no password reaches the database file or the log. The real secure store gets one manual check on this machine
+2. Steps 3–8 as in the plan: the Xtream client and quirk fixtures, M3U and `get.php`, the sync engine (drift-in-an-isolate spiked first), onboarding, Settings → Sources and the categories manager, integration and the phase exit
+3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
-## ADR-008
-**Written: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** The running list that used to live here — the choices collected as each Phase 1 step landed — is now that ADR, organized by theme instead of by step, so there is one source of truth. Collect the next phase's choices under a new heading here as they land.
+## ADR-008 and ADR-009
+**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (In progress)** is written straight into docs/decisions.md as each step lands, rather than collected here first, so there is one source of truth all the way through; it moves to Accepted at the phase exit.
 
 ## Open questions
 - `bootstrap()` takes no overrides and resolves `AppPaths` itself, so an integration test can't drive the real entry point without writing a log and a database into the real app-support directory and taking over `FlutterError.onError`. The step 7 smoke test pumps `IptvPlayerApp` with bootstrap's non-disk overrides instead. A deeper launch test later needs an injectable paths/overrides seam in `bootstrap()`
@@ -97,7 +99,7 @@ Phase 1 — Foundation. **ADR-007 GO accepted (2026-09-15); Phase 1 plan approve
 | Metric | Budget | Latest | Date |
 |---|---|---|---|
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s | 320 / 597 ms — spike over loopback, Intel, patched media_kit (fake provider not built yet) | 2026-09-15 |
-| Sync 50k channels + 30k movies | ≤ 60 s | — | — |
+| Sync 50k channels + 30k movies | ≤ 60 s | — (step 5). Parts so far: 50k channel upserts in 5,000-row batches 2.0 s first time, 1.0 s re-sync with unchanged names (FTS triggers included; in-memory DB) | 2026-09-18 |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
 | H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |

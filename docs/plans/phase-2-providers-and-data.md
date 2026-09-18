@@ -1,6 +1,6 @@
 # Phase 2 — Sources, onboarding, sync: plan
 
-**Status: proposed — needs your approval before step 1.** Three layout sketches near the bottom need approving too, because docs/05 has no artboard for them.
+**Status: approved 2026-09-18** — all four recommendations below accepted as written, and the three layout sketches with them.
 
 ## Context
 Phase 1 left a running app with no data in it: the design system, the keyboard-first shell, a drift database with only `sources` and `settings`, and a fake provider that already serves the whole Xtream API (ADR-008). Phase 2 is where the app first shows a real catalogue: a source is added, its credentials are stored safely, its data is synced into the database, and the user picks what they want to see.
@@ -13,7 +13,7 @@ Carried in from Phase 1, not to be relitigated without new evidence (ADR-008): `
 
 Working rhythm, as in Phase 1: one numbered step at a time; after each, analyze + format + tests, commit locally without trailers, and stop for your review.
 
-## Decisions I need from you
+## Decisions (approved 2026-09-18: the recommendation in each)
 1. **Your real provider.** The exit criterion needs credentials and your own hands — I can't reach a real panel, and I won't ask you to paste credentials into this session. Plan: you run the onboarding flow yourself at the end of step 6, on your own machine, and tell me what broke. Anything you paste from a failure gets `redact()`ed before it lands in a log or a doc.
 2. **`favorites` and `watch_history` tables: not in this phase** (my recommendation). They belong to the phases that write them (3, 5, 6), migrations are cheap, and mark-and-sweep only touches provider tables so nothing is lost by waiting. Say the word if you'd rather have the whole docs/02 schema in one migration.
 3. **M3U file *and* M3U URL both in this phase** (my recommendation): the parser is the same code and the file picker already exists.

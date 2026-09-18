@@ -76,12 +76,13 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | Table | Columns |
 |---|---|
 | sources | id, type, name, server_url, username, credential_ref, m3u_url, epg_url_override, user_agent, live_format, epg_offset_min, refresh_hours, max_connections_override, account_json, exp_date, last_synced_at, sort_order |
-| categories | id, source_id, kind (live/movie/series), remote_key, name, display_name, is_hidden, sort_order |
-| channels | id, source_id, category_id, remote_key, number, name, display_name, logo_url, epg_key, archive_days, ext, is_hidden, added_at |
-| movies | id, source_id, category_id, remote_key, name, poster_url, rating, year, ext, added_at |
-| movie_details | movie_id, plot, cast, director, genre, runtime_min, backdrop_url, fetched_at |
-| series | id, source_id, category_id, remote_key, name, poster_url, rating, year, plot, updated_at |
-| episodes | id, series_id, season, episode, remote_key, title, ext, duration_s, plot, still_url |
+| sync_runs | id, source_id, started_at, finished_at, outcome (running/succeeded/failed/cancelled), failure, counts_json — the id is the mark-and-sweep marker |
+| categories | id, source_id, kind (live/movie/series), remote_key, name, display_name, is_hidden, sort_order (the user's; null until reordered), position (the provider's), seen_run — unique (source_id, kind, remote_key): Xtream numbers each kind's categories separately |
+| channels | id, source_id, category_id, remote_key, number, name, display_name, logo_url, epg_key, archive_days, stream_url, extras_json, is_hidden, added_at, position, seen_run |
+| movies | id, source_id, category_id, remote_key, name, poster_url, rating, year, ext, stream_url, extras_json, added_at, position, seen_run |
+| movie_details | movie_id, plot, cast_names, director, genre, runtime_minutes, backdrop_url, fetched_at |
+| series | id, source_id, category_id, remote_key, name, poster_url, rating, year, plot, updated_at, episodes_fetched_at, position, seen_run |
+| episodes | id, series_id, season, episode, remote_key, title, ext, duration_seconds, plot, still_url, stream_url, extras_json, seen_run — unique (series_id, remote_key) |
 | epg_channels | id, source_id, xmltv_id, display_name, icon_url |
 | epg_programs | id, source_id, epg_channel_id, start_utc, end_utc, title, subtitle, description, category — index (epg_channel_id, start_utc) |
 | epg_mappings | source_id, channel_remote_key, xmltv_id |
@@ -89,11 +90,18 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | watch_history | id, item_type, source_id, remote_key, position_ms, duration_ms, completed, updated_at |
 | cast_devices | device_id, name, model, last_host, is_manual, hevc_support (auto/yes/no), learned_json, last_used_at |
 | settings | key, value_json |
-| FTS5 | channels_fts, movies_fts, series_fts, programs_fts |
+| FTS5 | channels_fts (name, display_name), movies_fts, series_fts (name), programs_fts — external-content tables kept current by triggers |
 
 Every schema change: bump the schema version, write a migration, add a migration test (drift schema dumps + verifier).
 
-The flow is `dart run drift_dev make-migrations`, which writes the dump for the current version into `drift_schemas/app/` (committed), followed by `dart run drift_dev schema generate drift_schemas/app/ test/data/db/generated/` for the verifier's helpers. `test/data/db/schema_v1_test.dart` checks the live schema against the committed dump; `test/data/db/generated/` is excluded from the analyzer because drift_dev owns it.
+The flow: bump `schemaVersion`, run `dart run build_runner build`, then `dart run drift_dev make-migrations`. That one command writes the new dump into `drift_schemas/app/` (committed), the step-by-step helpers into `lib/data/db/app_database.steps.dart`, and the verifier's helpers into `test/drift/app/generated/` (excluded from the analyzer; drift_dev owns it). Write the new `fromNToM` step in `AppDatabase`, and add a data case to `test/drift/app/migration_test.dart` — the tool creates that file only when it is missing, so it is ours to edit.
+
+Items are keyed by `(source_id, remote_key)`; the columns a sync writes and the ones it never touches are fixed per table:
+- **Provider-owned** (rewritten by every sync): everything that comes from the provider, plus `position` and `seen_run`.
+- **User-owned** (never written by sync): `display_name`, `is_hidden`, a category's `sort_order`, a series' `episodes_fetched_at`, and `movie_details` / `episodes`, which hang off a row id that an upsert keeps.
+- `stream_url` and `extras_json` are for M3U items only: the stream URL has the source's credentials replaced by placeholders, and the extras hold the per-item `#EXTVLCOPT` and catch-up attributes. Xtream URLs are built from the source instead.
+
+Triggers are derived state: drift's versioned schemas leave them out, and its schema verifier does not compare them. So every upgrade drops and recreates all triggers once the tables are final, and a migration test proves the search index works on a migrated database.
 
 Downloads and the local library (tables `library_folders`, `library_items`, `downloads`, `library_fts`) are specified in docs/09 and added by a migration in Phase 8. `favorites` and `watch_history` also hold local files (`item_type = local`, `remote_key` = quick hash).
 

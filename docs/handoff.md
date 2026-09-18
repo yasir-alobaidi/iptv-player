@@ -1,34 +1,17 @@
-# Handoff — 2026-09-16 (session 14)
+# Handoff — 2026-09-18 (session 15)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Phase 1 is finished except for CI going green. Nine commits are waiting to
-be pushed, and pushing is the one thing left:** the workflow cannot run — and
-ADR-008's last open item cannot close — until GitHub sees it. `origin/main` is
-still at step 3a (`e9efe17`).
+**Review Phase 2 step 1 (schema v2)** — one commit on top of what you pushed.
+Nothing in it is visible in the app: it is the catalogue tables, search, and
+the DAOs the sync engine will write through. The parts worth your eyes are
+ADR-009 in docs/decisions.md and the updated schema table in
+docs/02-providers-and-data.md. Push when you're happy with it.
 
-```
-git push
-# then read the run (public repo, no gh CLI needed):
-curl -s 'https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=1' \
-  | grep -E '"name"|"status"|"conclusion"|"html_url"'
-```
-
-Everything the workflow does was verified locally on Linux, step by step, so
-the Linux job should pass. **The Windows job has never run anywhere** — no
-Windows machine has touched this project yet. If it fails, the two likely
-places are `media_kit_libs_video` (it downloads libmpv at build time) and the
-vendored `third_party/media_kit_video`; the patch itself only touches
-`linux/video_output.cc`, so it cannot be the cause.
-
-Two things still only you can do, and one run covers both:
-
-1. **window_manager #585, the crash when the window is closed.** Still
-   unverified: this laptop is on Wayland, and neither closing a window nor
-   taking a screenshot works from a script here.
-2. **The window size and the rail's expanded state are remembered** — they
-   are written on the first run and restored on the second.
+CI's first run passed on both Linux and Windows (run 35312720884). The window
+checks from last time are still yours to do when convenient — they don't
+block Phase 2:
 
 ```
 flutter run -d linux       # resize, expand the rail, close with the X
@@ -36,139 +19,94 @@ tail ~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log
 flutter run -d linux       # same size, rail still expanded
 ```
 
-While that window is open, the new keyboard rules are worth ten seconds of
-your own hands, because tests cannot tell you how they feel: **Ctrl+3** (focus
-should land in the guide, ring visible), **Tab** from there, **Esc** (focus
-should step back from the chrome into the screen), and arrowing the rail with
-**↑ ↓** then **Enter** (focus should stay on the rail).
-
-**PID 42684 is still open** — the session 9 build with the in-memory store.
-Close it first rather than reading anything into its behaviour.
-
-The fake provider runs if you want to see real data move:
-
-```
-dart run tools/fake_provider/bin/server.dart --port 8899
-mpv 'http://127.0.0.1:8899/live/test/test/1.ts'
-```
+That run will also create the app's first on-disk database, straight at
+schema v2 (no database file exists on this machine yet — every earlier run
+used the in-memory fallback).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
-Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md and
-docs/decisions.md (ADR-008) first. Phase 1 is done and I have pushed. Check the CI run and fix anything red. The Phase 2 plan
-is in docs/plans/phase-2-providers-and-data.md — here are my answers to its four questions:
-<answer them, or say "your recommendations are fine">. Then do step 1 and stop for my review.
+Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
+docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
+Step 1 is reviewed <or: here is what to change>. Do Phase 2 step 2 and stop for my review.
 ```
 
 ## Where things stand
-- **Phase 0 done, GO for Linux accepted** (ADR-007). Windows playback is still
-  unverified — no PC yet.
-- **Phase 1 step 1:** app scaffold, every ADR-002 package, lints, `build.yaml`.
-- **Phase 1 step 2:** `Result`/`AppFailure`, `redact()`, logging with our own
-  rotation, global error handlers, background isolates, `bootstrap()`.
-- **Phase 1 step 3a:** bundled variable fonts, `AppTokens` as a
-  `ThemeExtension`, the dark theme, the focus system, the basic components,
-  and the Component Gallery.
-- **Phase 1 step 3b:** the canvas icon set and the media, overlay, casting and
-  download components.
-- **Phase 1 step 4:** the router, the desktop shell, the global shortcuts, the
-  placeholder screens and the window plumbing.
-- **Phase 1 step 5:** the drift database, the DAOs, `SettingsRepository`, and
-  the migration flow.
-- **Phase 1 step 6:** `tools/fake_provider` — the Xtream API, live streams and
-  the fault stub.
-- **Phase 1 step 7:** real fonts in tests, four goldens, the full keyboard
-  matrix, and the integration smoke test.
-- **Phase 1 step 8:** `.github/workflows/ci.yml` — Linux + Windows, every
-  step verified locally except the Windows job, which needs a push.
-- **Phase 1 exit docs:** ADR-008 written and Accepted; docs/05, docs/01,
-  ADR-002 and docs/06 corrected to match what shipped.
-- 259 app tests and 81 fake-provider tests pass; `flutter analyze`, the format
-  check over `lib test integration_test tools` and `flutter build linux
-  --debug` are clean.
+- **Phase 1 is complete** (ADR-008), and CI is green on both OSes.
+- **Phase 2 plan approved 2026-09-18** — the recommendation on all four
+  questions and the three layout sketches (recorded at the top of the plan
+  and in ADR-009).
+- **Phase 2 step 1 done:** schema v2. `lib/data/db/catalogue_tables.dart`
+  (`sync_runs`, `categories`, `channels`, `movies`, `movie_details`,
+  `series`, `episodes`), `lib/data/db/search.drift` (FTS5 over channels,
+  movies and series, kept current by triggers), the v1 → v2 migration, and
+  the DAOs `SyncRunsDao`, `CategoriesDao`, `ChannelsDao`, `MoviesDao`,
+  `SeriesDao`.
+- 284 app tests and 81 fake-provider tests pass; `flutter analyze`, the
+  format check and `flutter build linux --debug` are clean.
 
-## Done this session (2026-09-16)
-Step 8 (the CI workflow) and the Phase 1 exit docs.
-
-`.github/workflows/ci.yml`: one matrix job over ubuntu-22.04 and
-windows-latest, Flutter pinned to 3.47.4, on push to main, on pull requests
-and on demand, with in-progress runs superseded per ref. In order: apt
-dependencies → `flutter pub get` and `dart pub get
---directory=tools/fake_provider` → `build_runner` then `git diff
---exit-code` → `flutter analyze` → the format check → `flutter test` (Linux)
-or `flutter test --exclude-tags golden` (Windows) → the fake provider's
-`dart test` → the integration test under xvfb → release bundles, uploaded as
-artifacts. Each step was run here first: `dart pub get --directory=` works,
-`build_runner` leaves the tree clean, analyze and format are clean, 259 + 81
-tests pass, the integration test passes under xvfb, and `flutter build linux
---release` produces exactly the bundle path the workflow uploads.
-
-**ADR-008 is written and Accepted** (docs/decisions.md): every Phase 1 choice,
-organized by theme rather than by step — identity, where the canvas beats
-docs/05, the design system, focus and keyboard, core, data, window, testing,
-CI, the rejected alternatives, and what is still open. The running list in
-docs/progress.md is now a pointer to it, so there is one source of truth.
-
-Docs corrected to match what shipped: **docs/05** (64 px top bar, a rail with
-no Search item and a collapse toggle, the focus ring as a 2 px ring with a
-4 px glow at 25 % stroked outside the control, radius `control` 10, h2 and
-bodyStrong at 700, the 17/14/12 px styles, the 380 × 40 search field,
-`ChannelRow`'s progress on the title line), **docs/01 and ADR-002**
-(flutter_svg 2.3.0, `crypto` for the icon extractor), **docs/06** (goldens are
-Linux-only, how they are tagged and skipped, and the fake provider's `pub get`
-before analyze).
+## Done this session (2026-09-18)
+- Read the first CI run: Linux green; Windows passed every step, including
+  the release build, which is the first time Windows has built this project.
+- Marked the plan approved.
+- Step 1, as above. The decisions and measurements are in ADR-009; the short
+  version is in "Instructions" below.
 
 ## Instructions for the next session
-1. **Phase 1 is done and the Phase 2 plan is written** —
-   `docs/plans/phase-2-providers-and-data.md`, proposed, not approved. It
-   asks four questions and offers three layout sketches; don't start step 1
-   until the user has answered them. Read ADR-008 before changing anything it
-   covers: the
-   choices in it are the ones later phases must not relitigate without new
-   evidence. Phase 2 (providers and data, docs/02) is next, and the fake
-   provider from step 6 is what it gets tested against.
-2. CI is written; if a job is red, these are the three things that were
-   easy to get wrong and are already handled — don't "fix" them away: `dart pub get` in
-   `tools/fake_provider` **before** the root `flutter analyze`; `flutter test
-   --exclude-tags golden` on the Windows job (goldens are Linux-only); and
-   `xvfb-run -a flutter test integration_test -d linux` with `GDK_BACKEND=x11`
-   and no `WAYLAND_DISPLAY` for the integration job. The smoke test needs no
-   fake provider — docs/06 assumes one, but this test is deliberately
-   network-free.
-3. Root `flutter analyze` reaches into `tools/fake_provider` — that is why
-   the `pub get` above matters. The package's `pubspec.lock` is committed, as
-   the spikes' are.
-4. Working in the fake provider: `dart test` from `tools/fake_provider`, and
-   `dart run tools/fake_provider/bin/server.dart` from the repo root (the
-   nested package resolves correctly from there — verified).
-5. The ffmpeg tests need `third_party/ffmpeg/linux-x64/ffmpeg` and
+1. **Step 2 is next:** `CredentialStore` in `lib/core/` (read/write/delete
+   keyed by source id), a flutter_secure_storage implementation in
+   `lib/data/`, an in-memory fake for tests and CI (CI has no keyring), and
+   `SourceRepository` (add, edit, remove, list, reorder; writes only
+   `credential_ref`; removing a source deletes its secret). Include the test
+   that a full source round-trip leaves no password in the database file and
+   nothing credential-shaped in the log. Exercise the real secure store once
+   by hand on this machine and record the result.
+2. **Sync writes go through the DAOs' `upsertAll` and `sweep`.** Upserts
+   rewrite only provider-owned columns — never `display_name`, `is_hidden`,
+   a category's `sort_order`, or `episodes_fetched_at`. If a new column is
+   provider-owned, add it to that DAO's `DoUpdate` list, or re-syncs will
+   silently keep the stale value.
+3. **Mark-and-sweep uses the run id:** `SyncRunsDao.start()` returns the id,
+   every upserted row carries it in `seen_run`, and only a *succeeded* run
+   sweeps. Sweep the items before the categories. Call
+   `SyncRunsDao.failInterrupted()` once on launch (step 5 wires it in).
+4. Categories are unique per `(source_id, kind, remote_key)`; items per
+   `(source_id, remote_key)`. `idsByRemoteKey(source, kind)` maps a
+   provider's category id to the row id items need.
+5. **Schema changes:** bump `schemaVersion`, `dart run build_runner build`,
+   then `dart run drift_dev make-migrations` — one command writes the dump
+   (`drift_schemas/app/`), `lib/data/db/app_database.steps.dart`, and
+   `test/drift/app/generated/`. Write the `fromNToM` step in
+   `AppDatabase`, and add a case to `test/drift/app/migration_test.dart`
+   (ours; the tool leaves it alone once it exists). **Don't create triggers
+   inside a step:** `_recreateTriggers` rebuilds them all after every
+   upgrade, because drift's versioned schemas omit them and its verifier
+   doesn't compare them.
+6. FTS consistency in tests: `INSERT INTO <t>(<t>, rank) VALUES
+   ('integrity-check', 1)` throws on a stale index (verified).
+7. **`DoUpdate.withExcluded` inside `Batch.insertAll` needs explicit type
+   arguments** (`DoUpdate<$ChannelsTable, ChannelRow>.withExcluded`), or the
+   analyzer reports every `excluded.x` as a nullable access.
+8. Root `flutter analyze` reaches into `tools/fake_provider`; `dart pub get`
+   there first. Work in it with `dart test` from `tools/fake_provider`, and
+   `dart run tools/fake_provider/bin/server.dart` from the repo root.
+9. The ffmpeg tests need `third_party/ffmpeg/linux-x64/ffmpeg` and
    `tools/media_samples/out`, and skip with a reason without them. Keep it
    that way: CI on Windows has neither.
-6. `/proc/<pid>` is a **directory** — `File('/proc/$pid').existsSync()` is
-   false for a live process. Liveness checks read
-   `/proc/<pid>/cmdline`, which is also how the stale sweep tells our ffmpeg
-   from a reused PID.
-7. The shell's slots — `shellSourceProvider`, `shellSyncStatusProvider`,
-   `shellDownloadsProvider`, `shellCastSessionProvider` — are still
-   deliberately empty. Override the provider in the phase that owns the data
-   rather than changing the shell.
-8. `test/app/app_harness.dart` pumps the real app with a silent log and an
-   uninstalled `ErrorReporter`; `pumpApp(tester, overrides: [...])` fills a
-   shell slot, and `findByLabel('…')` finds an icon-only control. Don't call
-   `pumpApp` twice in one test.
-9. Re-recording a golden after a deliberate UI change:
-   `flutter test --tags golden --update-goldens`, then look at the PNG before
-   trusting it. Reading the image is how the `ChannelRow` bug was found —
-   a green golden only means nothing changed, not that it looks right.
-10. Regenerating the drift schema: bump `schemaVersion`, then
-   `dart run build_runner build`, `dart run drift_dev make-migrations`, and
-   `dart run drift_dev schema generate drift_schemas/app/ test/data/db/generated/`.
-   Add a case to `test/data/db/schema_v1_test.dart`.
-11. Commit messages carry no trailers. Commit locally; the user pushes.
-12. At the end: analyze, format check, `flutter test`, the fake provider's
-    `dart test`, update `docs/progress.md`, overwrite this file, and commit.
+10. `/proc/<pid>` is a **directory**; liveness checks read
+    `/proc/<pid>/cmdline`.
+11. The shell's slots — `shellSourceProvider`, `shellSyncStatusProvider`,
+    `shellDownloadsProvider`, `shellCastSessionProvider` — stay empty until
+    the phase that owns the data overrides them (step 7 for the first two).
+12. `test/app/app_harness.dart`: `pumpApp(tester, overrides: [...])`,
+    `findByLabel('…')`; don't call `pumpApp` twice in one test.
+13. Re-recording a golden: `flutter test --tags golden --update-goldens`,
+    then look at the PNG before trusting it.
+14. Commit messages carry no trailers. Commit locally; the user pushes.
+15. At the end: analyze, format check, `flutter test`, the fake provider's
+    `dart test`, add to ADR-009, update `docs/progress.md`, overwrite this
+    file, and commit.
 
 ## Don't reopen without new evidence
 - Flutter + media_kit for desktop with the patched `media_kit_video` in
@@ -202,6 +140,9 @@ before analyze).
 - Search is a route, not a dialog, so Ctrl+K, Esc and back agree.
 - The canvas beats docs/05 on token values; docs/05 gets corrected at the end
   of the phase along with ADR-008.
+- Categories are unique per kind; mark-and-sweep compares a run id, not a
+  timestamp; FTS is maintained by triggers with a `WHEN` guard (ADR-009, with
+  the measurements).
 
 ## Open questions for the user
 - The second Google TV doesn't answer on the network. Is it on another
