@@ -142,6 +142,26 @@ final class StorageFailure extends AppFailure {
   String get code => 'storage';
 }
 
+/// The system keyring (libsecret, Windows Credential Manager) is missing,
+/// locked, or refused access. Passwords are never saved anywhere else, so
+/// the user has to unlock or install it.
+final class SecureStorageFailure extends AppFailure {
+  new([super.detail]);
+
+  @override
+  String get code => 'secure_storage';
+}
+
+/// The caller passed something the operation refuses, such as a source
+/// draft without a server. Forms validate inline first; this is the
+/// backstop, so its detail names the field, never the value.
+final class InvalidInputFailure extends AppFailure {
+  new([super.detail]);
+
+  @override
+  String get code => 'invalid_input';
+}
+
 final class TimeoutFailure extends AppFailure {
   new([super.detail]);
 

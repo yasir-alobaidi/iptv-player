@@ -15,6 +15,10 @@ String failureMessage(AppFailure failure) => switch (failure) {
   StorageFailure() =>
     "Couldn't read or write on this computer. Check disk "
         'space and permissions.',
+  SecureStorageFailure() =>
+    "Couldn't use this computer's password keyring. Unlock it, "
+        'or check that one is installed, and try again.',
+  InvalidInputFailure() => 'Some of these details are missing or invalid.',
   TimeoutFailure() => 'The server took too long to answer.',
   CancelledFailure() => 'Cancelled.',
   UnexpectedFailure() => 'Something went wrong. The details are in the log.',

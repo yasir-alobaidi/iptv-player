@@ -34,6 +34,7 @@ iptv-player/
 │   │   ├── downloads/              # DownloadService, DownloadTask, DownloadRequest
 │   │   ├── library/                # LibraryRepository, LibraryItem, LibraryFolder
 │   │   ├── isolates/               # background worker helpers
+│   │   ├── secure/                 # CredentialStore interface (+ the in-memory fake for tests)
 │   │   └── utils/
 │   ├── data/
 │   │   ├── db/                     # drift database, tables, DAOs, migrations, FTS
@@ -48,7 +49,7 @@ iptv-player/
 │   │   └── library/                # scanner isolate, name parser, thumbnails, folder watcher
 │   ├── design/                     # tokens, theme, typography, motion, focus system, components
 │   └── features/
-│       ├── onboarding/  home/  live_tv/  player/  guide/
+│       ├── sources/  onboarding/  home/  live_tv/  player/  guide/
 │       ├── movies/  series/  search/  favorites/  casting/  library/  settings/
 ├── test/                           # mirrors lib/
 ├── test_fixtures/                  # JSON / M3U / XMLTV fixtures, including malformed ones
@@ -80,7 +81,7 @@ iptv-player/
 | Local HTTP server | shelf + shelf_router | dart:io HttpServer |
 | Cast protobuf | protobuf (generated code committed) | minimal hand-written encoder |
 | Window control | window_manager | — |
-| Secrets | flutter_secure_storage (libsecret on Linux, Credential Manager on Windows) | encrypted file |
+| Secrets | flutter_secure_storage (libsecret on Linux; on Windows an encrypted file whose AES key is in Credential Manager) | none — no plain-file fallback (hard rule 3) |
 | Images | extended_image or cached_network_image | — |
 | Vector icons | flutter_svg (the canvas's SVGs via the `AppIcons` enum) | — |
 | XML | xml (event/streaming API) | custom streaming tokenizer |

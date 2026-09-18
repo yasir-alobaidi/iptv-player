@@ -10,6 +10,8 @@ void main() {
       NotFoundFailure('404'),
       ParseFailure('unexpected character'),
       StorageFailure('ENOSPC'),
+      SecureStorageFailure('Libsecret error'),
+      InvalidInputFailure('server'),
       TimeoutFailure('after 10s'),
       CancelledFailure(),
       UnexpectedFailure('null check'),

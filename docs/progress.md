@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync. **Phase 1 is complete: CI ran for the first time on 2026-09-18 and both jobs passed**, including the first Windows build this project has ever had. The Phase 2 plan is approved (all four recommendations, and the three layout sketches). **Step 1 (schema v2) is done and waiting for your review**; step 2 (credentials and the source repository) is next.
+Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1 (schema v2) and 2 (credentials and the source repository) are done; step 2 is waiting for your review.** Step 3 (the Xtream client) is next.
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
 - 2026-09-14: Design canvas (Cinematic Dark, 9 screens): https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -58,12 +58,14 @@ Phase 2 — Sources, onboarding, sync. **Phase 1 is complete: CI ran for the fir
 
 - 2026-09-18: **Phase 2 step 1 (schema v2):** `lib/data/db/catalogue_tables.dart` — `sync_runs`, `categories`, `channels`, `movies`, `movie_details`, `series`, `episodes`, all cascading from `sources`; `lib/data/db/search.drift` — external-content FTS5 tables for channels, movies and series, kept current by triggers that skip unchanged names; the v1 → v2 step plus a recreate-all-triggers pass after every upgrade; DAOs for every table (`SyncRunsDao`, `CategoriesDao`, `ChannelsDao`, `MoviesDao`, `SeriesDao`) whose batched upserts rewrite only provider-owned columns, so renames, hidden flags, the user's category order, movie details and fetched episodes survive a re-sync, plus run-id mark-and-sweep. Findings (ADR-009): **drift's schema verifier does not compare triggers**, so a search test on a migrated database is the only thing that catches a missing trigger — proven by removing the step and watching only that test fail; categories must be unique per *kind* because Xtream numbers each kind separately; FTS triggers cost ~1 s per 50k new or renamed rows and nothing on an unchanged re-sync. The migration tests moved to drift's own `test/drift/app/` layout, which `make-migrations` regenerates, and Phase 1's stale copy in `test/data/db/generated/` is gone. docs/02's schema table and migration flow now match the code. 22 new DAO tests, 4 migration tests; 284 app tests pass
 
+- 2026-09-18: **Phase 2 step 2 (credentials and sources):** `CredentialStore` (`lib/core/secure/`) with `SecureCredentialStore` over flutter_secure_storage and `InMemoryCredentialStore` for tests; a new `SecureStorageFailure` with its own message; `Source`, `SourceDraft`, `SourceCredentials` and the `SourceRepository` interface in `lib/features/sources/domain`, `DbSourceRepository` and its providers in `lib/features/sources/data`; `credentialStoreProvider` overridden in `bootstrap()`. One JSON secret per source in the keyring; the database keeps the Xtream server without credentials and **only the origin of playlist and EPG URLs**. That last rule came from the hard-rule-3 test: a playlist URL with a token in its path went through `redact()` unchanged and into the database file on the first attempt. Orphaned secrets are pruned after a sync, never at launch, so a locked keyring never prompts on start. **The real keyring was checked by hand on this machine:** a throwaway integration test through the real plugin round-tripped a key (non-ASCII included) and left nothing behind. docs/01 (Windows keeps an encrypted file keyed from Credential Manager; no plain-file fallback) and docs/02 (the `sources` columns and where secrets live) corrected. 43 new tests; 327 app tests pass
+
 ## In progress
-- **Phase 2 step 1 is waiting for your review** (commit "Phase 2 step 1: …")
+- **Phase 2 step 2 is waiting for your review** (commit "Phase 2 step 2: …"; step 1 was reviewed)
 
 ## Next
-1. Phase 2 step 2: `CredentialStore` (flutter_secure_storage, plus an in-memory fake for tests and CI) and `SourceRepository`; a test that no password reaches the database file or the log. The real secure store gets one manual check on this machine
-2. Steps 3–8 as in the plan: the Xtream client and quirk fixtures, M3U and `get.php`, the sync engine (drift-in-an-isolate spiked first), onboarding, Settings → Sources and the categories manager, integration and the phase exit
+1. Phase 2 step 3: the Xtream client on dio (`lib/data/providers/xtream/`), tolerant DTOs with one fixture test per docs/02 quirk plus a run against the fake provider's `quirky` profile, serialized requests with backoff, big bodies decoded in an isolate. Strip `user_info.username`/`password` before anything reaches `account_json`
+2. Steps 4–8 as in the plan: M3U and `get.php`, the sync engine (drift-in-an-isolate spiked first; it calls `pruneOrphanedSecrets()` and `SyncRunsDao.failInterrupted()`), onboarding, Settings → Sources and the categories manager, integration and the phase exit
 3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009

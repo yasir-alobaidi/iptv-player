@@ -75,7 +75,7 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 
 | Table | Columns |
 |---|---|
-| sources | id, type, name, server_url, username, credential_ref, m3u_url, epg_url_override, user_agent, live_format, epg_offset_min, refresh_hours, max_connections_override, account_json, exp_date, last_synced_at, sort_order |
+| sources | id, type, name, url (the Xtream server without credentials, a playlist URL's origin only — `http://host/…` — or a file path), username, credential_ref, epg_url (origin only), user_agent, live_format, epg_offset_minutes, refresh_hours, max_connections_override, account_json, expires_at, last_synced_at, sort_order, created_at, updated_at |
 | sync_runs | id, source_id, started_at, finished_at, outcome (running/succeeded/failed/cancelled), failure, counts_json — the id is the mark-and-sweep marker |
 | categories | id, source_id, kind (live/movie/series), remote_key, name, display_name, is_hidden, sort_order (the user's; null until reordered), position (the provider's), seen_run — unique (source_id, kind, remote_key): Xtream numbers each kind's categories separately |
 | channels | id, source_id, category_id, remote_key, number, name, display_name, logo_url, epg_key, archive_days, stream_url, extras_json, is_hidden, added_at, position, seen_run |
@@ -91,6 +91,8 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | cast_devices | device_id, name, model, last_host, is_manual, hevc_support (auto/yes/no), learned_json, last_used_at |
 | settings | key, value_json |
 | FTS5 | channels_fts (name, display_name), movies_fts, series_fts (name), programs_fts — external-content tables kept current by triggers |
+
+**Secrets (hard rule 3).** A source's secrets live in the system keyring as one JSON document under `credential_ref` (`source.<id>`): the Xtream password, the real playlist URL, and the real EPG override URL. Playlist and EPG URLs go there whole whatever they look like, and the database keeps only their origin: `redact()` can't recognize a token in a path (`/p/9c2e81d4/list.m3u`), so a masked URL is not safe to store, and only the origin is. The Xtream server URL is normalized on save (scheme assumed `http://` if missing; user-info, query, fragment and trailing slashes dropped). `SourceRepository.credentialsFor()` is the only way back to the real values, and it adds every value it returns to the log's `SecretRegistry`. There is no fallback to a file when the keyring is missing or locked: saving fails with a message asking the user to unlock or install one.
 
 Every schema change: bump the schema version, write a migration, add a migration test (drift schema dumps + verifier).
 

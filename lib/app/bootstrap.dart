@@ -13,6 +13,7 @@ import 'package:iptv_player/core/platform/app_paths.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/secure/secure_credential_store.dart';
 import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
@@ -72,6 +73,7 @@ Future<void> bootstrap() async {
         secretRegistryProvider.overrideWithValue(secrets),
         errorReporterProvider.overrideWithValue(errors),
         appDatabaseProvider.overrideWithValue(database),
+        credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
         windowBoundsStoreProvider.overrideWithValue(windowBounds),
         uiPreferencesProvider.overrideWithValue(uiPreferences),
       ],

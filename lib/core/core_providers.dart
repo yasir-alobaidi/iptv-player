@@ -3,6 +3,7 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'core_providers.g.dart';
@@ -22,6 +23,12 @@ SecretRegistry secretRegistry(Ref ref) => throw UnimplementedError(
 @Riverpod(keepAlive: true)
 ErrorReporter errorReporter(Ref ref) => throw UnimplementedError(
   'errorReporterProvider is overridden in bootstrap()',
+);
+
+/// The system keyring in the app; `InMemoryCredentialStore` in tests.
+@Riverpod(keepAlive: true)
+CredentialStore credentialStore(Ref ref) => throw UnimplementedError(
+  'credentialStoreProvider is overridden in bootstrap()',
 );
 
 @Riverpod(keepAlive: true)

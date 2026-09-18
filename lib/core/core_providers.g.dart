@@ -131,6 +131,53 @@ final class ErrorReporterProvider
 
 String _$errorReporterHash() => r'c7d27ec2845820d96d058060f5b96b2013f77188';
 
+/// The system keyring in the app; `InMemoryCredentialStore` in tests.
+
+@ProviderFor(credentialStore)
+final credentialStoreProvider = CredentialStoreProvider._();
+
+/// The system keyring in the app; `InMemoryCredentialStore` in tests.
+
+final class CredentialStoreProvider
+    extends
+        $FunctionalProvider<CredentialStore, CredentialStore, CredentialStore>
+    with $Provider<CredentialStore> {
+  /// The system keyring in the app; `InMemoryCredentialStore` in tests.
+  CredentialStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'credentialStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$credentialStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<CredentialStore> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CredentialStore create(Ref ref) {
+    return credentialStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CredentialStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CredentialStore>(value),
+    );
+  }
+}
+
+String _$credentialStoreHash() => r'c1953b4cac3a02c91d396a60c794746b72d8e11d';
+
 @ProviderFor(formFactor)
 final formFactorProvider = FormFactorProvider._();
 

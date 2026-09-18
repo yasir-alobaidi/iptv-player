@@ -1,17 +1,19 @@
-# Handoff — 2026-09-18 (session 15)
+# Handoff — 2026-09-18 (session 15, after step 2)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 step 1 (schema v2)** — one commit on top of what you pushed.
-Nothing in it is visible in the app: it is the catalogue tables, search, and
-the DAOs the sync engine will write through. The parts worth your eyes are
-ADR-009 in docs/decisions.md and the updated schema table in
-docs/02-providers-and-data.md. Push when you're happy with it.
+**Review Phase 2 step 2 (credentials and the source repository)** — two
+local commits are waiting on top of what you pushed: step 1 (which you've
+already seen) and step 2. Still nothing visible in the app: step 2 is where
+passwords go and how sources are stored. Worth your eyes: the "Credentials
+and sources (step 2)" part of ADR-009, and one behaviour change — **playlist
+and EPG URLs now show only their origin** (`http://host/…`) wherever the app
+displays them, because a masked URL turned out not to be safe to store.
+Push when you're happy with it.
 
-CI's first run passed on both Linux and Windows (run 35312720884). The window
-checks from last time are still yours to do when convenient — they don't
-block Phase 2:
+The window checks from Phase 1 are still yours to do when convenient; they
+don't block Phase 2:
 
 ```
 flutter run -d linux       # resize, expand the rail, close with the X
@@ -19,17 +21,13 @@ tail ~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log
 flutter run -d linux       # same size, rail still expanded
 ```
 
-That run will also create the app's first on-disk database, straight at
-schema v2 (no database file exists on this machine yet — every earlier run
-used the in-memory fallback).
-
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 1 is reviewed <or: here is what to change>. Do Phase 2 step 2 and stop for my review.
+Step 2 is reviewed <or: here is what to change>. Do Phase 2 step 3 and stop for my review.
 ```
 
 ## Where things stand
@@ -37,31 +35,43 @@ Step 1 is reviewed <or: here is what to change>. Do Phase 2 step 2 and stop for 
 - **Phase 2 plan approved 2026-09-18** — the recommendation on all four
   questions and the three layout sketches (recorded at the top of the plan
   and in ADR-009).
-- **Phase 2 step 1 done:** schema v2. `lib/data/db/catalogue_tables.dart`
-  (`sync_runs`, `categories`, `channels`, `movies`, `movie_details`,
-  `series`, `episodes`), `lib/data/db/search.drift` (FTS5 over channels,
-  movies and series, kept current by triggers), the v1 → v2 migration, and
-  the DAOs `SyncRunsDao`, `CategoriesDao`, `ChannelsDao`, `MoviesDao`,
-  `SeriesDao`.
-- 284 app tests and 81 fake-provider tests pass; `flutter analyze`, the
+- **Phase 2 step 1 done:** schema v2 — the catalogue tables, FTS5 search
+  kept current by triggers, the v1 → v2 migration, and the catalogue DAOs.
+- **Phase 2 step 2 done:** `CredentialStore` (`lib/core/secure/`), the
+  keyring implementation (`lib/data/secure/`), and `SourceRepository`
+  (`lib/features/sources/{domain,data}`), with `credentialStoreProvider`
+  overridden in `bootstrap()`.
+- 327 app tests and 81 fake-provider tests pass; `flutter analyze`, the
   format check and `flutter build linux --debug` are clean.
 
 ## Done this session (2026-09-18)
-- Read the first CI run: Linux green; Windows passed every step, including
-  the release build, which is the first time Windows has built this project.
-- Marked the plan approved.
-- Step 1, as above. The decisions and measurements are in ADR-009; the short
-  version is in "Instructions" below.
+- Read the first CI run: green on both OSes; Windows built for the first
+  time. Marked the plan approved.
+- Step 1 (schema v2), then step 2 (credentials and sources). The decisions
+  and measurements are in ADR-009; the short version is below.
+- Checked the real keyring by hand: GNOME Keyring round-trips through the
+  real plugin (recorded in ADR-009).
 
 ## Instructions for the next session
-1. **Step 2 is next:** `CredentialStore` in `lib/core/` (read/write/delete
-   keyed by source id), a flutter_secure_storage implementation in
-   `lib/data/`, an in-memory fake for tests and CI (CI has no keyring), and
-   `SourceRepository` (add, edit, remove, list, reorder; writes only
-   `credential_ref`; removing a source deletes its secret). Include the test
-   that a full source round-trip leaves no password in the database file and
-   nothing credential-shaped in the log. Exercise the real secure store once
-   by hand on this machine and record the result.
+1. **Step 3 is next:** the Xtream client in `lib/data/providers/xtream/`
+   (see the plan). Get credentials only through
+   `SourceRepository.credentialsFor()` — it registers every value with the
+   log's `SecretRegistry` — and never put `SourceCredentials` in a
+   long-lived object. **Strip `user_info.username` and `password` from the
+   account payload** before anything is written to `account_json`.
+   Failures map onto `AppFailure`: 401/`auth: 0` → `AuthFailure`, 404 →
+   `NotFoundFailure`, the rest by `AppFailure.fromError`.
+1a. **Secrets (step 2):** the keyring holds one JSON document per source
+   under `source.<id>`; the database never holds a password, and holds
+   playlist and EPG URLs as their origin only (`displayOrigin()`), because
+   `redact()` can't see a token in a path. `InMemoryCredentialStore` (with
+   `locked = true` to simulate a locked keyring) is the store for every
+   test and CI; there is no keyring there. The hard-rule-3 test in
+   `test/features/sources/data/db_source_repository_test.dart` scans the
+   real database file — extend it rather than writing a second one.
+1b. **`pruneOrphanedSecrets()` must run after a successful keyring use**
+   (step 5: at the start of a sync, once a session), never at launch on its
+   own: listing a locked keyring prompts for its password.
 2. **Sync writes go through the DAOs' `upsertAll` and `sweep`.** Upserts
    rewrite only provider-owned columns — never `display_name`, `is_hidden`,
    a category's `sort_order`, or `episodes_fetched_at`. If a new column is
@@ -143,6 +153,9 @@ Step 1 is reviewed <or: here is what to change>. Do Phase 2 step 2 and stop for 
 - Categories are unique per kind; mark-and-sweep compares a run id, not a
   timestamp; FTS is maintained by triggers with a `WHEN` guard (ADR-009, with
   the measurements).
+- Secrets only in the keyring, no file fallback; playlist and EPG URLs in
+  the database as their origin only, not masked; orphan pruning after a
+  sync, never at launch (ADR-009).
 
 ## Open questions for the user
 - The second Google TV doesn't answer on the network. Is it on another

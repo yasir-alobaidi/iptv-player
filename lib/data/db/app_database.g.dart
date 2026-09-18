@@ -459,17 +459,22 @@ class SourceRow extends DataClass implements Insertable<SourceRow> {
   final SourceType type;
   final String name;
 
-  /// The Xtream server base URL, the playlist URL, or the local file path,
-  /// depending on [type].
+  /// The Xtream server base URL (never with credentials in it), the
+  /// playlist URL's origin only (`http://host/…`), or the local file path,
+  /// depending on [type]. A playlist URL's real value is in the secure
+  /// store: playlist URLs usually carry the username and password, and
+  /// some carry a token no masking pattern recognizes.
   final String url;
 
   /// Xtream only. Not a secret, but it never reaches a log unredacted.
   final String? username;
 
-  /// The flutter_secure_storage key holding this source's password.
+  /// The secure-store key holding this source's secrets (password,
+  /// playlist URL, EPG URL), or null when it has none.
   final String? credentialRef;
 
-  /// Overrides the XMLTV URL the provider advertises.
+  /// Overrides the XMLTV URL the provider advertises. Its origin only,
+  /// like [url]; the real value is in the secure store.
   final String? epgUrl;
   final String? userAgent;
   final LiveFormat liveFormat;

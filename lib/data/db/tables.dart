@@ -1,20 +1,8 @@
 import 'package:drift/drift.dart';
+import 'package:iptv_player/features/sources/domain/source.dart';
 
-/// Where a source gets its channel list.
-enum SourceType {
-  /// Xtream Codes `player_api.php`.
-  xtream,
-
-  /// An M3U playlist fetched over HTTP.
-  m3uUrl,
-
-  /// An M3U playlist read from a local file.
-  m3uFile,
-}
-
-/// The container a provider serves live streams in. Xtream offers both;
-/// `ts` is the default because it starts faster and zaps better (docs/03).
-enum LiveFormat { ts, hls }
+export 'package:iptv_player/features/sources/domain/source.dart'
+    show LiveFormat, SourceType;
 
 /// A configured provider.
 ///
@@ -29,17 +17,22 @@ class Sources extends Table {
 
   TextColumn get name => text().withLength(min: 1, max: 200)();
 
-  /// The Xtream server base URL, the playlist URL, or the local file path,
-  /// depending on [type].
+  /// The Xtream server base URL (never with credentials in it), the
+  /// playlist URL's origin only (`http://host/…`), or the local file path,
+  /// depending on [type]. A playlist URL's real value is in the secure
+  /// store: playlist URLs usually carry the username and password, and
+  /// some carry a token no masking pattern recognizes.
   TextColumn get url => text()();
 
   /// Xtream only. Not a secret, but it never reaches a log unredacted.
   TextColumn get username => text().nullable()();
 
-  /// The flutter_secure_storage key holding this source's password.
+  /// The secure-store key holding this source's secrets (password,
+  /// playlist URL, EPG URL), or null when it has none.
   TextColumn get credentialRef => text().nullable()();
 
-  /// Overrides the XMLTV URL the provider advertises.
+  /// Overrides the XMLTV URL the provider advertises. Its origin only,
+  /// like [url]; the real value is in the secure store.
   TextColumn get epgUrl => text().nullable()();
 
   TextColumn get userAgent => text().nullable()();

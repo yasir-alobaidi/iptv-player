@@ -1,8 +1,10 @@
 import 'package:iptv_player/core/logging/redact.dart';
 
 /// Exact secret values (source usernames, passwords, tokens) that logs
-/// remove even where no pattern recognizes them. The credential store adds
-/// values when it loads them and removes them when a source is deleted.
+/// remove even where no pattern recognizes them. The source repository
+/// adds values whenever it handles them. Removing a source does not take
+/// them out again: another source may share a value, and masking too much
+/// is harmless where masking too little is not.
 final class SecretRegistry {
   final Set<String> _values = {};
 

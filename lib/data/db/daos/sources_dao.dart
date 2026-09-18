@@ -28,6 +28,14 @@ class SourcesDao extends DatabaseAccessor<AppDatabase> with _$SourcesDaoMixin {
     )..addColumns([total])).map((row) => row.read(total) ?? 0).getSingle();
   }
 
+  /// One past the highest sort order, so a new source goes last.
+  Future<int> nextSortOrder() {
+    final highest = sources.sortOrder.max();
+    return (selectOnly(sources)..addColumns([highest]))
+        .map((row) => (row.read(highest) ?? -1) + 1)
+        .getSingle();
+  }
+
   /// Inserts the source, or replaces the row that already has its id.
   Future<void> upsert(SourcesCompanion source) =>
       into(sources).insert(source, mode: InsertMode.insertOrReplace);
