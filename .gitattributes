@@ -1,0 +1,4 @@
+# Test fixtures are byte-exact: CRLF, lone CR, a BOM and invalid UTF-8 are
+# what some of them test, so git must never normalize them (CI's
+# `core.autocrlf false` covers the checkout; this covers everyone else).
+test_fixtures/** -text

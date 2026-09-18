@@ -6,13 +6,13 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:iptv_player/core/isolates/background.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/core/streams/idle_timeout.dart';
+import 'package:iptv_player/data/providers/provider_http.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_parse.dart';
 
-/// What the app sends as its User-Agent unless the source overrides it.
-/// Panels commonly block agents they don't recognize, and a media player's
-/// is the one they expect (docs/02).
-const defaultUserAgent = 'VLC/3.0.20 LibVLC/3.0.20';
+export 'package:iptv_player/data/providers/provider_http.dart'
+    show defaultUserAgent;
 
 /// Bodies bigger than this are decoded and parsed in a background isolate
 /// (hard rule 2). A 50k-channel list is ~20 MB; categories and the account
@@ -293,54 +293,27 @@ final class XtreamClient {
   }
 
   /// Collects the body, failing with a `TimeoutFailure` when no byte
-  /// arrives for [idleTimeout]. One periodic check per request, not a
-  /// timer per chunk: the chunk handler only stamps the time.
-  Future<Result<Uint8List>> _readBody(Stream<Uint8List> stream, String action) {
-    final done = Completer<Result<Uint8List>>();
+  /// arrives for [idleTimeout] (see `IdleTimeout`: one watchdog per
+  /// request, not a timer per chunk).
+  Future<Result<Uint8List>> _readBody(
+    Stream<Uint8List> stream,
+    String action,
+  ) async {
     final bytes = BytesBuilder(copy: false);
-    final clock = Stopwatch()..start();
-    var lastChunk = Duration.zero;
-    late final StreamSubscription<Uint8List> subscription;
-    final watchdog = Timer.periodic(_watchdogPeriod(idleTimeout), (timer) {
-      if (clock.elapsed - lastChunk < idleTimeout) return;
-      timer.cancel();
-      unawaited(subscription.cancel());
-      if (!done.isCompleted) {
-        done.complete(Err(TimeoutFailure('$action: no data for $idleTimeout')));
-      }
-    });
-    subscription = stream.listen(
-      (chunk) {
-        lastChunk = clock.elapsed;
-        bytes.add(chunk);
-      },
-      onError: (Object error) {
-        watchdog.cancel();
-        if (done.isCompleted) return;
-        done.complete(
-          Err(switch (error) {
-            DioException(type: DioExceptionType.cancel) => CancelledFailure(
-              action,
-            ),
-            DioException(:final error?) => AppFailure.fromError(error),
-            _ => AppFailure.fromError(error),
-          }),
-        );
-      },
-      onDone: () {
-        watchdog.cancel();
-        if (!done.isCompleted) done.complete(Ok(bytes.takeBytes()));
-      },
-      cancelOnError: true,
-    );
-    return done.future;
-  }
-
-  static Duration _watchdogPeriod(Duration idle) {
-    final quarter = idle ~/ 4;
-    return quarter < const Duration(milliseconds: 50)
-        ? const Duration(milliseconds: 50)
-        : quarter;
+    try {
+      await stream.idleTimeout(idleTimeout).forEach(bytes.add);
+      return Ok(bytes.takeBytes());
+    } on DioException catch (error) {
+      return Err(
+        error.type == DioExceptionType.cancel
+            ? CancelledFailure(action)
+            : AppFailure.fromError(error.error ?? error),
+      );
+    } on Object catch (error) {
+      // TimeoutException → TimeoutFailure; a body cut off mid-transfer
+      // (HttpException) → NetworkFailure, its URL redacted.
+      return Err(AppFailure.fromError(error));
+    }
   }
 
   Uri _url(Map<String, String> params) {

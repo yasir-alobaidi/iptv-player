@@ -1,16 +1,21 @@
-# Handoff — 2026-09-18 (session 15, after step 3)
+# Handoff — 2026-09-18 (session 15, after step 4)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 step 3 (the Xtream client).** Three local commits are
-waiting on top of what you pushed: steps 1 and 2 (already reviewed) and
-step 3. Nothing visible in the app yet: this is the code that talks to your
-provider. Worth your eyes: "The Xtream client (step 3)" in ADR-009, and the
-list under docs/02's quirks section, which records how each quirk is handled
-and a few found on the way. One finding stands out — dio's receive timeout
-was freezing the UI isolate for about a second on a 50k-channel list; that's
-fixed and measured. Push when you're happy with it.
+**Review Phase 2 step 4 (M3U playlists, and `get.php` on the fake
+provider).** Four local commits are waiting on top of what you pushed:
+steps 1–3 (reviewed) and step 4. Still nothing visible in the app. Worth
+your eyes: "M3U and get.php (step 4)" in ADR-009, and the list under
+docs/02's M3U section. Two things there are choices you might want to
+weigh in on: a playlist line ending in `.mp4`/`.mkv` counts as a movie
+even without `/movie/` in its path, and a per-line CDN token that the
+playlist URL doesn't carry can't be recognized, so it's stored as sent.
+Push when you're happy with it.
+
+If you have an M3U playlist of your own, give me its path (or URL) next
+session and I'll run it through the parser: nothing is stored, and a real
+playlist will find quirks the fixtures don't have.
 
 The window checks from Phase 1 are still yours to do when convenient; they
 don't block Phase 2:
@@ -27,7 +32,7 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 3 is reviewed <or: here is what to change>. Do Phase 2 step 4 and stop for my review.
+Step 4 is reviewed <or: here is what to change>. Do Phase 2 step 5 and stop for my review.
 ```
 
 ## Where things stand
@@ -45,27 +50,47 @@ Step 3 is reviewed <or: here is what to change>. Do Phase 2 step 4 and stop for 
   (`lib/data/providers/xtream/`), shared text cleanup
   (`lib/data/providers/provider_text.dart`), fixtures in
   `test_fixtures/xtream/`, and the fake provider as a path dev-dependency.
-- 382 app tests and 81 fake-provider tests pass; `flutter analyze`, the
-  format check and `flutter build linux --debug` are clean.
+- **Phase 2 step 4 done:** the streaming M3U parser and reader
+  (`lib/data/providers/m3u/`), `IdleTimeout` (`lib/core/streams/`),
+  fixtures in `test_fixtures/m3u/`, `get.php` and the `messyM3u` quirk on
+  the fake provider, and a skipped-by-default `benchmark` test tag.
+- 426 app tests (plus one skipped benchmark) and 87 fake-provider tests
+  pass; `flutter analyze`, the format check and `flutter build linux
+  --debug` are clean.
 
 ## Done this session (2026-09-18)
 - Read the first CI run: green on both OSes; Windows built for the first
   time. Marked the plan approved.
-- Steps 1, 2 and 3: schema v2, credentials and sources, the Xtream client.
+- Steps 1–4: schema v2, credentials and sources, the Xtream client, M3U.
   The decisions and measurements are in ADR-009; the short version is
   below.
 - Checked the real keyring by hand: GNOME Keyring round-trips through the
   real plugin (recorded in ADR-009).
 
 ## Instructions for the next session
-1. **Step 4 is next:** the streaming M3U parser and the fake provider's
-   `get.php` (see the plan). Reuse `cleanText` and `cleanImageUrl` from
-   `lib/data/providers/provider_text.dart`. Put fixtures in
-   `test_fixtures/m3u/`, one per quirk, as `test_fixtures/xtream/` does.
-   `stream_url` must hold the credentials as placeholders, never the real
-   values (hard rule 3; the hard-rule test in
-   `test/features/sources/data/db_source_repository_test.dart` is the
-   pattern for proving it on the database file).
+1. **Step 5 is next: the sync engine** (see the plan and progress.md
+   "Next"). **Spike drift in a background isolate with its own connection
+   first** — the phase's one real unknown. Inside the sync isolate: Xtream
+   through `XtreamClient`, M3U through `readM3u` (not
+   `readM3uInBackground`: the sync isolate *is* the background). Upserts
+   through the DAOs' `upsertAll` in 5,000-row batches, then `sweep` items
+   before categories, only after a succeeded run. A dangling or missing
+   category → a synthetic "Uncategorized" category or a null
+   `category_id` (decide, and record in ADR-009). M3U: `remote_key` is
+   `M3uEntry.identity`; `stream_url` is `M3uEntry.streamUrl` (already
+   templated); the per-entry `#EXTVLCOPT` and catch-up fields go in
+   `extras_json`; episodes are grouped into series by `seriesName`, and
+   those without one need a rule (by group?). The account goes into
+   `account_json` as `XtreamAccount.toStoredJson()`; `exp_date` into
+   `expires_at`. M3U header EPG URLs carry credentials: they go to the
+   secure store with the source's other secrets, never the database.
+1f. **M3U (step 4):** credentials in stream URLs are `{username}`,
+   `{password}`, `{token}` placeholders; `fillUrl(template,
+   playlistSecrets(realPlaylistUrl))` rebuilds the real URL at play time
+   (Phase 3). The identity hash is pinned in tests: never change
+   `entryIdentity`. Test fixtures are byte-exact (`.gitattributes`).
+   Timing checks go in a test tagged `benchmark`, which is skipped unless
+   run with `--tags benchmark --run-skipped`.
 1c. **The Xtream client (step 3):** get credentials only through
    `SourceRepository.credentialsFor()`, and never keep `SourceCredentials`
    in a long-lived object. `XtreamAccount.toStoredJson()` is an allow-list

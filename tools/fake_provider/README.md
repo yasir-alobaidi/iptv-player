@@ -53,7 +53,8 @@ profile always produces the same channels, so a test can assert on channel
 
 `quirky` turns on numbers as strings, `""` for null, `info: []`, episodes as
 a map keyed by season, invalid UTF-8 in names, dangling and missing
-`category_id`s, junk icon URLs, and HTML entities in names.
+`category_id`s, junk icon URLs, HTML entities in names, and a messy
+`get.php` (CRLF, `#EXTVLCOPT`, `#KODIPROP`).
 
 ## Endpoints
 
@@ -66,6 +67,11 @@ a map keyed by season, invalid UTF-8 in names, dangling and missing
   optional `category_id` / id / `limit` parameters docs/02 lists. Any other
   action answers **501** and names the ones it knows, so a phase that needs
   a new action fails loudly instead of parsing silence.
+- `GET /get.php?username=&password=[&type=m3u_plus|m3u][&output=ts|m3u8]` —
+  the whole catalogue as an Xtream-style M3U export: live, then movies, then
+  every episode (named `Series S01 E02`), streamed an entry at a time. Wrong
+  credentials answer **401**. The `messyM3u` quirk (on in `quirky`) adds
+  CRLF line ends, `#EXTVLCOPT` and `#KODIPROP` lines.
 - `GET /live/{username}/{password}/{stream_id}.ts` — MPEG-TS, looped forever.
 - `GET|POST|DELETE /admin/faults` — read, replace, or clear the fault set.
 - `GET /` — a plain-text summary of the running profile.
@@ -113,7 +119,6 @@ the repo root includes it).
 
 By design — each arrives with the phase that tests it (docs/06):
 
-- `get.php` (M3U output) — Phase 2, which owns the M3U parser.
 - `xmltv.php`, including gzip and a 300 MB EPG — Phase 4, which owns the
   XMLTV parser and the guide.
 - VOD files over HTTP with Range, ETag and `Last-Modified`, `vod_as_hls`,

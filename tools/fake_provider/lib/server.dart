@@ -4,6 +4,7 @@ library;
 import 'dart:io';
 
 import 'package:fake_provider/admin.dart';
+import 'package:fake_provider/get_php.dart';
 import 'package:fake_provider/player_api.dart';
 import 'package:fake_provider/server_state.dart';
 import 'package:fake_provider/streams.dart';
@@ -29,6 +30,7 @@ class FakeProviderServer {
 
     final router = Router()
       ..all('/player_api.php', playerApiHandler(state))
+      ..get('/get.php', getPhpHandler(state))
       ..get('/', (Request request) => Response.ok(_index(state)));
 
     var handler = const Pipeline().addHandler(

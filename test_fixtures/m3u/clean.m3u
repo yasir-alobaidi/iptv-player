@@ -1,0 +1,14 @@
+#EXTM3U url-tvg="http://epg.test/guide.xml.gz,http://epg.test/backup.xml" x-tvg-url="http://epg.test/guide.xml.gz"
+#EXTINF:-1 tvg-id="bbc1.uk" tvg-name="BBC One" tvg-logo="http://logos.test/bbc1.png" group-title="UK | General" tvg-chno="101" catchup="default" catchup-days="7" catchup-source="?utc={utc}&lutc={lutc}",BBC One HD
+http://streams.test/live/101.ts
+#EXTINF:-1 tvg-id="sky.news" tvg-logo="http://logos.test/sky.png" group-title="UK | News",Sky News
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (SmartTV)
+#EXTVLCOPT:http-referrer=http://portal.test/
+http://streams.test/live/102.m3u8
+#EXTINF:-1 tvg-id="" group-title="Movies | Crime",Heat (1995)
+http://streams.test/movie/501.mkv
+#EXTINF:-1 group-title="Series | Sci-Fi",Dark S01 E02
+http://streams.test/series/9002.mp4
+#EXTINF:-1,Arrival
+#EXTGRP:Movies | Sci-Fi
+http://vod.test/films/arrival.mp4

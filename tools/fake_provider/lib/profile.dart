@@ -24,6 +24,7 @@ class FakeQuirks {
     this.danglingCategoryIds = false,
     this.junkIcons = false,
     this.htmlEntities = false,
+    this.messyM3u = false,
   });
 
   /// All quirks on, for the `quirky` profile.
@@ -36,6 +37,7 @@ class FakeQuirks {
     danglingCategoryIds: true,
     junkIcons: true,
     htmlEntities: true,
+    messyM3u: true,
   );
 
   /// `"num": "12"`, `"rating": "7.4"`, timestamps as strings.
@@ -63,6 +65,10 @@ class FakeQuirks {
   /// HTML entities and stray whitespace in names.
   final bool htmlEntities;
 
+  /// `get.php` as real exports come: CRLF line ends, an `#EXTVLCOPT`
+  /// user agent on every 7th entry, a `#KODIPROP` line on every 9th.
+  final bool messyM3u;
+
   Map<String, Object?> toJson() => {
     'numbers_as_strings': numbersAsStrings,
     'empty_string_for_null': emptyStringForNull,
@@ -72,6 +78,7 @@ class FakeQuirks {
     'dangling_category_ids': danglingCategoryIds,
     'junk_icons': junkIcons,
     'html_entities': htmlEntities,
+    'messy_m3u': messyM3u,
   };
 }
 

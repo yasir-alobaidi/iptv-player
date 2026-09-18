@@ -6,3 +6,11 @@ tags:
       Golden image tests. Linux only: text rasterizes differently on
       Windows, so the reference images are recorded and checked on Linux
       (ADR-008). CI runs `flutter test --exclude-tags golden` on Windows.
+  benchmark:
+    description: >-
+      Timing and UI-isolate jank measurements. Skipped by default: timings
+      on shared CI runners are noise, and docs/06's frame budget is
+      measured by hand (Phase 2 decision 4). Run with
+      `flutter test --tags benchmark --run-skipped` and record the numbers
+      in docs/progress.md.
+    skip: "a benchmark: run with --tags benchmark --run-skipped"

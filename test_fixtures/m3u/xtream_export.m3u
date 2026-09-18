@@ -1,0 +1,9 @@
+#EXTM3U url-tvg="http://panel.test:8080/xmltv.php?username=viewer&password=Pw-7f3a9c1e"
+#EXTINF:-1 tvg-id="bbc1.uk" tvg-name="BBC One" group-title="UK",BBC One
+http://panel.test:8080/live/viewer/Pw-7f3a9c1e/101.ts
+#EXTINF:-1 group-title="Movies",Heat
+http://panel.test:8080/movie/viewer/Pw-7f3a9c1e/501.mkv
+#EXTINF:-1 group-title="Series",Dark S01E02
+http://panel.test:8080/series/viewer/Pw-7f3a9c1e/9002.mp4
+#EXTINF:-1,Token in the query
+http://cdn.test/hls/7.m3u8?token=Pw-7f3a9c1e&quality=hd

@@ -256,7 +256,7 @@ Response _object(
   int status = 200,
 }) => Response(
   status,
-  body: _encode(
+  body: encodeWireText(
     json.encode(body),
     breakUtf8: state.profile.quirks.invalidUtf8Names,
   ),
@@ -283,7 +283,7 @@ Stream<List<int>> _arrayBytes(
     first = false;
     // one chunk per item is what makes the marker replacement below safe: a
     // marker can never straddle two chunks, so nothing has to be buffered.
-    yield _encode(text, breakUtf8: breakUtf8);
+    yield encodeWireText(text, breakUtf8: breakUtf8);
   }
   yield _arrayClose;
 }
@@ -292,7 +292,7 @@ Stream<List<int>> _arrayBytes(
 /// not valid UTF-8 when the quirk is on. The break has to happen here: a
 /// Dart `String` cannot hold an invalid sequence, so only the encoder can
 /// put a genuinely malformed body on the wire.
-List<int> _encode(String text, {required bool breakUtf8}) {
+List<int> encodeWireText(String text, {required bool breakUtf8}) {
   if (!breakUtf8 || !text.contains(invalidUtf8Marker)) {
     return utf8.encode(text);
   }
@@ -303,6 +303,13 @@ List<int> _encode(String text, {required bool breakUtf8}) {
     bytes.addAll(utf8.encode(parts[i]));
   }
   return bytes;
+}
+
+/// `http://host:port` as the client reached this server, for URLs that
+/// must lead back here (`get.php` stream lines, `server_info`).
+String requestOrigin(Request request) {
+  final endpoint = _endpoint(request);
+  return 'http://${endpoint.host}:${endpoint.port}';
 }
 
 /// The host and port the client used, from the Host header when there is one

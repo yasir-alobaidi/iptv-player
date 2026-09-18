@@ -1,0 +1,19 @@
+ï»¿#EXTM3U
+#EXTINF:-1 tvg-id="arte.fr" group-title="FR",Arte ÿ HD
+http://streams.test/live/1.ts
+#EXTINF:-1 tvg-id="broken group-title="News",Euronews
+http://streams.test/live/2.ts
+#EXTINF:-1 tvg-id=cnn.us group-title='US, News' tvg-chno=abc,CNN, International
+http://streams.test/live/3.ts
+#EXTINF:-1 tvg-id="dash",DASH channel
+#KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha
+#EXT-X-SOMETHING:1
+http://streams.test/live/4.mpd
+#EXTINF:-1,Orphan
+#EXTINF:-1,Junk URL
+not a url at all
+#EXTINF:-1 tvg-id="arte.fr" group-title="FR",Arte ÿ HD
+http://streams.test/live/1.ts
+http://streams.test/live/radio-one.aac#EXTINF:-1 tvg-name="  Tom &amp; Jerry  ",   
+http://streams.test/live/5.ts
+#EXTINF:-1 tvg-id="tru
