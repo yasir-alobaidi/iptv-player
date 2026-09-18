@@ -39,6 +39,19 @@ class SyncRunsDao extends DatabaseAccessor<AppDatabase>
             ..limit(1))
           .getSingleOrNull();
 
+  /// The source's last successful run before [before], the run id.
+  Future<SyncRunRow?> lastSucceeded(String sourceId, {required int before}) =>
+      (select(syncRuns)
+            ..where(
+              (t) =>
+                  t.sourceId.equals(sourceId) &
+                  t.id.isSmallerThanValue(before) &
+                  t.outcome.equalsValue(SyncOutcome.succeeded),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.id)])
+            ..limit(1))
+          .getSingleOrNull();
+
   Stream<SyncRunRow?> watchLatest(String sourceId) =>
       (select(syncRuns)
             ..where((t) => t.sourceId.equals(sourceId))

@@ -117,6 +117,12 @@ abstract interface class SyncService {
   /// `CancelledFailure`. Does nothing when none is running.
   Future<void> cancel(String sourceId);
 
+  /// Removes the source for good, with its catalogue and its secrets.
+  /// Stops its sync first, so no run is left writing rows for a source
+  /// that is gone; a sync asked for meanwhile fails as not found. The UI
+  /// removes sources through this, never through `SourceRepository`.
+  Future<Result<void>> removeSource(String sourceId);
+
   /// Once on launch: records runs the last session left unfinished as
   /// failed, then syncs, one after another, every source whose data is
   /// older than its `refresh_hours`.

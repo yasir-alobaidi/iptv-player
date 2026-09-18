@@ -430,6 +430,45 @@ void main() {
       );
     });
 
+    test('a list empty twice in a row is taken at its word', () async {
+      final env = await _Env.open();
+      final upstream = await _fakeProvider(fakeProfiles['default']!);
+      final draft = _xtream(upstream.url);
+      final id = await env.add(draft);
+      await env.engine.sync(id);
+      final proxy = await _panelProxy(upstream.url, {
+        'get_vod_streams': '[]',
+        'get_vod_categories': '[]',
+      });
+      final empty = draft.copyWith(url: '$proxy');
+
+      // Empty, whole again, empty: never two in a row, so nothing goes.
+      await env.repository.update(id, empty);
+      await env.engine.sync(id);
+      await env.repository.update(id, draft);
+      await env.engine.sync(id);
+      await env.repository.update(id, empty);
+      await env.engine.sync(id);
+      expect(await env.db.moviesDao.countFor(id), 120);
+
+      final report = (await env.engine.sync(id)).valueOrNull!;
+
+      expect(await env.db.moviesDao.countFor(id), 0);
+      expect(
+        await env.db.categoriesDao
+            .watchForSource(id, CatalogueKind.movie)
+            .first,
+        isEmpty,
+      );
+      expect(report.removed, greaterThan(120));
+      // The other lists are untouched.
+      expect(await env.db.channelsDao.countFor(id), greaterThan(0));
+      expect(
+        env.logLines,
+        contains(contains('the movie list came back empty twice in a row')),
+      );
+    });
+
     test('a wrong password fails as auth and changes nothing', () async {
       final env = await _Env.open();
       final server = await _fakeProvider(fakeProfiles['default']!);
@@ -612,6 +651,43 @@ void main() {
     // And the next sync picks up cleanly.
     expect((await env.engine.sync(id)).valueOrNull!.channels, 20000);
     expect(await env.db.channelsDao.countFor(id), 20000);
+  });
+
+  test('removing a source mid-sync stops the sync first', () async {
+    final env = await _Env.open();
+    final lines = StringBuffer('#EXTM3U\n');
+    for (var i = 0; i < 20000; i++) {
+      lines
+        ..writeln('#EXTINF:-1 group-title="G${i % 40}",Channel $i')
+        ..writeln('http://tv.test/live/$i.ts');
+    }
+    final id = await env.add(_file(env.playlist('big.m3u', '$lines')));
+    final writing = Completer<void>();
+    final statuses = <SyncStatus>[];
+    final watching = env.engine.watch(id).listen((status) {
+      statuses.add(status);
+      if (status case SyncRunning(:final progress)
+          when progress.channels > 0 && !writing.isCompleted) {
+        writing.complete();
+      }
+    });
+
+    final result = env.engine.sync(id);
+    await writing.future;
+    final removed = await env.engine.removeSource(id);
+    await pumpEventQueue();
+    await watching.cancel();
+
+    expect(removed.isOk, isTrue);
+    expect((await result).failureOrNull, isA<CancelledFailure>());
+    expect(await env.db.sourcesDao.byId(id), isNull);
+    expect(await _count(env.db, 'channels'), 0);
+    expect(await _count(env.db, 'categories'), 0);
+    expect(await _count(env.db, 'sync_runs'), 0);
+    await _checkSearchIndexes(env.db);
+    expect(env.engine.statusOf(id), isA<SyncIdle>());
+    expect(statuses.last, isA<SyncIdle>());
+    expect((await env.engine.sync(id)).failureOrNull, isA<NotFoundFailure>());
   });
 
   test('one sync per source: asking again joins the run', () async {

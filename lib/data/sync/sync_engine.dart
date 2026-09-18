@@ -46,6 +46,7 @@ final class SyncEngine implements SyncService {
   static const _tag = 'sync';
 
   final _running = <String, _Run>{};
+  final _removing = <String>{};
   final _status = <String, SyncStatus>{};
   final _changes = StreamController<(String, SyncStatus)>.broadcast();
   var _pruned = false;
@@ -77,6 +78,9 @@ final class SyncEngine implements SyncService {
     if (_disposed) {
       return Future.value(Err(CancelledFailure('the app is closing')));
     }
+    if (_removing.contains(sourceId)) {
+      return Future.value(Err(NotFoundFailure('source $sourceId')));
+    }
     final running = _running[sourceId];
     if (running != null) return running.result.future;
 
@@ -107,6 +111,22 @@ final class SyncEngine implements SyncService {
     run.cancelled = true;
     run.job?.cancel();
     await run.result.future;
+  }
+
+  @override
+  Future<Result<void>> removeSource(String sourceId) async {
+    _removing.add(sourceId);
+    try {
+      await cancel(sourceId);
+      final removed = await _sources.remove(sourceId);
+      if (removed.isOk) {
+        _status.remove(sourceId);
+        if (!_changes.isClosed) _changes.add((sourceId, const SyncIdle()));
+      }
+      return removed;
+    } finally {
+      _removing.remove(sourceId);
+    }
   }
 
   @override
@@ -245,10 +265,12 @@ final class SyncEngine implements SyncService {
     }
     final now = _clock();
     final SyncReport report;
+    final Set<CatalogueKind> confirmedEmpty;
     try {
+      confirmedEmpty = await _confirmedEmpty(id, runId, work.emptyLists);
       report = await _db.transaction(() async {
         var removed = 0;
-        final items = work.sweepItems;
+        final items = {...work.sweepItems, ...confirmedEmpty};
         if (items.contains(CatalogueKind.live)) {
           removed += await _db.channelsDao.sweep(id, runId);
         }
@@ -261,11 +283,12 @@ final class SyncEngine implements SyncService {
         if (items.contains(CatalogueKind.series)) {
           removed += await _db.seriesDao.sweep(id, runId);
         }
-        if (work.sweepCategories.isNotEmpty) {
+        final categories = {...work.sweepCategories, ...confirmedEmpty};
+        if (categories.isNotEmpty) {
           removed += await _db.categoriesDao.sweep(
             id,
             runId,
-            kinds: work.sweepCategories,
+            kinds: categories,
           );
         }
         final report = work.report.copyWith(
@@ -276,7 +299,7 @@ final class SyncEngine implements SyncService {
           runId,
           outcome: SyncOutcome.succeeded,
           at: now,
-          countsJson: _countsJson(report),
+          countsJson: _countsJson(report, empty: work.emptyLists),
         );
         await _db.sourcesDao.markSynced(id, now);
         return report;
@@ -287,6 +310,16 @@ final class SyncEngine implements SyncService {
 
     for (final warning in work.warnings) {
       _log.warning(_tag, 'Sync $id: $warning');
+    }
+    for (final kind in work.emptyLists) {
+      _log.warning(
+        _tag,
+        confirmedEmpty.contains(kind)
+            ? 'Sync $id: the ${kind.name} list came back empty twice in a '
+                  'row; removed it'
+            : 'Sync $id: the ${kind.name} list came back empty; kept the '
+                  'last one',
+      );
     }
     if (source.type != SourceType.xtream) {
       final saved = await _sources.setAdvertisedEpgUrls(id, work.epgUrls);
@@ -356,7 +389,46 @@ final class SyncEngine implements SyncService {
     if (!_changes.isClosed) _changes.add((sourceId, status));
   }
 
-  static String _countsJson(SyncReport report) => jsonEncode({
+  /// The lists in [empty] that the previous successful run found empty
+  /// too. One empty list is likelier a panel's hiccup than a provider
+  /// that dropped every movie, so it keeps the last one; two in a row
+  /// are taken at their word (ADR-009).
+  Future<Set<CatalogueKind>> _confirmedEmpty(
+    String sourceId,
+    int runId,
+    Set<CatalogueKind> empty,
+  ) async {
+    if (empty.isEmpty) return const {};
+    final previous = await _db.syncRunsDao.lastSucceeded(
+      sourceId,
+      before: runId,
+    );
+    final before = _emptyIn(previous?.countsJson);
+    return {
+      for (final kind in empty)
+        if (before.contains(kind)) kind,
+    };
+  }
+
+  static Set<CatalogueKind> _emptyIn(String? countsJson) {
+    if (countsJson == null) return const {};
+    try {
+      if (jsonDecode(countsJson) case {'empty': final List<Object?> names}) {
+        return {
+          for (final kind in CatalogueKind.values)
+            if (names.contains(kind.name)) kind,
+        };
+      }
+    } on FormatException {
+      // A run from before this field, or a damaged row: nothing confirmed.
+    }
+    return const {};
+  }
+
+  static String _countsJson(
+    SyncReport report, {
+    Set<CatalogueKind> empty = const {},
+  }) => jsonEncode({
     'categories': report.categories,
     'channels': report.channels,
     'movies': report.movies,
@@ -365,6 +437,7 @@ final class SyncEngine implements SyncService {
     'skipped': report.skipped,
     'removed': report.removed,
     'duration_ms': report.duration.inMilliseconds,
+    if (empty.isNotEmpty) 'empty': [for (final kind in empty) kind.name],
   });
 }
 

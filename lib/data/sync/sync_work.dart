@@ -56,6 +56,7 @@ final class SyncWorkResult {
     required this.sweepItems,
     required this.sweepCategories,
     this.sweepEpisodes = false,
+    this.emptyLists = const {},
     this.epgUrls = const [],
     this.warnings = const [],
   });
@@ -67,6 +68,10 @@ final class SyncWorkResult {
   /// go. A list that came back empty keeps what it had (ADR-009).
   final Set<CatalogueKind> sweepItems;
   final Set<CatalogueKind> sweepCategories;
+
+  /// Xtream only: the item lists that came back empty. The engine sweeps
+  /// one after all when the previous successful run found it empty too.
+  final Set<CatalogueKind> emptyLists;
 
   /// M3U only: episodes come with the playlist and are swept with it.
   final bool sweepEpisodes;

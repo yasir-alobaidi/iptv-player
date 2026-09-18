@@ -34,6 +34,7 @@ final class XtreamSync {
   var _skipped = 0;
   final _sweepItems = <CatalogueKind>{};
   final _sweepCategories = <CatalogueKind>{};
+  final _emptyLists = <CatalogueKind>{};
   final _warnings = <String>[];
 
   Future<Result<SyncWorkResult>> run() async {
@@ -179,6 +180,7 @@ final class XtreamSync {
         ),
         sweepItems: _sweepItems,
         sweepCategories: _sweepCategories,
+        emptyLists: _emptyLists,
         warnings: _warnings,
       ),
     );
@@ -206,8 +208,9 @@ final class XtreamSync {
     // An empty list is far more often a panel's hiccup than a provider
     // that dropped every channel, so it keeps what the last sync stored
     // rather than wiping it — and the user's hidden categories with it.
+    // The engine sweeps it when the next run finds it empty again.
     if (items.isEmpty) {
-      _warnings.add('the ${kind.name} list came back empty; kept the last one');
+      _emptyLists.add(kind);
       return;
     }
     _sweepItems.add(kind);
