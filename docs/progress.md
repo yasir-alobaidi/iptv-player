@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met** (sync budget, quirk fixtures, onboarding against the fake provider and your real one), waiting for your review and for CI to go green on your push. ADR-009 is Accepted. CI was red on the pushed step 6 commit (a stale generated hash) and is fixed by step 7. Phase 3 (live TV and playback) is next.
+Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed**. Exit: the fault suite is green and the zap budget is met; **the 1-hour soak on the real display is yours to run** (`tools/soak/run.sh`), and CI needs your push. ADR-010 is Accepted with the soak outstanding. Phase 4 (EPG and the guide) is next.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -78,16 +78,19 @@ Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met
 - 2026-09-19: **Phase 2 step 8, the phase exit.** **Your real provider** (the keyboard-only walk as `integration_test/real_provider_test.dart`): sign-in, Cancel, a full sync of 12,610 channels / 20,072 movies / 8,262 series in 8.7–9.4 s with nothing dropped, Pick categories, Refresh (7.8 s), Account details, Edit, a category hidden/moved/renamed, Remove — all passed after two fixes it forced: **a wrong password came back "Not found"** (this panel answers a refused sign-in with an empty 404; now "Sign-in refused", with a fake-provider quirk and tests), and **Finish sat 146 Tabs away** on Pick categories (the list is now one Tab stop, arrows inside: `FocusPane(tabStop: true)`). **`integration_test/large_sync_test.dart`**: onboarding against the `large` profile in its own process, the sync asserted under 60 s, in CI. **Profile-mode measurement** (`flutter drive --profile`, Wayland): large sync 7.7 s, 493 frames, build worst 7.1 ms (none over 16 ms), UI isolate's longest pause 29 ms (budget 32). All 26 `copyWith(fontWeight:)` in `lib/design` → `withWeight()`, 7 goldens re-recorded. CI's red step 6 run traced to a stale riverpod hash, fixed by step 7. docs/02 (the real panel), docs/05 (one-Tab-stop lists), docs/06, ADR-009 Accepted. 715 app tests (3 benchmarks skipped), 88 fake-provider tests, 4 integration tests (the real-provider one skips without its login file)
 - 2026-09-19: **Errors say what the server answered** (your review): a 404 with a page stays "Not found", the empty 404 stays "Sign-in refused", and every failure with an HTTP status shows it after the app's own words ("The server answered HTTP 503 (Service Unavailable).") on Connect, Sync, the source card, Account details and error toasts; a 5xx is "Server error", not "Can't reach the server". Background syncs keep the status in `sync_runs.failure_status` (schema v3, number only). 726 app tests
 
+- 2026-09-19: **Phase 3, steps 1–9** (plan approved the same day with the recommendation on all six decisions). **1** `PlayerEngine` + `MediaKitPlayerEngine` (the xvfb spike: works with video and with `vo=null`; found media_kit waiting for the video controller's texture on every property call, and `vid=no` without a controller). **2** the fake provider's stream faults (per request too) and live HLS. **3** stream URLs, `ChannelRepository` (count + window over 50k rows), `PlaybackCoordinator` (one-connection sources closed before the next open), schema v4 (`favorites`, `watch_history`). **4** the watchdog (timeouts, stall, backoff 1–30 s, 6 tries, 3 for a full account) and `HttpStreamProber` classifying failures with the server's status. **5** the Live TV screen (goldens 1280×800 and 1920×1080). **6** the full-screen player (OSD, zapping, number entry, last channel, channel panel, tracks, aspect, stream info). **7** Settings → Playback. **8** the fault suite (10 faults, all green), a keyboard-only walk on the real app, CI generating samples and playing with no picture, and **your provider played for the first time** (with your go-ahead): 1.2 s to the first frame, zapping on your one connection with no refusal, the connection let go afterwards. **9** zap benchmark **p50 961 ms / p95 972 ms** on the desktop (budget 1.5 / 3 s), and the soak tool. Also: errors show the server's answer (schema v3, before Phase 3). 821 app tests (3 skipped), 97 fake-provider tests, 9 integration tests (4 opt-in: real provider ×2, benchmarks, soak)
+
 ## In progress
-- **Phase 2 is waiting for your review** (commits "Real-provider keyboard walk…" and "Phase 2 step 8: …"), and for CI on your push
+- **Phase 3 is waiting for your review, your 1-hour soak, and CI on your push** (commits from "Phase 3 plan" to "Phase 3 step 9")
 
 ## Next
-1. **You:** review and push; CI should go green (the step 6 failure is fixed in step 7). Optionally walk the app by hand with `flutter run -d linux`
-2. **Phase 3 plan written** (`docs/plans/phase-3-live-tv-and-playback.md`), waiting for your approval: six decisions (playing from your one-connection provider, now/next from `get_short_epg`, schema v4, real libmpv in CI, Settings → Playback, where the 1-hour soak runs) and four overlay sketches
-3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. **You:** run the 1-hour soak on your screen: `tools/soak/run.sh` (a window plays test channels for an hour; the fake provider only). Tell me the summary line it prints
+2. **You:** push; CI now generates three media samples with Ubuntu's ffmpeg and runs the player tests without a picture. Then try the app yourself: `flutter run -d linux` → Live TV (your provider, when your other device is off)
+3. Phase 4 plan (EPG and the guide), for your approval
+4. The Windows playback run when your Windows PC is available
 
-## ADR-008 and ADR-009
-**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19)** was written straight into docs/decisions.md as each step landed, so there is one source of truth.
+## ADR-008, ADR-009, ADR-010
+**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19).** **Phase 3: ADR-010 (Accepted 2026-09-19, the 1-hour soak still to run).** Each is written straight into docs/decisions.md as its steps land, so there is one source of truth.
 
 ## Open questions
 - `bootstrap()` takes no overrides and resolves `AppPaths` itself, so an integration test can't drive the real entry point without writing a log and a database into the real app-support directory and taking over `FlutterError.onError`. The step 7 smoke test pumps `IptvPlayerApp` with bootstrap's non-disk overrides instead. A deeper launch test later needs an injectable paths/overrides seam in `bootstrap()`
@@ -97,6 +100,9 @@ Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met
 - App name and icon (placeholder: "IPTV Player", Dart package `iptv_player`)
 
 ## Known issues
+- On your provider one channel takes ~4.7 s to its first picture every time (cold or zapped), most likely a long keyframe interval in that stream; nothing in the app to change, but Phase 3's zap time is a fake-provider number
+- The fake panel can report 2 active connections for a moment after a reconnect on a one-connection source (it notices a closed client on its next write); the soak's CSV shows it. Real panels may do the same, which is why a refused stream right after a zap is retried
+- Memory numbers from the integration tests (~800 MB RSS) are a debug build with the test harness; idle memory is measured on a release build in a later phase
 - The Settings → Categories manager's list is still one Tab stop per row plus each Rename button; with a big provider, the controls above it are a long Shift+Tab away (Home/End or a one-Tab-stop list would fix it; docs/05)
 - The onboarding backdrop's radial glow shows faint banding rings on this laptop's display
 - media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11), NVIDIA included. Upstream has no fix yet; we carry the patch in `third_party/media_kit_video`
@@ -120,11 +126,11 @@ Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met
 ## Measurements
 | Metric | Budget | Latest | Date |
 |---|---|---|---|
-| Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s | 320 / 597 ms — spike over loopback, Intel, patched media_kit (fake provider not built yet) | 2026-09-15 |
+| Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s | **961 / 972 ms** from the key press (350 ms debounce included), one-connection source, 50 zaps, Wayland + vaapi (xvfb 1205 / 1373 ms). `IPTV_BENCHMARK=1 flutter test integration_test/zap_benchmark_test.dart -d linux`. Your provider: first frame 1.1 s on one channel, ~4.7 s on another (its keyframes) | 2026-09-19 |
 | Sync 50k channels + 30k movies | ≤ 60 s; no UI frame > 32 ms | **6.5 s first sync, 3.9 s re-sync** (`large` profile + 3k series, fake provider in its own process, file DB, debug JIT); worst UI-isolate gap 31 / 26 ms; DB 24 MB. M3U file 27 MB / 200k entries: 16.2 s, worst gap 20 ms, peak RSS 234 MB. `flutter test --tags benchmark --run-skipped test/data/sync/sync_benchmark_test.dart` | 2026-09-18 |
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
 | H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |
-| 8 h soak memory growth | ≤ 50 MB | — | — |
+| 8 h soak memory growth | ≤ 50 MB | 1 h run pending (yours: `tools/soak/run.sh`); a 4-min xvfb trial: flat, 0 failures, 8 s longest without a picture | 2026-09-19 |
 | Library scan, 5,000 new files | ≤ 5 min | — | — |
 | Download speed vs curl | ≥ 90 % | — | — |

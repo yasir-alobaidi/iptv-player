@@ -42,6 +42,7 @@ Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO /
 - `flutter test` (unit/widget/golden) · `flutter test integration_test/<file>_test.dart -d linux` (integration, one file per run: a multi-file run on Linux desktop never starts the second app; `xvfb-run -a` for a headless run)
 - `flutter run -d linux` · `flutter run -d windows`
 - `dart run tools/fake_provider/bin/server.dart --port 8899` (fake IPTV server, see docs/06-quality.md)
+- `tools/soak/run.sh [minutes]` (soak on the real display) · `IPTV_BENCHMARK=1 flutter test integration_test/zap_benchmark_test.dart -d linux` (zap budget) · `IPTV_PLAYER_VIDEO=0` plays with no picture
 
 ## Hard rules
 1. **Never crash on provider data.** Parsing is tolerant (numbers as strings, "" as null, [] vs {}). Bad rows are skipped and logged, never thrown to the UI.

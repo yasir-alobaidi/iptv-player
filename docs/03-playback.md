@@ -45,6 +45,8 @@ Setting: Auto (default) / On / Off. libmpv 0.34.1's `deinterlace` is only yes/no
 - Records history: live = last watched time; VOD = position every 10 s and on stop
 
 ## Watchdog (stability core)
+As built (ADR-010 step 4): in `PlaybackCoordinator`. A failure is classified by one GET of the stream's URL after mpv lets go (status and the first bytes; on an Xtream refusal the account is read too), then closed at once. A full account (`connectionLimit`) is tried 3 times, not 6. A first frame resets the count. The fault suite (`integration_test/playback_faults_test.dart`) proves each class against the fake provider.
+
 States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 - **Open timeout:** no first frame within 12 s (Balanced preset) → reconnect
 - **Stall:** playing but position/cache not advancing for 8 s, or buffering longer than 15 s → reconnect
@@ -67,6 +69,7 @@ States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 - Reuse one engine instance across channels
 - Preload now/next EPG for neighbors in the current list
 - Target: p50 ≤ 1.5 s on the fake provider (the Phase 0 spike measured p50 / p95 320 / 597 ms over loopback, ADR-003)
+- **Measured (Phase 3 step 9, `integration_test/zap_benchmark_test.dart`):** on a one-connection source (the old stream closed before the new one opens), 50 zaps from the key press to the first frame including the 350 ms debounce: **p50 961 ms, p95 972 ms** on the Wayland desktop with `vaapi` (xvfb: 1205 / 1373 ms). On the user's real provider (one connection): the old stream closes in 43 ms and the next is accepted at once; its first frame took 1.1 s on one channel and ~4.7 s on another every time, cold or zapped — that stream's keyframe interval, not the zap.
 
 ## VOD & series
 - Resume prompt when position > 60 s and < 95 % (Resume / Start over)

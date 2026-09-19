@@ -1,71 +1,93 @@
-# Handoff — 2026-09-19 (session 18, Phase 2 exit)
+# Handoff — 2026-09-19 (session 18, Phase 3 built)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Review Phase 2 and push.** Three local commits sit on top of what you
-pushed: step 7, the real-provider test, and step 8. CI was red on your
-last push (step 6: a stale generated hash); step 7 already fixes it, so
-the push should go green.
-
-Your provider login is in `~/.config/iptv-player-dev/real_provider.json`
-(only you can read it; it is not in the repository). It has
-`"wrong_password": false` so reruns don't add failed sign-ins. To rerun
-the walk against your provider:
+**1. Run the 1-hour soak on your screen** (the last Phase 3 check; you
+chose to run it yourself). It uses only the fake provider, not your
+subscription:
 
 ```
-xvfb-run -a flutter test integration_test/real_provider_test.dart -d linux
-cat build/real_provider_run/report.md
+cd ~/724/iptv-player
+tools/soak/run.sh          # 60 minutes; a player window stays open
 ```
 
-You shared the password in chat. If that worries you, change it with
-your provider and update the file.
+It prints one summary line at the end, e.g. `soak 60min video on: 812→840
+MB (growth after warm-up 12 MB), 40 reconnects, 0 failures, longest
+without a picture 9 s`, and writes a row a minute to `build/soak/soak.csv`.
+It passes when nothing stayed down for a minute and memory grew by 50 MB
+at most after warm-up. Paste the summary line in the next session.
 
-What I decided without asking (say if you want any changed):
-- a 404 with an empty body from the panel means "Sign-in refused"
-  (that is how your panel says it); a 404 with a page is "Not found";
-- the Pick categories list is one Tab stop: arrows move inside it, Tab
-  goes on to Back and Finish. The Settings Categories manager is not
-  changed yet (nothing sits below its list; listed in Known issues).
+**2. Push**, so CI runs the new player tests (it now generates three
+media samples with Ubuntu's ffmpeg and plays with no picture).
+
+**3. Try it yourself:** `flutter run -d linux`, add your provider (or
+it is there already from an earlier run), Ctrl+2 for Live TV. Only play
+from your provider when your other device is off: your plan allows one
+stream.
+
+What I decided without asking (all in ADR-010; say if you want any
+changed):
+- a click on a channel plays it in the preview, Enter plays it full
+  screen, F adds a favorite; no double-click on rows (it would delay every
+  click);
+- choosing a category moves the keyboard into the new list once it has
+  loaded, on its first channel, which then previews;
+- leaving Live TV stops playback; the full-screen player keeps it going;
+- Settings → Playback shows your source's live format (TS/HLS) and sends
+  you to Edit source for the User-Agent, rather than a second copy of it;
+- the watchdog tries a full account 3 times, not 6.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/08-phases-and-prompts.md (Phase 3) and ADR-009 in docs/decisions.md first.
-Phase 2 is reviewed and pushed; CI is <green | red: …>.
-Phase 3 plan: <approved as written | changes: …>. Start step 1.
+docs/08-phases-and-prompts.md (Phase 4) and ADR-010 in docs/decisions.md first.
+Phase 3 is reviewed and pushed; CI is <green | red: …>.
+The 1-hour soak printed: <paste the summary line>.
+Write the Phase 4 plan and stop for my approval.
 ```
 
 ## Where things stand
-- **Phases 1 and 2 are complete** (ADR-008, ADR-009 Accepted). Phase 2's
-  exit: the `large` sync in 7.7 s against a 60 s budget, every quirk
-  fixture green, onboarding working against the fake provider and your
-  real one (12,610 channels, 20,072 movies, 8,262 series in about 9 s).
-- Profile mode, `large` sync on this laptop: worst frame build 7.1 ms, the
-  UI isolate's longest pause 29 ms (budget 32).
-- Your provider allows **1 connection** and it was in use by another
-  device during the run. Phase 3's playback must handle that plainly.
-- All checks clean: analyze, format, the app tests, the fake-provider
-  tests, 4 integration tests (the real-provider one skips without the
-  login file).
+- **Phases 1–3 are built.** Phase 3's exit: the fault suite green, the zap
+  budget met (p50 961 ms / p95 972 ms on the desktop), the 1-hour soak
+  pending (yours). ADR-010 Accepted with the soak outstanding.
+- **Your provider played** (three short runs, each after your yes): first
+  frame 1.2 s, zapping on your single connection without a refusal, the
+  connection let go afterwards. One channel is slow (~4.7 s) to its first
+  picture every time: that stream, not the app.
+- All checks clean: analyze, format, 821 app tests (3 skipped), 97
+  fake-provider tests, 9 integration tests (the fault suite, the Live TV
+  keyboard walk, the engine; 4 opt-in: real provider ×2, zap benchmark,
+  soak).
+- Your login file (`~/.config/iptv-player-dev/real_provider.json`) has
+  `"wrong_password": false` and `"play": false`, so no test signs in wrongly
+  or plays from your provider unless you turn it on.
 
 ## Done this session (2026-09-19)
-- `integration_test/real_provider_test.dart` (the keyboard walk against
-  your panel) and its two fixes: the empty-404 sign-in refusal
-  (`XtreamClient`, fake quirk `refusedSignInAs404`) and the one-Tab-stop
-  category list (`FocusPane(tabStop: true)`).
-- Step 8: `integration_test/large_sync_test.dart`, the profile-mode
-  measurement via `flutter drive` (`test_driver/integration_test.dart`),
-  the `withWeight()` cleanup (7 goldens re-recorded), docs/02, 05, 06,
-  ADR-009 Accepted.
+- Phase 2 exit (step 8), errors showing the server's answer (schema v3),
+  the Phase 3 plan, and Phase 3 steps 1–9.
 
 ## Instructions for the next session
-1. **Phase 3 plan is written** (`docs/plans/phase-3-live-tv-and-playback.md`), waiting for approval; start step 1 once approved, recording the answers in the plan's status line and in ADR-010.
-   From the real panel: `max_connections` 1 and already in use; the
-   account's `allowed_output_formats` is `m3u8, ts`; the live format
-   defaults to TS.
+1. **Phase 4 is next** (EPG and the guide): write its plan and stop for
+   approval. Before that, read the soak summary the user pastes; a failure
+   there comes first.
+1k. **Phase 3 (playback):** `PlayerEngine` (`lib/core/player/`) is the seam;
+   `MediaKitPlayerEngine` (`lib/data/player_mediakit/`) passes
+   `waitForInitialization: false` on its own property calls (media_kit
+   otherwise waits for the video controller's first texture, which needs
+   frames drawn) and sets `vid=auto` when headless. `PlaybackCoordinator`
+   (`lib/features/playback/domain/`) owns playback, the connection policy
+   and the watchdog; `HttpStreamProber` classifies failures;
+   `playbackCoordinatorProvider`, `playbackStateProvider`,
+   `playbackSettingsControllerProvider`. Live TV in
+   `lib/features/live_tv/`; the player at `/player`
+   (`PlayerScreen`, root navigator). Integration tests that play need
+   `binding.framePolicy = fullyLive` and the samples
+   (`streamsAvailable`); `IPTV_PLAYER_VIDEO=0` plays with no picture.
+   **Never play from the user's provider without asking first** (a pop-up;
+   they free their one connection and say yes).
 1j. **Step 8:** keyboard helpers for integration tests live in
    `integration_test/support/keyboard.dart` (`Keys`, finders). They send
    explicit physical keys (profile builds have no key debug names) and

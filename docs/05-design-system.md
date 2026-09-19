@@ -114,6 +114,8 @@ Rows: Continue Watching (landscape cards with progress) · Favorite Channels (lo
 - **Preview pane** (~40 %): rounded 16:9 player with LIVE badge; now block (title, time range, progress, 3-line description) and next line; actions: Fullscreen, Favorite, Cast, Catch-up (if available)
 - Moving selection previews after a 350 ms debounce. Optional muted preview setting.
 
+As built (Phase 3 step 5; ADR-010): the canvas's widths at 1440 px (248 / flexible / 540), the preview shrinking to 380 px on a smaller window and the list's filter and sort going under its title below 560 px. Categories: Favorites, All channels, the visible categories, Uncategorized, "N categories hidden · Manage". Both lists are one Tab stop with the arrows inside; ← and → move between the panes. **A click on a channel plays it in the preview; Enter plays it full screen; F toggles the favorite** (the shortcut table's "F = fullscreen" applies in the player, not the list); the row menu has Watch, favorite, Rename… and Hide channel (Cast arrives with Phase 7). Now/next come from the provider's short EPG for the channel previewed (Phase 4 replaces it with the guide); rows show only what was looked up. Every state: skeletons, an error with Retry, "Getting your channels…" during a sync, "No favorites yet", "No channels in this category." with Show hidden channels, "No channels match". Leaving Live TV stops playback.
+
 ### 4. Full-screen player
 - OSD hides after 3 s without input; any input shows it; cursor hides with OSD
 - Top gradient: channel logo, number, name, LIVE badge, resolution badge, clock
@@ -122,6 +124,8 @@ Rows: Continue Watching (landscape cards with progress) · Favorite Channels (lo
 - Up/Down zap with a top channel banner; digits open the number overlay; Backspace = last channel
 - ReconnectingPill top center; failure card center (Retry / Next channel / Details)
 - Double-click toggles fullscreen
+
+As built (Phase 3 step 6; ADR-010): a page of its own (`/player`) that puts the window in full screen and takes it out on Esc, leaving the stream playing in the preview. ↑/PageUp previous and ↓/PageDown next in the list Live TV shows, wrapping; the banner at once, the stream 350 ms after the last press. Digits open the number overlay with the match shown as typed. ← opens the channel panel (a window of channels around the one playing, which takes the focus; the arrows and Enter belong to it while it is open). M mute, A / S cycle audio / subtitles, I stream info (the address masked), F or a double-click toggle the window's full screen. The failure card says what went wrong in our words and the server's, with Retry, Next channel and Details. Cast waits for Phase 7; Play/Pause and seeking for VOD (Phase 5).
 
 ### 5. Guide (EPG grid)
 Header: day selector (Today, Tomorrow, weekdays), Now button, category filter. Grid: sticky channel column (logo + name, 220 px), time ruler with 30-minute ticks (1 hour = 240 px), program cells (title + time; current program highlighted; past programs dimmed), red vertical now line. 2D virtualization. Arrow keys move between programs; Enter opens a detail sheet (title, time, description, category; Watch, Catch-up).
