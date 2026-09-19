@@ -38,6 +38,13 @@ Future<void> main(List<String> args) async {
     ..addOption('series', help: 'Series count, overriding the profile.')
     ..addOption('max-connections', help: 'Overrides the profile.')
     ..addFlag('verbose', abbr: 'v', help: 'Log requests and ffmpeg stderr.')
+    ..addFlag(
+      'exit-with-stdin',
+      negatable: false,
+      help:
+          'Stop when stdin closes, so a test that started the server stops '
+          'it even when the test itself is killed.',
+    )
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults opts;
@@ -116,14 +123,29 @@ Future<void> main(List<String> args) async {
     ..writeln('Ctrl+C to stop.');
 
   // Ctrl+C has to reach close(): the ffmpeg children outlive the isolate
-  // otherwise, and the next run would inherit them (hard rule 8).
+  // otherwise, and the next run would inherit them (hard rule 8). A test's
+  // server has its own run dir, so no later run would sweep them either:
+  // there, the parent going away (its end of our stdin closing) stops us too.
   late final StreamSubscription<ProcessSignal> sigint;
-  sigint = ProcessSignal.sigint.watch().listen((_) async {
+  var stopping = false;
+  Future<void> stop() async {
+    if (stopping) return;
+    stopping = true;
     stdout.writeln('\nstopping…');
+    // A second Ctrl+C now kills a close that hangs.
     await sigint.cancel();
     await server.close();
     exit(0);
-  });
+  }
+
+  sigint = ProcessSignal.sigint.watch().listen((_) => unawaited(stop()));
+  if (opts.flag('exit-with-stdin')) {
+    stdin.listen(
+      (_) {},
+      onDone: () => unawaited(stop()),
+      onError: (Object _) => unawaited(stop()),
+    );
+  }
 }
 
 /// `.../tools/fake_provider/bin/server.dart` → the repo root, falling back to

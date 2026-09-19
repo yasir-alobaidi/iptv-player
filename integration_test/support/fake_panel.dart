@@ -33,6 +33,8 @@ final class FakePanel {
       ...['--profile', profile, '--port', '$port'],
       ...['--samples', if (streams) samplesDirectory.path else scratch.path],
       ...['--run-dir', scratch.path],
+      // Stops with this process even when it is killed (hard rule 8).
+      '--exit-with-stdin',
       ...extra,
     ]);
     unawaited(process.stdout.drain<void>());

@@ -214,17 +214,140 @@ class StreamRelay {
       return await _servePlaylist(streamId, sample, limit);
     }
 
+    // Nothing is taken until the connection is ours: if the client is gone
+    // by then, shelf never calls back.
+    request.hijack(
+      (connection) => unawaited(
+        _relayLive(
+          connection.stream,
+          connection.sink,
+          sample,
+          limit,
+          faults,
+          switchTo: _switchSample(channel.sample),
+        ),
+      ),
+    );
+  }
+
+  /// A live `.ts` stream, written on the hijacked connection itself.
+  ///
+  /// Not a shelf [Response]: when a client resets the connection before the
+  /// response headers go out (a player abandoning an attempt mid-reconnect),
+  /// dart:io takes the body, drops every chunk and never cancels it, so the
+  /// ffmpeg and the slot stay taken for good (the 2026-09-19 soak). Owning
+  /// the socket, the relay sees the client leave on its read side, as a
+  /// panel does, whenever that happens.
+  Future<void> _relayLive(
+    Stream<List<int>> incoming,
+    StreamSink<List<int>> outgoing,
+    File sample,
+    int limit,
+    FakeFaults faults, {
+    required String switchTo,
+  }) async {
+    unawaited(outgoing.done.then((_) {}, onError: (Object _) {}));
+    var gone = false;
+    Future<void> Function()? stop;
+    final reading = incoming.listen(
+      null,
+      onDone: () {
+        gone = true;
+        unawaited(stop?.call());
+      },
+      onError: (Object _) {
+        gone = true;
+        unawaited(stop?.call());
+      },
+      cancelOnError: true,
+    );
+    Future<void> hangUp() async {
+      await reading.cancel();
+      try {
+        await outgoing.close();
+      } on Object {
+        // The client is already gone.
+      }
+    }
+
+    // Again, now that the connection is ours: the check in [_serveLive]
+    // came before the hijack's wait, so another stream may have started.
+    if (_state.activeStreams >= limit) {
+      outgoing.add(_plainAnswer(403, 'Forbidden', '$maxConnectionsBody\n'));
+      await hangUp();
+      return;
+    }
     _state.activeStreams++;
     final _Child child;
     try {
       child = await _startLoop(sample);
     } on Object catch (error) {
       _state.activeStreams--;
-      return Response.internalServerError(
-        body: 'ffmpeg failed for ${channel.sample}: $error\n',
+      final name = sample.uri.pathSegments.last;
+      outgoing.add(
+        _plainAnswer(
+          500,
+          'Internal Server Error',
+          'ffmpeg failed for $name: $error\n',
+        ),
       );
+      await hangUp();
+      return;
     }
-    return _relayBody(child, faults, switchTo: _switchSample(channel.sample));
+    final body = _relayBody(child, faults, switchTo: switchTo);
+    stop = body.stop;
+    if (gone) {
+      await body.stop();
+      await hangUp();
+      return;
+    }
+    // Chunked, as shelf sent it: a body that ends (drop_after_s) ends with
+    // the last chunk, which lavf takes as the end of the stream. Without a
+    // length or chunks, lavf takes the close for a cut and reconnects by
+    // itself (reconnect_streamed), so the player never sees the drop.
+    outgoing.add(
+      utf8.encode(
+        'HTTP/1.1 200 OK\r\n'
+        'content-type: video/mp2t\r\n'
+        'cache-control: no-store\r\n'
+        'transfer-encoding: chunked\r\n'
+        'connection: close\r\n\r\n',
+      ),
+    );
+    try {
+      await outgoing.addStream(
+        body.stream.where((data) => data.isNotEmpty).map(_chunk),
+      );
+      outgoing.add(_lastChunk);
+    } on Object {
+      // A failed write: the client is gone.
+    }
+    // Idempotent: the body ended (a drop, ffmpeg exited) or the write failed.
+    await body.stop();
+    await hangUp();
+  }
+
+  /// One chunk of a chunked body: size in hex, the bytes, CRLF.
+  static List<int> _chunk(List<int> data) => [
+    ...ascii.encode('${data.length.toRadixString(16)}\r\n'),
+    ...data,
+    13, 10, //
+  ];
+
+  static final List<int> _lastChunk = ascii.encode('0\r\n\r\n');
+
+  /// A whole HTTP answer with a text body, for the hijacked connection.
+  List<int> _plainAnswer(int status, String reason, String text) {
+    final body = utf8.encode(text);
+    return [
+      ...utf8.encode(
+        'HTTP/1.1 $status $reason\r\n'
+        'content-type: text/plain; charset=utf-8\r\n'
+        'content-length: ${body.length}\r\n'
+        'connection: close\r\n\r\n',
+      ),
+      ...body,
+    ];
   }
 
   /// A fault's status, with the body a panel would plausibly send.
@@ -271,13 +394,13 @@ class StreamRelay {
 
   /// The body is the process's stdout, unbuffered and with pause/resume
   /// passed through so a slow client throttles ffmpeg instead of filling
-  /// memory. Cancelling the subscription is how shelf tells us the client
-  /// disconnected, and that is where the process dies.
+  /// memory. `stop` (the client left) or cancelling the body kills the
+  /// process and frees the slot.
   ///
   /// The stream faults act here: `drop_after_s` ends the body (a dropped
   /// connection), `stall_after_s` stops sending but keeps it open, and
   /// `codec_switch_after_s` carries on with [switchTo] in the same body.
-  Response _relayBody(
+  ({Stream<List<int>> stream, Future<void> Function() stop}) _relayBody(
     _Child first,
     FakeFaults faults, {
     required String switchTo,
@@ -288,13 +411,19 @@ class StreamRelay {
     final timers = <Timer>[];
     late StreamSubscription<List<int>> out;
 
-    void finish() {
+    var ended = false;
+
+    Future<void> stop() async {
+      ended = true;
       for (final timer in timers) {
         timer.cancel();
       }
       if (!body.isClosed) unawaited(body.close());
-      unawaited(_reap(child));
+      await out.cancel();
+      await _reap(child);
     }
+
+    void finish() => unawaited(stop());
 
     void pipe(_Child source) {
       out = source.process.stdout.listen(
@@ -322,8 +451,7 @@ class StreamRelay {
         Timer(Duration(seconds: s), () {
           stalled = true;
           out.pause();
-          // Nothing a player can play, but a write, so a client that gives
-          // up and disconnects is noticed and its slot freed.
+          // Nothing a player can play, but the connection is visibly alive.
           timers.add(
             Timer.periodic(const Duration(seconds: 1), (_) {
               if (!body.isClosed) body.add(tsNullPacket);
@@ -336,9 +464,11 @@ class StreamRelay {
       timers.add(
         Timer(Duration(seconds: s), () async {
           final sample = File('${_state.samplesDir}/$switchTo');
-          if (body.isClosed || !sample.existsSync()) return;
+          // `ended`, not `body.isClosed`: a client that left cancels the
+          // body without closing it.
+          if (ended || !sample.existsSync()) return;
           final next = await _startLoop(sample);
-          if (body.isClosed) {
+          if (ended) {
             await _reap(next, releaseSlot: false);
             return;
           }
@@ -357,19 +487,9 @@ class StreamRelay {
       ..onResume = () {
         if (!stalled) out.resume();
       }
-      ..onCancel = () async {
-        for (final timer in timers) {
-          timer.cancel();
-        }
-        await out.cancel();
-        await _reap(child);
-      };
+      ..onCancel = stop;
 
-    return Response.ok(
-      body.stream,
-      headers: {'content-type': 'video/mp2t', 'cache-control': 'no-store'},
-      context: {'shelf.io.buffer_output': false},
-    );
+    return (stream: body.stream, stop: stop);
   }
 
   /// `.m3u8`: live HLS from one ffmpeg per channel writing 2 s segments,

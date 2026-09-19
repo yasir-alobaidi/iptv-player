@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:fake_provider/generator.dart';
 import 'package:fake_provider/profile.dart';
@@ -195,15 +196,62 @@ void main() {
       expect(_isAlive(childPid), isFalse);
     });
 
+    test(
+      'a client reset before the answer starts frees its slot',
+      () async {
+        // A player abandoning an attempt mid-reconnect. Before the relay
+        // owned the socket, a reset that beat the response headers left
+        // dart:io holding the body: it dropped every chunk and never
+        // cancelled it, so ffmpeg and the slot stayed taken for good (the
+        // 2026-09-19 soak). The first request for a sample waits on its
+        // remux, which holds the answer back long enough to reset.
+        final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+        addTearDown(() => server.close(force: true));
+        final socket = await Socket.connect('127.0.0.1', server.port);
+        socket.write(
+          'GET /live/test/test/1.ts HTTP/1.1\r\nHost: x\r\n'
+          'Connection: close\r\n\r\n',
+        );
+        await socket.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        _reset(socket);
+
+        await _until(
+          () =>
+              File('${runDir.path}/loop_cache/h264_1080p50_aac.mkv')
+                  .existsSync(),
+          'the remux',
+          timeout: const Duration(seconds: 30),
+        );
+        await Future<void>.delayed(const Duration(seconds: 1));
+        await _until(
+          () => state.activeStreams == 0 && _pidFiles(runDir).isEmpty,
+          'the slot to be freed',
+        );
+      },
+      skip: mediaSkip ?? (Platform.isLinux ? null : 'SO_LINGER is Linux here'),
+    );
+
     test('reuses the cached remux and never remuxes twice at once', () async {
       // Two concurrent requests for the same sample (default profile allows
       // two connections): one remux, one cached MKV, no .part left behind.
-      final responses = await Future.wait([
-        get('/live/test/test/1.ts'),
-        get('/live/test/test/1.ts'),
-      ]);
+      final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+      addTearDown(() => server.close(force: true));
+      final client = HttpClient();
+      addTearDown(() => client.close(force: true));
+      Future<HttpClientResponse> open() async {
+        final request = await client.getUrl(
+          Uri.parse('http://127.0.0.1:${server.port}/live/test/test/1.ts'),
+        );
+        return await request.close();
+      }
+
+      final responses = await Future.wait([open(), open()]);
       expect(responses.map((r) => r.statusCode), everyElement(HttpStatus.ok));
       expect(state.activeStreams, 2);
+      for (final response in responses) {
+        unawaited(response.drain<void>().catchError((Object _) {}));
+      }
 
       final cache = Directory('${runDir.path}/loop_cache');
       final cached = cache.listSync().whereType<File>().toList();
@@ -215,10 +263,11 @@ void main() {
       expect(state.activeStreams, 0);
       expect(_pidFiles(runDir), isEmpty);
 
-      final again = await get('/live/test/test/1.ts');
+      final again = await open();
       expect(again.statusCode, HttpStatus.ok);
+      unawaited(again.drain<void>().catchError((Object _) {}));
       expect(cached.single.lastModifiedSync(), stamp);
-    });
+    }, skip: mediaSkip);
 
     test('a missing sample file is a 404 naming it', () async {
       final empty = Directory.systemTemp.createTempSync('fake_samples_');
@@ -447,6 +496,20 @@ List<File> _pidFiles(Directory runDir) {
       .whereType<File>()
       .where((f) => f.path.endsWith('.pid'))
       .toList();
+}
+
+/// Closes [socket] with a reset rather than a FIN, as a player killing an
+/// attempt does: SO_LINGER (13 on Linux) on, with a 0 s timeout.
+void _reset(Socket socket) {
+  socket
+    ..setRawOption(
+      RawSocketOption(
+        RawSocketOption.levelSocket,
+        13,
+        Uint8List.fromList([1, 0, 0, 0, 0, 0, 0, 0]),
+      ),
+    )
+    ..destroy();
 }
 
 bool _isAlive(int pid) =>
