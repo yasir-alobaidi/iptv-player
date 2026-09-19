@@ -254,11 +254,15 @@ final class XtreamClient {
           Err() => _Outcome(body, retryAfter: Duration.zero),
         };
       }
-      // An error page's body is never needed; drain it so the connection
-      // can be reused.
-      await stream.drain<void>().catchError((_) {});
+      // An error page is read only to tell two 404s apart, and drained
+      // either way so the connection can be reused.
+      final visible = await _visibleBytes(stream);
       final failure = switch (status) {
         401 || 403 => AuthFailure('$action: HTTP $status'),
+        // Some panels refuse a sign-in with an empty 404 from
+        // player_api.php; a page that isn't there has the web server's
+        // error page as its body (docs/02).
+        404 when visible == 0 => AuthFailure('$action: HTTP 404, no body'),
         404 => NotFoundFailure('$action: HTTP 404'),
         _ => NetworkFailure('$action: HTTP $status', status),
       };
@@ -290,6 +294,21 @@ final class XtreamClient {
               error.error is HttpException);
       return _Outcome(Err(failure), retryAfter: dropped ? Duration.zero : null);
     }
+  }
+
+  /// Drains an error body, counting its bytes that aren't whitespace.
+  static Future<int> _visibleBytes(Stream<Uint8List> stream) async {
+    var count = 0;
+    try {
+      await for (final chunk in stream) {
+        for (final byte in chunk) {
+          if (byte > 0x20) count++;
+        }
+      }
+    } on Object {
+      // A broken error page is still an error page.
+    }
+    return count;
   }
 
   /// Collects the body, failing with a `TimeoutFailure` when no byte

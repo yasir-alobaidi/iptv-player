@@ -42,6 +42,90 @@ void main() {
       expect(visited.length, 4);
     });
 
+    group('tabStop', () {
+      Widget screen() => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppButton(label: 'above', onPressed: () {}),
+          FocusPane(debugLabel: 'list', tabStop: true, child: _buttons('i', 6)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppButton(label: 'back', onPressed: () {}),
+              AppButton(label: 'finish', onPressed: () {}),
+            ],
+          ),
+        ],
+      );
+
+      Future<void> press(
+        WidgetTester tester,
+        LogicalKeyboardKey key, {
+        bool shift = false,
+      }) async {
+        if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(key);
+        if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pumpAndSettle();
+      }
+
+      String? label() => FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<AppButton>()
+          ?.label;
+
+      testWidgets('Tab enters it once, arrows move inside, Tab leaves it for '
+          'the next control below', (tester) async {
+        await pumpDesign(tester, screen());
+        await tester.pumpAndSettle();
+
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'above');
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'i0');
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expect(label(), 'i2');
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'back');
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'finish');
+      });
+
+      testWidgets('Shift+Tab leaves it for the control above', (tester) async {
+        await pumpDesign(tester, screen());
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expect(label(), 'i1');
+
+        await press(tester, LogicalKeyboardKey.tab, shift: true);
+
+        expect(label(), 'above');
+      });
+
+      testWidgets('with nothing below, Tab wraps to the top', (tester) async {
+        await pumpDesign(
+          tester,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppButton(label: 'above', onPressed: () {}),
+              FocusPane(tabStop: true, child: _buttons('i', 3)),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'i0');
+
+        await press(tester, LogicalKeyboardKey.tab);
+
+        expect(label(), 'above');
+      });
+    });
+
     testWidgets('it remembers the item focus left from', (tester) async {
       final controller = FocusPaneController();
       addTearDown(controller.dispose);

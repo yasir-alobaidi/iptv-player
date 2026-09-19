@@ -6,6 +6,8 @@
 //   ~/.config/iptv-player-dev/real_provider.json, or the path in
 //   $IPTV_REAL_PROVIDER, holding
 //   {"server": "http://host:port", "username": "…", "password": "…"}
+// and optionally "wrong_password": false, to skip the wrong sign-in (a
+// panel may lock an account out after a few).
 //
 // Run: xvfb-run -a flutter test integration_test/real_provider_test.dart -d linux
 //
@@ -108,21 +110,29 @@ Future<void> _walk(
   await k.type(login.username, into: 'Username');
   await k.press(LogicalKeyboardKey.tab);
 
-  // ── One wrong password.
-  await k.type('${login.password}-wrong', into: 'Password');
-  var watch = Stopwatch()..start();
-  await k.press(LogicalKeyboardKey.enter);
-  final wrong = await _outcome(k);
-  report.step(
-    'Wrong password',
-    '"$wrong" after ${_s(watch.elapsed)}'
-        '${wrong == 'Sign-in refused' ? '' : ' — expected "Sign-in refused"'}',
-  );
-  expect(
-    screenText(tester),
-    isNot(contains('${login.password}-wrong')),
-    reason: 'the password showed outside its field',
-  );
+  // ── One wrong password, unless the login file says not to.
+  var watch = Stopwatch();
+  if (login.tryWrongPassword) {
+    await k.type('${login.password}-wrong', into: 'Password');
+    watch = Stopwatch()..start();
+    await k.press(LogicalKeyboardKey.enter);
+    final wrong = await _outcome(k);
+    final expected = wrong == 'Sign-in refused'
+        ? ''
+        : ' — expected "Sign-in refused"';
+    report.step(
+      'Wrong password',
+      '"$wrong" after ${_s(watch.elapsed)}$expected',
+    );
+    expect(
+      screenText(tester),
+      isNot(contains('${login.password}-wrong')),
+      reason: 'the password showed outside its field',
+    );
+  } else {
+    await k.type(login.password, into: 'Password');
+    report.step('Wrong password', 'skipped (login file)');
+  }
 
   // ── The right one.
   await k.tabTo(input('Password'), back: true);
@@ -196,12 +206,19 @@ Future<void> _walk(
     'Pick categories',
     '${find.byType(AppCheckbox).evaluate().length} checkboxes on screen',
   );
-  await k.tabTo(find.byType(AppCheckbox).last);
+  // The list is one Tab stop: into it, Down one, Space, Tab out.
+  await k.tabTo(find.byType(AppCheckbox).first);
+  await k.press(LogicalKeyboardKey.arrowDown);
+  final unticked = k.focusedLabel();
   await k.press(LogicalKeyboardKey.space);
-  await k.tabTo(find.text('Finish'));
+  await k.tabTo(find.text('Finish'), max: 3);
   await k.press(LogicalKeyboardKey.enter);
   expect(app.location, '/');
   final source = (await app.sources()).single;
+  report.step(
+    'Pick categories',
+    'unticked "$unticked"; hidden now: ${await app.hiddenNames(source.id)}',
+  );
   var name = source.name;
   report.step('Home', 'the top bar names the source "$name"');
 
@@ -371,11 +388,17 @@ String _textsWith(WidgetTester tester, String part) => [
 ].join(' | ');
 
 final class _Login {
-  const new(this.server, this.username, this.password);
+  const new(
+    this.server,
+    this.username,
+    this.password, {
+    required this.tryWrongPassword,
+  });
 
   final String server;
   final String username;
   final String password;
+  final bool tryWrongPassword;
 
   static _Login? read() {
     final home = Platform.environment['HOME'] ?? '';
@@ -389,6 +412,7 @@ final class _Login {
       '${json['server'] ?? ''}'.trim(),
       '${json['username'] ?? ''}'.trim(),
       '${json['password'] ?? ''}',
+      tryWrongPassword: json['wrong_password'] != false,
     );
     if ([login.server, login.username, login.password].any((v) => v.isEmpty)) {
       return null;

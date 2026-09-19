@@ -131,10 +131,9 @@ class _MenuRow extends StatelessWidget {
                 child: Text(
                   item.label,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.text.caption.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: tokens.text.caption
+                      .withWeight(600)
+                      .copyWith(color: foreground),
                 ),
               ),
               if (item.checked)

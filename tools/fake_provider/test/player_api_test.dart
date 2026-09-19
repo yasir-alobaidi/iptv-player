@@ -189,6 +189,21 @@ void main() {
       expect(body.containsKey('server_info'), isFalse);
     });
 
+    test('refusedSignInAs404: a wrong password is an empty 404', () async {
+      final state = stateOf(fakeProfiles['quirky']!);
+      for (final query in [
+        '?username=test&password=nope',
+        '?username=test&password=nope&action=get_live_streams',
+      ]) {
+        final response = await call(state, query);
+        expect(response.statusCode, 404);
+        expect(await bytesOf(response), isEmpty);
+      }
+      // The right password still signs in.
+      final body = await mapOf(state, '?$creds');
+      expect((body['user_info']! as Map<String, Object?>)['auth'], '1');
+    });
+
     test('missing credentials are auth 0, whatever the action', () async {
       final body = await mapOf(
         stateOf(fakeProfiles['default']!),

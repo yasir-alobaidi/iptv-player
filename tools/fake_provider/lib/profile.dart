@@ -25,6 +25,7 @@ class FakeQuirks {
     this.junkIcons = false,
     this.htmlEntities = false,
     this.messyM3u = false,
+    this.refusedSignInAs404 = false,
   });
 
   /// All quirks on, for the `quirky` profile.
@@ -38,6 +39,7 @@ class FakeQuirks {
     junkIcons: true,
     htmlEntities: true,
     messyM3u: true,
+    refusedSignInAs404: true,
   );
 
   /// `"num": "12"`, `"rating": "7.4"`, timestamps as strings.
@@ -69,6 +71,12 @@ class FakeQuirks {
   /// user agent on every 7th entry, a `#KODIPROP` line on every 9th.
   final bool messyM3u;
 
+  /// A wrong username or password gets an empty `404` from
+  /// `player_api.php` instead of `200` with `auth: 0`, as a real panel
+  /// answered (2026-09-19). A page that doesn't exist still gets the web
+  /// server's error page, with a body.
+  final bool refusedSignInAs404;
+
   Map<String, Object?> toJson() => {
     'numbers_as_strings': numbersAsStrings,
     'empty_string_for_null': emptyStringForNull,
@@ -79,6 +87,7 @@ class FakeQuirks {
     'junk_icons': junkIcons,
     'html_entities': htmlEntities,
     'messy_m3u': messyM3u,
+    'refused_sign_in_as_404': refusedSignInAs404,
   };
 }
 

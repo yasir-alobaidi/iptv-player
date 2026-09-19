@@ -477,7 +477,13 @@ class _Picker extends StatelessWidget {
         ],
         SizedBox(height: spacing.s16),
         Expanded(
-          child: FocusTraversalGroup(child: CustomScrollView(slivers: slivers)),
+          // One Tab stop: a provider can have hundreds of categories, and
+          // Finish is after them. Arrows move between the tiles.
+          child: FocusPane(
+            debugLabel: 'Categories',
+            tabStop: true,
+            child: CustomScrollView(slivers: slivers),
+          ),
         ),
       ],
     );

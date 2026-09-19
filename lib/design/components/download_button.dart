@@ -106,10 +106,9 @@ class DownloadButton extends StatelessWidget {
               SizedBox(width: tokens.spacing.s4 + 2),
               Text(
                 label,
-                style: tokens.text.caption.copyWith(
-                  color: tint,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: tokens.text.caption
+                    .withWeight(700)
+                    .copyWith(color: tint),
               ),
             ],
           ],

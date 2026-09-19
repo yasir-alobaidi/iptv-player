@@ -132,12 +132,14 @@ void main() {
     expect(k.focusIsOn(find.text('Pick categories')), isTrue);
     await k.press(LogicalKeyboardKey.enter);
 
-    // ── Pick categories: Space on the first tile, Finish.
+    // ── Pick categories: the list is one Tab stop; Down to a tile, Space,
+    // then Tab straight out to the footer.
     await k.waitFor(find.text('Pick what you watch'));
-    await k.tabTo(find.byType(AppCheckbox).last);
+    await k.tabTo(find.byType(AppCheckbox).first);
+    await k.press(LogicalKeyboardKey.arrowDown);
     final picked = k.focusedLabel();
     await k.press(LogicalKeyboardKey.space);
-    await k.tabTo(find.text('Finish'));
+    await k.tabTo(find.text('Finish'), max: 3);
     await k.press(LogicalKeyboardKey.enter);
     expect(app.location, '/');
     final source = (await app.sources()).single;

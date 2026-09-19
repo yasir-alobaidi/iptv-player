@@ -74,10 +74,9 @@ class _SearchFieldState extends State<SearchField> {
     final body = asButton
         ? Text(
             widget.hint,
-            style: tokens.text.label.copyWith(
-              color: colors.textTertiary,
-              fontWeight: FontWeight.w500,
-            ),
+            style: tokens.text.label
+                .withWeight(500)
+                .copyWith(color: colors.textTertiary),
           )
         : TextField(
             controller: widget.controller,
@@ -85,19 +84,17 @@ class _SearchFieldState extends State<SearchField> {
             autofocus: widget.autofocus,
             onChanged: widget.onChanged,
             onSubmitted: widget.onSubmitted,
-            style: tokens.text.label.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+            style: tokens.text.label
+                .withWeight(500)
+                .copyWith(color: colors.textPrimary),
             cursorColor: colors.accentBase,
             decoration: InputDecoration(
               isDense: true,
               border: InputBorder.none,
               hintText: widget.hint,
-              hintStyle: tokens.text.label.copyWith(
-                color: colors.textTertiary,
-                fontWeight: FontWeight.w500,
-              ),
+              hintStyle: tokens.text.label
+                  .withWeight(500)
+                  .copyWith(color: colors.textTertiary),
               contentPadding: EdgeInsets.zero,
             ),
           );

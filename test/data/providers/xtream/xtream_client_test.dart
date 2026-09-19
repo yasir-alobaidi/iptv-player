@@ -164,6 +164,27 @@ void main() {
       }
     });
 
+    test('an empty 404 is a refused sign-in; an error page is not found '
+        '(a real panel, 2026-09-19)', () async {
+      for (final (body, type) in [
+        ('', isA<AuthFailure>()),
+        ('\r\n', isA<AuthFailure>()),
+        (_nginx404, isA<NotFoundFailure>()),
+      ]) {
+        final p = await panel((r, _) {
+          r.response
+            ..statusCode = 404
+            ..write(body);
+          return r.response.close();
+        });
+
+        final result = await clientFor(p).account(retry: false);
+
+        expect(result.failureOrNull, type, reason: jsonEncode(body));
+        expect(p.requests, hasLength(1));
+      }
+    });
+
     test('a 200 that is not JSON is a parse failure', () async {
       final p = await panel((r, _) {
         r.response
@@ -418,3 +439,9 @@ void main() {
     expect(items[4999].name, 'Channel & 4999');
   });
 }
+
+/// nginx's own 404 page, as a real panel's server sends it for a missing page.
+const _nginx404 =
+    '<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n'
+    '<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n'
+    '</body>\r\n</html>\r\n';

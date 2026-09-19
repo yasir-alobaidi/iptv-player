@@ -50,6 +50,9 @@ dev_dependencies:
   # Tests start the fake Xtream panel in-process on a free port (docs/06).
   fake_provider:
     path: tools/fake_provider
+  # `flutter drive --profile` for the frame-time measurement (docs/06).
+  flutter_driver:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   freezed: ^4.0.1

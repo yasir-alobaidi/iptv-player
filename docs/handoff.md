@@ -1,89 +1,82 @@
-# Handoff — 2026-09-19 (session 17, after step 7)
+# Handoff — 2026-09-19 (session 18, Phase 2 exit)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Run the app against your real provider, and review steps 6 and 7.** Two
-new local commits (step 7, and the real-provider test) sit on top of what
-you pushed.
+**Review Phase 2 and push.** Three local commits sit on top of what you
+pushed: step 7, the real-provider test, and step 8. CI was red on your
+last push (step 6: a stale generated hash); step 7 already fixes it, so
+the push should go green.
 
-The quickest way: put your login in the file I created (outside the
-repository, only you can read it) and let the test walk the app:
+Your provider login is in `~/.config/iptv-player-dev/real_provider.json`
+(only you can read it; it is not in the repository). It has
+`"wrong_password": false` so reruns don't add failed sign-ins. To rerun
+the walk against your provider:
 
 ```
-nano ~/.config/iptv-player-dev/real_provider.json   # server, username, password
 xvfb-run -a flutter test integration_test/real_provider_test.dart -d linux
 cat build/real_provider_run/report.md
 ```
 
-The report has the timings, counts and anything that stopped the walk,
-with your username and password masked. The test uses a throwaway
-database, so your installed app stays empty.
+You shared the password in chat. If that worries you, change it with
+your provider and update the file.
 
-Then walk it yourself with `flutter run -d linux` (the app opens on
-Welcome). With the keyboard only (Tab, Shift+Tab, arrows, Enter, Space,
-Esc): add your provider, try a wrong password once, Cancel during a
-sync, then finish the sync and pick your categories. Then Ctrl+, →
-Sources: Refresh, Edit (rename it; leave the password empty), ⋯ →
-Account details; and Settings → Categories: hide one, Alt+↑ to move
-one, rename one. Tell me what broke or felt wrong. If you paste an error
-or a log line, check it has no password or token in it first; the app's
-own log masks them.
-
-What I decided without asking (docs/05 "As built" has the full list; say
-if you want any changed):
-- the switcher's pick is remembered across restarts; the first source in
-  your order is used when nothing is picked;
-- the Categories manager is a flat reorderable list, not the picker's
-  country groups (moving across groups has no meaning);
-- Remove asks first and focuses **Keep**, so Enter straight away is safe;
-- editing only the name saves at once; a new server, sign-in or playlist
-  is tested first and synced again;
-- the expiry banner appears within 7 days of the end date and can be
-  closed for the session;
-- a text field's Clear button is no longer a Tab stop (Tab goes field to
-  field); Show password still is, with a focus ring.
+What I decided without asking (say if you want any changed):
+- a 404 with an empty body from the panel means "Sign-in refused"
+  (that is how your panel says it); a 404 with a page is "Not found";
+- the Pick categories list is one Tab stop: arrows move inside it, Tab
+  goes on to Back and Finish. The Settings Categories manager is not
+  changed yet (nothing sits below its list; listed in Known issues).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Steps 6 and 7 are reviewed; my real-provider run <went fine | broke like this: …>.
-Fix what broke, then do Phase 2 step 8 (the phase exit) and stop for my review.
+docs/08-phases-and-prompts.md (Phase 3) and ADR-009 in docs/decisions.md first.
+Phase 2 is reviewed and pushed; CI is <green | red: …>.
+Write the Phase 3 plan and stop for my approval.
 ```
 
 ## Where things stand
-- **Phase 1 is complete** (ADR-008), and CI is green on both OSes.
-- **Phase 2 plan approved 2026-09-18.** Steps 1–5 done and reviewed; step 6
-  (onboarding) and **step 7** (Settings → Sources, the Categories manager,
-  Edit source, the top bar's switcher, sync line and expiry banner) done,
-  waiting for review and the real-provider run.
-- 711 app tests (plus 3 skipped benchmarks), 2 integration tests and 87
-  fake-provider tests pass; analyze, the format check and
-  `flutter build linux --debug` are clean. The new keyboard-only
-  end-to-end test passed 4 runs of 4 under xvfb.
-- **Not done by me:** the real-provider run (yours, per the plan).
+- **Phases 1 and 2 are complete** (ADR-008, ADR-009 Accepted). Phase 2's
+  exit: the `large` sync in 7.7 s against a 60 s budget, every quirk
+  fixture green, onboarding working against the fake provider and your
+  real one (12,610 channels, 20,072 movies, 8,262 series in about 9 s).
+- Profile mode, `large` sync on this laptop: worst frame build 7.1 ms, the
+  UI isolate's longest pause 29 ms (budget 32).
+- Your provider allows **1 connection** and it was in use by another
+  device during the run. Phase 3's playback must handle that plainly.
+- All checks clean: analyze, format, the app tests, the fake-provider
+  tests, 4 integration tests (the real-provider one skips without the
+  login file).
 
 ## Done this session (2026-09-19)
-- `integration_test/real_provider_test.dart`: the keyboard walk against
-  a real panel from `~/.config/iptv-player-dev/real_provider.json`
-  (skipped without it); helpers moved to `integration_test/support/keyboard.dart`.
-- Step 7, and four keyboard bugs the new end-to-end test found (see
-  ADR-009 "step 7"). CI's integration step now runs one file per
-  `flutter test`.
+- `integration_test/real_provider_test.dart` (the keyboard walk against
+  your panel) and its two fixes: the empty-404 sign-in refusal
+  (`XtreamClient`, fake quirk `refusedSignInAs404`) and the one-Tab-stop
+  category list (`FocusPane(tabStop: true)`).
+- Step 8: `integration_test/large_sync_test.dart`, the profile-mode
+  measurement via `flutter drive` (`test_driver/integration_test.dart`),
+  the `withWeight()` cleanup (7 goldens re-recorded), docs/02, 05, 06,
+  ADR-009 Accepted.
 
 ## Instructions for the next session
-1. **Step 8 is next: the phase exit** (plan step 8). The `large`-profile
-   integration test with the sync duration budget; the frame-time
-   benchmark in profile mode (the 31 ms UI-isolate gap from step 5);
-   docs/02 corrected where the real provider disagreed; ADR-009 to
-   Accepted; the `copyWith(fontWeight:)` cleanup in Known issues
-   (re-record goldens that change). Start the new integration test from
-   `integration_test/sources_keyboard_test.dart`: it already has the
-   app-without-bootstrap setup, the fake panel behind a proxy, and the
-   keyboard helpers.
+1. **Phase 3 is next:** write its plan (docs/08) and stop for approval.
+   From the real panel: `max_connections` 1 and already in use; the
+   account's `allowed_output_formats` is `m3u8, ts`; the live format
+   defaults to TS.
+1j. **Step 8:** keyboard helpers for integration tests live in
+   `integration_test/support/keyboard.dart` (`Keys`, finders). They send
+   explicit physical keys (profile builds have no key debug names) and
+   `resume()` clears held keys (the real desktop reports its modifiers).
+   A long list is one Tab stop with `FocusPane(tabStop: true)`. Frame
+   times: `flutter drive --profile -d linux
+   --driver=test_driver/integration_test.dart
+   --target=integration_test/large_sync_test.dart`; the Linux embedder
+   reports raster time as 0. An empty 404 from the panel is an
+   `AuthFailure`; a scripted test server that means "not found" must
+   send a body.
 1i. **Step 7 (Settings):** `SettingsScreen` + `settingsLocationProvider`
    (section, and the source the Categories section manages); open it from
    anywhere with `openSettings()`. Pages in

@@ -48,8 +48,11 @@ Handler playerApiHandler(FakeServerState state) {
   return (Request request) async {
     final params = await _readParams(request);
     if (!state.authenticates(params['username'], params['password'])) {
-      // what a real panel answers: 200 with auth 0 and no hint about which
-      // half was wrong. streams answer 401 instead.
+      // What most panels answer: 200 with auth 0 and no hint about which
+      // half was wrong; some an empty 404. Streams answer 401.
+      if (state.profile.quirks.refusedSignInAs404) {
+        return Response.notFound('', headers: _jsonHeaders);
+      }
       return _object(state, const {
         'user_info': {'auth': 0, 'status': 'Disabled'},
       });

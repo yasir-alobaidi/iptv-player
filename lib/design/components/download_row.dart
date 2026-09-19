@@ -105,10 +105,9 @@ class DownloadRow extends StatelessWidget {
                         SizedBox(width: tokens.spacing.s8),
                         Text(
                           subtitle!,
-                          style: tokens.text.labelSmall.copyWith(
-                            color: colors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: tokens.text.labelSmall
+                              .withWeight(500)
+                              .copyWith(color: colors.textTertiary),
                         ),
                       ],
                     ],
@@ -129,10 +128,11 @@ class DownloadRow extends StatelessWidget {
                         : (meta.isEmpty ? _stateText(state) : meta),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: tokens.text.labelSmall.copyWith(
-                      color: failed ? colors.danger : colors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: tokens.text.labelSmall
+                        .withWeight(500)
+                        .copyWith(
+                          color: failed ? colors.danger : colors.textSecondary,
+                        ),
                   ),
                 ],
               ),
@@ -196,18 +196,18 @@ class StorageMeter extends StatelessWidget {
             SizedBox(width: tokens.spacing.s8),
             Text(
               usedLabel,
-              style: tokens.text.labelSmall.copyWith(
-                color: colors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+              style: tokens.text.labelSmall
+                  .withWeight(600)
+                  .copyWith(color: colors.textSecondary),
             ),
             const Spacer(),
             Text(
               freeLabel,
-              style: tokens.text.labelSmall.copyWith(
-                color: warning ? colors.warning : colors.textTertiary,
-                fontWeight: FontWeight.w500,
-              ),
+              style: tokens.text.labelSmall
+                  .withWeight(500)
+                  .copyWith(
+                    color: warning ? colors.warning : colors.textTertiary,
+                  ),
             ),
           ],
         ),

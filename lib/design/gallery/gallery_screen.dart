@@ -496,10 +496,9 @@ class _DemoRow extends StatelessWidget {
             children: [
               Text(
                 '201',
-                style: tokens.text.caption.copyWith(
-                  color: tokens.colors.accentBase,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: tokens.text.caption
+                    .withWeight(700)
+                    .copyWith(color: tokens.colors.accentBase),
               ),
               SizedBox(width: tokens.spacing.s12),
               Expanded(

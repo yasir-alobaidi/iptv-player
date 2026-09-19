@@ -20,11 +20,45 @@ final class Keys {
   /// the engine keeps reporting the app as inactive, and Flutter parks
   /// keyboard focus while it is. A desktop session is resumed while the
   /// user types; this puts the test in the same state before each key.
+  ///
+  /// It also forgets keys held on the real keyboard: on a real desktop the
+  /// engine reports its modifiers (an Alt+Tab away from the test window
+  /// left Alt "held"), and a held Alt turns the test's Enter into
+  /// Alt+Enter, which activates nothing.
   void resume() {
     if (tester.binding.lifecycleState != AppLifecycleState.resumed) {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     }
+    if (HardwareKeyboard.instance.logicalKeysPressed.isNotEmpty) {
+      HardwareKeyboard.instance.clearState();
+    }
   }
+
+  // flutter_test finds a key's physical key by its debug name, which a
+  // profile build doesn't have (the frame measurement runs in profile
+  // mode), so the keys the tests press say theirs.
+  static final Map<LogicalKeyboardKey, PhysicalKeyboardKey> _physical = {
+    LogicalKeyboardKey.enter: PhysicalKeyboardKey.enter,
+    LogicalKeyboardKey.tab: PhysicalKeyboardKey.tab,
+    LogicalKeyboardKey.space: PhysicalKeyboardKey.space,
+    LogicalKeyboardKey.escape: PhysicalKeyboardKey.escape,
+    LogicalKeyboardKey.arrowUp: PhysicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown: PhysicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft: PhysicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight: PhysicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.comma: PhysicalKeyboardKey.comma,
+    LogicalKeyboardKey.shiftLeft: PhysicalKeyboardKey.shiftLeft,
+    LogicalKeyboardKey.controlLeft: PhysicalKeyboardKey.controlLeft,
+    LogicalKeyboardKey.altLeft: PhysicalKeyboardKey.altLeft,
+  };
+
+  Future<void> _down(LogicalKeyboardKey key, {bool up = false}) async {
+    await tester.sendKeyDownEvent(key, physicalKey: _physical[key]);
+    if (up) await _up(key);
+  }
+
+  Future<void> _up(LogicalKeyboardKey key) =>
+      tester.sendKeyUpEvent(key, physicalKey: _physical[key]);
 
   Future<void> _frames() async {
     await tester.pump();
@@ -40,25 +74,25 @@ final class Keys {
       await _frames();
       return;
     }
-    await tester.sendKeyEvent(key);
+    await _down(key, up: true);
     await _frames();
   }
 
   /// Ctrl + [key].
   Future<void> chord(LogicalKeyboardKey key) async {
     resume();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(key);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await _down(LogicalKeyboardKey.controlLeft);
+    await _down(key, up: true);
+    await _up(LogicalKeyboardKey.controlLeft);
     await _frames();
   }
 
   /// Alt + [key].
   Future<void> alt(LogicalKeyboardKey key) async {
     resume();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyEvent(key);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await _down(LogicalKeyboardKey.altLeft);
+    await _down(key, up: true);
+    await _up(LogicalKeyboardKey.altLeft);
     await _frames();
   }
 
@@ -149,11 +183,11 @@ final class Keys {
         focusedLabel() ?? '${FocusManager.instance.primaryFocus?.debugLabel}',
       );
       if (back) {
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await _down(LogicalKeyboardKey.shiftLeft);
+        await _down(LogicalKeyboardKey.tab, up: true);
+        await _up(LogicalKeyboardKey.shiftLeft);
       } else {
-        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await _down(LogicalKeyboardKey.tab, up: true);
       }
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));

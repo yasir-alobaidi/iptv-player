@@ -85,12 +85,13 @@ class CastingBar extends StatelessWidget {
                             : 'Playing on $deviceName',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: tokens.text.labelSmall.copyWith(
-                          color: reconnecting
-                              ? colors.warning
-                              : colors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: tokens.text.labelSmall
+                            .withWeight(500)
+                            .copyWith(
+                              color: reconnecting
+                                  ? colors.warning
+                                  : colors.textSecondary,
+                            ),
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -100,10 +101,9 @@ class CastingBar extends StatelessWidget {
                           subtitle!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: tokens.text.labelSmall.copyWith(
-                            color: colors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: tokens.text.labelSmall
+                              .withWeight(500)
+                              .copyWith(color: colors.textTertiary),
                         ),
                       ),
                     ],

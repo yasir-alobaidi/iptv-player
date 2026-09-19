@@ -68,10 +68,9 @@ class AppChip extends StatelessWidget {
               ],
               Text(
                 label,
-                style: tokens.text.caption.copyWith(
-                  color: foreground,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                ),
+                style: tokens.text.caption
+                    .withWeight(selected ? 700 : 600)
+                    .copyWith(color: foreground),
               ),
               if (count != null) ...[
                 SizedBox(width: tokens.spacing.s8 - 2),

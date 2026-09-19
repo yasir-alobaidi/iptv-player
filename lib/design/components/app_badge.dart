@@ -57,10 +57,9 @@ class AppBadge extends StatelessWidget {
           ],
           Text(
             label.toUpperCase(),
-            style: tokens.text.micro.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w800,
-            ),
+            style: tokens.text.micro
+                .withWeight(800)
+                .copyWith(color: foreground),
           ),
         ],
       ),

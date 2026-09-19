@@ -45,10 +45,9 @@ class SectionHeader extends StatelessWidget {
                 SizedBox(height: tokens.spacing.s4 - 2),
                 Text(
                   subtitle!,
-                  style: tokens.text.labelSmall.copyWith(
-                    color: colors.textTertiary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: tokens.text.labelSmall
+                      .withWeight(500)
+                      .copyWith(color: colors.textTertiary),
                 ),
               ],
             ],
@@ -71,12 +70,13 @@ class SectionHeader extends StatelessWidget {
                   children: [
                     Text(
                       seeAllLabel,
-                      style: tokens.text.caption.copyWith(
-                        color: states.highlighted
-                            ? colors.textPrimary
-                            : colors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: tokens.text.caption
+                          .withWeight(700)
+                          .copyWith(
+                            color: states.highlighted
+                                ? colors.textPrimary
+                                : colors.textSecondary,
+                          ),
                     ),
                     SizedBox(width: tokens.spacing.s4),
                     AppIcon(

@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Linux and Windows. The Phase 2 plan is approved. **Steps 1–7 are done (schema v2; credentials and sources; the Xtream client; M3U and `get.php`; the sync engine; onboarding; Settings → Sources, the categories manager and the top bar's switcher, sync line and expiry banner). Steps 6 and 7 are waiting for your review and your run against your real provider.** Step 8 (the phase exit: the large-profile integration test, profile-mode measurements, docs) is next.
+Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met** (sync budget, quirk fixtures, onboarding against the fake provider and your real one), waiting for your review and for CI to go green on your push. ADR-009 is Accepted. CI was red on the pushed step 6 commit (a stale generated hash) and is fixed by step 7. Phase 3 (live TV and playback) is next.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -75,16 +75,18 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 
 - 2026-09-19: **The real-provider run, as a test:** `integration_test/real_provider_test.dart` walks step 7's keyboard-only flow against a real Xtream panel from a login file outside the repository (`~/.config/iptv-player-dev/real_provider.json`, created empty, mode 600); skipped without it, so CI is unaffected. Report and masked log in `build/real_provider_run/`. Passed against the fake panel's `default` and `large` profiles (large: Cancel taken, first sync 8.7 s, Refresh 6.6 s). Keyboard helpers shared in `integration_test/support/keyboard.dart`; `sources_keyboard_test` still green. The release bundle (30 MB) starts on an empty data folder with a clean log; it links the system `libmpv.so.1`, so it runs on Ubuntu 22.04-family systems only until the Phase 10 AppImage. ADR-009, docs/06.
 
+- 2026-09-19: **Phase 2 step 8, the phase exit.** **Your real provider** (the keyboard-only walk as `integration_test/real_provider_test.dart`): sign-in, Cancel, a full sync of 12,610 channels / 20,072 movies / 8,262 series in 8.7–9.4 s with nothing dropped, Pick categories, Refresh (7.8 s), Account details, Edit, a category hidden/moved/renamed, Remove — all passed after two fixes it forced: **a wrong password came back "Not found"** (this panel answers a refused sign-in with an empty 404; now "Sign-in refused", with a fake-provider quirk and tests), and **Finish sat 146 Tabs away** on Pick categories (the list is now one Tab stop, arrows inside: `FocusPane(tabStop: true)`). **`integration_test/large_sync_test.dart`**: onboarding against the `large` profile in its own process, the sync asserted under 60 s, in CI. **Profile-mode measurement** (`flutter drive --profile`, Wayland): large sync 7.7 s, 493 frames, build worst 7.1 ms (none over 16 ms), UI isolate's longest pause 29 ms (budget 32). All 26 `copyWith(fontWeight:)` in `lib/design` → `withWeight()`, 7 goldens re-recorded. CI's red step 6 run traced to a stale riverpod hash, fixed by step 7. docs/02 (the real panel), docs/05 (one-Tab-stop lists), docs/06, ADR-009 Accepted. 715 app tests (3 benchmarks skipped), 88 fake-provider tests, 4 integration tests (the real-provider one skips without its login file)
+
 ## In progress
-- **Phase 2 steps 6 and 7 are waiting for your review, and for your run against your real provider** (commits "Sync gaps: …", "Phase 2 step 6: …" and "Phase 2 step 7: …")
+- **Phase 2 is waiting for your review** (commits "Real-provider keyboard walk…" and "Phase 2 step 8: …"), and for CI on your push
 
 ## Next
-1. **You:** fill in `~/.config/iptv-player-dev/real_provider.json` (server, username, password) so the real-provider test can run, and/or run the app yourself (`flutter run -d linux`) and walk the same flow by hand. Tell me what broke; paste nothing with a password in it
-2. Step 8: the `large`-profile integration test with the sync duration budget, profile-mode frame measurements (the 31 ms gap), docs/02 corrections, ADR-009 to Accepted, the phase exit
-4. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
+1. **You:** review and push; CI should go green (the step 6 failure is fixed in step 7). Optionally walk the app by hand with `flutter run -d linux`
+2. Phase 3 plan (live TV and playback): write it and stop for approval. Your provider allows **one connection**, and it was in use by another device during the run: playback must say so plainly and never fight another device for it (hard rule 7)
+3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009
-**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (In progress)** is written straight into docs/decisions.md as each step lands, rather than collected here first, so there is one source of truth all the way through; it moves to Accepted at the phase exit.
+**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19)** was written straight into docs/decisions.md as each step landed, so there is one source of truth.
 
 ## Open questions
 - `bootstrap()` takes no overrides and resolves `AppPaths` itself, so an integration test can't drive the real entry point without writing a log and a database into the real app-support directory and taking over `FlutterError.onError`. The step 7 smoke test pumps `IptvPlayerApp` with bootstrap's non-disk overrides instead. A deeper launch test later needs an injectable paths/overrides seam in `bootstrap()`
@@ -94,7 +96,7 @@ Phase 2 — Sources, onboarding, sync. Phase 1 is complete and CI is green on Li
 - App name and icon (placeholder: "IPTV Player", Dart package `iptv_player`)
 
 ## Known issues
-- Older components set a text weight with `copyWith(fontWeight:)` alone, which leaves the token's variable-font `wght` axis in place, so the weight doesn't change at all (measured: a 13 px caption set to w700 that way lays out exactly as wide as the w500 token; `withWeight(700)` is 3 % wider). Affected: section header, download button, poster card, search field, segmented control, menu rows. New code uses `TextStyle.withWeight()`; the old calls get fixed with the phase's docs pass, re-recording any golden that changes
+- The Settings → Categories manager's list is still one Tab stop per row plus each Rename button; with a big provider, the controls above it are a long Shift+Tab away (Home/End or a one-Tab-stop list would fix it; docs/05)
 - The onboarding backdrop's radial glow shows faint banding rings on this laptop's display
 - media_kit #1404: every unpatched build falls back to S/W rendering on this laptop (Wayland and X11), NVIDIA included. Upstream has no fix yet; we carry the patch in `third_party/media_kit_video`
 - Zero-copy VA-API fails under XWayland (`GDK_BACKEND=x11` inside a Wayland session): Ubuntu 22.04's libva-x11 only supports DRI2 and XWayland only DRI3, so mpv uses `vaapi-copy`: dropped frames at 50 fps, audio underruns, VOD first frame about 5.5 s, zap p95 3.3 s. Native Wayland and a real Xorg session are both fine

@@ -106,10 +106,11 @@ class _Segment<T> extends StatelessWidget {
             ],
             Text(
               option.label,
-              style: tokens.text.labelSmall.copyWith(
-                color: selected ? colors.textPrimary : colors.textSecondary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: tokens.text.labelSmall
+                  .withWeight(700)
+                  .copyWith(
+                    color: selected ? colors.textPrimary : colors.textSecondary,
+                  ),
             ),
             if (option.count != null) ...[
               SizedBox(width: tokens.spacing.s4 + 2),

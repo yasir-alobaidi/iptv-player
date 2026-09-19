@@ -100,11 +100,9 @@ class _Monogram extends StatelessWidget {
       child: Center(
         child: Text(
           ChannelLogo.monogramOf(name),
-          style: tokens.text.caption.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: size * 0.33,
-          ),
+          style: tokens.text.caption
+              .withWeight(800)
+              .copyWith(color: Colors.white, fontSize: size * 0.33),
         ),
       ),
     );

@@ -83,10 +83,9 @@ class ReconnectingPill extends StatelessWidget {
           SizedBox(width: tokens.spacing.s8),
           Text(
             attempt == null ? message : '$message · try $attempt',
-            style: tokens.text.caption.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+            style: tokens.text.caption
+                .withWeight(600)
+                .copyWith(color: colors.textPrimary),
           ),
         ],
       ),

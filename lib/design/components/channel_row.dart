@@ -71,10 +71,13 @@ class ChannelRow extends StatelessWidget {
                   width: 32,
                   child: Text(
                     '$number',
-                    style: tokens.text.caption.copyWith(
-                      color: selected ? colors.accentBase : colors.textTertiary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: tokens.text.caption
+                        .withWeight(700)
+                        .copyWith(
+                          color: selected
+                              ? colors.accentBase
+                              : colors.textTertiary,
+                        ),
                   ),
                 ),
                 SizedBox(width: tokens.spacing.s4),

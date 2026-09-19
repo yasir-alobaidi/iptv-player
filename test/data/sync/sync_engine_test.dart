@@ -115,7 +115,11 @@ Future<Uri> _panelProxy(Uri upstream, Map<String, Object> answers) async {
     final response = request.response;
     switch (answers[request.uri.queryParameters['action']]) {
       case final int status:
-        response.statusCode = status;
+        // An error page, as a web server sends: an empty 404 would be a
+        // panel refusing the sign-in (XtreamClient).
+        response
+          ..statusCode = status
+          ..write('<html><body><h1>$status</h1></body></html>');
       case final String body:
         response
           ..headers.contentType = ContentType.json

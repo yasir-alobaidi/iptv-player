@@ -72,10 +72,17 @@ class FocusPane extends StatefulWidget {
     this.controller,
     this.debugLabel,
     this.policy,
+    this.tabStop = false,
     super.key,
   });
 
   final Widget child;
+
+  /// Makes the pane one Tab stop, for lists that can be hundreds of items
+  /// long (a provider's categories): arrows move inside it, Tab leaves it
+  /// for the nearest control below, Shift+Tab for the nearest above
+  /// (docs/05, "each pane is a group").
+  final bool tabStop;
 
   /// Supply one to move focus back into this pane later (step 4's
   /// Left/Right between panes).
@@ -132,15 +139,62 @@ class _FocusPaneState extends State<FocusPane> {
     if (focused.ancestors.contains(_marker)) controller._remember(focused);
   }
 
+  /// Focuses the nearest control outside the pane, below it ([forward])
+  /// or above it, in reading order; past the last one, wraps around as
+  /// Tab does. False when the screen has nothing else to focus.
+  bool _leave({required bool forward}) {
+    final scope = _marker.nearestScope;
+    if (scope == null) return false;
+    final pane = _marker.rect;
+    final outside = [
+      for (final node in scope.traversalDescendants)
+        if (node.canRequestFocus &&
+            node.context != null &&
+            !node.ancestors.contains(_marker))
+          node,
+    ]..sort(_readingOrder);
+    if (outside.isEmpty) return false;
+    (forward
+            ? outside.where((n) => n.rect.top >= pane.bottom - 1).firstOrNull ??
+                  outside.first
+            : outside.where((n) => n.rect.bottom <= pane.top + 1).lastOrNull ??
+                  outside.last)
+        .requestFocus();
+    return true;
+  }
+
+  /// Top to bottom, then left to right among controls on one line.
+  static int _readingOrder(FocusNode a, FocusNode b) {
+    final dy = a.rect.center.dy - b.rect.center.dy;
+    if (dy.abs() > a.rect.height / 2 && dy.abs() > b.rect.height / 2) {
+      return dy.sign.toInt();
+    }
+    return a.rect.left.compareTo(b.rect.left);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Widget pane = Focus(
+      focusNode: _marker,
+      debugLabel: widget.debugLabel,
+      child: widget.child,
+    );
+    if (widget.tabStop) {
+      pane = Actions(
+        actions: {
+          NextFocusIntent: CallbackAction<NextFocusIntent>(
+            onInvoke: (_) => _leave(forward: true),
+          ),
+          PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(
+            onInvoke: (_) => _leave(forward: false),
+          ),
+        },
+        child: pane,
+      );
+    }
     return FocusTraversalGroup(
       policy: widget.policy ?? ReadingOrderTraversalPolicy(),
-      child: Focus(
-        focusNode: _marker,
-        debugLabel: widget.debugLabel,
-        child: widget.child,
-      ),
+      child: pane,
     );
   }
 }

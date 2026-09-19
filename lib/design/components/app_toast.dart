@@ -66,10 +66,9 @@ class AppToast extends StatelessWidget {
                 onTap: onAction,
                 child: Text(
                   actionLabel!,
-                  style: tokens.text.caption.copyWith(
-                    color: colors.accentBase,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: tokens.text.caption
+                      .withWeight(700)
+                      .copyWith(color: colors.accentBase),
                 ),
               ),
             ),

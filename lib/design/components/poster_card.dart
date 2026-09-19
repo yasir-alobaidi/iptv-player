@@ -95,10 +95,9 @@ class PosterCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: tokens.text.label.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: tokens.text.label
+                  .withWeight(700)
+                  .copyWith(color: colors.textPrimary),
             ),
             if (meta != null || rating != null) ...[
               SizedBox(height: tokens.spacing.s4 - 2),
@@ -110,10 +109,9 @@ class PosterCard extends StatelessWidget {
                         rating == null ? meta! : '${meta!} ·',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: tokens.text.labelSmall.copyWith(
-                          color: colors.textTertiary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: tokens.text.labelSmall
+                            .withWeight(500)
+                            .copyWith(color: colors.textTertiary),
                       ),
                     ),
                   if (rating != null) ...[
@@ -126,10 +124,9 @@ class PosterCard extends StatelessWidget {
                     SizedBox(width: tokens.spacing.s4 - 1),
                     Text(
                       rating!.toStringAsFixed(1),
-                      style: tokens.text.labelSmall.copyWith(
-                        color: colors.textTertiary,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: tokens.text.labelSmall
+                          .withWeight(500)
+                          .copyWith(color: colors.textTertiary),
                     ),
                   ],
                 ],
@@ -281,10 +278,9 @@ class LandscapeCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: tokens.text.label.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: tokens.text.label
+                  .withWeight(700)
+                  .copyWith(color: colors.textPrimary),
             ),
             if (subtitle != null) ...[
               SizedBox(height: tokens.spacing.s4 - 2),
@@ -292,10 +288,9 @@ class LandscapeCard extends StatelessWidget {
                 subtitle!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: tokens.text.labelSmall.copyWith(
-                  color: colors.textTertiary,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: tokens.text.labelSmall
+                    .withWeight(500)
+                    .copyWith(color: colors.textTertiary),
               ),
             ],
           ],

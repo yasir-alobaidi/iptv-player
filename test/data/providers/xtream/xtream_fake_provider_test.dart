@@ -82,12 +82,15 @@ void main() {
     },
   );
 
-  test('wrong credentials are an auth failure', () async {
-    final server = await _start(fakeProfiles['default']!);
+  test('wrong credentials are an auth failure, as auth 0 or as an empty '
+      '404', () async {
+    for (final profile in ['default', 'quirky']) {
+      final server = await _start(fakeProfiles[profile]!);
 
-    final result = await _client(server, password: 'wrong').account();
+      final result = await _client(server, password: 'wrong').account();
 
-    expect(result.failureOrNull, isA<AuthFailure>());
+      expect(result.failureOrNull, isA<AuthFailure>(), reason: profile);
+    }
   });
 
   test('the quirky profile: every quirk at once, nothing lost, nothing '
