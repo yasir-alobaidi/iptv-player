@@ -237,6 +237,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         return KeyEventResult.handled;
       }
     }
+    // The channel panel moves with the arrows and plays with Enter.
+    if (_panel &&
+        (key == LogicalKeyboardKey.arrowUp ||
+            key == LogicalKeyboardKey.arrowDown ||
+            key == LogicalKeyboardKey.pageUp ||
+            key == LogicalKeyboardKey.pageDown ||
+            key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.space)) {
+      return KeyEventResult.ignored;
+    }
     if (event is KeyRepeatEvent &&
         key != LogicalKeyboardKey.arrowUp &&
         key != LogicalKeyboardKey.arrowDown) {

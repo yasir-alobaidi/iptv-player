@@ -56,11 +56,12 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
             libsecret-1-dev libjsoncpp-dev \
             libmpv-dev libmimalloc-dev \
-            xvfb
+            xvfb ffmpeg
         # libsecret/jsoncpp: flutter_secure_storage. libmpv/mimalloc:
-        # media_kit. xvfb: the integration test. No VA-API drivers, no
-        # avahi and no protoc — CI builds and tests, it does not play or
-        # cast (docs/setup.md).
+        # media_kit. xvfb: the integration tests. ffmpeg: the few media
+        # samples the player tests need, and the fake provider's streams.
+        # No VA-API drivers, no avahi and no protoc — CI plays with no
+        # picture and does not cast (docs/setup.md, ADR-010).
 
       - uses: subosito/flutter-action@v2
         with:
@@ -107,10 +108,21 @@ jobs:
         # The tests that need ffmpeg and the generated media samples skip
         # themselves with a reason: neither is committed.
 
+      - name: Media samples for the player tests
+        if: runner.os == 'Linux'
+        # The fault suite and the engine test play these through the fake
+        # provider; 30 s each is plenty for a loop (ADR-010, step 8).
+        run: |
+          FFMPEG=/usr/bin/ffmpeg LIVE_SECONDS=30 tools/media_samples/generate.sh \
+            h264_1080p50_aac h264_1080p25_ac3 hevc_1080p50_aac
+
       - name: Integration tests under xvfb
         if: runner.os == 'Linux'
         env:
           GDK_BACKEND: x11
+          # No GPU on the runner: mpv decodes and plays with no picture
+          # (vo=null); the laptop runs the same tests with video.
+          IPTV_PLAYER_VIDEO: '0'
         # One file per run: on Linux desktop the second app of a
         # multi-file run never starts ("Unable to start the app on the
         # device"), whichever file it is.

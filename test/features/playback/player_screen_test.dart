@@ -138,6 +138,10 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await _settle(tester);
+    // The arrow moved in the panel; it didn't zap.
+    expect(find.byType(ChannelBanner), findsNothing);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(live.rig.engine.opened, hasLength(1));
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
     expect(find.byType(ChannelPanel), findsNothing);
