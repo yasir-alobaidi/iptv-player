@@ -13,6 +13,7 @@ class ChannelRow extends StatelessWidget {
     this.number,
     this.image,
     this.nowTitle,
+    this.guideKnown = true,
     this.progress,
     this.badges = const [],
     this.isFavorite = false,
@@ -31,6 +32,10 @@ class ChannelRow extends StatelessWidget {
 
   /// The programme on now; null shows "No guide data".
   final String? nowTitle;
+
+  /// False while nothing was looked up for this channel yet: the second
+  /// line stays empty rather than claiming there is no guide.
+  final bool guideKnown;
 
   /// How far through the current programme, 0..1.
   final double? progress;
@@ -106,34 +111,36 @@ class ChannelRow extends StatelessWidget {
                         ],
                       ],
                     ),
-                    SizedBox(height: tokens.spacing.s4 - 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            nowTitle ?? 'No guide data',
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.text.caption.copyWith(
-                              color: nowTitle == null
-                                  ? colors.textTertiary
-                                  : colors.textSecondary,
+                    if (guideKnown || nowTitle != null) ...[
+                      SizedBox(height: tokens.spacing.s4 - 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              nowTitle ?? (guideKnown ? 'No guide data' : ''),
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.text.caption.copyWith(
+                                color: nowTitle == null
+                                    ? colors.textTertiary
+                                    : colors.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
-                        // The canvas puts the programme's progress on
-                        // this line, after the title: a 72 px bar with
-                        // a 10 px gap. It rode the row's bottom edge
-                        // until the step 7 golden showed it striking
-                        // through the title in both densities.
-                        if (progress != null) ...[
-                          SizedBox(width: tokens.spacing.s8 + 2),
-                          SizedBox(
-                            width: 72,
-                            child: ProgressBar(value: progress),
-                          ),
+                          // The canvas puts the programme's progress on
+                          // this line, after the title: a 72 px bar with
+                          // a 10 px gap. It rode the row's bottom edge
+                          // until the step 7 golden showed it striking
+                          // through the title in both densities.
+                          if (progress != null) ...[
+                            SizedBox(width: tokens.spacing.s8 + 2),
+                            SizedBox(
+                              width: 72,
+                              child: ProgressBar(value: progress),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),

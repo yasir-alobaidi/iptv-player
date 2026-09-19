@@ -1,4 +1,5 @@
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -41,4 +42,20 @@ Stream<PlaybackState> playbackState(Ref ref) async* {
   final coordinator = ref.watch(playbackCoordinatorProvider);
   yield coordinator.state;
   yield* coordinator.states;
+}
+
+/// The picture's size while something plays; null between streams.
+@Riverpod(keepAlive: true)
+Stream<(int, int)?> videoSize(Ref ref) async* {
+  yield null;
+  yield* ref
+      .watch(playerEngineProvider)
+      .events
+      .where((e) => e is PlayerOpening || e is PlayerVideoChanged)
+      .map(
+        (e) => switch (e) {
+          PlayerVideoChanged(:final width, :final height) => (width, height),
+          _ => null,
+        },
+      );
 }

@@ -86,3 +86,29 @@ const _months = [
   'Nov',
   'Dec',
 ];
+
+/// `8:05 PM`, in local time (the 12/24 h setting arrives in Phase 9).
+String formatClock(DateTime at) {
+  final local = at.toLocal();
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$hour:$minute ${local.hour < 12 ? 'AM' : 'PM'}';
+}
+
+/// `8:00 – 10:00 PM`, or `11:30 AM – 1:00 PM` when the halves differ.
+String formatTimeRange(DateTime start, DateTime end) {
+  final a = formatClock(start);
+  final b = formatClock(end);
+  final sameHalf = a.substring(a.length - 2) == b.substring(b.length - 2);
+  return sameHalf ? '${a.substring(0, a.length - 3)} – $b' : '$a – $b';
+}
+
+/// `38 min left`, `1 h 24 min left`.
+String formatTimeLeft(Duration left) {
+  final minutes = left.inMinutes < 1 ? 1 : left.inMinutes;
+  if (minutes < 60) return '$minutes min left';
+  final rest = minutes % 60;
+  return rest == 0
+      ? '${minutes ~/ 60} h left'
+      : '${minutes ~/ 60} h $rest min left';
+}

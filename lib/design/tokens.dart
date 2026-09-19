@@ -116,6 +116,12 @@ class AppColors {
   /// Overlay over video (docs/05: black at 60 %).
   Color get scrim => const Color(0xFF000000).withValues(alpha: 0.6);
 
+  /// Behind and around the picture (letterbox).
+  Color get video => const Color(0xFF000000);
+
+  /// Badges and small controls laid over video (canvas: bg at 70 %).
+  Color get videoChip => bg.withValues(alpha: 0.7);
+
   AppColors copyWith({AppAccent? accent}) =>
       AppColors(accent: accent ?? this.accent);
 }

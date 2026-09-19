@@ -155,3 +155,47 @@ final class PlaybackStateProvider
 }
 
 String _$playbackStateHash() => r'e2580c6462b0085057e71cd841b62a8419d25f65';
+
+/// The picture's size while something plays; null between streams.
+
+@ProviderFor(videoSize)
+final videoSizeProvider = VideoSizeProvider._();
+
+/// The picture's size while something plays; null between streams.
+
+final class VideoSizeProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<(int, int)?>,
+          (int, int)?,
+          Stream<(int, int)?>
+        >
+    with $FutureModifier<(int, int)?>, $StreamProvider<(int, int)?> {
+  /// The picture's size while something plays; null between streams.
+  VideoSizeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'videoSizeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoSizeHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<(int, int)?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<(int, int)?> create(Ref ref) {
+    return videoSize(ref);
+  }
+}
+
+String _$videoSizeHash() => r'f9ae8541f6540798fe3044f713417ba65fdded84';

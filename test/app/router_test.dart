@@ -53,13 +53,13 @@ void main() {
       final app = await pumpApp(tester, initialLocation: destination.path);
 
       expect(app.location, destination.path);
-      // Settings is the first destination with a real screen (Phase 2).
+      // Settings (Phase 2) and Live TV (Phase 3) are real screens.
       expect(
-        find.byType(
-          destination == AppDestination.settings
-              ? SettingsScreen
-              : PlaceholderScreen,
-        ),
+        find.byType(switch (destination) {
+          AppDestination.settings => SettingsScreen,
+          AppDestination.liveTv => LiveTvScreen,
+          _ => PlaceholderScreen,
+        }),
         findsOneWidget,
         reason: '${destination.label} has no screen',
       );
