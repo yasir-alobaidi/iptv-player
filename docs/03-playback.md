@@ -35,6 +35,9 @@ Show `hwdec-current` in the stream info overlay. Confirmed on Linux in Phase 0 (
 ### Deinterlacing
 Setting: Auto (default) / On / Off. libmpv 0.34.1's `deinterlace` is only yes/no, so Auto reads `video-frame-info/interlaced` (it reports `yes` for 1080i50 and 576i25) and sets `deinterlace` to match.
 
+### As built (Phase 3 step 1)
+`PlayerEngine` (`lib/core/player/`) is the seam; `MediaKitPlayerEngine` sets the base options once and `mpvOptionsFor(request)` before each open. First frame: `playback-time` set and `video-params/w` known (or no video track). A failure: mpv idle before the first frame. media_kit's `error` stream is built from log lines (decoder hiccups included), so it is only ever the failure's detail. Our own property calls pass `waitForInitialization: false`: media_kit otherwise waits for the video controller's first texture, which needs frames drawn. Headless (`vo=null`) needs `vid=auto` set by hand.
+
 ## Playback coordinator
 - Single owner of what's playing where (local player, cast relay) and of each source's connections
 - Enforces connection policy: with `max_connections = 1`, stop the current stream on that source and wait for it to close before opening another

@@ -13,9 +13,13 @@ import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
+import 'package:iptv_player/core/player/player_engine.dart';
+import 'package:iptv_player/core/player/player_providers.dart';
+import 'package:iptv_player/core/player/unavailable_player_engine.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
 import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
@@ -72,8 +76,11 @@ Future<void> bootstrap() async {
     );
   }
 
+  final player = await _createPlayer(log, secrets);
+
   final container = ProviderContainer(
     overrides: [
+      playerEngineProvider.overrideWithValue(player),
       appLogProvider.overrideWithValue(log),
       secretRegistryProvider.overrideWithValue(secrets),
       errorReporterProvider.overrideWithValue(errors),
@@ -112,6 +119,22 @@ void _syncAfterLaunch(ProviderContainer container) {
 }
 
 const _launchSyncDelay = Duration(seconds: 2);
+
+/// The one player (docs/03). A libmpv that won't start leaves the app
+/// running without playback rather than not running (hard rule 1).
+Future<PlayerEngine> _createPlayer(AppLog log, SecretRegistry secrets) async {
+  try {
+    return await MediaKitPlayerEngine.create(log: log, secrets: secrets);
+  } on Object catch (error, stackTrace) {
+    log.error(
+      'bootstrap',
+      'The video player could not start',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return UnavailablePlayerEngine('$error');
+  }
+}
 
 /// Opens the database file, or falls back to a temporary in-memory one so
 /// a broken file can't stop the app from starting (hard rule 1). The file

@@ -37,6 +37,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
+import 'support/fake_panel.dart';
 import 'support/keyboard.dart';
 
 /// docs/06: sync 50k channels + 30k movies (fake provider) ≤ 60 s.
@@ -55,7 +56,9 @@ void main() {
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
 
-    final panel = (await tester.runAsync(_Panel.start))!;
+    final panel = (await tester.runAsync(
+      () => FakePanel.start(profile: 'large'),
+    ))!;
     addTearDown(() => tester.runAsync(panel.stop));
     final directory = (await tester.runAsync(
       () => Directory.systemTemp.createTemp('iptv_large'),
@@ -177,75 +180,6 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   }, timeout: const Timeout(Duration(minutes: 5)));
-}
-
-/// The fake provider's `large` profile in its own `dart` process.
-final class _Panel {
-  new(this._process, this.port, this._samples);
-
-  static Future<_Panel> start() async {
-    final port = await _freePort();
-    // The API needs no media samples, and CI has none: an empty folder
-    // satisfies the server's start-up check.
-    final samples = await Directory.systemTemp.createTemp('iptv_samples');
-    final process = await Process.start('dart', [
-      'run',
-      'tools/fake_provider/bin/server.dart',
-      '--profile',
-      'large',
-      '--port',
-      '$port',
-      '--samples',
-      samples.path,
-      '--run-dir',
-      samples.path,
-    ]);
-    unawaited(process.stdout.drain<void>());
-    final errors = StringBuffer();
-    process.stderr
-        .transform(const SystemEncoding().decoder)
-        .listen(errors.write);
-    final panel = _Panel(process, port, samples);
-    final client = HttpClient();
-    try {
-      for (var attempt = 0; attempt < 240; attempt++) {
-        try {
-          final request = await client.get('127.0.0.1', port, '/');
-          await (await request.close()).drain<void>();
-          return panel;
-        } on SocketException {
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
-      }
-    } finally {
-      client.close(force: true);
-    }
-    await panel.stop();
-    throw StateError('the fake provider did not start: $errors');
-  }
-
-  final Process _process;
-  final int port;
-  final Directory _samples;
-
-  Future<void> stop() async {
-    _process.kill();
-    await _process.exitCode.timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        _process.kill(ProcessSignal.sigkill);
-        return -1;
-      },
-    );
-    await _samples.delete(recursive: true);
-  }
-}
-
-Future<int> _freePort() async {
-  final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-  final port = socket.port;
-  await socket.close();
-  return port;
 }
 
 /// Frame build and raster times over the sync, and the UI isolate's

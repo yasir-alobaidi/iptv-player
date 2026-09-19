@@ -1,6 +1,6 @@
 # Phase 3 — Live TV, the player, the watchdog: plan
 
-**Status: draft 2026-09-19, waiting for your approval** (the six decisions and the four overlay sketches below).
+**Status: approved 2026-09-19** — the recommendation in all six decisions, and the four overlay sketches. For decision 1: before any stream from your provider I ask in a pop-up and wait for your yes (you free the connection first).
 
 ## Context
 Phase 2 left the catalogue in the database: sources, credentials in the keyring, a sync engine, and the categories the user picked (ADR-009). Nothing plays yet. Phase 3 makes the app an IPTV player: the Live TV screen, a full-screen player, and the watchdog that keeps a live stream alive through drops, stalls and provider faults.
