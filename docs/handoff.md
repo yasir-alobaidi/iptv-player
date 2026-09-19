@@ -35,7 +35,7 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/08-phases-and-prompts.md (Phase 3) and ADR-009 in docs/decisions.md first.
 Phase 2 is reviewed and pushed; CI is <green | red: …>.
-Write the Phase 3 plan and stop for my approval.
+Phase 3 plan: <approved as written | changes: …>. Start step 1.
 ```
 
 ## Where things stand
@@ -62,7 +62,7 @@ Write the Phase 3 plan and stop for my approval.
   ADR-009 Accepted.
 
 ## Instructions for the next session
-1. **Phase 3 is next:** write its plan (docs/08) and stop for approval.
+1. **Phase 3 plan is written** (`docs/plans/phase-3-live-tv-and-playback.md`), waiting for approval; start step 1 once approved, recording the answers in the plan's status line and in ADR-010.
    From the real panel: `max_connections` 1 and already in use; the
    account's `allowed_output_formats` is `m3u8, ts`; the live format
    defaults to TS.

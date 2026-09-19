@@ -83,7 +83,7 @@ Phase 2 — Sources, onboarding, sync: **all 8 steps done; the phase exit is met
 
 ## Next
 1. **You:** review and push; CI should go green (the step 6 failure is fixed in step 7). Optionally walk the app by hand with `flutter run -d linux`
-2. Phase 3 plan (live TV and playback): write it and stop for approval. Your provider allows **one connection**, and it was in use by another device during the run: playback must say so plainly and never fight another device for it (hard rule 7)
+2. **Phase 3 plan written** (`docs/plans/phase-3-live-tv-and-playback.md`), waiting for your approval: six decisions (playing from your one-connection provider, now/next from `get_short_epg`, schema v4, real libmpv in CI, Settings → Playback, where the 1-hour soak runs) and four overlay sketches
 3. The Windows playback run when your Windows PC is available (pub media_kit; the patch is Linux-only)
 
 ## ADR-008 and ADR-009
