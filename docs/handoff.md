@@ -3,21 +3,32 @@
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Run the app against your real provider, and review steps 6 and 7.** One
-new local commit (step 7) sits on top of what you pushed.
+**Run the app against your real provider, and review steps 6 and 7.** Two
+new local commits (step 7, and the real-provider test) sit on top of what
+you pushed.
+
+The quickest way: put your login in the file I created (outside the
+repository, only you can read it) and let the test walk the app:
 
 ```
-flutter run -d linux
+nano ~/.config/iptv-player-dev/real_provider.json   # server, username, password
+xvfb-run -a flutter test integration_test/real_provider_test.dart -d linux
+cat build/real_provider_run/report.md
 ```
 
-Your database has no sources yet, so the app opens on Welcome. With the
-keyboard only (Tab, Shift+Tab, arrows, Enter, Space, Esc): add your
-provider, try a wrong password once, Cancel during a sync, then finish
-the sync and pick your categories. Then Ctrl+, → Sources: Refresh, Edit
-(rename it; leave the password empty), ⋯ → Account details; and
-Settings → Categories: hide one, Alt+↑ to move one, rename one. Tell me
-what broke or felt wrong. If you paste an error or a log line, check it
-has no password or token in it first; the app's own log masks them.
+The report has the timings, counts and anything that stopped the walk,
+with your username and password masked. The test uses a throwaway
+database, so your installed app stays empty.
+
+Then walk it yourself with `flutter run -d linux` (the app opens on
+Welcome). With the keyboard only (Tab, Shift+Tab, arrows, Enter, Space,
+Esc): add your provider, try a wrong password once, Cancel during a
+sync, then finish the sync and pick your categories. Then Ctrl+, →
+Sources: Refresh, Edit (rename it; leave the password empty), ⋯ →
+Account details; and Settings → Categories: hide one, Alt+↑ to move
+one, rename one. Tell me what broke or felt wrong. If you paste an error
+or a log line, check it has no password or token in it first; the app's
+own log masks them.
 
 What I decided without asking (docs/05 "As built" has the full list; say
 if you want any changed):
@@ -56,6 +67,9 @@ Fix what broke, then do Phase 2 step 8 (the phase exit) and stop for my review.
 - **Not done by me:** the real-provider run (yours, per the plan).
 
 ## Done this session (2026-09-19)
+- `integration_test/real_provider_test.dart`: the keyboard walk against
+  a real panel from `~/.config/iptv-player-dev/real_provider.json`
+  (skipped without it); helpers moved to `integration_test/support/keyboard.dart`.
 - Step 7, and four keyboard bugs the new end-to-end test found (see
   ADR-009 "step 7"). CI's integration step now runs one file per
   `flutter test`.
