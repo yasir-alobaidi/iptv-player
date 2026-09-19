@@ -188,6 +188,15 @@ class StreamRelay {
         streamId >= liveIdBase + _state.profile.liveCount) {
       return Response.notFound('no live stream $id\n');
     }
+    // Before any work, like a panel at its connection limit (an HLS session
+    // already running for this channel is shared, so it is checked there).
+    // activeStreams is `user_info.active_cons`: incremented once a stream
+    // starts, decremented in [_reap] whatever ends it.
+    final limit = faults.maxConnections ?? _state.profile.maxConnections;
+    if (extension == 'ts' && _state.activeStreams >= limit) {
+      return Response.forbidden('$maxConnectionsBody\n');
+    }
+
     final channel = _state.catalog.channelById(streamId);
     if (channel == null) return Response.notFound('no live stream $id\n');
 
@@ -201,16 +210,8 @@ class StreamRelay {
       );
     }
 
-    final limit = faults.maxConnections ?? _state.profile.maxConnections;
     if (extension == 'm3u8') {
       return await _servePlaylist(streamId, sample, limit);
-    }
-
-    // Before any work, like a panel at its connection limit. activeStreams is
-    // `user_info.active_cons`, so it is incremented here and decremented in
-    // [_reap] whatever ends the request.
-    if (_state.activeStreams >= limit) {
-      return Response.forbidden('$maxConnectionsBody\n');
     }
 
     _state.activeStreams++;
