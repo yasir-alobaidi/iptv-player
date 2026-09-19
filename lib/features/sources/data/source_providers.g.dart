@@ -497,3 +497,140 @@ final class CategoryListFamily extends $Family
   @override
   String toString() => r'categoryListProvider';
 }
+
+@ProviderFor(sourceOverviewRepository)
+final sourceOverviewRepositoryProvider = SourceOverviewRepositoryProvider._();
+
+final class SourceOverviewRepositoryProvider
+    extends
+        $FunctionalProvider<
+          SourceOverviewRepository,
+          SourceOverviewRepository,
+          SourceOverviewRepository
+        >
+    with $Provider<SourceOverviewRepository> {
+  SourceOverviewRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sourceOverviewRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sourceOverviewRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<SourceOverviewRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SourceOverviewRepository create(Ref ref) {
+    return sourceOverviewRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SourceOverviewRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SourceOverviewRepository>(value),
+    );
+  }
+}
+
+String _$sourceOverviewRepositoryHash() =>
+    r'd5669b89752cde7b4d01089a0ff28ff07653ba73';
+
+/// A source's account, counts and latest sync, for Settings → Sources and
+/// the top bar; null once the source is gone.
+
+@ProviderFor(sourceOverview)
+final sourceOverviewProvider = SourceOverviewFamily._();
+
+/// A source's account, counts and latest sync, for Settings → Sources and
+/// the top bar; null once the source is gone.
+
+final class SourceOverviewProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SourceOverview?>,
+          SourceOverview?,
+          Stream<SourceOverview?>
+        >
+    with $FutureModifier<SourceOverview?>, $StreamProvider<SourceOverview?> {
+  /// A source's account, counts and latest sync, for Settings → Sources and
+  /// the top bar; null once the source is gone.
+  SourceOverviewProvider._({
+    required SourceOverviewFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'sourceOverviewProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$sourceOverviewHash();
+
+  @override
+  String toString() {
+    return r'sourceOverviewProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<SourceOverview?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<SourceOverview?> create(Ref ref) {
+    final argument = this.argument as String;
+    return sourceOverview(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SourceOverviewProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$sourceOverviewHash() => r'6d3804b35427d61867e07569de877877023899d0';
+
+/// A source's account, counts and latest sync, for Settings → Sources and
+/// the top bar; null once the source is gone.
+
+final class SourceOverviewFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<SourceOverview?>, String> {
+  SourceOverviewFamily._()
+    : super(
+        retry: null,
+        name: r'sourceOverviewProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A source's account, counts and latest sync, for Settings → Sources and
+  /// the top bar; null once the source is gone.
+
+  SourceOverviewProvider call(String sourceId) =>
+      SourceOverviewProvider._(argument: sourceId, from: this);
+
+  @override
+  String toString() => r'sourceOverviewProvider';
+}

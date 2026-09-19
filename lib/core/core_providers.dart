@@ -34,3 +34,8 @@ CredentialStore credentialStore(Ref ref) => throw UnimplementedError(
 @Riverpod(keepAlive: true)
 FormFactor formFactor(Ref ref) =>
     detectFormFactor(platform: defaultTargetPlatform);
+
+/// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
+/// pin it.
+@Riverpod(keepAlive: true)
+DateTime Function() appClock(Ref ref) => DateTime.now;

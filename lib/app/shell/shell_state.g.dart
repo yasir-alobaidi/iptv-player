@@ -50,6 +50,54 @@ final class ShellSourceProvider
 
 String _$shellSourceHash() => r'7b940a828fc9d63eaf504776e1e5bb737706e966';
 
+@ProviderFor(shellSourceChoices)
+final shellSourceChoicesProvider = ShellSourceChoicesProvider._();
+
+final class ShellSourceChoicesProvider
+    extends
+        $FunctionalProvider<
+          ShellSourceChoices?,
+          ShellSourceChoices?,
+          ShellSourceChoices?
+        >
+    with $Provider<ShellSourceChoices?> {
+  ShellSourceChoicesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellSourceChoicesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellSourceChoicesHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellSourceChoices?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ShellSourceChoices? create(Ref ref) {
+    return shellSourceChoices(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellSourceChoices? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellSourceChoices?>(value),
+    );
+  }
+}
+
+String _$shellSourceChoicesHash() =>
+    r'5b75cca7577dfc7aa647cac5470d26eee5594c2f';
+
 @ProviderFor(shellSyncStatus)
 final shellSyncStatusProvider = ShellSyncStatusProvider._();
 
@@ -95,6 +143,47 @@ final class ShellSyncStatusProvider
 }
 
 String _$shellSyncStatusHash() => r'07f28207321a310224c34732501b27859aa517f5';
+
+@ProviderFor(shellNotice)
+final shellNoticeProvider = ShellNoticeProvider._();
+
+final class ShellNoticeProvider
+    extends $FunctionalProvider<ShellNotice?, ShellNotice?, ShellNotice?>
+    with $Provider<ShellNotice?> {
+  ShellNoticeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellNoticeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellNoticeHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellNotice?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShellNotice? create(Ref ref) {
+    return shellNotice(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellNotice? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellNotice?>(value),
+    );
+  }
+}
+
+String _$shellNoticeHash() => r'af143dd577b7c56ffe2a4c7461a8e9e40396a1a0';
 
 @ProviderFor(shellDownloads)
 final shellDownloadsProvider = ShellDownloadsProvider._();

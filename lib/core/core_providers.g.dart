@@ -218,3 +218,58 @@ final class FormFactorProvider
 }
 
 String _$formFactorHash() => r'5d9b1ac5d1b8c35a7984207d800825857f3c0bd5';
+
+/// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
+/// pin it.
+
+@ProviderFor(appClock)
+final appClockProvider = AppClockProvider._();
+
+/// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
+/// pin it.
+
+final class AppClockProvider
+    extends
+        $FunctionalProvider<
+          DateTime Function(),
+          DateTime Function(),
+          DateTime Function()
+        >
+    with $Provider<DateTime Function()> {
+  /// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
+  /// pin it.
+  AppClockProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appClockProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appClockHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime Function()> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DateTime Function() create(Ref ref) {
+    return appClock(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime Function() value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime Function()>(value),
+    );
+  }
+}
+
+String _$appClockHash() => r'3a160822e94c7452db9eb102245e788a74843edf';

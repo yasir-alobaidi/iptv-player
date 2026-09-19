@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
+import 'package:iptv_player/design/components/app_tooltip.dart';
+import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Single-line text input (canvas: 48 px tall, radius 10, surface1 on a
@@ -158,6 +160,9 @@ class _AppTextFieldState extends State<AppTextField> {
                   _FieldAction(
                     icon: AppIcons.close,
                     tooltip: 'Clear',
+                    // Not a Tab stop: Tab goes field to field, and the
+                    // keyboard clears with select-all and Delete.
+                    focusable: false,
                     onPressed: () {
                       _controller.clear();
                       widget.onChanged?.call('');
@@ -190,33 +195,39 @@ class _AppTextFieldState extends State<AppTextField> {
   }
 }
 
+/// A small button inside the field (Clear, Show password). One that is
+/// focusable shows the standard focus ring (hard rule 5).
 class _FieldAction extends StatelessWidget {
   const new({
     required this.icon,
     required this.tooltip,
     required this.onPressed,
     this.active = false,
+    this.focusable = true,
   });
 
   final AppIcons icon;
   final String tooltip;
   final VoidCallback onPressed;
   final bool active;
+  final bool focusable;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Tooltip(
+    return AppTooltip(
       message: tooltip,
-      child: InkResponse(
-        onTap: onPressed,
-        radius: 16,
-        child: Padding(
+      child: FocusableSurface(
+        onPressed: onPressed,
+        canRequestFocus: focusable,
+        borderRadius: tokens.radii.smAll,
+        semanticLabel: tooltip,
+        builder: (context, states) => Padding(
           padding: EdgeInsets.all(tokens.spacing.s4),
           child: AppIcon(
             icon,
             size: 18,
-            color: active
+            color: active || states.highlighted
                 ? tokens.colors.accentBase
                 : tokens.colors.textTertiary,
           ),

@@ -141,6 +141,12 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
     }
   });
 
+  /// Back to the provider's order: clears the user's.
+  Future<void> resetOrder(String sourceId, CatalogueKind kind) =>
+      (update(categories)
+            ..where((t) => t.sourceId.equals(sourceId) & _isKind(kind)))
+          .write(const CategoriesCompanion(sortOrder: Value(null)));
+
   Expression<bool> _isKind(CatalogueKind kind) =>
       categories.kind.equalsValue(kind);
 }

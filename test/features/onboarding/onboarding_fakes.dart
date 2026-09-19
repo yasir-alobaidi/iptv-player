@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -10,6 +11,7 @@ import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/provider_account.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/source_check.dart';
+import 'package:iptv_player/features/sources/domain/source_overview.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 
 /// In-memory stand-ins for the domain interfaces onboarding talks to, so
@@ -19,6 +21,7 @@ final class OnboardingFakes {
   late final sync = FakeSyncService(sources);
   final checker = FakeSourceChecker();
   final categories = FakeCategoryRepository();
+  final overviews = FakeSourceOverviewRepository();
 
   /// What the file dialog returns; null is "closed without choosing".
   String? pickedFile;
@@ -36,6 +39,8 @@ final class OnboardingFakes {
       return pickedFile;
     }),
     onboardingClockProvider.overrideWithValue(() => now),
+    sourceOverviewRepositoryProvider.overrideWithValue(overviews),
+    appClockProvider.overrideWithValue(() => now),
   ];
 }
 
@@ -45,12 +50,29 @@ final class FakeSourceRepository implements SourceRepository {
   final added = <SourceDraft>[];
   final removed = <String>[];
 
+  final updated = <(String, SourceDraft)>[];
+  final reorders = <List<String>>[];
+
   /// Makes the next [add] fail with this.
   AppFailure? addFailure;
+
+  /// Makes every [update], [reorder] fail with this.
+  AppFailure? writeFailure;
+
+  /// What [credentialsFor] answers; by default a stored password.
+  Result<SourceCredentials>? credentials;
   var _next = 0;
 
-  Source seed({String id = 'src-1', SourceType type = SourceType.xtream}) {
-    final source = _source(id, type, 'Northwind TV');
+  Source seed({
+    String id = 'src-1',
+    SourceType type = SourceType.xtream,
+    String name = 'Northwind TV',
+    DateTime? lastSyncedAt,
+  }) {
+    final source = _source(id, type, name).copyWith(
+      username: type == SourceType.xtream ? 'alice' : null,
+      lastSyncedAt: lastSyncedAt,
+    );
     _sources.add(source);
     _changes.add(List.of(_sources));
     return source;
@@ -60,7 +82,11 @@ final class FakeSourceRepository implements SourceRepository {
     id: id,
     type: type,
     name: name,
-    displayUrl: 'http://line.northwind.test',
+    displayUrl: switch (type) {
+      SourceType.xtream => 'http://line.northwind.test',
+      SourceType.m3uUrl => 'http://lists.northwind.test/…',
+      SourceType.m3uFile => '/home/alice/playlists/northwind.m3u',
+    },
     liveFormat: LiveFormat.ts,
     epgOffsetMinutes: 0,
     refreshHours: 12,
@@ -104,16 +130,49 @@ final class FakeSourceRepository implements SourceRepository {
   }
 
   @override
-  Future<Result<Source>> update(String id, SourceDraft draft) =>
-      throw UnimplementedError();
+  Future<Result<Source>> update(String id, SourceDraft draft) async {
+    updated.add((id, draft));
+    if (writeFailure case final failure?) return Err(failure);
+    final index = _sources.indexWhere((s) => s.id == id);
+    if (index < 0) return Err(NotFoundFailure(id));
+    final source = _sources[index].copyWith(
+      name: draft.name,
+      username: draft.username,
+      userAgent: draft.userAgent,
+      liveFormat: draft.liveFormat,
+    );
+    _sources[index] = source;
+    _changes.add(List.of(_sources));
+    return Ok(source);
+  }
 
   @override
-  Future<Result<void>> reorder(List<String> idsInOrder) =>
-      throw UnimplementedError();
+  Future<Result<void>> reorder(List<String> idsInOrder) async {
+    reorders.add(idsInOrder);
+    if (writeFailure case final failure?) return Err(failure);
+    final byId = {for (final s in _sources) s.id: s};
+    _sources
+      ..clear()
+      ..addAll([for (final id in idsInOrder) byId[id]!]);
+    _changes.add(List.of(_sources));
+    return const Ok(null);
+  }
 
   @override
-  Future<Result<SourceCredentials>> credentialsFor(String id) =>
-      throw UnimplementedError();
+  Future<Result<SourceCredentials>> credentialsFor(String id) async {
+    if (credentials case final answer?) return answer;
+    final source = _sources.where((s) => s.id == id).firstOrNull;
+    if (source == null) return Err(NotFoundFailure(id));
+    return Ok(
+      SourceCredentials(
+        url: source.type == SourceType.m3uUrl
+            ? 'http://lists.northwind.test/get.php?username=alice&password=s3cret'
+            : source.displayUrl,
+        username: source.username,
+        password: source.type == SourceType.xtream ? 's3cret' : null,
+      ),
+    );
+  }
 
   @override
   Future<Result<void>> setAdvertisedEpgUrls(String id, List<String> urls) =>
@@ -121,6 +180,29 @@ final class FakeSourceRepository implements SourceRepository {
 
   @override
   Future<Result<int>> pruneOrphanedSecrets() async => const Ok(0);
+}
+
+/// Overviews the test sets per source; an unset one is an empty overview.
+final class FakeSourceOverviewRepository implements SourceOverviewRepository {
+  final _overviews = <String, SourceOverview>{};
+  final _changes = StreamController<String>.broadcast();
+
+  /// Makes [watch] fail with this.
+  AppFailure? failure;
+
+  void set(String id, SourceOverview overview) {
+    _overviews[id] = overview;
+    _changes.add(id);
+  }
+
+  @override
+  Stream<SourceOverview?> watch(String sourceId) async* {
+    if (failure case final failure?) throw failure;
+    yield _overviews[sourceId] ?? const SourceOverview();
+    yield* _changes.stream
+        .where((id) => id == sourceId)
+        .map((id) => _overviews[id]);
+  }
 }
 
 /// A sync service the test drives: [emit] sets a source's status.
@@ -280,6 +362,61 @@ final class FakeCategoryRepository implements CategoryRepository {
     CatalogueKind kind, {
     required bool hidden,
   }) => _change('setAllHidden ${kind.name} $hidden', (_) => true, hidden);
+
+  @override
+  Future<Result<void>> rename(int id, String? name) async {
+    writes.add('rename $id ${name ?? '<provider>'}');
+    if (writeFailure case final failure?) return Err(failure);
+    for (final entry in lists.entries.toList()) {
+      lists[entry.key] = entry.value.copyWith(
+        categories: [
+          for (final c in entry.value.categories)
+            if (c.id != id)
+              c
+            else if (name == null || name.trim().isEmpty)
+              c.copyWith(name: c.providerName ?? c.name, providerName: null)
+            else
+              c.copyWith(
+                name: name.trim(),
+                providerName: c.providerName ?? c.name,
+              ),
+        ],
+      );
+    }
+    _changes.add(null);
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void>> reorder(List<int> idsInOrder) async {
+    writes.add('reorder ${idsInOrder.join(',')}');
+    if (writeFailure case final failure?) return Err(failure);
+    for (final entry in lists.entries.toList()) {
+      final byId = {for (final c in entry.value.categories) c.id: c};
+      if (!idsInOrder.every(byId.containsKey)) continue;
+      lists[entry.key] = entry.value.copyWith(
+        categories: [for (final id in idsInOrder) byId[id]!],
+        customOrder: true,
+      );
+    }
+    _changes.add(null);
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void>> resetOrder(String sourceId, CatalogueKind kind) async {
+    writes.add('resetOrder ${kind.name}');
+    if (writeFailure case final failure?) return Err(failure);
+    final list = lists[kind];
+    if (list != null) {
+      lists[kind] = list.copyWith(
+        categories: [...list.categories]..sort((a, b) => a.id.compareTo(b.id)),
+        customOrder: false,
+      );
+    }
+    _changes.add(null);
+    return const Ok(null);
+  }
 }
 
 /// A catalogue shaped like the canvas: UK and US clusters, a lone tag,
@@ -315,7 +452,11 @@ Map<CatalogueKind, CategoryList> sampleCategories() {
 /// focus node wraps it (a button's label) or sits inside it (a text
 /// field's editable text).
 bool focusIsOn(WidgetTester tester, Finder finder) {
-  final focused = FocusManager.instance.primaryFocus?.context;
+  final primary = FocusManager.instance.primaryFocus;
+  // A scope with the focus is no control: its element is an ancestor of
+  // everything in it, which would make any finder match.
+  if (primary == null || primary is FocusScopeNode) return false;
+  final focused = primary.context;
   if (focused == null) return false;
   final target = tester.element(finder);
   if (target == focused) return true;

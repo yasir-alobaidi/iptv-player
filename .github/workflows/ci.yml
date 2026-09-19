@@ -107,11 +107,17 @@ jobs:
         # The tests that need ffmpeg and the generated media samples skip
         # themselves with a reason: neither is committed.
 
-      - name: Integration test under xvfb
+      - name: Integration tests under xvfb
         if: runner.os == 'Linux'
         env:
           GDK_BACKEND: x11
-        run: xvfb-run -a flutter test integration_test -d linux
+        # One file per run: on Linux desktop the second app of a
+        # multi-file run never starts ("Unable to start the app on the
+        # device"), whichever file it is.
+        run: |
+          for test in integration_test/*_test.dart; do
+            xvfb-run -a flutter test "$test" -d linux
+          done
 
       - name: Build release bundle (Linux)
         if: runner.os == 'Linux'

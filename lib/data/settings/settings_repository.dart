@@ -9,6 +9,7 @@ import 'package:iptv_player/data/db/daos/settings_dao.dart';
 abstract final class SettingsKeys {
   static const windowBounds = 'window.bounds';
   static const railExpanded = 'shell.rail_expanded';
+  static const currentSource = 'shell.current_source';
 }
 
 /// Reads and writes the `settings` table.

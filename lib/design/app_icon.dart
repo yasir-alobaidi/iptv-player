@@ -26,6 +26,7 @@ enum AppIcons {
   deviceSpeaker('device-speaker'),
   deviceTv('device-tv'),
   download('download'),
+  edit('edit'),
   downloadActive('download-active'),
   dragHandle('drag-handle'),
   exitFullscreen('exit-fullscreen'),
@@ -37,6 +38,7 @@ enum AppIcons {
   home('home'),
   info('info'),
   library('library'),
+  more('more'),
   liveTv('live-tv'),
   loading('loading'),
   movies('movies'),
@@ -53,6 +55,7 @@ enum AppIcons {
   stop('stop'),
   storage('storage'),
   subtitles('subtitles'),
+  trash('trash'),
   volumeHigh('volume-high'),
   volumeLow('volume-low'),
   volumeOff('volume-off');

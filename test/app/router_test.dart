@@ -12,6 +12,7 @@ import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
+import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
 import 'app_harness.dart';
 
@@ -52,8 +53,13 @@ void main() {
       final app = await pumpApp(tester, initialLocation: destination.path);
 
       expect(app.location, destination.path);
+      // Settings is the first destination with a real screen (Phase 2).
       expect(
-        find.byType(PlaceholderScreen),
+        find.byType(
+          destination == AppDestination.settings
+              ? SettingsScreen
+              : PlaceholderScreen,
+        ),
         findsOneWidget,
         reason: '${destination.label} has no screen',
       );

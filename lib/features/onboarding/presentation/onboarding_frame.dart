@@ -12,18 +12,19 @@ const onboardingNarrowWidth = 1100.0;
 /// body, and a [footer] of actions pinned to the bottom.
 class OnboardingFrame extends StatelessWidget {
   const new({
-    required this.step,
     required this.title,
     required this.subtitle,
     required this.body,
     required this.footer,
+    this.step,
     this.trailing,
     this.maxWidth,
     super.key,
   });
 
-  /// Zero-based index into [onboardingSteps].
-  final int step;
+  /// Zero-based index into [onboardingSteps]; null hides the indicator
+  /// (editing a source is not a step of adding one).
+  final int? step;
   final String title;
   final String subtitle;
   final Widget body;
@@ -111,10 +112,12 @@ class OnboardingFrame extends StatelessWidget {
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerRight,
-                        child: StepIndicator(
-                          steps: onboardingSteps,
-                          current: step,
-                        ),
+                        child: step == null
+                            ? const SizedBox.shrink()
+                            : StepIndicator(
+                                steps: onboardingSteps,
+                                current: step!,
+                              ),
                       ),
                     ),
                   ],

@@ -27,4 +27,22 @@ void main() {
     expect(formatDuration(const Duration(seconds: 72)), '1 min 12 s');
     expect(formatDuration(const Duration(minutes: 2)), '2 min');
   });
+
+  test('formatAgo: minutes, hours, then days, then the date', () {
+    final now = DateTime(2026, 9, 14, 12);
+    String ago(Duration d) => formatAgo(now.subtract(d), now);
+
+    expect(ago(const Duration(seconds: 20)), 'just now');
+    expect(ago(const Duration(minutes: 12)), '12 min ago');
+    expect(ago(const Duration(hours: 3)), '3 h ago');
+    expect(formatAgo(DateTime(2026, 9, 13, 8), now), 'yesterday');
+    expect(formatAgo(DateTime(2026, 9, 10, 23), now), '4 days ago');
+    expect(formatAgo(DateTime(2026, 8, 30), now), 'on Aug 30, 2026');
+    // A clock that runs ahead reads as just now, not "in 5 min".
+    expect(formatAgo(now.add(const Duration(minutes: 5)), now), 'just now');
+  });
+
+  test('formatShortDate drops the year', () {
+    expect(formatShortDate(DateTime(2026, 11, 3, 12)), 'Nov 3');
+  });
 }

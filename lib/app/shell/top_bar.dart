@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/design/components.dart';
@@ -11,6 +13,7 @@ class ShellTopBar extends StatelessWidget {
     required this.title,
     required this.onOpenSearch,
     this.source,
+    this.sourceChoices,
     this.syncStatus,
     this.downloads,
     this.onOpenSource,
@@ -26,8 +29,13 @@ class ShellTopBar extends StatelessWidget {
   final String title;
   final VoidCallback onOpenSearch;
   final ShellSource? source;
+
+  /// Two or more sources turn the chip into a switcher menu.
+  final ShellSourceChoices? sourceChoices;
   final ShellSyncStatus? syncStatus;
   final ShellDownloads? downloads;
+
+  /// "Manage sources…", and the chip itself with fewer than two sources.
   final VoidCallback? onOpenSource;
   final VoidCallback? onOpenDownloads;
 
@@ -60,7 +68,11 @@ class ShellTopBar extends StatelessWidget {
               ),
             ),
             SizedBox(width: tokens.spacing.s16),
-            _SourceChip(source: source, onPressed: onOpenSource),
+            _SourceChip(
+              source: source,
+              choices: sourceChoices,
+              onManage: onOpenSource,
+            ),
             const Spacer(),
             SizedBox(width: tokens.spacing.s16),
             SearchField(width: searchWidth, onTap: onOpenSearch),
@@ -91,13 +103,47 @@ class ShellTopBar extends StatelessWidget {
 }
 
 /// The source switcher (canvas: a 32 px pill with a status dot and a
-/// chevron). With no provider configured it reads "No source" and opens
-/// Settings → Sources.
+/// chevron). With two or more sources it opens a menu of them and
+/// "Manage sources…"; otherwise it opens Settings → Sources. With no
+/// provider configured it reads "No source".
 class _SourceChip extends StatelessWidget {
-  const new({required this.source, required this.onPressed});
+  const new({
+    required this.source,
+    required this.choices,
+    required this.onManage,
+  });
 
   final ShellSource? source;
-  final VoidCallback? onPressed;
+  final ShellSourceChoices? choices;
+  final VoidCallback? onManage;
+
+  void _open(BuildContext context) {
+    final choices = this.choices;
+    if (choices == null || choices.sources.length < 2) {
+      onManage?.call();
+      return;
+    }
+    unawaited(
+      showAppMenu(
+        context,
+        width: 260,
+        items: [
+          for (final choice in choices.sources)
+            AppMenuItem(
+              label: choice.name,
+              checked: choice.id == source?.id,
+              onPressed: () => choices.onSelect(choice.id),
+            ),
+          const AppMenuItem.separator(),
+          AppMenuItem(
+            label: 'Manage sources…',
+            icon: AppIcons.settings,
+            onPressed: onManage,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,10 +156,15 @@ class _SourceChip extends StatelessWidget {
       _ => colors.warning,
     };
 
+    final switcher = (choices?.sources.length ?? 0) >= 2;
     return AppTooltip(
-      message: source == null ? 'Add a source' : 'Switch source',
+      message: source == null
+          ? 'Add a source'
+          : switcher
+          ? 'Switch source'
+          : 'Manage sources',
       child: FocusableSurface(
-        onPressed: onPressed,
+        onPressed: onManage == null ? null : () => _open(context),
         borderRadius: tokens.radii.pillAll,
         background: colors.surface2,
         hoverBackground: colors.surface3,

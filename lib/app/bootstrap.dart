@@ -22,6 +22,7 @@ import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
+import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:logger/logger.dart';
 
 /// Sets up logging and the global error handlers, then starts the app.
@@ -83,6 +84,7 @@ Future<void> bootstrap() async {
       startLocationProvider.overrideWithValue(
         firstRun ? welcomeRoutePath : '/',
       ),
+      ...sourceShellOverrides,
     ],
   );
   runApp(

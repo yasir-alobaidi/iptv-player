@@ -18,7 +18,15 @@ abstract class CategoryChoice with _$CategoryChoice {
 
     /// Channels, movies or series filed under it.
     required int itemCount,
+
+    /// The provider's own name, which a rename hides; null when the
+    /// category isn't renamed.
+    String? providerName,
   }) = _CategoryChoice;
+
+  const new _();
+
+  bool get isRenamed => providerName != null;
 }
 
 /// A source's categories of one kind, in display order, and the items
@@ -31,6 +39,10 @@ abstract class CategoryList with _$CategoryList {
     /// Items with no category, or one the provider no longer lists. They
     /// are always shown: there is no category to hide them with.
     @Default(0) int uncategorized,
+
+    /// True when the user reordered this list; false while it follows the
+    /// provider's order.
+    @Default(false) bool customOrder,
   }) = _CategoryList;
 
   const new _();
@@ -61,4 +73,16 @@ abstract interface class CategoryRepository {
     CatalogueKind kind, {
     required bool hidden,
   });
+
+  /// The user's name for a category; null or blank restores the
+  /// provider's. Kept across re-syncs.
+  Future<Result<void>> rename(int id, String? name);
+
+  /// Stores [idsInOrder] — every category of one kind of one source — as
+  /// the user's order. Kept across re-syncs; a category the provider adds
+  /// later goes after them.
+  Future<Result<void>> reorder(List<int> idsInOrder);
+
+  /// Back to the provider's order.
+  Future<Result<void>> resetOrder(String sourceId, CatalogueKind kind);
 }

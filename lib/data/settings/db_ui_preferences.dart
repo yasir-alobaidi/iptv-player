@@ -11,12 +11,18 @@ final class DbUiPreferences implements UiPreferences {
 
   static Future<DbUiPreferences> load(SettingsRepository settings) async {
     final expanded = await settings.readBool(SettingsKeys.railExpanded);
+    final source = await settings.readValue<String?>(
+      SettingsKeys.currentSource,
+      null,
+    );
     return DbUiPreferences(settings)
-      .._railExpanded = expanded.valueOrNull ?? false;
+      .._railExpanded = expanded.valueOrNull ?? false
+      .._currentSourceId = source.valueOrNull;
   }
 
   final SettingsRepository _settings;
   bool _railExpanded = false;
+  String? _currentSourceId;
 
   @override
   bool get railExpanded => _railExpanded;
@@ -25,5 +31,16 @@ final class DbUiPreferences implements UiPreferences {
   Future<Result<void>> setRailExpanded({required bool expanded}) {
     _railExpanded = expanded;
     return _settings.writeValue(SettingsKeys.railExpanded, expanded);
+  }
+
+  @override
+  String? get currentSourceId => _currentSourceId;
+
+  @override
+  Future<Result<void>> setCurrentSourceId(String? id) {
+    _currentSourceId = id;
+    return id == null
+        ? _settings.remove(SettingsKeys.currentSource)
+        : _settings.writeValue(SettingsKeys.currentSource, id);
   }
 }

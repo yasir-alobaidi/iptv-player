@@ -42,6 +42,36 @@ String formatDuration(Duration duration) {
   return rest == 0 ? '${seconds ~/ 60} min' : '${seconds ~/ 60} min $rest s';
 }
 
+/// `just now`, `12 min ago`, `3 h ago`, `yesterday`, `4 days ago`, then
+/// the date. A time in the future (a skewed clock) reads as just now.
+String formatAgo(DateTime at, DateTime now) {
+  final elapsed = now.difference(at);
+  if (elapsed.inMinutes < 1) return 'just now';
+  if (elapsed.inMinutes < 60) return '${elapsed.inMinutes} min ago';
+  if (elapsed.inHours < 24) return '${elapsed.inHours} h ago';
+  final days = _calendarDays(at, now);
+  if (days <= 1) return 'yesterday';
+  if (days < 7) return '$days days ago';
+  return 'on ${formatDate(at)}';
+}
+
+/// `Nov 3`: a date within the current year, in local time.
+String formatShortDate(DateTime date) {
+  final local = date.toLocal();
+  return '${_months[local.month - 1]} ${local.day}';
+}
+
+/// Whole local calendar days from [from] to [to].
+int _calendarDays(DateTime from, DateTime to) {
+  final a = from.toLocal();
+  final b = to.toLocal();
+  return DateTime.utc(
+    b.year,
+    b.month,
+    b.day,
+  ).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
+}
+
 const _months = [
   'Jan',
   'Feb',

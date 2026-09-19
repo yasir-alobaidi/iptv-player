@@ -45,6 +45,9 @@ String sourceSyncPath(String sourceId) => '/source-setup/$sourceId';
 String pickCategoriesPath(String sourceId) =>
     '/source-setup/$sourceId/categories';
 
+/// Editing a configured source: Connect's form, filled in.
+String editSourcePath(String sourceId) => '/sources/$sourceId/edit';
+
 /// Where the app opens: Home, or Welcome when no source is configured yet.
 /// `bootstrap()` decides before the first frame.
 @Riverpod(keepAlive: true)
@@ -105,6 +108,12 @@ GoRouter buildRouter({String initialLocation = '/'}) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) =>
             ConnectScreen(preset: state.extra as ConnectPreset?),
+      ),
+      GoRoute(
+        path: '/sources/:sourceId/edit',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            ConnectScreen(editSourceId: state.pathParameters['sourceId']),
       ),
       GoRoute(
         path: '/source-setup/:sourceId',

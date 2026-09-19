@@ -11,6 +11,15 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+/// Icons the canvas doesn't draw but the app needs, drawn to match its
+/// set (24 px grid, 1.8 px round strokes). Written after the extracted
+/// ones, since extraction clears the folder.
+const _handDrawn = <String, String>{
+  'edit': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>',
+  'more': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>',
+  'trash': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9L17.5 7M10 11v5M14 11v5"/></svg>',
+};
+
 /// Canvas icon hash -> asset name. Several canvas SVGs are the same icon
 /// drawn twice; they map to one name and the first occurrence wins.
 const _names = <String, String>{
@@ -137,6 +146,11 @@ void main(List<String> args) {
       File('${out.path}/$filled.svg').writeAsStringSync(icon.filled);
       written++;
     }
+  }
+
+  for (final entry in _handDrawn.entries) {
+    File('${out.path}/${entry.key}.svg').writeAsStringSync('${entry.value}\n');
+    written++;
   }
 
   stdout.writeln('Wrote $written icons to ${out.path}/');

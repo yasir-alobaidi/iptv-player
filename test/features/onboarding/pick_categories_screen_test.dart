@@ -234,6 +234,23 @@ void main() {
     expect(container.read(pendingSourceDraftProvider), isNull);
   });
 
+  testWidgets('Finish returns to Settings when adding started there', (
+    tester,
+  ) async {
+    final app = await pump(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    container.read(onboardingReturnPathProvider.notifier).path = '/settings';
+
+    await tester.tap(find.text('Finish'));
+    await settleApp(tester);
+
+    expect(app.location, '/settings');
+    // Used once: the next source added from Welcome ends at Home.
+    expect(container.read(onboardingReturnPathProvider), isNull);
+  });
+
   test('sample data has the kinds the tests expect', () {
     expect(sampleCategories().keys, CatalogueKind.values);
   });

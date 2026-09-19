@@ -397,6 +397,22 @@ void main() {
     expect(app.location, welcomeRoutePath);
   });
 
+  testWidgets('after a cancelled sync from Settings, Back returns there', (
+    tester,
+  ) async {
+    // Sync's Cancel goes (not pushes) to Connect, so nothing is behind it.
+    fakes.sources.seed();
+    final app = await pump(tester);
+    ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
+            .read(onboardingReturnPathProvider.notifier)
+            .path =
+        '/settings';
+
+    await press(tester, 'Back');
+
+    expect(app.location, '/settings');
+  });
+
   testWidgets('a narrow window stacks the card under the form', (tester) async {
     fakes.checker.result = Err(AuthFailure('auth 0'));
     await pump(tester, size: const Size(1024, 768));

@@ -135,7 +135,9 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
 
     final wantsExpanded = ref.watch(railExpandedProvider);
     final source = ref.watch(shellSourceProvider);
+    final sourceChoices = ref.watch(shellSourceChoicesProvider);
     final syncStatus = ref.watch(shellSyncStatusProvider);
+    final notice = ref.watch(shellNoticeProvider);
     final downloads = ref.watch(shellDownloadsProvider);
     final cast = ref.watch(shellCastSessionProvider);
 
@@ -172,6 +174,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                           ShellTopBar(
                             title: _current.label,
                             source: source,
+                            sourceChoices: sourceChoices,
                             syncStatus: syncStatus,
                             downloads: downloads,
                             onOpenSearch: widget.onOpenSearch ?? () {},
@@ -179,6 +182,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                             onOpenDownloads: () => _go(AppDestination.library),
                             paneController: _topBarPane,
                           ),
+                          if (notice != null) _NoticeBar(notice: notice),
                           Expanded(
                             child: _ContentPane(
                               controller: _contentPane,
@@ -206,6 +210,36 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
           ),
         );
       },
+    );
+  }
+}
+
+/// The shell's notice (expiry, refused sign-in), as a banner between the
+/// top bar and the screen.
+class _NoticeBar extends StatelessWidget {
+  const new({required this.notice});
+
+  final ShellNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.tokens.spacing;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(spacing.s24, spacing.s12, spacing.s24, 0),
+      child: Semantics(
+        liveRegion: true,
+        child: AppBanner(
+          message: notice.message,
+          tone: switch (notice.tone) {
+            ShellNoticeTone.info => BannerTone.info,
+            ShellNoticeTone.warning => BannerTone.warning,
+            ShellNoticeTone.error => BannerTone.error,
+          },
+          actionLabel: notice.actionLabel,
+          onAction: notice.onAction,
+          onDismiss: notice.onDismiss,
+        ),
+      ),
     );
   }
 }

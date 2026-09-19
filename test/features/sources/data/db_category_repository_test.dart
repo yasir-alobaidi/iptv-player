@@ -98,6 +98,76 @@ void main() {
     expect(movies.categories.single.isHidden, isFalse);
   });
 
+  test(
+    'a rename shows the provider name beside it, and can be undone',
+    () async {
+      var list = await repository.watch('s1', CatalogueKind.live).first;
+      final music = list.categories.last;
+      expect(music.name, 'My music');
+      expect(music.providerName, 'Music');
+      expect(music.isRenamed, isTrue);
+      expect(list.categories.first.providerName, isNull);
+
+      expect(
+        await repository.rename(ids['0']!, '  Football '),
+        isA<Ok<void>>(),
+      );
+      await repository.rename(ids['2']!, null);
+      list = await repository.watch('s1', CatalogueKind.live).first;
+
+      expect(list.categories.first.name, 'Football');
+      expect(list.categories.first.providerName, 'UK | Sports');
+      expect(list.categories.last.name, 'Music');
+      expect(list.categories.last.isRenamed, isFalse);
+    },
+  );
+
+  test("reorder keeps the user's order until reset", () async {
+    var list = await repository.watch('s1', CatalogueKind.live).first;
+    expect(list.customOrder, isFalse);
+
+    await repository.reorder([ids['2']!, ids['0']!, ids['1']!]);
+    list = await repository.watch('s1', CatalogueKind.live).first;
+    expect(
+      [for (final c in list.categories) c.name],
+      ['My music', 'UK | Sports', 'UK | News'],
+    );
+    expect(list.customOrder, isTrue);
+    // Movies keep the provider's order.
+    final movies = await repository.watch('s1', CatalogueKind.movie).first;
+    expect(movies.customOrder, isFalse);
+
+    await repository.resetOrder('s1', CatalogueKind.live);
+    list = await repository.watch('s1', CatalogueKind.live).first;
+    expect(
+      [for (final c in list.categories) c.name],
+      ['UK | Sports', 'UK | News', 'My music'],
+    );
+    expect(list.customOrder, isFalse);
+  });
+
+  test('the order and renames survive a re-sync of the categories', () async {
+    await repository.reorder([ids['1']!, ids['0']!, ids['2']!]);
+    await repository.rename(ids['1']!, 'Headlines');
+    // A sync upserts the provider's rows again, in its own order.
+    await db.categoriesDao.upsertAll([
+      for (final (i, name) in ['UK | Sports', 'UK | News', 'Music'].indexed)
+        CategoriesCompanion.insert(
+          sourceId: 's1',
+          kind: CatalogueKind.live,
+          remoteKey: '$i',
+          name: name,
+          position: Value(i),
+        ),
+    ]);
+
+    final list = await repository.watch('s1', CatalogueKind.live).first;
+    expect(
+      [for (final c in list.categories) c.name],
+      ['Headlines', 'UK | Sports', 'My music'],
+    );
+  });
+
   test('a write to a closed database is a StorageFailure', () async {
     await db.close();
     final result = await repository.setHidden(1, hidden: true);

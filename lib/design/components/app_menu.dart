@@ -39,10 +39,23 @@ class _MenuSeparator extends AppMenuItem {
 /// The item menu, opened with the Menu key, Shift+F10, or right-click
 /// (docs/05). Presentational: callers position it.
 class AppMenu extends StatelessWidget {
-  const new({required this.items, this.width = 240, super.key});
+  const new({
+    required this.items,
+    this.width = 240,
+    this.autofocus = false,
+    super.key,
+  });
 
   final List<AppMenuItem> items;
   final double width;
+
+  /// Focuses the first enabled item: a menu opened from the keyboard is
+  /// walked with the arrows at once.
+  final bool autofocus;
+
+  AppMenuItem? get _firstEnabled => items
+      .where((item) => item is! _MenuSeparator && item.onPressed != null)
+      .firstOrNull;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +84,10 @@ class AppMenu extends StatelessWidget {
                   child: Divider(height: 1, color: colors.border),
                 )
               else
-                _MenuRow(item: item),
+                _MenuRow(
+                  item: item,
+                  autofocus: autofocus && identical(item, _firstEnabled),
+                ),
           ],
         ),
       ),
@@ -80,9 +96,10 @@ class AppMenu extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const new({required this.item});
+  const new({required this.item, this.autofocus = false});
 
   final AppMenuItem item;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +110,7 @@ class _MenuRow extends StatelessWidget {
     return FocusableSurface(
       onPressed: item.onPressed,
       enabled: item.onPressed != null,
+      autofocus: autofocus,
       hoverBackground: colors.bg.withValues(alpha: 0.4),
       borderRadius: tokens.radii.smAll,
       semanticLabel: item.label,

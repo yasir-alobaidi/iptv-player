@@ -44,4 +44,25 @@ void main() {
 
     expect(preferences.railExpanded, isFalse);
   });
+
+  test('the chosen source survives a reload and can be cleared', () async {
+    final first = await DbUiPreferences.load(settings);
+    expect(first.currentSourceId, isNull);
+
+    await first.setCurrentSourceId('src-2');
+    final second = await DbUiPreferences.load(settings);
+    expect(second.currentSourceId, 'src-2');
+
+    await second.setCurrentSourceId(null);
+    final third = await DbUiPreferences.load(settings);
+    expect(third.currentSourceId, isNull);
+  });
+
+  test('a corrupt chosen source reads as none', () async {
+    await settings.writeJsonText(SettingsKeys.currentSource, '42');
+
+    final preferences = await DbUiPreferences.load(settings);
+
+    expect(preferences.currentSourceId, isNull);
+  });
 }

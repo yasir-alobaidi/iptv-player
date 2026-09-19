@@ -17,7 +17,9 @@ mixin _$CategoryChoice {
 
  int get id;/// The user's rename, or the provider's name.
  String get name; bool get isHidden;/// Channels, movies or series filed under it.
- int get itemCount;
+ int get itemCount;/// The provider's own name, which a rename hides; null when the
+/// category isn't renamed.
+ String? get providerName;
 /// Create a copy of CategoryChoice
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,20 +31,20 @@ $CategoryChoiceCopyWith<CategoryChoice> get copyWith => _$CategoryChoiceCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as CategoryChoice;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryChoice&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.isHidden, _this.isHidden) || other.isHidden == _this.isHidden)&&(identical(other.itemCount, _this.itemCount) || other.itemCount == _this.itemCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryChoice&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.isHidden, _this.isHidden) || other.isHidden == _this.isHidden)&&(identical(other.itemCount, _this.itemCount) || other.itemCount == _this.itemCount)&&(identical(other.providerName, _this.providerName) || other.providerName == _this.providerName));
 }
 
 
 @override
 int get hashCode {
   final _this = this as CategoryChoice;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.isHidden,_this.itemCount);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.isHidden,_this.itemCount,_this.providerName);
 }
 
 @override
 String toString() {
   final _this = this as CategoryChoice;
-  return 'CategoryChoice(id: ${_this.id}, name: ${_this.name}, isHidden: ${_this.isHidden}, itemCount: ${_this.itemCount})';
+  return 'CategoryChoice(id: ${_this.id}, name: ${_this.name}, isHidden: ${_this.isHidden}, itemCount: ${_this.itemCount}, providerName: ${_this.providerName})';
 }
 
 
@@ -53,7 +55,7 @@ abstract mixin class $CategoryChoiceCopyWith<$Res>  {
   factory $CategoryChoiceCopyWith(CategoryChoice value, $Res Function(CategoryChoice) _then) = _$CategoryChoiceCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, bool isHidden, int itemCount
+ int id, String name, bool isHidden, int itemCount, String? providerName
 });
 
 
@@ -70,13 +72,14 @@ class _$CategoryChoiceCopyWithImpl<$Res>
 
 /// Create a copy of CategoryChoice
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? isHidden = null,Object? itemCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? isHidden = null,Object? itemCount = null,Object? providerName = freezed,}) {
   return _then(CategoryChoice(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,isHidden: null == isHidden ? _self.isHidden : isHidden // ignore: cast_nullable_to_non_nullable
 as bool,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,providerName: freezed == providerName ? _self.providerName : providerName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -161,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  bool isHidden,  int itemCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  bool isHidden,  int itemCount,  String? providerName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CategoryChoice() when $default != null:
-return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
+return $default(_that.id,_that.name,_that.isHidden,_that.itemCount,_that.providerName);case _:
   return orElse();
 
 }
@@ -182,10 +185,10 @@ return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  bool isHidden,  int itemCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  bool isHidden,  int itemCount,  String? providerName)  $default,) {final _that = this;
 switch (_that) {
 case _CategoryChoice():
-return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
+return $default(_that.id,_that.name,_that.isHidden,_that.itemCount,_that.providerName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +205,10 @@ return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  bool isHidden,  int itemCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  bool isHidden,  int itemCount,  String? providerName)?  $default,) {final _that = this;
 switch (_that) {
 case _CategoryChoice() when $default != null:
-return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
+return $default(_that.id,_that.name,_that.isHidden,_that.itemCount,_that.providerName);case _:
   return null;
 
 }
@@ -216,8 +219,8 @@ return $default(_that.id,_that.name,_that.isHidden,_that.itemCount);case _:
 /// @nodoc
 
 
-class _CategoryChoice implements CategoryChoice {
-  const _CategoryChoice({required this.id, required this.name, required this.isHidden, required this.itemCount});
+class _CategoryChoice extends CategoryChoice {
+  const _CategoryChoice({required this.id, required this.name, required this.isHidden, required this.itemCount, this.providerName}): super._();
   
 
 @override final  int id;
@@ -226,6 +229,9 @@ class _CategoryChoice implements CategoryChoice {
 @override final  bool isHidden;
 /// Channels, movies or series filed under it.
 @override final  int itemCount;
+/// The provider's own name, which a rename hides; null when the
+/// category isn't renamed.
+@override final  String? providerName;
 
 /// Create a copy of CategoryChoice
 /// with the given fields replaced by the non-null parameter values.
@@ -237,18 +243,18 @@ _$CategoryChoiceCopyWith<_CategoryChoice> get copyWith => __$CategoryChoiceCopyW
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryChoice&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryChoice&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount)&&(identical(other.providerName, providerName) || other.providerName == providerName));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,isHidden,itemCount);
+    return Object.hash(runtimeType,id,name,isHidden,itemCount,providerName);
 }
 
 @override
 String toString() {
-    return 'CategoryChoice(id: $id, name: $name, isHidden: $isHidden, itemCount: $itemCount)';
+    return 'CategoryChoice(id: $id, name: $name, isHidden: $isHidden, itemCount: $itemCount, providerName: $providerName)';
 }
 
 
@@ -259,7 +265,7 @@ abstract mixin class _$CategoryChoiceCopyWith<$Res> implements $CategoryChoiceCo
   factory _$CategoryChoiceCopyWith(_CategoryChoice value, $Res Function(_CategoryChoice) _then) = __$CategoryChoiceCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, bool isHidden, int itemCount
+ int id, String name, bool isHidden, int itemCount, String? providerName
 });
 
 
@@ -276,13 +282,14 @@ class __$CategoryChoiceCopyWithImpl<$Res>
 
 /// Create a copy of CategoryChoice
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? isHidden = null,Object? itemCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? isHidden = null,Object? itemCount = null,Object? providerName = freezed,}) {
   return _then(_CategoryChoice(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,isHidden: null == isHidden ? _self.isHidden : isHidden // ignore: cast_nullable_to_non_nullable
 as bool,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,providerName: freezed == providerName ? _self.providerName : providerName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -294,7 +301,9 @@ mixin _$CategoryList {
 
  List<CategoryChoice> get categories;/// Items with no category, or one the provider no longer lists. They
 /// are always shown: there is no category to hide them with.
- int get uncategorized;
+ int get uncategorized;/// True when the user reordered this list; false while it follows the
+/// provider's order.
+ bool get customOrder;
 /// Create a copy of CategoryList
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,20 +315,20 @@ $CategoryListCopyWith<CategoryList> get copyWith => _$CategoryListCopyWithImpl<C
 @override
 bool operator ==(Object other) {
   final _this = this as CategoryList;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryList&&const DeepCollectionEquality().equals(other.categories, _this.categories)&&(identical(other.uncategorized, _this.uncategorized) || other.uncategorized == _this.uncategorized));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryList&&const DeepCollectionEquality().equals(other.categories, _this.categories)&&(identical(other.uncategorized, _this.uncategorized) || other.uncategorized == _this.uncategorized)&&(identical(other.customOrder, _this.customOrder) || other.customOrder == _this.customOrder));
 }
 
 
 @override
 int get hashCode {
   final _this = this as CategoryList;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.categories),_this.uncategorized);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.categories),_this.uncategorized,_this.customOrder);
 }
 
 @override
 String toString() {
   final _this = this as CategoryList;
-  return 'CategoryList(categories: ${_this.categories}, uncategorized: ${_this.uncategorized})';
+  return 'CategoryList(categories: ${_this.categories}, uncategorized: ${_this.uncategorized}, customOrder: ${_this.customOrder})';
 }
 
 
@@ -330,7 +339,7 @@ abstract mixin class $CategoryListCopyWith<$Res>  {
   factory $CategoryListCopyWith(CategoryList value, $Res Function(CategoryList) _then) = _$CategoryListCopyWithImpl;
 @useResult
 $Res call({
- List<CategoryChoice> categories, int uncategorized
+ List<CategoryChoice> categories, int uncategorized, bool customOrder
 });
 
 
@@ -347,11 +356,12 @@ class _$CategoryListCopyWithImpl<$Res>
 
 /// Create a copy of CategoryList
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? categories = null,Object? uncategorized = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? categories = null,Object? uncategorized = null,Object? customOrder = null,}) {
   return _then(CategoryList(
 categories: null == categories ? _self.categories : categories // ignore: cast_nullable_to_non_nullable
 as List<CategoryChoice>,uncategorized: null == uncategorized ? _self.uncategorized : uncategorized // ignore: cast_nullable_to_non_nullable
-as int,
+as int,customOrder: null == customOrder ? _self.customOrder : customOrder // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -436,10 +446,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<CategoryChoice> categories,  int uncategorized)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<CategoryChoice> categories,  int uncategorized,  bool customOrder)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CategoryList() when $default != null:
-return $default(_that.categories,_that.uncategorized);case _:
+return $default(_that.categories,_that.uncategorized,_that.customOrder);case _:
   return orElse();
 
 }
@@ -457,10 +467,10 @@ return $default(_that.categories,_that.uncategorized);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<CategoryChoice> categories,  int uncategorized)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<CategoryChoice> categories,  int uncategorized,  bool customOrder)  $default,) {final _that = this;
 switch (_that) {
 case _CategoryList():
-return $default(_that.categories,_that.uncategorized);case _:
+return $default(_that.categories,_that.uncategorized,_that.customOrder);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -477,10 +487,10 @@ return $default(_that.categories,_that.uncategorized);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<CategoryChoice> categories,  int uncategorized)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<CategoryChoice> categories,  int uncategorized,  bool customOrder)?  $default,) {final _that = this;
 switch (_that) {
 case _CategoryList() when $default != null:
-return $default(_that.categories,_that.uncategorized);case _:
+return $default(_that.categories,_that.uncategorized,_that.customOrder);case _:
   return null;
 
 }
@@ -492,7 +502,7 @@ return $default(_that.categories,_that.uncategorized);case _:
 
 
 class _CategoryList extends CategoryList {
-  const _CategoryList({required  List<CategoryChoice> categories, this.uncategorized = 0}): _categories = categories,super._();
+  const _CategoryList({required  List<CategoryChoice> categories, this.uncategorized = 0, this.customOrder = false}): _categories = categories,super._();
   
 
  final  List<CategoryChoice> _categories;
@@ -505,6 +515,9 @@ class _CategoryList extends CategoryList {
 /// Items with no category, or one the provider no longer lists. They
 /// are always shown: there is no category to hide them with.
 @override@JsonKey() final  int uncategorized;
+/// True when the user reordered this list; false while it follows the
+/// provider's order.
+@override@JsonKey() final  bool customOrder;
 
 /// Create a copy of CategoryList
 /// with the given fields replaced by the non-null parameter values.
@@ -516,18 +529,18 @@ _$CategoryListCopyWith<_CategoryList> get copyWith => __$CategoryListCopyWithImp
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryList&&const DeepCollectionEquality().equals(other.categories, _categories)&&(identical(other.uncategorized, uncategorized) || other.uncategorized == uncategorized));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryList&&const DeepCollectionEquality().equals(other.categories, _categories)&&(identical(other.uncategorized, uncategorized) || other.uncategorized == uncategorized)&&(identical(other.customOrder, customOrder) || other.customOrder == customOrder));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_categories),uncategorized);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_categories),uncategorized,customOrder);
 }
 
 @override
 String toString() {
-    return 'CategoryList(categories: $categories, uncategorized: $uncategorized)';
+    return 'CategoryList(categories: $categories, uncategorized: $uncategorized, customOrder: $customOrder)';
 }
 
 
@@ -538,7 +551,7 @@ abstract mixin class _$CategoryListCopyWith<$Res> implements $CategoryListCopyWi
   factory _$CategoryListCopyWith(_CategoryList value, $Res Function(_CategoryList) _then) = __$CategoryListCopyWithImpl;
 @override @useResult
 $Res call({
- List<CategoryChoice> categories, int uncategorized
+ List<CategoryChoice> categories, int uncategorized, bool customOrder
 });
 
 
@@ -555,11 +568,12 @@ class __$CategoryListCopyWithImpl<$Res>
 
 /// Create a copy of CategoryList
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? categories = null,Object? uncategorized = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? categories = null,Object? uncategorized = null,Object? customOrder = null,}) {
   return _then(_CategoryList(
 categories: null == categories ? _self._categories : categories // ignore: cast_nullable_to_non_nullable
 as List<CategoryChoice>,uncategorized: null == uncategorized ? _self.uncategorized : uncategorized // ignore: cast_nullable_to_non_nullable
-as int,
+as int,customOrder: null == customOrder ? _self.customOrder : customOrder // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

@@ -1,40 +1,37 @@
-# Handoff — 2026-09-18 (session 16, after step 6)
+# Handoff — 2026-09-19 (session 17, after step 7)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**Run onboarding against your real provider, and review step 6.** Seven
-local commits are waiting on top of what you pushed: steps 1–5, the step 5
-gap fixes, and step 6 (onboarding).
+**Run the app against your real provider, and review steps 6 and 7.** One
+new local commit (step 7) sits on top of what you pushed.
 
 ```
 flutter run -d linux
 ```
 
-Your database has no sources yet, so the app opens on Welcome. Go through
-it with the keyboard only (Tab, arrows, Enter, Space, Esc): add your
-provider, Test connection, Start sync, pick your categories, Finish. Then
-tell me what broke or felt wrong. If you paste an error or a log line,
-check it has no password or token in it first; the app's own log already
-masks them. Try a wrong password once too, and Cancel during a sync.
+Your database has no sources yet, so the app opens on Welcome. With the
+keyboard only (Tab, Shift+Tab, arrows, Enter, Space, Esc): add your
+provider, try a wrong password once, Cancel during a sync, then finish
+the sync and pick your categories. Then Ctrl+, → Sources: Refresh, Edit
+(rename it; leave the password empty), ⋯ → Account details; and
+Settings → Categories: hide one, Alt+↑ to move one, rename one. Tell me
+what broke or felt wrong. If you paste an error or a log line, check it
+has no password or token in it first; the app's own log masks them.
 
 What I decided without asking (docs/05 "As built" has the full list; say
-if you want any of them changed):
-- no "TV guide" row on the sync screen until Phase 4 brings the guide;
-- the sync screen never moves on by itself; Pick categories gets the focus;
-- pasting a `get.php?username=…&password=…` link into the server field
-  fills in all three fields;
-- an account that isn't Active can still be synced, with a warning;
-- an empty movie (or channel, series) list keeps the old one once, and is
-  cleared if the next sync finds it empty again.
-
-The window checks from Phase 1 are still yours to do when convenient:
-
-```
-flutter run -d linux       # resize, expand the rail, close with the X
-tail ~/.local/share/io.github.yasiralobaidi.iptvplayer/logs/app.log
-flutter run -d linux       # same size, rail still expanded
-```
+if you want any changed):
+- the switcher's pick is remembered across restarts; the first source in
+  your order is used when nothing is picked;
+- the Categories manager is a flat reorderable list, not the picker's
+  country groups (moving across groups has no meaning);
+- Remove asks first and focuses **Keep**, so Enter straight away is safe;
+- editing only the name saves at once; a new server, sign-in or playlist
+  is tested first and synced again;
+- the expiry banner appears within 7 days of the end date and can be
+  closed for the session;
+- a text field's Clear button is no longer a Tab stop (Tab goes field to
+  field); Show password still is, with a focus ring.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -42,42 +39,60 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-2-providers-and-data.md and ADR-009 in docs/decisions.md first.
-Step 6 is reviewed; my real-provider run <went fine | broke like this: …>.
-Fix what broke, then do Phase 2 step 7 and stop for my review.
+Steps 6 and 7 are reviewed; my real-provider run <went fine | broke like this: …>.
+Fix what broke, then do Phase 2 step 8 (the phase exit) and stop for my review.
 ```
 
 ## Where things stand
 - **Phase 1 is complete** (ADR-008), and CI is green on both OSes.
-- **Phase 2 plan approved 2026-09-18.** Steps 1–5 done and reviewed.
-- **Step 5's gaps filled** after review: two empty runs in a row sweep a
-  list; `SyncService.removeSource()` stops the sync first.
-- **Phase 2 step 6 done:** onboarding (Welcome → Connect → Sync → Pick
-  categories → Home), the app opening on Welcome with no source.
-- 630 app tests (plus 3 skipped benchmarks) and 87 fake-provider tests
-  pass; `flutter analyze`, the format check and `flutter build linux
-  --debug` are clean; the built app, started on an empty data folder,
-  opens on Welcome with a clean log.
-- **Not done by me:** a keyboard walk of the real app (no input
-  automation on this Wayland session) and the real-provider run — both
-  yours, per the plan.
+- **Phase 2 plan approved 2026-09-18.** Steps 1–5 done and reviewed; step 6
+  (onboarding) and **step 7** (Settings → Sources, the Categories manager,
+  Edit source, the top bar's switcher, sync line and expiry banner) done,
+  waiting for review and the real-provider run.
+- 711 app tests (plus 3 skipped benchmarks), 2 integration tests and 87
+  fake-provider tests pass; analyze, the format check and
+  `flutter build linux --debug` are clean. The new keyboard-only
+  end-to-end test passed 4 runs of 4 under xvfb.
+- **Not done by me:** the real-provider run (yours, per the plan).
 
-## Done this session (2026-09-18)
-- The step 5 gaps, then step 6. Decisions in ADR-009 "Onboarding (step
-  6)"; the screens' rules in docs/05 "As built".
+## Done this session (2026-09-19)
+- Step 7, and four keyboard bugs the new end-to-end test found (see
+  ADR-009 "step 7"). CI's integration step now runs one file per
+  `flutter test`.
 
 ## Instructions for the next session
-1. **Step 7 is next: Settings → Sources, the categories manager, and the
-   shell's source and sync slots** (plan step 7; the two approved sketches).
-   Remove a source only through `SyncService.removeSource()`. Add a source
-   by pushing `addSourceRoutePath` (`/add-source`): Connect, Sync and Pick
-   categories already work for a second source, but Connect's Back falls
-   back to Home only when it can't pop, and Sync's Cancel returns to
-   `/add-source`. Decide how the flow ends when it started from Settings
-   (Finish currently goes Home). The categories manager reuses
-   `CategoryRepository` / `categoryListProvider` and `groupCategories`; it
-   needs rename and reorder, which the DAO has (`rename`, `reorder`) but the
-   repository doesn't expose yet. `shellSourceProvider` and
-   `shellSyncStatusProvider` get overridden by this feature (ADR-008).
+1. **Step 8 is next: the phase exit** (plan step 8). The `large`-profile
+   integration test with the sync duration budget; the frame-time
+   benchmark in profile mode (the 31 ms UI-isolate gap from step 5);
+   docs/02 corrected where the real provider disagreed; ADR-009 to
+   Accepted; the `copyWith(fontWeight:)` cleanup in Known issues
+   (re-record goldens that change). Start the new integration test from
+   `integration_test/sources_keyboard_test.dart`: it already has the
+   app-without-bootstrap setup, the fake panel behind a proxy, and the
+   keyboard helpers.
+1i. **Step 7 (Settings):** `SettingsScreen` + `settingsLocationProvider`
+   (section, and the source the Categories section manages); open it from
+   anywhere with `openSettings()`. Pages in
+   `lib/features/sources/presentation/`: `SourcesSettings`,
+   `CategoriesManager`, `source_text.dart` (every phrase about a source's
+   state), `current_source.dart` (`chosenSourceIdProvider`,
+   `currentSourceProvider` — what the catalogue screens of Phase 3+
+   should browse), `source_shell_slots.dart` (`sourceShellOverrides`,
+   applied in `bootstrap()`; an integration test must apply them too).
+   Edit is `ConnectScreen(editSourceId:)` at `editSourcePath(id)`.
+   `onboardingReturnPathProvider` makes adding from Settings end there.
+   Remove a source only through `SyncService.removeSource()`, then
+   `chosenSourceIdProvider.notifier.forget(id)`.
+   **Show menus and dialogs with `showAppMenu` / `showAppDialog`**; Esc
+   closes them through the global Esc action. A callback a provider builds
+   must not use its `ref` later: read the notifiers first (see
+   `source_shell_slots.dart`).
+   **Integration tests under xvfb:** register `tester.testTextInput`,
+   ignore the engine's lifecycle and view-focus events (there is no window
+   manager, so the window flips between focused and not and Flutter parks
+   keyboard focus), and send Enter in a text field as
+   `receiveAction(TextInputAction.done)`, as the platform's text input
+   does. **One file per `flutter test` run** on Linux desktop.
 1h. **Onboarding (step 6):** screens in `lib/features/onboarding/presentation/`;
    the domain they use in `lib/features/sources/domain/` (`SourceChecker`,
    `CategoryRepository`, `validateDraft`, `groupCategories`). The app opens on
@@ -175,18 +190,19 @@ Fix what broke, then do Phase 2 step 7 and stop for my review.
    that way: CI on Windows has neither.
 10. `/proc/<pid>` is a **directory**; liveness checks read
     `/proc/<pid>/cmdline`.
-11. The shell's slots — `shellSourceProvider`, `shellSyncStatusProvider`,
-    `shellDownloadsProvider`, `shellCastSessionProvider` — stay empty until
-    the phase that owns the data overrides them (step 7 for the first two;
-    `syncStatusProvider` is what the sync slot will read).
+11. The shell's slots are filled by overriding their providers from the
+    feature that owns the data: source, switcher, sync line and notice come
+    from `sourceShellOverrides` (step 7); `shellDownloadsProvider` (Phase 8)
+    and `shellCastSessionProvider` (Phase 7) are still empty.
 12. `test/app/app_harness.dart`: `pumpApp(tester, overrides: [...])`,
     `findByLabel('…')`; don't call `pumpApp` twice in one test.
 13. Re-recording a golden: `flutter test --tags golden --update-goldens`,
     then look at the PNG before trusting it.
 14. Commit messages carry no trailers. Commit locally; the user pushes.
 15. At the end: analyze, format check, `flutter test`, the fake provider's
-    `dart test`, add to ADR-009, update `docs/progress.md`, overwrite this
-    file, and commit.
+    `dart test`, each integration test under `xvfb-run -a … -d linux` (one
+    file per run), add to ADR-009, update `docs/progress.md`, overwrite
+    this file, and commit.
 
 ## Don't reopen without new evidence
 - Flutter + media_kit for desktop with the patched `media_kit_video` in
@@ -239,6 +255,11 @@ Fix what broke, then do Phase 2 step 7 and stop for my review.
   can't abandon a first sync; a source is added at Start sync, not at the
   test; the typed draft is kept in memory only; categories cluster over
   the whole list and the filter only hides entries.
+- Settings (ADR-009 step 7): the overview query watches `sources` and
+  `sync_runs` only; the current source is remembered, with the first as
+  the fallback; Edit reuses Connect; the manager is a flat list; a
+  destructive dialog focuses its safe button; in-field Clear is not a Tab
+  stop.
 
 ## Open questions for the user
 - The second Google TV doesn't answer on the network. Is it on another

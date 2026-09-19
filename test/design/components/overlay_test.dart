@@ -73,10 +73,9 @@ void main() {
       await pumpDesign(
         tester,
         AppDialog(
-          title: 'Delete downloaded file?',
-          primaryLabel: 'Delete file',
+          title: 'Rename category',
+          primaryLabel: 'Save',
           secondaryLabel: 'Cancel',
-          destructive: true,
           onPrimary: () => confirmed++,
           onSecondary: () => cancelled++,
           child: const Text('Copper Hollow'),
@@ -92,6 +91,36 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
       expect(cancelled, 1);
+    });
+
+    testWidgets('a destructive dialog starts on the safe choice', (
+      tester,
+    ) async {
+      var confirmed = 0;
+      var cancelled = 0;
+      await pumpDesign(
+        tester,
+        AppDialog(
+          title: 'Delete downloaded file?',
+          primaryLabel: 'Delete file',
+          secondaryLabel: 'Cancel',
+          destructive: true,
+          onPrimary: () => confirmed++,
+          onSecondary: () => cancelled++,
+          child: const Text('Copper Hollow'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter straight away cancels; deleting takes a deliberate move.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(cancelled, 1);
+      expect(confirmed, 0);
+
+      await tester.tap(find.text('Delete file'));
+      await tester.pump();
+      expect(confirmed, 1);
     });
   });
 

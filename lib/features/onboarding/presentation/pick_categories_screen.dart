@@ -95,7 +95,9 @@ class _PickCategoriesScreenState extends ConsumerState<PickCategoriesScreen> {
 
   void _finish() {
     ref.read(pendingSourceDraftProvider.notifier).draft = null;
-    context.go('/');
+    final back = ref.read(onboardingReturnPathProvider);
+    ref.read(onboardingReturnPathProvider.notifier).path = null;
+    context.go(back ?? '/');
   }
 
   @override

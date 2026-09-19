@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_button.dart';
+import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// How loud a banner is.
@@ -66,16 +67,21 @@ class AppBanner extends StatelessWidget {
             ),
           ],
           if (onDismiss != null) ...[
-            SizedBox(width: tokens.spacing.s8),
-            Semantics(
-              button: true,
-              label: 'Dismiss',
-              child: GestureDetector(
-                onTap: onDismiss,
+            SizedBox(width: tokens.spacing.s4),
+            // Focusable like every other control (hard rule 5); the
+            // padding keeps the icon where it was and gives it a ring.
+            FocusableSurface(
+              onPressed: onDismiss,
+              borderRadius: tokens.radii.smAll,
+              semanticLabel: 'Dismiss',
+              builder: (context, states) => Padding(
+                padding: EdgeInsets.all(tokens.spacing.s4),
                 child: AppIcon(
                   AppIcons.close,
                   size: 16,
-                  color: colors.textTertiary,
+                  color: states.highlighted
+                      ? colors.textPrimary
+                      : colors.textTertiary,
                 ),
               ),
             ),

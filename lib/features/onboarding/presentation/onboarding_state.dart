@@ -28,6 +28,18 @@ class PendingSourceDraft extends _$PendingSourceDraft {
   set draft(SourceDraft? draft) => state = draft;
 }
 
+/// Where adding a source ends: Home for the first source, or the screen
+/// the user started from (Settings → Sources) for another. Finish, and
+/// Connect's Back when there is nothing to pop, go here.
+@Riverpod(keepAlive: true)
+class OnboardingReturnPath extends _$OnboardingReturnPath {
+  @override
+  String? build() => null;
+
+  // ignore: avoid_setters_without_getters, the state is the getter.
+  set path(String? path) => state = path;
+}
+
 /// Asks the user for a playlist file; null when they close the dialog.
 typedef PlaylistFilePicker = Future<String?> Function();
 

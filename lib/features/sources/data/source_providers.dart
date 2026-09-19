@@ -2,11 +2,13 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/sync_engine.dart';
 import 'package:iptv_player/features/sources/data/db_category_repository.dart';
+import 'package:iptv_player/features/sources/data/db_source_overview_repository.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/data/provider_source_checker.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/source_check.dart';
+import 'package:iptv_player/features/sources/domain/source_overview.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -66,3 +68,13 @@ Stream<CategoryList> categoryList(
   String sourceId,
   CatalogueKind kind,
 ) => ref.watch(categoryRepositoryProvider).watch(sourceId, kind);
+
+@Riverpod(keepAlive: true)
+SourceOverviewRepository sourceOverviewRepository(Ref ref) =>
+    DbSourceOverviewRepository(ref.watch(appDatabaseProvider));
+
+/// A source's account, counts and latest sync, for Settings → Sources and
+/// the top bar; null once the source is gone.
+@riverpod
+Stream<SourceOverview?> sourceOverview(Ref ref, String sourceId) =>
+    ref.watch(sourceOverviewRepositoryProvider).watch(sourceId);

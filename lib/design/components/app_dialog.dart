@@ -17,6 +17,7 @@ class AppDialog extends StatelessWidget {
     this.onSecondary,
     this.onClose,
     this.destructive = false,
+    this.focusButtons = true,
     this.width = 520,
     super.key,
   });
@@ -33,6 +34,11 @@ class AppDialog extends StatelessWidget {
   /// Makes the primary button a danger button (Delete file, Remove
   /// source).
   final bool destructive;
+
+  /// Whether a footer button takes the focus when the dialog opens (the
+  /// primary one, or the safe one in a destructive dialog). False when
+  /// the body has a field that should have it instead.
+  final bool focusButtons;
   final double width;
 
   @override
@@ -124,6 +130,9 @@ class AppDialog extends StatelessWidget {
                         AppButton(
                           label: secondaryLabel!,
                           variant: AppButtonVariant.secondary,
+                          // A destructive dialog starts on the safe
+                          // choice: Enter straight away must not delete.
+                          autofocus: focusButtons && destructive,
                           onPressed: onSecondary,
                         ),
                         SizedBox(width: tokens.spacing.s8),
@@ -134,7 +143,7 @@ class AppDialog extends StatelessWidget {
                           variant: destructive
                               ? AppButtonVariant.danger
                               : AppButtonVariant.primary,
-                          autofocus: true,
+                          autofocus: focusButtons && !destructive,
                           onPressed: onPrimary,
                         ),
                     ],

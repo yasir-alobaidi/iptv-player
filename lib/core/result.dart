@@ -93,6 +93,21 @@ sealed class AppFailure implements Exception {
     };
   }
 
+  /// The failure a stored [code] names (a sync run keeps only the code),
+  /// without its detail. An unknown code is an [UnexpectedFailure].
+  factory fromCode(String code) => switch (code) {
+    'network' => NetworkFailure(),
+    'auth' => AuthFailure(),
+    'not_found' => NotFoundFailure(),
+    'parse' => ParseFailure(),
+    'storage' => StorageFailure(),
+    'secure_storage' => SecureStorageFailure(),
+    'invalid_input' => InvalidInputFailure(),
+    'timeout' => TimeoutFailure(),
+    'cancelled' => CancelledFailure(),
+    _ => UnexpectedFailure(),
+  };
+
   final String? detail;
 
   /// Stable name for logs and diagnostics.

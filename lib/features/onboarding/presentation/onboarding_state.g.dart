@@ -51,7 +51,7 @@ final class PendingSourceDraftProvider
 }
 
 String _$pendingSourceDraftHash() =>
-    r'18e4d234e32d098c1a37ed89a63b3aa3393d2d31';
+    r'2071c0b347a3eb910322ea91f6a7eda062094717';
 
 /// The details the user typed, kept while their first sync runs, so
 /// Cancel or a failed sync can take them back to a filled-in form. Held in
@@ -68,6 +68,73 @@ abstract class _$PendingSourceDraft extends $Notifier<SourceDraft?> {
             as $ClassProviderElement<
               AnyNotifier<SourceDraft?, SourceDraft?>,
               SourceDraft?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Where adding a source ends: Home for the first source, or the screen
+/// the user started from (Settings → Sources) for another. Finish, and
+/// Connect's Back when there is nothing to pop, go here.
+
+@ProviderFor(OnboardingReturnPath)
+final onboardingReturnPathProvider = OnboardingReturnPathProvider._();
+
+/// Where adding a source ends: Home for the first source, or the screen
+/// the user started from (Settings → Sources) for another. Finish, and
+/// Connect's Back when there is nothing to pop, go here.
+final class OnboardingReturnPathProvider
+    extends $NotifierProvider<OnboardingReturnPath, String?> {
+  /// Where adding a source ends: Home for the first source, or the screen
+  /// the user started from (Settings → Sources) for another. Finish, and
+  /// Connect's Back when there is nothing to pop, go here.
+  OnboardingReturnPathProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'onboardingReturnPathProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$onboardingReturnPathHash();
+
+  @$internal
+  @override
+  OnboardingReturnPath create() => OnboardingReturnPath();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$onboardingReturnPathHash() =>
+    r'99426b24d01318003f1df3268d11e28aef2a2fd1';
+
+/// Where adding a source ends: Home for the first source, or the screen
+/// the user started from (Settings → Sources) for another. Finish, and
+/// Connect's Back when there is nothing to pop, go here.
+
+abstract class _$OnboardingReturnPath extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
               Object?,
               Object?
             >;

@@ -198,6 +198,10 @@ class AppTypography {
   /// 28/36 — screen titles on wide layouts.
   TextStyle get h1 => _font(AppFonts.sans, 28, 36, 700);
 
+  /// 24/32 — a Settings section's title (canvas `Settings`).
+  TextStyle get panelTitle =>
+      _font(AppFonts.sans, 24, 32, 800, letterSpacing: -0.3);
+
   /// 22/30 — the shell's screen title (canvas weight 700, not docs/05 600).
   TextStyle get h2 => _font(AppFonts.sans, 22, 30, 700, letterSpacing: -0.2);
 
@@ -233,6 +237,11 @@ class AppTypography {
 
   /// 12/16 — canvas counts and secondary metadata.
   TextStyle get labelSmall => _font(AppFonts.sans, 12, 16, 600);
+
+  /// 12/16 — group headings inside a panel ("DOWNLOADS", canvas
+  /// `Settings`); callers upper-case the text.
+  TextStyle get overline =>
+      _font(AppFonts.sans, 12, 16, 800, letterSpacing: 0.6);
 
   /// 11/14 — badges (uppercase, +0.4 tracking).
   TextStyle get micro => _font(AppFonts.sans, 11, 14, 600, letterSpacing: 0.4);

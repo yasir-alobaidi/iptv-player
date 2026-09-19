@@ -9,17 +9,53 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'shell_state.g.dart';
 
-/// The source chip in the top bar. Null while no provider is configured,
-/// which is every run until Phase 2 adds sources.
+/// The source chip in the top bar, and each entry of its switcher. Null
+/// while no provider is configured.
 @immutable
 class ShellSource {
-  const new({required this.name, required this.connected});
+  const new({required this.name, required this.connected, this.id = ''});
 
+  final String id;
   final String name;
 
   /// Drives the status dot: green when the last request succeeded.
   final bool connected;
 }
+
+/// What the source switcher offers: every source, in the user's order,
+/// and what choosing one does. With fewer than two, the chip opens
+/// Settings → Sources instead of a menu.
+@immutable
+class ShellSourceChoices {
+  const new({required this.sources, required this.onSelect});
+
+  final List<ShellSource> sources;
+  final ValueChanged<String> onSelect;
+}
+
+/// A message across the top of every screen, under the top bar: the
+/// subscription is about to end, has ended, or the provider refused the
+/// saved details (docs/08 Phase 2). One at a time.
+@immutable
+class ShellNotice {
+  const new({
+    required this.message,
+    this.tone = ShellNoticeTone.warning,
+    this.actionLabel,
+    this.onAction,
+    this.onDismiss,
+  });
+
+  final String message;
+  final ShellNoticeTone tone;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  /// Null: the notice can't be closed.
+  final VoidCallback? onDismiss;
+}
+
+enum ShellNoticeTone { info, warning, error }
 
 /// The top bar's sync slot, e.g. "Syncing channels · 12,340" or
 /// "Guide updated 12 min ago" (docs/05). Phase 2 and Phase 4 fill it.
@@ -74,7 +110,13 @@ class ShellCastSession {
 ShellSource? shellSource(Ref ref) => null;
 
 @riverpod
+ShellSourceChoices? shellSourceChoices(Ref ref) => null;
+
+@riverpod
 ShellSyncStatus? shellSyncStatus(Ref ref) => null;
+
+@riverpod
+ShellNotice? shellNotice(Ref ref) => null;
 
 @riverpod
 ShellDownloads? shellDownloads(Ref ref) => null;

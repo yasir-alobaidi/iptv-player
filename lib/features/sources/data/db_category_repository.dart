@@ -36,8 +36,10 @@ final class DbCategoryRepository implements CategoryRepository {
                   name: row.displayName ?? row.name,
                   isHidden: row.isHidden,
                   itemCount: counts[row.id] ?? 0,
+                  providerName: row.displayName == null ? null : row.name,
                 ),
             ],
+            customOrder: rows.any((row) => row.sortOrder != null),
             uncategorized: counts.entries
                 .where((e) => e.key == null || !known.contains(e.key))
                 .fold(0, (sum, e) => sum + e.value),
@@ -67,6 +69,18 @@ final class DbCategoryRepository implements CategoryRepository {
   }) => _guard(
     () => _db.categoriesDao.setAllHidden(sourceId, kind, hidden: hidden),
   );
+
+  @override
+  Future<Result<void>> rename(int id, String? name) =>
+      _guard(() => _db.categoriesDao.rename(id, name));
+
+  @override
+  Future<Result<void>> reorder(List<int> idsInOrder) =>
+      _guard(() => _db.categoriesDao.reorder(idsInOrder));
+
+  @override
+  Future<Result<void>> resetOrder(String sourceId, CatalogueKind kind) =>
+      _guard(() => _db.categoriesDao.resetOrder(sourceId, kind));
 
   static Future<Result<void>> _guard(Future<void> Function() write) async {
     try {
