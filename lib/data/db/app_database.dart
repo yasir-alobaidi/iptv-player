@@ -6,12 +6,15 @@ import 'package:iptv_player/data/db/app_database.steps.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/daos/categories_dao.dart';
 import 'package:iptv_player/data/db/daos/channels_dao.dart';
+import 'package:iptv_player/data/db/daos/favorites_dao.dart';
 import 'package:iptv_player/data/db/daos/movies_dao.dart';
 import 'package:iptv_player/data/db/daos/series_dao.dart';
 import 'package:iptv_player/data/db/daos/settings_dao.dart';
 import 'package:iptv_player/data/db/daos/sources_dao.dart';
 import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
+import 'package:iptv_player/data/db/daos/watch_history_dao.dart';
 import 'package:iptv_player/data/db/tables.dart';
+import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:path/path.dart' as p;
 
 part 'app_database.g.dart';
@@ -30,6 +33,8 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     MovieDetails,
     Series,
     Episodes,
+    Favorites,
+    WatchHistory,
   ],
   include: {'search.drift'},
   daos: [
@@ -38,6 +43,8 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     SyncRunsDao,
     CategoriesDao,
     ChannelsDao,
+    FavoritesDao,
+    WatchHistoryDao,
     MoviesDao,
     SeriesDao,
   ],
@@ -49,7 +56,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -101,6 +108,12 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
   from2To3: (m, schema) async {
     // Phase 2 step 8: the HTTP status a failed sync was answered with.
     await m.addColumn(schema.syncRuns, schema.syncRuns.failureStatus);
+  },
+  from3To4: (m, schema) async {
+    // Phase 3: favorites and watch history (docs/02).
+    await m.createTable(schema.favorites);
+    await m.createTable(schema.watchHistory);
+    await m.createIndex(schema.watchHistoryRecent);
   },
 );
 

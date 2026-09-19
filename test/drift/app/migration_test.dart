@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -189,6 +190,53 @@ void main() {
           expect(runs.single.failure, 'auth');
           expect(runs.single.failureStatus, isNull);
           expect(runs.single.startedAt, created);
+        },
+      );
+    });
+  });
+
+  group('v3 → v4', () {
+    const created = '2026-09-19T08:00:00.000Z';
+    const source = v3.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const channel = v3.ChannelsData(
+      id: 1,
+      sourceId: 'src-1',
+      remoteKey: '101',
+      position: 0,
+      name: 'Arena Sports 1',
+      archiveDays: 0,
+      isHidden: 1,
+    );
+
+    test('keeps the catalogue and adds empty favorites and history', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 3,
+        newVersion: 4,
+        createOld: v3.DatabaseAtV3.new,
+        createNew: v4.DatabaseAtV4.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.channels, channel);
+        },
+        validateItems: (newDb) async {
+          final channels = await newDb.select(newDb.channels).get();
+          expect(channels.single.name, 'Arena Sports 1');
+          expect(channels.single.isHidden, 1);
+          expect(await newDb.select(newDb.favorites).get(), isEmpty);
+          expect(await newDb.select(newDb.watchHistory).get(), isEmpty);
         },
       );
     });

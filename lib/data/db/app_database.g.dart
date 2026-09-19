@@ -6827,6 +6827,998 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $FavoritesTable extends Favorites
+    with TableInfo<$FavoritesTable, FavoriteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FavoritesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
+      GeneratedColumn<String>(
+        'item_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<UserItemType>($FavoritesTable.$converteritemType);
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
+    'remoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
+    'remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupNameMeta = const VerificationMeta(
+    'groupName',
+  );
+  @override
+  late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
+    'group_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    groupName,
+    sortOrder,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'favorites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FavoriteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('remote_key')) {
+      context.handle(
+        _remoteKeyMeta,
+        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteKeyMeta);
+    }
+    if (data.containsKey('group_name')) {
+      context.handle(
+        _groupNameMeta,
+        groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {itemType, sourceId, remoteKey},
+  ];
+  @override
+  FavoriteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FavoriteRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      itemType: $FavoritesTable.$converteritemType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}item_type'],
+        )!,
+      ),
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      ),
+      remoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_key'],
+      )!,
+      groupName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_name'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FavoritesTable createAlias(String alias) {
+    return $FavoritesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
+      const EnumNameConverter<UserItemType>(UserItemType.values);
+}
+
+class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
+  final int id;
+  final UserItemType itemType;
+
+  /// Null only for local library files (Phase 8).
+  final String? sourceId;
+  final String remoteKey;
+
+  /// A user-made group; null is the default list.
+  final String? groupName;
+  final int? sortOrder;
+  final DateTime addedAt;
+  const FavoriteRow({
+    required this.id,
+    required this.itemType,
+    this.sourceId,
+    required this.remoteKey,
+    this.groupName,
+    this.sortOrder,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    {
+      map['item_type'] = Variable<String>(
+        $FavoritesTable.$converteritemType.toSql(itemType),
+      );
+    }
+    if (!nullToAbsent || sourceId != null) {
+      map['source_id'] = Variable<String>(sourceId);
+    }
+    map['remote_key'] = Variable<String>(remoteKey);
+    if (!nullToAbsent || groupName != null) {
+      map['group_name'] = Variable<String>(groupName);
+    }
+    if (!nullToAbsent || sortOrder != null) {
+      map['sort_order'] = Variable<int>(sortOrder);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    return map;
+  }
+
+  FavoritesCompanion toCompanion(bool nullToAbsent) {
+    return FavoritesCompanion(
+      id: Value(id),
+      itemType: Value(itemType),
+      sourceId: sourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceId),
+      remoteKey: Value(remoteKey),
+      groupName: groupName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupName),
+      sortOrder: sortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sortOrder),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory FavoriteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FavoriteRow(
+      id: serializer.fromJson<int>(json['id']),
+      itemType: $FavoritesTable.$converteritemType.fromJson(
+        serializer.fromJson<String>(json['itemType']),
+      ),
+      sourceId: serializer.fromJson<String?>(json['sourceId']),
+      remoteKey: serializer.fromJson<String>(json['remoteKey']),
+      groupName: serializer.fromJson<String?>(json['groupName']),
+      sortOrder: serializer.fromJson<int?>(json['sortOrder']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'itemType': serializer.toJson<String>(
+        $FavoritesTable.$converteritemType.toJson(itemType),
+      ),
+      'sourceId': serializer.toJson<String?>(sourceId),
+      'remoteKey': serializer.toJson<String>(remoteKey),
+      'groupName': serializer.toJson<String?>(groupName),
+      'sortOrder': serializer.toJson<int?>(sortOrder),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+    };
+  }
+
+  FavoriteRow copyWith({
+    int? id,
+    UserItemType? itemType,
+    Value<String?> sourceId = const Value.absent(),
+    String? remoteKey,
+    Value<String?> groupName = const Value.absent(),
+    Value<int?> sortOrder = const Value.absent(),
+    DateTime? addedAt,
+  }) => FavoriteRow(
+    id: id ?? this.id,
+    itemType: itemType ?? this.itemType,
+    sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    remoteKey: remoteKey ?? this.remoteKey,
+    groupName: groupName.present ? groupName.value : this.groupName,
+    sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  FavoriteRow copyWithCompanion(FavoritesCompanion data) {
+    return FavoriteRow(
+      id: data.id.present ? data.id.value : this.id,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
+      groupName: data.groupName.present ? data.groupName.value : this.groupName,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteRow(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('groupName: $groupName, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    groupName,
+    sortOrder,
+    addedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FavoriteRow &&
+          other.id == this.id &&
+          other.itemType == this.itemType &&
+          other.sourceId == this.sourceId &&
+          other.remoteKey == this.remoteKey &&
+          other.groupName == this.groupName &&
+          other.sortOrder == this.sortOrder &&
+          other.addedAt == this.addedAt);
+}
+
+class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
+  final Value<int> id;
+  final Value<UserItemType> itemType;
+  final Value<String?> sourceId;
+  final Value<String> remoteKey;
+  final Value<String?> groupName;
+  final Value<int?> sortOrder;
+  final Value<DateTime> addedAt;
+  const FavoritesCompanion({
+    this.id = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.remoteKey = const Value.absent(),
+    this.groupName = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.addedAt = const Value.absent(),
+  });
+  FavoritesCompanion.insert({
+    this.id = const Value.absent(),
+    required UserItemType itemType,
+    this.sourceId = const Value.absent(),
+    required String remoteKey,
+    this.groupName = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    required DateTime addedAt,
+  }) : itemType = Value(itemType),
+       remoteKey = Value(remoteKey),
+       addedAt = Value(addedAt);
+  static Insertable<FavoriteRow> custom({
+    Expression<int>? id,
+    Expression<String>? itemType,
+    Expression<String>? sourceId,
+    Expression<String>? remoteKey,
+    Expression<String>? groupName,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? addedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (itemType != null) 'item_type': itemType,
+      if (sourceId != null) 'source_id': sourceId,
+      if (remoteKey != null) 'remote_key': remoteKey,
+      if (groupName != null) 'group_name': groupName,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (addedAt != null) 'added_at': addedAt,
+    });
+  }
+
+  FavoritesCompanion copyWith({
+    Value<int>? id,
+    Value<UserItemType>? itemType,
+    Value<String?>? sourceId,
+    Value<String>? remoteKey,
+    Value<String?>? groupName,
+    Value<int?>? sortOrder,
+    Value<DateTime>? addedAt,
+  }) {
+    return FavoritesCompanion(
+      id: id ?? this.id,
+      itemType: itemType ?? this.itemType,
+      sourceId: sourceId ?? this.sourceId,
+      remoteKey: remoteKey ?? this.remoteKey,
+      groupName: groupName ?? this.groupName,
+      sortOrder: sortOrder ?? this.sortOrder,
+      addedAt: addedAt ?? this.addedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(
+        $FavoritesTable.$converteritemType.toSql(itemType.value),
+      );
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (remoteKey.present) {
+      map['remote_key'] = Variable<String>(remoteKey.value);
+    }
+    if (groupName.present) {
+      map['group_name'] = Variable<String>(groupName.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoritesCompanion(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('groupName: $groupName, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WatchHistoryTable extends WatchHistory
+    with TableInfo<$WatchHistoryTable, WatchHistoryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WatchHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
+      GeneratedColumn<String>(
+        'item_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<UserItemType>($WatchHistoryTable.$converteritemType);
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
+    'remoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
+    'remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completedMeta = const VerificationMeta(
+    'completed',
+  );
+  @override
+  late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
+    'completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    positionMs,
+    durationMs,
+    completed,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'watch_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WatchHistoryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('remote_key')) {
+      context.handle(
+        _remoteKeyMeta,
+        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteKeyMeta);
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('completed')) {
+      context.handle(
+        _completedMeta,
+        completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {itemType, sourceId, remoteKey},
+  ];
+  @override
+  WatchHistoryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WatchHistoryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      itemType: $WatchHistoryTable.$converteritemType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}item_type'],
+        )!,
+      ),
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      ),
+      remoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_key'],
+      )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      ),
+      completed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}completed'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WatchHistoryTable createAlias(String alias) {
+    return $WatchHistoryTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
+      const EnumNameConverter<UserItemType>(UserItemType.values);
+}
+
+class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
+  final int id;
+  final UserItemType itemType;
+  final String? sourceId;
+  final String remoteKey;
+  final int positionMs;
+  final int? durationMs;
+  final bool completed;
+  final DateTime updatedAt;
+  const WatchHistoryRow({
+    required this.id,
+    required this.itemType,
+    this.sourceId,
+    required this.remoteKey,
+    required this.positionMs,
+    this.durationMs,
+    required this.completed,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    {
+      map['item_type'] = Variable<String>(
+        $WatchHistoryTable.$converteritemType.toSql(itemType),
+      );
+    }
+    if (!nullToAbsent || sourceId != null) {
+      map['source_id'] = Variable<String>(sourceId);
+    }
+    map['remote_key'] = Variable<String>(remoteKey);
+    map['position_ms'] = Variable<int>(positionMs);
+    if (!nullToAbsent || durationMs != null) {
+      map['duration_ms'] = Variable<int>(durationMs);
+    }
+    map['completed'] = Variable<bool>(completed);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  WatchHistoryCompanion toCompanion(bool nullToAbsent) {
+    return WatchHistoryCompanion(
+      id: Value(id),
+      itemType: Value(itemType),
+      sourceId: sourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceId),
+      remoteKey: Value(remoteKey),
+      positionMs: Value(positionMs),
+      durationMs: durationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationMs),
+      completed: Value(completed),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory WatchHistoryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WatchHistoryRow(
+      id: serializer.fromJson<int>(json['id']),
+      itemType: $WatchHistoryTable.$converteritemType.fromJson(
+        serializer.fromJson<String>(json['itemType']),
+      ),
+      sourceId: serializer.fromJson<String?>(json['sourceId']),
+      remoteKey: serializer.fromJson<String>(json['remoteKey']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      durationMs: serializer.fromJson<int?>(json['durationMs']),
+      completed: serializer.fromJson<bool>(json['completed']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'itemType': serializer.toJson<String>(
+        $WatchHistoryTable.$converteritemType.toJson(itemType),
+      ),
+      'sourceId': serializer.toJson<String?>(sourceId),
+      'remoteKey': serializer.toJson<String>(remoteKey),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'durationMs': serializer.toJson<int?>(durationMs),
+      'completed': serializer.toJson<bool>(completed),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  WatchHistoryRow copyWith({
+    int? id,
+    UserItemType? itemType,
+    Value<String?> sourceId = const Value.absent(),
+    String? remoteKey,
+    int? positionMs,
+    Value<int?> durationMs = const Value.absent(),
+    bool? completed,
+    DateTime? updatedAt,
+  }) => WatchHistoryRow(
+    id: id ?? this.id,
+    itemType: itemType ?? this.itemType,
+    sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    remoteKey: remoteKey ?? this.remoteKey,
+    positionMs: positionMs ?? this.positionMs,
+    durationMs: durationMs.present ? durationMs.value : this.durationMs,
+    completed: completed ?? this.completed,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  WatchHistoryRow copyWithCompanion(WatchHistoryCompanion data) {
+    return WatchHistoryRow(
+      id: data.id.present ? data.id.value : this.id,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      completed: data.completed.present ? data.completed.value : this.completed,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchHistoryRow(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('completed: $completed, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    positionMs,
+    durationMs,
+    completed,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WatchHistoryRow &&
+          other.id == this.id &&
+          other.itemType == this.itemType &&
+          other.sourceId == this.sourceId &&
+          other.remoteKey == this.remoteKey &&
+          other.positionMs == this.positionMs &&
+          other.durationMs == this.durationMs &&
+          other.completed == this.completed &&
+          other.updatedAt == this.updatedAt);
+}
+
+class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
+  final Value<int> id;
+  final Value<UserItemType> itemType;
+  final Value<String?> sourceId;
+  final Value<String> remoteKey;
+  final Value<int> positionMs;
+  final Value<int?> durationMs;
+  final Value<bool> completed;
+  final Value<DateTime> updatedAt;
+  const WatchHistoryCompanion({
+    this.id = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.remoteKey = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.completed = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  WatchHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required UserItemType itemType,
+    this.sourceId = const Value.absent(),
+    required String remoteKey,
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.completed = const Value.absent(),
+    required DateTime updatedAt,
+  }) : itemType = Value(itemType),
+       remoteKey = Value(remoteKey),
+       updatedAt = Value(updatedAt);
+  static Insertable<WatchHistoryRow> custom({
+    Expression<int>? id,
+    Expression<String>? itemType,
+    Expression<String>? sourceId,
+    Expression<String>? remoteKey,
+    Expression<int>? positionMs,
+    Expression<int>? durationMs,
+    Expression<bool>? completed,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (itemType != null) 'item_type': itemType,
+      if (sourceId != null) 'source_id': sourceId,
+      if (remoteKey != null) 'remote_key': remoteKey,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (completed != null) 'completed': completed,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  WatchHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<UserItemType>? itemType,
+    Value<String?>? sourceId,
+    Value<String>? remoteKey,
+    Value<int>? positionMs,
+    Value<int?>? durationMs,
+    Value<bool>? completed,
+    Value<DateTime>? updatedAt,
+  }) {
+    return WatchHistoryCompanion(
+      id: id ?? this.id,
+      itemType: itemType ?? this.itemType,
+      sourceId: sourceId ?? this.sourceId,
+      remoteKey: remoteKey ?? this.remoteKey,
+      positionMs: positionMs ?? this.positionMs,
+      durationMs: durationMs ?? this.durationMs,
+      completed: completed ?? this.completed,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(
+        $WatchHistoryTable.$converteritemType.toSql(itemType.value),
+      );
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (remoteKey.present) {
+      map['remote_key'] = Variable<String>(remoteKey.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (completed.present) {
+      map['completed'] = Variable<bool>(completed.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('completed: $completed, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6894,11 +7886,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'CREATE INDEX series_category ON series (category_id)',
   );
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $FavoritesTable favorites = $FavoritesTable(this);
+  late final $WatchHistoryTable watchHistory = $WatchHistoryTable(this);
+  late final Index watchHistoryRecent = Index(
+    'watch_history_recent',
+    'CREATE INDEX watch_history_recent ON watch_history (item_type, updated_at)',
+  );
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final SourcesDao sourcesDao = SourcesDao(this as AppDatabase);
   late final SyncRunsDao syncRunsDao = SyncRunsDao(this as AppDatabase);
   late final CategoriesDao categoriesDao = CategoriesDao(this as AppDatabase);
   late final ChannelsDao channelsDao = ChannelsDao(this as AppDatabase);
+  late final FavoritesDao favoritesDao = FavoritesDao(this as AppDatabase);
+  late final WatchHistoryDao watchHistoryDao = WatchHistoryDao(
+    this as AppDatabase,
+  );
   late final MoviesDao moviesDao = MoviesDao(this as AppDatabase);
   late final SeriesDao seriesDao = SeriesDao(this as AppDatabase);
   @override
@@ -6931,6 +7933,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     moviesCategory,
     seriesCategory,
     settings,
+    favorites,
+    watchHistory,
+    watchHistoryRecent,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -7066,6 +8071,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('episodes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('favorites', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('watch_history', kind: UpdateKind.delete)],
     ),
   ]);
   @override
@@ -7207,6 +8226,42 @@ final class $$SourcesTableReferences
     ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_syncRunsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
+  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favorites,
+    aliasName: 'sources__id__favorites__source_id',
+  );
+
+  $$FavoritesTableProcessedTableManager get favoritesRefs {
+    final manager = $$FavoritesTableTableManager(
+      $_db,
+      $_db.favorites,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$WatchHistoryTable, List<WatchHistoryRow>>
+  _watchHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.watchHistory,
+    aliasName: 'sources__id__watch_history__source_id',
+  );
+
+  $$WatchHistoryTableProcessedTableManager get watchHistoryRefs {
+    final manager = $$WatchHistoryTableTableManager(
+      $_db,
+      $_db.watchHistory,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_watchHistoryRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7430,6 +8485,56 @@ class $$SourcesTableFilterComposer
           }) => $$SyncRunsTableFilterComposer(
             $db: $db,
             $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> favoritesRefs(
+    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
+  ) {
+    final $$FavoritesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableFilterComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> watchHistoryRefs(
+    Expression<bool> Function($$WatchHistoryTableFilterComposer f) f,
+  ) {
+    final $$WatchHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchHistory,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.watchHistory,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7742,6 +8847,56 @@ class $$SourcesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> favoritesRefs<T extends Object>(
+    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
+  ) {
+    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> watchHistoryRefs<T extends Object>(
+    Expression<T> Function($$WatchHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$WatchHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchHistory,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.watchHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$SourcesTableTableManager
@@ -7763,6 +8918,8 @@ class $$SourcesTableTableManager
             bool moviesRefs,
             bool seriesRefs,
             bool syncRunsRefs,
+            bool favoritesRefs,
+            bool watchHistoryRefs,
           })
         > {
   $$SourcesTableTableManager(_$AppDatabase db, $SourcesTable table)
@@ -7875,6 +9032,8 @@ class $$SourcesTableTableManager
                 moviesRefs = false,
                 seriesRefs = false,
                 syncRunsRefs = false,
+                favoritesRefs = false,
+                watchHistoryRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7884,6 +9043,8 @@ class $$SourcesTableTableManager
                     if (moviesRefs) db.movies,
                     if (seriesRefs) db.series,
                     if (syncRunsRefs) db.syncRuns,
+                    if (favoritesRefs) db.favorites,
+                    if (watchHistoryRefs) db.watchHistory,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -7993,6 +9154,48 @@ class $$SourcesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (favoritesRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          FavoriteRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._favoritesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).favoritesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (watchHistoryRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          WatchHistoryRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._watchHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).watchHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -8019,6 +9222,8 @@ typedef $$SourcesTableProcessedTableManager =
         bool moviesRefs,
         bool seriesRefs,
         bool syncRunsRefs,
+        bool favoritesRefs,
+        bool watchHistoryRefs,
       })
     >;
 typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
@@ -12378,6 +13583,723 @@ typedef $$SettingsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
+  Value<int> id,
+  required UserItemType itemType,
+  Value<String?> sourceId,
+  required String remoteKey,
+  Value<String?> groupName,
+  Value<int?> sortOrder,
+  required DateTime addedAt,
+});
+typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
+  Value<int> id,
+  Value<UserItemType> itemType,
+  Value<String?> sourceId,
+  Value<String> remoteKey,
+  Value<String?> groupName,
+  Value<int?> sortOrder,
+  Value<DateTime> addedAt,
+});
+
+final class $$FavoritesTableReferences
+    extends BaseReferences<_$AppDatabase, $FavoritesTable, FavoriteRow> {
+  $$FavoritesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('favorites__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager? get sourceId {
+    final $_column = $_itemColumn<String>('source_id');
+    if ($_column == null) return null;
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FavoritesTableFilterComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
+  get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupName => $composableBuilder(
+    column: $table.groupName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get groupName => $composableBuilder(
+    column: $table.groupName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteKey =>
+      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
+
+  GeneratedColumn<String> get groupName =>
+      $composableBuilder(column: $table.groupName, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FavoritesTable,
+          FavoriteRow,
+          $$FavoritesTableFilterComposer,
+          $$FavoritesTableOrderingComposer,
+          $$FavoritesTableAnnotationComposer,
+          $$FavoritesTableCreateCompanionBuilder,
+          $$FavoritesTableUpdateCompanionBuilder,
+          (FavoriteRow, $$FavoritesTableReferences),
+          FavoriteRow,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$FavoritesTableTableManager(_$AppDatabase db, $FavoritesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FavoritesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FavoritesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FavoritesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<UserItemType> itemType = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String> remoteKey = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+              }) => FavoritesCompanion(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                groupName: groupName,
+                sortOrder: sortOrder,
+                addedAt: addedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required UserItemType itemType,
+                Value<String?> sourceId = const Value.absent(),
+                required String remoteKey,
+                Value<String?> groupName = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                required DateTime addedAt,
+              }) => FavoritesCompanion.insert(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                groupName: groupName,
+                sortOrder: sortOrder,
+                addedAt: addedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FavoritesTable, FavoriteRow>(table),
+                  $$FavoritesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$FavoritesTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$FavoritesTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FavoritesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FavoritesTable,
+      FavoriteRow,
+      $$FavoritesTableFilterComposer,
+      $$FavoritesTableOrderingComposer,
+      $$FavoritesTableAnnotationComposer,
+      $$FavoritesTableCreateCompanionBuilder,
+      $$FavoritesTableUpdateCompanionBuilder,
+      (FavoriteRow, $$FavoritesTableReferences),
+      FavoriteRow,
+      PrefetchHooks Function({bool sourceId})
+    >;
+typedef $$WatchHistoryTableCreateCompanionBuilder =
+    WatchHistoryCompanion Function({
+      Value<int> id,
+      required UserItemType itemType,
+      Value<String?> sourceId,
+      required String remoteKey,
+      Value<int> positionMs,
+      Value<int?> durationMs,
+      Value<bool> completed,
+      required DateTime updatedAt,
+    });
+typedef $$WatchHistoryTableUpdateCompanionBuilder =
+    WatchHistoryCompanion Function({
+      Value<int> id,
+      Value<UserItemType> itemType,
+      Value<String?> sourceId,
+      Value<String> remoteKey,
+      Value<int> positionMs,
+      Value<int?> durationMs,
+      Value<bool> completed,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$WatchHistoryTableReferences
+    extends BaseReferences<_$AppDatabase, $WatchHistoryTable, WatchHistoryRow> {
+  $$WatchHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('watch_history__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager? get sourceId {
+    final $_column = $_itemColumn<String>('source_id');
+    if ($_column == null) return null;
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$WatchHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
+  get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteKey =>
+      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get completed =>
+      $composableBuilder(column: $table.completed, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WatchHistoryTable,
+          WatchHistoryRow,
+          $$WatchHistoryTableFilterComposer,
+          $$WatchHistoryTableOrderingComposer,
+          $$WatchHistoryTableAnnotationComposer,
+          $$WatchHistoryTableCreateCompanionBuilder,
+          $$WatchHistoryTableUpdateCompanionBuilder,
+          (WatchHistoryRow, $$WatchHistoryTableReferences),
+          WatchHistoryRow,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$WatchHistoryTableTableManager(_$AppDatabase db, $WatchHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WatchHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WatchHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WatchHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<UserItemType> itemType = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String> remoteKey = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => WatchHistoryCompanion(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                completed: completed,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required UserItemType itemType,
+                Value<String?> sourceId = const Value.absent(),
+                required String remoteKey,
+                Value<int> positionMs = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
+                required DateTime updatedAt,
+              }) => WatchHistoryCompanion.insert(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                completed: completed,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$WatchHistoryTable, WatchHistoryRow>(table),
+                  $$WatchHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$WatchHistoryTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$WatchHistoryTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WatchHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WatchHistoryTable,
+      WatchHistoryRow,
+      $$WatchHistoryTableFilterComposer,
+      $$WatchHistoryTableOrderingComposer,
+      $$WatchHistoryTableAnnotationComposer,
+      $$WatchHistoryTableCreateCompanionBuilder,
+      $$WatchHistoryTableUpdateCompanionBuilder,
+      (WatchHistoryRow, $$WatchHistoryTableReferences),
+      WatchHistoryRow,
+      PrefetchHooks Function({bool sourceId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12406,4 +14328,8 @@ class $AppDatabaseManager {
       $$EpisodesTableTableManager(_db, _db.episodes);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$FavoritesTableTableManager get favorites =>
+      $$FavoritesTableTableManager(_db, _db.favorites);
+  $$WatchHistoryTableTableManager get watchHistory =>
+      $$WatchHistoryTableTableManager(_db, _db.watchHistory);
 }
