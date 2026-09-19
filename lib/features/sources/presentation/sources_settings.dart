@@ -330,8 +330,7 @@ class SourceCard extends ConsumerWidget {
           if (lastFailed) ...[
             if (parts.isNotEmpty) SizedBox(height: tokens.spacing.s4),
             _Line(
-              'Last attempt failed: '
-              '${syncFailureMessage(info.lastSync!.failureCode)}',
+              'Last attempt failed: ${_failure(info.lastSync!)}',
               color: colors.danger,
             ),
           ] else if (parts.isEmpty)
@@ -571,6 +570,9 @@ class SourceCard extends ConsumerWidget {
   }
 }
 
+String _failure(LastSync run) =>
+    syncFailureMessage(run.failureCode, status: run.failureStatus);
+
 class _Line extends StatelessWidget {
   const new(this.text, {required this.color});
 
@@ -649,9 +651,13 @@ class SourceDetailsDialog extends ConsumerWidget {
         switch (last) {
           null => 'Never',
           LastSync(outcome: LastSyncOutcome.running) => 'Running now',
-          LastSync(outcome: LastSyncOutcome.failed, :final failureCode) =>
+          LastSync(
+            outcome: LastSyncOutcome.failed,
+            :final failureCode,
+            :final failureStatus,
+          ) =>
             'Failed ${formatAgo(last.finishedAt ?? last.startedAt, now)}: '
-                '${syncFailureMessage(failureCode)}',
+                '${syncFailureMessage(failureCode, status: failureStatus)}',
           LastSync(outcome: LastSyncOutcome.cancelled) =>
             'Cancelled ${formatAgo(last.finishedAt ?? last.startedAt, now)}',
           LastSync(:final finishedAt) =>

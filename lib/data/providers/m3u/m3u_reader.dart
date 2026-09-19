@@ -67,8 +67,8 @@ Future<Result<M3uSummary>> readM3u(
         if (status < 200 || status >= 300) {
           await response.drain<void>().catchError((_) {});
           return Err(switch (status) {
-            401 || 403 => AuthFailure('playlist: HTTP $status'),
-            404 => NotFoundFailure('playlist: HTTP 404'),
+            401 || 403 => AuthFailure('playlist: HTTP $status', status),
+            404 => NotFoundFailure('playlist: HTTP 404', status),
             _ => NetworkFailure('playlist: HTTP $status', status),
           });
         }

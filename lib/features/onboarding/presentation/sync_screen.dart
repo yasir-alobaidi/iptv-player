@@ -162,11 +162,14 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     );
   }
 
-  String _failureText(AppFailure failure) => switch (failure) {
-    AuthFailure() =>
-      'Your provider rejected these details. Change them and try again.',
-    _ => '${failureMessage(failure)} Nothing was saved yet; try again.',
-  };
+  String _failureText(AppFailure failure) => [
+    switch (failure) {
+      AuthFailure() =>
+        'Your provider rejected these details. Change them and try again.',
+      _ => '${failureMessage(failure)} Nothing was saved yet; try again.',
+    },
+    ?serverAnswer(failure),
+  ].join(' ');
 
   static SourceType _typeFrom(SyncProgress? progress) =>
       progress?.stage == SyncStage.playlist

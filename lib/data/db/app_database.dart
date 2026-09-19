@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -97,6 +97,10 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.create(schema.channelsFts);
     await m.create(schema.moviesFts);
     await m.create(schema.seriesFts);
+  },
+  from2To3: (m, schema) async {
+    // Phase 2 step 8: the HTTP status a failed sync was answered with.
+    await m.addColumn(schema.syncRuns, schema.syncRuns.failureStatus);
   },
 );
 

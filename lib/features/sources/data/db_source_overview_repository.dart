@@ -21,7 +21,7 @@ final class DbSourceOverviewRepository implements SourceOverviewRepository {
   Stream<SourceOverview?> watch(String sourceId) => _db
       .customSelect(
         'SELECT s.account_json, r.outcome, r.started_at, r.finished_at, '
-        'r.failure, r.id AS run_id '
+        'r.failure, r.failure_status, r.id AS run_id '
         'FROM sources s '
         'LEFT JOIN sync_runs r ON r.id = '
         '(SELECT MAX(id) FROM sync_runs WHERE source_id = s.id) '
@@ -74,6 +74,7 @@ final class DbSourceOverviewRepository implements SourceOverviewRepository {
       startedAt: startedAt,
       finishedAt: _time(row.read<String?>('finished_at')),
       failureCode: row.read<String?>('failure'),
+      failureStatus: row.read<int?>('failure_status'),
     );
   }
 

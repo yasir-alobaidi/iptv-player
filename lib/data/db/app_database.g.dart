@@ -4823,6 +4823,17 @@ class $SyncRunsTable extends SyncRuns
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _failureStatusMeta = const VerificationMeta(
+    'failureStatus',
+  );
+  @override
+  late final GeneratedColumn<int> failureStatus = GeneratedColumn<int>(
+    'failure_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _countsJsonMeta = const VerificationMeta(
     'countsJson',
   );
@@ -4842,6 +4853,7 @@ class $SyncRunsTable extends SyncRuns
     finishedAt,
     outcome,
     failure,
+    failureStatus,
     countsJson,
   ];
   @override
@@ -4887,6 +4899,15 @@ class $SyncRunsTable extends SyncRuns
         failure.isAcceptableOrUnknown(data['failure']!, _failureMeta),
       );
     }
+    if (data.containsKey('failure_status')) {
+      context.handle(
+        _failureStatusMeta,
+        failureStatus.isAcceptableOrUnknown(
+          data['failure_status']!,
+          _failureStatusMeta,
+        ),
+      );
+    }
     if (data.containsKey('counts_json')) {
       context.handle(
         _countsJsonMeta,
@@ -4928,6 +4949,10 @@ class $SyncRunsTable extends SyncRuns
         DriftSqlType.string,
         data['${effectivePrefix}failure'],
       ),
+      failureStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}failure_status'],
+      ),
       countsJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}counts_json'],
@@ -4955,6 +4980,11 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
   /// exception text, which can carry a credential-bearing URL.
   final String? failure;
 
+  /// The HTTP status the server answered a failed run with, if any, so
+  /// Settings can say what the server said (schema v3). Only the number:
+  /// the failure's detail text can carry a credential.
+  final int? failureStatus;
+
   /// Item counts per stage, for Settings → Sources and the diagnostics
   /// export.
   final String? countsJson;
@@ -4965,6 +4995,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
     this.finishedAt,
     required this.outcome,
     this.failure,
+    this.failureStatus,
     this.countsJson,
   });
   @override
@@ -4984,6 +5015,9 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
     if (!nullToAbsent || failure != null) {
       map['failure'] = Variable<String>(failure);
     }
+    if (!nullToAbsent || failureStatus != null) {
+      map['failure_status'] = Variable<int>(failureStatus);
+    }
     if (!nullToAbsent || countsJson != null) {
       map['counts_json'] = Variable<String>(countsJson);
     }
@@ -5002,6 +5036,9 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
       failure: failure == null && nullToAbsent
           ? const Value.absent()
           : Value(failure),
+      failureStatus: failureStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failureStatus),
       countsJson: countsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(countsJson),
@@ -5022,6 +5059,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
         serializer.fromJson<String>(json['outcome']),
       ),
       failure: serializer.fromJson<String?>(json['failure']),
+      failureStatus: serializer.fromJson<int?>(json['failureStatus']),
       countsJson: serializer.fromJson<String?>(json['countsJson']),
     );
   }
@@ -5037,6 +5075,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
         $SyncRunsTable.$converteroutcome.toJson(outcome),
       ),
       'failure': serializer.toJson<String?>(failure),
+      'failureStatus': serializer.toJson<int?>(failureStatus),
       'countsJson': serializer.toJson<String?>(countsJson),
     };
   }
@@ -5048,6 +5087,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
     Value<DateTime?> finishedAt = const Value.absent(),
     SyncOutcome? outcome,
     Value<String?> failure = const Value.absent(),
+    Value<int?> failureStatus = const Value.absent(),
     Value<String?> countsJson = const Value.absent(),
   }) => SyncRunRow(
     id: id ?? this.id,
@@ -5056,6 +5096,9 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
     finishedAt: finishedAt.present ? finishedAt.value : this.finishedAt,
     outcome: outcome ?? this.outcome,
     failure: failure.present ? failure.value : this.failure,
+    failureStatus: failureStatus.present
+        ? failureStatus.value
+        : this.failureStatus,
     countsJson: countsJson.present ? countsJson.value : this.countsJson,
   );
   SyncRunRow copyWithCompanion(SyncRunsCompanion data) {
@@ -5068,6 +5111,9 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
           : this.finishedAt,
       outcome: data.outcome.present ? data.outcome.value : this.outcome,
       failure: data.failure.present ? data.failure.value : this.failure,
+      failureStatus: data.failureStatus.present
+          ? data.failureStatus.value
+          : this.failureStatus,
       countsJson: data.countsJson.present
           ? data.countsJson.value
           : this.countsJson,
@@ -5083,6 +5129,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
           ..write('finishedAt: $finishedAt, ')
           ..write('outcome: $outcome, ')
           ..write('failure: $failure, ')
+          ..write('failureStatus: $failureStatus, ')
           ..write('countsJson: $countsJson')
           ..write(')'))
         .toString();
@@ -5096,6 +5143,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
     finishedAt,
     outcome,
     failure,
+    failureStatus,
     countsJson,
   );
   @override
@@ -5108,6 +5156,7 @@ class SyncRunRow extends DataClass implements Insertable<SyncRunRow> {
           other.finishedAt == this.finishedAt &&
           other.outcome == this.outcome &&
           other.failure == this.failure &&
+          other.failureStatus == this.failureStatus &&
           other.countsJson == this.countsJson);
 }
 
@@ -5118,6 +5167,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
   final Value<DateTime?> finishedAt;
   final Value<SyncOutcome> outcome;
   final Value<String?> failure;
+  final Value<int?> failureStatus;
   final Value<String?> countsJson;
   const SyncRunsCompanion({
     this.id = const Value.absent(),
@@ -5126,6 +5176,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
     this.finishedAt = const Value.absent(),
     this.outcome = const Value.absent(),
     this.failure = const Value.absent(),
+    this.failureStatus = const Value.absent(),
     this.countsJson = const Value.absent(),
   });
   SyncRunsCompanion.insert({
@@ -5135,6 +5186,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
     this.finishedAt = const Value.absent(),
     this.outcome = const Value.absent(),
     this.failure = const Value.absent(),
+    this.failureStatus = const Value.absent(),
     this.countsJson = const Value.absent(),
   }) : sourceId = Value(sourceId),
        startedAt = Value(startedAt);
@@ -5145,6 +5197,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
     Expression<DateTime>? finishedAt,
     Expression<String>? outcome,
     Expression<String>? failure,
+    Expression<int>? failureStatus,
     Expression<String>? countsJson,
   }) {
     return RawValuesInsertable({
@@ -5154,6 +5207,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
       if (finishedAt != null) 'finished_at': finishedAt,
       if (outcome != null) 'outcome': outcome,
       if (failure != null) 'failure': failure,
+      if (failureStatus != null) 'failure_status': failureStatus,
       if (countsJson != null) 'counts_json': countsJson,
     });
   }
@@ -5165,6 +5219,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
     Value<DateTime?>? finishedAt,
     Value<SyncOutcome>? outcome,
     Value<String?>? failure,
+    Value<int?>? failureStatus,
     Value<String?>? countsJson,
   }) {
     return SyncRunsCompanion(
@@ -5174,6 +5229,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
       finishedAt: finishedAt ?? this.finishedAt,
       outcome: outcome ?? this.outcome,
       failure: failure ?? this.failure,
+      failureStatus: failureStatus ?? this.failureStatus,
       countsJson: countsJson ?? this.countsJson,
     );
   }
@@ -5201,6 +5257,9 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
     if (failure.present) {
       map['failure'] = Variable<String>(failure.value);
     }
+    if (failureStatus.present) {
+      map['failure_status'] = Variable<int>(failureStatus.value);
+    }
     if (countsJson.present) {
       map['counts_json'] = Variable<String>(countsJson.value);
     }
@@ -5216,6 +5275,7 @@ class SyncRunsCompanion extends UpdateCompanion<SyncRunRow> {
           ..write('finishedAt: $finishedAt, ')
           ..write('outcome: $outcome, ')
           ..write('failure: $failure, ')
+          ..write('failureStatus: $failureStatus, ')
           ..write('countsJson: $countsJson')
           ..write(')'))
         .toString();
@@ -10955,6 +11015,7 @@ typedef $$SyncRunsTableCreateCompanionBuilder = SyncRunsCompanion Function({
   Value<DateTime?> finishedAt,
   Value<SyncOutcome> outcome,
   Value<String?> failure,
+  Value<int?> failureStatus,
   Value<String?> countsJson,
 });
 typedef $$SyncRunsTableUpdateCompanionBuilder = SyncRunsCompanion Function({
@@ -10964,6 +11025,7 @@ typedef $$SyncRunsTableUpdateCompanionBuilder = SyncRunsCompanion Function({
   Value<DateTime?> finishedAt,
   Value<SyncOutcome> outcome,
   Value<String?> failure,
+  Value<int?> failureStatus,
   Value<String?> countsJson,
 });
 
@@ -11021,6 +11083,11 @@ class $$SyncRunsTableFilterComposer
 
   ColumnFilters<String> get failure => $composableBuilder(
     column: $table.failure,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get failureStatus => $composableBuilder(
+    column: $table.failureStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11087,6 +11154,11 @@ class $$SyncRunsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get failureStatus => $composableBuilder(
+    column: $table.failureStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get countsJson => $composableBuilder(
     column: $table.countsJson,
     builder: (column) => ColumnOrderings(column),
@@ -11141,6 +11213,11 @@ class $$SyncRunsTableAnnotationComposer
 
   GeneratedColumn<String> get failure =>
       $composableBuilder(column: $table.failure, builder: (column) => column);
+
+  GeneratedColumn<int> get failureStatus => $composableBuilder(
+    column: $table.failureStatus,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get countsJson => $composableBuilder(
     column: $table.countsJson,
@@ -11205,6 +11282,7 @@ class $$SyncRunsTableTableManager
                 Value<DateTime?> finishedAt = const Value.absent(),
                 Value<SyncOutcome> outcome = const Value.absent(),
                 Value<String?> failure = const Value.absent(),
+                Value<int?> failureStatus = const Value.absent(),
                 Value<String?> countsJson = const Value.absent(),
               }) => SyncRunsCompanion(
                 id: id,
@@ -11213,6 +11291,7 @@ class $$SyncRunsTableTableManager
                 finishedAt: finishedAt,
                 outcome: outcome,
                 failure: failure,
+                failureStatus: failureStatus,
                 countsJson: countsJson,
               ),
           createCompanionCallback:
@@ -11223,6 +11302,7 @@ class $$SyncRunsTableTableManager
                 Value<DateTime?> finishedAt = const Value.absent(),
                 Value<SyncOutcome> outcome = const Value.absent(),
                 Value<String?> failure = const Value.absent(),
+                Value<int?> failureStatus = const Value.absent(),
                 Value<String?> countsJson = const Value.absent(),
               }) => SyncRunsCompanion.insert(
                 id: id,
@@ -11231,6 +11311,7 @@ class $$SyncRunsTableTableManager
                 finishedAt: finishedAt,
                 outcome: outcome,
                 failure: failure,
+                failureStatus: failureStatus,
                 countsJson: countsJson,
               ),
           withReferenceMapper: (p0) => p0

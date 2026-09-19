@@ -394,6 +394,7 @@ void main() {
       final run = await env.latestRun(id);
       expect(run.outcome, SyncOutcome.failed);
       expect(run.failure, 'not_found');
+      expect(run.failureStatus, 404);
       expect(await env.db.channelsDao.countFor(id), 240);
       expect(await env.db.seriesDao.countFor(id), 24);
     });

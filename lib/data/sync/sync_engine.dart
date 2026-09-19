@@ -355,6 +355,7 @@ final class SyncEngine implements SyncService {
         outcome: cancelled ? SyncOutcome.cancelled : SyncOutcome.failed,
         at: _clock(),
         failure: cancelled ? null : failure.code,
+        failureStatus: cancelled ? null : failure.statusCode,
       );
     } on Object catch (error) {
       _log.error(_tag, 'Could not record the end of sync run $runId: $error');

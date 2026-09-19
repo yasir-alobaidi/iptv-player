@@ -22,12 +22,14 @@ class SyncRunsDao extends DatabaseAccessor<AppDatabase>
     required SyncOutcome outcome,
     required DateTime at,
     String? failure,
+    int? failureStatus,
     String? countsJson,
   }) => (update(syncRuns)..where((t) => t.id.equals(id))).write(
     SyncRunsCompanion(
       outcome: Value(outcome),
       finishedAt: Value(at),
       failure: Value(failure),
+      failureStatus: Value(failureStatus),
       countsJson: Value(countsJson),
     ),
   );

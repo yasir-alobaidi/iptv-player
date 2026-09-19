@@ -20,6 +20,9 @@ abstract class LastSync with _$LastSync {
     /// An `AppFailure.code`, or [interruptedSyncCode]; null unless the run
     /// failed. The UI phrases it; it is never raw exception text.
     String? failureCode,
+
+    /// The HTTP status the server answered the failed run with, if any.
+    int? failureStatus,
   }) = _LastSync;
 }
 

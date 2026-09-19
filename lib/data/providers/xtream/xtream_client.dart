@@ -258,12 +258,15 @@ final class XtreamClient {
       // either way so the connection can be reused.
       final visible = await _visibleBytes(stream);
       final failure = switch (status) {
-        401 || 403 => AuthFailure('$action: HTTP $status'),
+        401 || 403 => AuthFailure('$action: HTTP $status', status),
         // Some panels refuse a sign-in with an empty 404 from
         // player_api.php; a page that isn't there has the web server's
-        // error page as its body (docs/02).
-        404 when visible == 0 => AuthFailure('$action: HTTP 404, no body'),
-        404 => NotFoundFailure('$action: HTTP 404'),
+        // error page as its body (docs/02). A real 404 stays one.
+        404 when visible == 0 => AuthFailure(
+          '$action: HTTP 404 with an empty body',
+          status,
+        ),
+        404 => NotFoundFailure('$action: HTTP 404', status),
         _ => NetworkFailure('$action: HTTP $status', status),
       };
       final retryable = status == 429 || (status >= 500 && status < 600);

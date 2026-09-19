@@ -181,6 +181,8 @@ void main() {
         final result = await clientFor(p).account(retry: false);
 
         expect(result.failureOrNull, type, reason: jsonEncode(body));
+        // Either way the user can see the server answered 404.
+        expect(result.failureOrNull!.statusCode, 404);
         expect(p.requests, hasLength(1));
       }
     });

@@ -188,6 +188,36 @@ void main() {
       });
     }
 
+    for (final (failure, title, answer) in [
+      (
+        AuthFailure('account: HTTP 404 with an empty body', 404),
+        'Sign-in refused',
+        'The server answered HTTP 404 with an empty page',
+      ),
+      (
+        NotFoundFailure('account: HTTP 404', 404),
+        'Not found',
+        'The server answered HTTP 404 (Not Found).',
+      ),
+      (
+        NetworkFailure('account: HTTP 503', 503),
+        'Server error',
+        'The server answered HTTP 503 (Service Unavailable).',
+      ),
+    ]) {
+      testWidgets('"$title" says what the server answered '
+          '(HTTP ${failure.statusCode})', (tester) async {
+        fakes.checker.result = Err(failure);
+        await pump(tester);
+        await fillXtream(tester);
+
+        await press(tester, 'Test connection');
+
+        expect(find.text(title), findsOneWidget);
+        expect(find.textContaining(answer), findsOneWidget);
+      });
+    }
+
     testWidgets('pasting a get.php link fills in all three fields', (
       tester,
     ) async {

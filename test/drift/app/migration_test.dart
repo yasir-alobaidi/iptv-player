@@ -9,6 +9,7 @@ import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -142,5 +143,54 @@ void main() {
         expect(await database.select(database.categories).get(), isEmpty);
       },
     );
+  });
+
+  group('v2 → v3', () {
+    const created = '2026-09-18T08:00:00.000Z';
+    const source = v2.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      username: 'viewer',
+      credentialRef: 'source.src-1',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const run = v2.SyncRunsData(
+      id: 1,
+      sourceId: 'src-1',
+      startedAt: created,
+      finishedAt: created,
+      outcome: 'failed',
+      failure: 'auth',
+    );
+
+    test('keeps every sync run, with no status for the old ones', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 2,
+        newVersion: 3,
+        createOld: v2.DatabaseAtV2.new,
+        createNew: v3.DatabaseAtV3.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.syncRuns, run);
+        },
+        validateItems: (newDb) async {
+          final runs = await newDb.select(newDb.syncRuns).get();
+
+          expect(runs, hasLength(1));
+          expect(runs.single.failure, 'auth');
+          expect(runs.single.failureStatus, isNull);
+          expect(runs.single.startedAt, created);
+        },
+      );
+    });
   });
 }

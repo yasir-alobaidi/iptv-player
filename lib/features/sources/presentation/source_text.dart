@@ -66,11 +66,12 @@ String countsSummary(SourceCounts counts) {
 String _items(int count, String one, String many) =>
     '${formatCount(count)} ${count == 1 ? one : many}';
 
-/// The human line for a failed run's stored code.
-String syncFailureMessage(String? code) => switch (code) {
+/// The human line for a failed run's stored code, with what the server
+/// answered when it answered with an HTTP [status].
+String syncFailureMessage(String? code, {int? status}) => switch (code) {
   null => failureMessage(UnexpectedFailure()),
   interruptedSyncCode => 'The app was closed before it finished.',
-  _ => failureMessage(AppFailure.fromCode(code)),
+  _ => failureWithAnswer(AppFailure.fromCode(code, statusCode: status)),
 };
 
 /// The top bar's words for a running sync: `Syncing channels · 12,340`.

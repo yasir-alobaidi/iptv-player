@@ -17,7 +17,8 @@ mixin _$LastSync {
 
  LastSyncOutcome get outcome; DateTime get startedAt; DateTime? get finishedAt;/// An `AppFailure.code`, or [interruptedSyncCode]; null unless the run
 /// failed. The UI phrases it; it is never raw exception text.
- String? get failureCode;
+ String? get failureCode;/// The HTTP status the server answered the failed run with, if any.
+ int? get failureStatus;
 /// Create a copy of LastSync
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,20 +30,20 @@ $LastSyncCopyWith<LastSync> get copyWith => _$LastSyncCopyWithImpl<LastSync>(thi
 @override
 bool operator ==(Object other) {
   final _this = this as LastSync;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LastSync&&(identical(other.outcome, _this.outcome) || other.outcome == _this.outcome)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.finishedAt, _this.finishedAt) || other.finishedAt == _this.finishedAt)&&(identical(other.failureCode, _this.failureCode) || other.failureCode == _this.failureCode));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LastSync&&(identical(other.outcome, _this.outcome) || other.outcome == _this.outcome)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.finishedAt, _this.finishedAt) || other.finishedAt == _this.finishedAt)&&(identical(other.failureCode, _this.failureCode) || other.failureCode == _this.failureCode)&&(identical(other.failureStatus, _this.failureStatus) || other.failureStatus == _this.failureStatus));
 }
 
 
 @override
 int get hashCode {
   final _this = this as LastSync;
-  return Object.hash(runtimeType,_this.outcome,_this.startedAt,_this.finishedAt,_this.failureCode);
+  return Object.hash(runtimeType,_this.outcome,_this.startedAt,_this.finishedAt,_this.failureCode,_this.failureStatus);
 }
 
 @override
 String toString() {
   final _this = this as LastSync;
-  return 'LastSync(outcome: ${_this.outcome}, startedAt: ${_this.startedAt}, finishedAt: ${_this.finishedAt}, failureCode: ${_this.failureCode})';
+  return 'LastSync(outcome: ${_this.outcome}, startedAt: ${_this.startedAt}, finishedAt: ${_this.finishedAt}, failureCode: ${_this.failureCode}, failureStatus: ${_this.failureStatus})';
 }
 
 
@@ -53,7 +54,7 @@ abstract mixin class $LastSyncCopyWith<$Res>  {
   factory $LastSyncCopyWith(LastSync value, $Res Function(LastSync) _then) = _$LastSyncCopyWithImpl;
 @useResult
 $Res call({
- LastSyncOutcome outcome, DateTime startedAt, DateTime? finishedAt, String? failureCode
+ LastSyncOutcome outcome, DateTime startedAt, DateTime? finishedAt, String? failureCode, int? failureStatus
 });
 
 
@@ -70,13 +71,14 @@ class _$LastSyncCopyWithImpl<$Res>
 
 /// Create a copy of LastSync
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? outcome = null,Object? startedAt = null,Object? finishedAt = freezed,Object? failureCode = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? outcome = null,Object? startedAt = null,Object? finishedAt = freezed,Object? failureCode = freezed,Object? failureStatus = freezed,}) {
   return _then(LastSync(
 outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
 as LastSyncOutcome,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,finishedAt: freezed == finishedAt ? _self.finishedAt : finishedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,failureCode: freezed == failureCode ? _self.failureCode : failureCode // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,failureStatus: freezed == failureStatus ? _self.failureStatus : failureStatus // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -161,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode,  int? failureStatus)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LastSync() when $default != null:
-return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode);case _:
+return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode,_that.failureStatus);case _:
   return orElse();
 
 }
@@ -182,10 +184,10 @@ return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode,  int? failureStatus)  $default,) {final _that = this;
 switch (_that) {
 case _LastSync():
-return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode);case _:
+return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode,_that.failureStatus);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +204,10 @@ return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LastSyncOutcome outcome,  DateTime startedAt,  DateTime? finishedAt,  String? failureCode,  int? failureStatus)?  $default,) {final _that = this;
 switch (_that) {
 case _LastSync() when $default != null:
-return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode);case _:
+return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode,_that.failureStatus);case _:
   return null;
 
 }
@@ -217,7 +219,7 @@ return $default(_that.outcome,_that.startedAt,_that.finishedAt,_that.failureCode
 
 
 class _LastSync implements LastSync {
-  const _LastSync({required this.outcome, required this.startedAt, this.finishedAt, this.failureCode});
+  const _LastSync({required this.outcome, required this.startedAt, this.finishedAt, this.failureCode, this.failureStatus});
   
 
 @override final  LastSyncOutcome outcome;
@@ -226,6 +228,8 @@ class _LastSync implements LastSync {
 /// An `AppFailure.code`, or [interruptedSyncCode]; null unless the run
 /// failed. The UI phrases it; it is never raw exception text.
 @override final  String? failureCode;
+/// The HTTP status the server answered the failed run with, if any.
+@override final  int? failureStatus;
 
 /// Create a copy of LastSync
 /// with the given fields replaced by the non-null parameter values.
@@ -237,18 +241,18 @@ _$LastSyncCopyWith<_LastSync> get copyWith => __$LastSyncCopyWithImpl<_LastSync>
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LastSync&&(identical(other.outcome, outcome) || other.outcome == outcome)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.finishedAt, finishedAt) || other.finishedAt == finishedAt)&&(identical(other.failureCode, failureCode) || other.failureCode == failureCode));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LastSync&&(identical(other.outcome, outcome) || other.outcome == outcome)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.finishedAt, finishedAt) || other.finishedAt == finishedAt)&&(identical(other.failureCode, failureCode) || other.failureCode == failureCode)&&(identical(other.failureStatus, failureStatus) || other.failureStatus == failureStatus));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,outcome,startedAt,finishedAt,failureCode);
+    return Object.hash(runtimeType,outcome,startedAt,finishedAt,failureCode,failureStatus);
 }
 
 @override
 String toString() {
-    return 'LastSync(outcome: $outcome, startedAt: $startedAt, finishedAt: $finishedAt, failureCode: $failureCode)';
+    return 'LastSync(outcome: $outcome, startedAt: $startedAt, finishedAt: $finishedAt, failureCode: $failureCode, failureStatus: $failureStatus)';
 }
 
 
@@ -259,7 +263,7 @@ abstract mixin class _$LastSyncCopyWith<$Res> implements $LastSyncCopyWith<$Res>
   factory _$LastSyncCopyWith(_LastSync value, $Res Function(_LastSync) _then) = __$LastSyncCopyWithImpl;
 @override @useResult
 $Res call({
- LastSyncOutcome outcome, DateTime startedAt, DateTime? finishedAt, String? failureCode
+ LastSyncOutcome outcome, DateTime startedAt, DateTime? finishedAt, String? failureCode, int? failureStatus
 });
 
 
@@ -276,13 +280,14 @@ class __$LastSyncCopyWithImpl<$Res>
 
 /// Create a copy of LastSync
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? outcome = null,Object? startedAt = null,Object? finishedAt = freezed,Object? failureCode = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? outcome = null,Object? startedAt = null,Object? finishedAt = freezed,Object? failureCode = freezed,Object? failureStatus = freezed,}) {
   return _then(_LastSync(
 outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
 as LastSyncOutcome,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,finishedAt: freezed == finishedAt ? _self.finishedAt : finishedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,failureCode: freezed == failureCode ? _self.failureCode : failureCode // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,failureStatus: freezed == failureStatus ? _self.failureStatus : failureStatus // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

@@ -165,6 +165,34 @@ void main() {
 
       expect(find.text('Xtream · Expired Sep 1, 2026'), findsOneWidget);
     });
+
+    testWidgets('a failed sync says what the server answered', (tester) async {
+      fakes.sources.seed();
+      fakes.overviews.set(
+        'src-1',
+        SourceOverview(
+          lastSync: LastSync(
+            outcome: LastSyncOutcome.failed,
+            startedAt: fakes.now.subtract(const Duration(hours: 1)),
+            finishedAt: fakes.now.subtract(const Duration(hours: 1)),
+            failureCode: 'network',
+            failureStatus: 503,
+          ),
+        ),
+      );
+      await pump(tester);
+
+      expect(
+        find.textContaining(
+          'Last attempt failed: The server answered with an error.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('HTTP 503 (Service Unavailable)'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('actions', () {

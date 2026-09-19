@@ -129,7 +129,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
       final failure = next.value;
       if (failure == null) return;
       _toasts.show(
-        ShellToast(message: failureMessage(failure), tone: ToastTone.error),
+        ShellToast(message: failureWithAnswer(failure), tone: ToastTone.error),
       );
     });
 

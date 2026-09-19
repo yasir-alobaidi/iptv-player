@@ -295,6 +295,10 @@ class _Failed extends StatelessWidget {
         'The server refused this playlist link. Check it with your '
             'provider.',
       ),
+      NetworkFailure(statusCode: _?) => (
+        'Server error',
+        failureMessage(failure),
+      ),
       NetworkFailure() ||
       TimeoutFailure() => ("Can't reach the server", failureMessage(failure)),
       ParseFailure() => (
@@ -318,7 +322,8 @@ class _Failed extends StatelessWidget {
     return _CardBody(
       badge: const _Badge(icon: AppIcons.alertCircle, tone: _Tone.danger),
       title: title,
-      subtitle: message,
+      // Our reading first, then what the server actually answered.
+      subtitle: [message, ?serverAnswer(failure)].join(' '),
       details: failure.detail,
     );
   }

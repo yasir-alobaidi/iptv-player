@@ -93,12 +93,12 @@ sealed class AppFailure implements Exception {
     };
   }
 
-  /// The failure a stored [code] names (a sync run keeps only the code),
-  /// without its detail. An unknown code is an [UnexpectedFailure].
-  factory fromCode(String code) => switch (code) {
-    'network' => NetworkFailure(),
-    'auth' => AuthFailure(),
-    'not_found' => NotFoundFailure(),
+  /// The failure a stored [code] names (a sync run keeps the code and the
+  /// HTTP status, never the detail). An unknown code is an [UnexpectedFailure].
+  factory fromCode(String code, {int? statusCode}) => switch (code) {
+    'network' => NetworkFailure(null, statusCode),
+    'auth' => AuthFailure(null, statusCode),
+    'not_found' => NotFoundFailure(null, statusCode),
     'parse' => ParseFailure(),
     'storage' => StorageFailure(),
     'secure_storage' => SecureStorageFailure(),
@@ -109,6 +109,11 @@ sealed class AppFailure implements Exception {
   };
 
   final String? detail;
+
+  /// The HTTP status the server answered with, when there was one: the
+  /// UI shows it beside its own words, so the user sees what the server
+  /// actually said.
+  int? get statusCode => null;
 
   /// Stable name for logs and diagnostics.
   String get code;
@@ -121,6 +126,7 @@ sealed class AppFailure implements Exception {
 final class NetworkFailure extends AppFailure {
   new([super.detail, this.statusCode]);
 
+  @override
   final int? statusCode;
 
   @override
@@ -129,14 +135,20 @@ final class NetworkFailure extends AppFailure {
 
 /// Credentials were rejected or the account can't be used.
 final class AuthFailure extends AppFailure {
-  new([super.detail]);
+  new([super.detail, this.statusCode]);
+
+  @override
+  final int? statusCode;
 
   @override
   String get code => 'auth';
 }
 
 final class NotFoundFailure extends AppFailure {
-  new([super.detail]);
+  new([super.detail, this.statusCode]);
+
+  @override
+  final int? statusCode;
 
   @override
   String get code => 'not_found';

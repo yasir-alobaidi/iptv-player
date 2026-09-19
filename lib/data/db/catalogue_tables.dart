@@ -30,6 +30,11 @@ class SyncRuns extends Table {
   /// exception text, which can carry a credential-bearing URL.
   TextColumn get failure => text().nullable()();
 
+  /// The HTTP status the server answered a failed run with, if any, so
+  /// Settings can say what the server said (schema v3). Only the number:
+  /// the failure's detail text can carry a credential.
+  IntColumn get failureStatus => integer().nullable()();
+
   /// Item counts per stage, for Settings → Sources and the diagnostics
   /// export.
   TextColumn get countsJson => text().nullable()();
