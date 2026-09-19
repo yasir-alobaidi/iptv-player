@@ -28,10 +28,14 @@ class ChannelListPane extends ConsumerStatefulWidget {
     this.onBack,
     this.onForward,
     this.onPlay,
+    this.onFullscreen,
     super.key,
   });
 
   final FocusPaneController controller;
+
+  /// Enter on a row: play it full screen.
+  final void Function(ChannelItem channel)? onFullscreen;
 
   /// Each notification asks for the first row to take the focus, as soon
   /// as the list shows rows (a category was just chosen).
@@ -310,6 +314,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
             onSelect: () =>
                 ref.read(liveTvControllerProvider.notifier).select(channel),
             onPlay: () => widget.onPlay?.call(channel),
+            onFullscreen: () => widget.onFullscreen?.call(channel),
             onFavorite: () => unawaited(_toggleFavorite(channel)),
             onMenu: (anchor) => unawaited(_menu(anchor, channel)),
           ),
@@ -442,6 +447,7 @@ class _Row extends ConsumerStatefulWidget {
     required this.selected,
     required this.onSelect,
     required this.onPlay,
+    required this.onFullscreen,
     required this.onFavorite,
     required this.onMenu,
   });
@@ -450,6 +456,7 @@ class _Row extends ConsumerStatefulWidget {
   final bool selected;
   final VoidCallback onSelect;
   final VoidCallback onPlay;
+  final VoidCallback onFullscreen;
   final VoidCallback onFavorite;
   final void Function(BuildContext anchor) onMenu;
 
@@ -459,6 +466,10 @@ class _Row extends ConsumerStatefulWidget {
 
 class _RowState extends ConsumerState<_Row> {
   final _focus = FocusNode(debugLabel: 'channel row');
+
+  /// Set by a pointer press, so the activation that follows is a click
+  /// (play here) rather than Enter (full screen).
+  bool _pointer = false;
 
   @override
   void dispose() {
@@ -480,25 +491,34 @@ class _RowState extends ConsumerState<_Row> {
       },
       // No double-click here: it would hold every single click back by the
       // double-click timeout. Enter opens full screen instead.
-      child: Builder(
-        builder: (context) => ChannelRow(
-          name: channel.name,
-          number: channel.number,
-          image: _logo(channel.logoUrl),
-          nowTitle: programme?.title,
-          guideKnown: guide != null,
-          progress: programme?.progressAt(now),
-          isFavorite: channel.isFavorite,
-          selected: widget.selected,
-          focusNode: _focus,
-          // A click takes the keyboard's place too, so the arrows go on
-          // from the row that was clicked.
-          onPressed: () {
-            _focus.requestFocus();
-            widget.onPlay();
-          },
-          onToggleFavorite: widget.onFavorite,
-          onMenu: () => widget.onMenu(context),
+      child: Listener(
+        onPointerDown: (_) => _pointer = true,
+        child: Builder(
+          builder: (context) => ChannelRow(
+            name: channel.name,
+            number: channel.number,
+            image: _logo(channel.logoUrl),
+            nowTitle: programme?.title,
+            guideKnown: guide != null,
+            progress: programme?.progressAt(now),
+            isFavorite: channel.isFavorite,
+            selected: widget.selected,
+            focusNode: _focus,
+            // A click plays here and takes the keyboard's place, so the
+            // arrows go on from the row clicked; Enter plays full screen.
+            onPressed: () {
+              final click = _pointer;
+              _pointer = false;
+              if (!click) {
+                widget.onFullscreen();
+                return;
+              }
+              _focus.requestFocus();
+              widget.onPlay();
+            },
+            onToggleFavorite: widget.onFavorite,
+            onMenu: () => widget.onMenu(context),
+          ),
         ),
       ),
     );

@@ -17,6 +17,7 @@ import 'package:iptv_player/features/onboarding/presentation/onboarding_state.da
 import 'package:iptv_player/features/onboarding/presentation/pick_categories_screen.dart';
 import 'package:iptv_player/features/onboarding/presentation/sync_screen.dart';
 import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart';
+import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/series/presentation/series_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
@@ -97,6 +98,12 @@ GoRouter buildRouter({String initialLocation = '/'}) {
           SearchOverlay(onClose: () => closeSearch(context)),
           key: state.pageKey,
         ),
+      ),
+      GoRoute(
+        path: playerRoutePath,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) =>
+            NoTransitionPage(key: state.pageKey, child: const PlayerScreen()),
       ),
       GoRoute(
         path: welcomeRoutePath,

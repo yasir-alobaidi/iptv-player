@@ -13,6 +13,7 @@ import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
+import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/player/unavailable_player_engine.dart';
@@ -81,6 +82,7 @@ Future<void> bootstrap() async {
   final container = ProviderContainer(
     overrides: [
       playerEngineProvider.overrideWithValue(player),
+      windowControlsProvider.overrideWithValue(const WindowManagerControls()),
       appLogProvider.overrideWithValue(log),
       secretRegistryProvider.overrideWithValue(secrets),
       errorReporterProvider.overrideWithValue(errors),

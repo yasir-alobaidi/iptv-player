@@ -199,3 +199,47 @@ final class VideoSizeProvider
 }
 
 String _$videoSizeHash() => r'f9ae8541f6540798fe3044f713417ba65fdded84';
+
+/// The stream's audio and subtitle tracks, and which are on.
+
+@ProviderFor(playerTracks)
+final playerTracksProvider = PlayerTracksProvider._();
+
+/// The stream's audio and subtitle tracks, and which are on.
+
+final class PlayerTracksProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<PlayerTracks?>,
+          PlayerTracks?,
+          Stream<PlayerTracks?>
+        >
+    with $FutureModifier<PlayerTracks?>, $StreamProvider<PlayerTracks?> {
+  /// The stream's audio and subtitle tracks, and which are on.
+  PlayerTracksProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'playerTracksProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$playerTracksHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<PlayerTracks?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<PlayerTracks?> create(Ref ref) {
+    return playerTracks(ref);
+  }
+}
+
+String _$playerTracksHash() => r'0d9141746c47513f32acaf4fd77d8c523708ddcb';

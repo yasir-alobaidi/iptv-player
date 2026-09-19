@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:iptv_player/core/logging/app_log.dart';
+import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
@@ -114,6 +115,13 @@ final class PlaybackCoordinator {
   Stream<PlaybackState> get states => _states.stream;
 
   ChannelItem? get current => _state.channel;
+
+  /// The stream's address with its credentials masked, for the
+  /// stream-info overlay.
+  String? get redactedUrl => switch (_stream?.url) {
+    final url? => redact(url),
+    null => null,
+  };
 
   /// The channel before this one, for Backspace.
   ChannelItem? get previous => _previous;

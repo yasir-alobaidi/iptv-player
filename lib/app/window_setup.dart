@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
+import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Sets the desktop window up and remembers where the user left it.
@@ -117,4 +118,16 @@ class AppWindow with WindowListener {
       );
     }
   }
+}
+
+/// [WindowControls] on window_manager.
+final class WindowManagerControls implements WindowControls {
+  const new();
+
+  @override
+  Future<bool> isFullScreen() => windowManager.isFullScreen();
+
+  @override
+  Future<void> setFullScreen({required bool on}) =>
+      windowManager.setFullScreen(on);
 }

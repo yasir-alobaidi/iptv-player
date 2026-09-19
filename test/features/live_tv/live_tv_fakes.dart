@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -38,6 +39,7 @@ final class LiveTvFakes {
   final AppDatabase db;
   final rig = Rig();
   final guide = FakeGuide();
+  final window = FakeWindow();
   late int sports;
   late int news;
 
@@ -103,6 +105,7 @@ final class LiveTvFakes {
     guideServiceProvider.overrideWithValue(guide),
     playerEngineProvider.overrideWithValue(rig.engine),
     playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
+    windowControlsProvider.overrideWithValue(window),
   ];
 }
 
@@ -117,5 +120,19 @@ final class FakeGuide implements GuideService {
   Future<Result<NowNext>> nowNext(ChannelItem channel) async {
     asked.add(channel.remoteKey);
     return Ok(byKey[channel.remoteKey] ?? NowNext.none);
+  }
+}
+
+final class FakeWindow implements WindowControls {
+  bool fullScreen = false;
+  final List<bool> changes = [];
+
+  @override
+  Future<bool> isFullScreen() async => fullScreen;
+
+  @override
+  Future<void> setFullScreen({required bool on}) async {
+    fullScreen = on;
+    changes.add(on);
   }
 }

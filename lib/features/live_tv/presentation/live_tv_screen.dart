@@ -74,7 +74,18 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
 
   void _play(ChannelItem channel) {
     ref.read(liveTvControllerProvider.notifier).select(channel);
-    unawaited(ref.read(playbackCoordinatorProvider).playLive(channel));
+    final coordinator = ref.read(playbackCoordinatorProvider);
+    final playing = coordinator.current;
+    if (playing?.id == channel.id && playing?.sourceId == channel.sourceId) {
+      return;
+    }
+    unawaited(coordinator.playLive(channel));
+  }
+
+  /// Enter on a row, Watch full screen, or a double-click on the picture.
+  void _fullscreen(ChannelItem channel) {
+    _play(channel);
+    unawaited(context.push(playerRoutePath));
   }
 
   /// The channel after the one playing, in the list as it shows.
@@ -147,6 +158,7 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
             onBack: _categories.focusPane,
             onForward: _preview.focusPane,
             onPlay: _play,
+            onFullscreen: _fullscreen,
           ),
         ),
         SizedBox(width: gap),
@@ -155,7 +167,7 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
           child: PreviewPane(
             controller: _preview,
             onBack: _channels.focusPane,
-            onFullscreen: _play,
+            onFullscreen: _fullscreen,
             onNextChannel: () => unawaited(_nextChannel()),
           ),
         ),

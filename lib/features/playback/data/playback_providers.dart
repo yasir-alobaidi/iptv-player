@@ -59,3 +59,14 @@ Stream<(int, int)?> videoSize(Ref ref) async* {
         },
       );
 }
+
+/// The stream's audio and subtitle tracks, and which are on.
+@Riverpod(keepAlive: true)
+Stream<PlayerTracks?> playerTracks(Ref ref) async* {
+  yield null;
+  yield* ref
+      .watch(playerEngineProvider)
+      .events
+      .where((e) => e is PlayerOpening || e is PlayerTracks)
+      .map((e) => e is PlayerTracks ? e : null);
+}
