@@ -10,6 +10,7 @@ abstract final class SettingsKeys {
   static const windowBounds = 'window.bounds';
   static const railExpanded = 'shell.rail_expanded';
   static const currentSource = 'shell.current_source';
+  static const playback = 'playback.settings';
 }
 
 /// Reads and writes the `settings` table.

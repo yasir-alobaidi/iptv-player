@@ -42,6 +42,13 @@ abstract interface class PlaybackHistory {
   Future<Result<List<String>>> recentLive(String sourceId, {int limit = 20});
 }
 
+/// Where [PlaybackSettings] are kept.
+abstract interface class PlaybackSettingsStore {
+  Future<Result<PlaybackSettings>> load();
+
+  Future<Result<void>> save(PlaybackSettings settings);
+}
+
 /// Settings → Playback (docs/05), as the player needs them.
 @immutable
 final class PlaybackSettings {
@@ -52,12 +59,60 @@ final class PlaybackSettings {
     this.deinterlace,
   });
 
+  /// Tolerant: anything unknown or damaged reads as the default.
+  factory fromJson(Object? json) {
+    if (json is! Map) return const PlaybackSettings();
+    List<String> languages(Object? value) => [
+      if (value is List)
+        for (final v in value)
+          if (v is String && v.trim().isNotEmpty) v.trim().toLowerCase(),
+    ];
+    return PlaybackSettings(
+      preset:
+          BufferPreset.values
+              .where((p) => p.name == json['preset'])
+              .firstOrNull ??
+          BufferPreset.balanced,
+      audioLanguages: languages(json['audio']),
+      subtitleLanguages: languages(json['subtitles']),
+      deinterlace: switch (json['deinterlace']) {
+        'on' => true,
+        'off' => false,
+        _ => null,
+      },
+    );
+  }
+
   final BufferPreset preset;
   final List<String> audioLanguages;
   final List<String> subtitleLanguages;
 
   /// null = Auto.
   final bool? deinterlace;
+
+  PlaybackSettings copyWith({
+    BufferPreset? preset,
+    List<String>? audioLanguages,
+    List<String>? subtitleLanguages,
+    bool? Function()? deinterlace,
+  }) => PlaybackSettings(
+    preset: preset ?? this.preset,
+    audioLanguages: audioLanguages ?? this.audioLanguages,
+    subtitleLanguages: subtitleLanguages ?? this.subtitleLanguages,
+    deinterlace: deinterlace == null ? this.deinterlace : deinterlace(),
+  );
+
+  /// As stored in the `settings` table.
+  Map<String, Object?> toJson() => {
+    'preset': preset.name,
+    'audio': audioLanguages,
+    'subtitles': subtitleLanguages,
+    'deinterlace': switch (deinterlace) {
+      null => 'auto',
+      true => 'on',
+      false => 'off',
+    },
+  };
 
   PlayRequest request(ResolvedStream stream) => PlayRequest(
     url: stream.url,

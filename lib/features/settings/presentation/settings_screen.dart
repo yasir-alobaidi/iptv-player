@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/presentation/categories_manager.dart';
 import 'package:iptv_player/features/sources/presentation/sources_settings.dart';
@@ -47,6 +48,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: switch (section) {
                     SettingsSection.sources => const SourcesSettings(),
                     SettingsSection.categories => const CategoriesManager(),
+                    SettingsSection.playback => const PlaybackSettingsSection(),
                     _ => _ComingLater(section: section),
                   },
                 ),

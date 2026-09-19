@@ -13,6 +13,7 @@ import 'package:iptv_player/features/sources/domain/source_overview.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import '../app/app_harness.dart';
+import '../features/live_tv/live_tv_fakes.dart';
 import '../features/onboarding/onboarding_fakes.dart';
 import 'golden_harness.dart';
 
@@ -86,6 +87,28 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/settings_categories.png'),
+      );
+    });
+
+    testWidgets('Playback', (tester) async {
+      hideDebugBanner();
+      final live = LiveTvFakes();
+      addTearDown(() => tester.runAsync(live.db.close));
+      await tester.runAsync(live.seed);
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.settings.path,
+        overrides: [...live.overrides, ...sourceShellOverrides],
+      );
+      await tester.tap(find.text('Playback').first);
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_playback.png'),
       );
     });
   }, skip: goldenSkipReason);

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
+import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/playback/data/db_playback_history.dart';
+import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
 import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
@@ -14,9 +18,35 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'playback_providers.g.dart';
 
-/// Settings → Playback (step 7 stores them; defaults until then).
 @Riverpod(keepAlive: true)
-PlaybackSettings playbackSettings(Ref ref) => const PlaybackSettings();
+PlaybackSettingsStore playbackSettingsStore(Ref ref) =>
+    DbPlaybackSettingsStore(ref.watch(settingsRepositoryProvider));
+
+/// Settings → Playback: the defaults at once, the stored choices as soon
+/// as they are read; a change is saved and applies to the next stream
+/// opened.
+@Riverpod(keepAlive: true)
+class PlaybackSettingsController extends _$PlaybackSettingsController {
+  @override
+  PlaybackSettings build() {
+    unawaited(_load());
+    return const PlaybackSettings();
+  }
+
+  var _changed = false;
+
+  Future<void> _load() async {
+    final stored = await ref.read(playbackSettingsStoreProvider).load();
+    // A choice made while loading wins over what was stored.
+    if (!_changed) state = stored.valueOrNull ?? const PlaybackSettings();
+  }
+
+  Future<Result<void>> update(PlaybackSettings settings) {
+    _changed = true;
+    state = settings;
+    return ref.read(playbackSettingsStoreProvider).save(settings);
+  }
+}
 
 /// The app's one playback owner (docs/03).
 @Riverpod(keepAlive: true)
@@ -30,7 +60,7 @@ PlaybackCoordinator playbackCoordinator(Ref ref) {
     history: DbPlaybackHistory(database),
     channels: ref.watch(channelRepositoryProvider),
     log: ref.watch(appLogProvider),
-    settings: () => ref.read(playbackSettingsProvider),
+    settings: () => ref.read(playbackSettingsControllerProvider),
   );
   ref.onDispose(coordinator.dispose);
   return coordinator;

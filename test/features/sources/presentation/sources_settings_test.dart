@@ -371,12 +371,13 @@ void main() {
       Focus.of(tester.element(find.text('Sources').first)).requestFocus();
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await settleApp(tester);
 
-      expect(find.text('Playback comes in Phase 9'), findsOneWidget);
+      expect(find.text('Casting comes in Phase 7'), findsOneWidget);
       // Focus stays in the list, as in the nav rail.
-      expect(focusIsOn(tester, find.text('Playback').first), isTrue);
+      expect(focusIsOn(tester, find.text('Casting').first), isTrue);
     });
 
     testWidgets("a source's Categories… opens the manager on it", (

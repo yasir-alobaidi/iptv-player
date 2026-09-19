@@ -8,45 +8,88 @@ part of 'playback_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Settings → Playback (step 7 stores them; defaults until then).
 
-@ProviderFor(playbackSettings)
-final playbackSettingsProvider = PlaybackSettingsProvider._();
+@ProviderFor(playbackSettingsStore)
+final playbackSettingsStoreProvider = PlaybackSettingsStoreProvider._();
 
-/// Settings → Playback (step 7 stores them; defaults until then).
-
-final class PlaybackSettingsProvider
+final class PlaybackSettingsStoreProvider
     extends
         $FunctionalProvider<
-          PlaybackSettings,
-          PlaybackSettings,
-          PlaybackSettings
+          PlaybackSettingsStore,
+          PlaybackSettingsStore,
+          PlaybackSettingsStore
         >
-    with $Provider<PlaybackSettings> {
-  /// Settings → Playback (step 7 stores them; defaults until then).
-  PlaybackSettingsProvider._()
+    with $Provider<PlaybackSettingsStore> {
+  PlaybackSettingsStoreProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'playbackSettingsProvider',
+        name: r'playbackSettingsStoreProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$playbackSettingsHash();
+  String debugGetCreateSourceHash() => _$playbackSettingsStoreHash();
 
   @$internal
   @override
-  $ProviderElement<PlaybackSettings> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $ProviderElement<PlaybackSettingsStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
-  PlaybackSettings create(Ref ref) {
-    return playbackSettings(ref);
+  PlaybackSettingsStore create(Ref ref) {
+    return playbackSettingsStore(ref);
   }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PlaybackSettingsStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PlaybackSettingsStore>(value),
+    );
+  }
+}
+
+String _$playbackSettingsStoreHash() =>
+    r'95ae781b7306ee84ba8bfde99822a05b66998d50';
+
+/// Settings → Playback: the defaults at once, the stored choices as soon
+/// as they are read; a change is saved and applies to the next stream
+/// opened.
+
+@ProviderFor(PlaybackSettingsController)
+final playbackSettingsControllerProvider =
+    PlaybackSettingsControllerProvider._();
+
+/// Settings → Playback: the defaults at once, the stored choices as soon
+/// as they are read; a change is saved and applies to the next stream
+/// opened.
+final class PlaybackSettingsControllerProvider
+    extends $NotifierProvider<PlaybackSettingsController, PlaybackSettings> {
+  /// Settings → Playback: the defaults at once, the stored choices as soon
+  /// as they are read; a change is saved and applies to the next stream
+  /// opened.
+  PlaybackSettingsControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'playbackSettingsControllerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$playbackSettingsControllerHash();
+
+  @$internal
+  @override
+  PlaybackSettingsController create() => PlaybackSettingsController();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(PlaybackSettings value) {
@@ -57,7 +100,31 @@ final class PlaybackSettingsProvider
   }
 }
 
-String _$playbackSettingsHash() => r'b7c6fd24227750afbc82fe557af0c739389c63c7';
+String _$playbackSettingsControllerHash() =>
+    r'be0a94a954429478b745edfee89efed5a9535437';
+
+/// Settings → Playback: the defaults at once, the stored choices as soon
+/// as they are read; a change is saved and applies to the next stream
+/// opened.
+
+abstract class _$PlaybackSettingsController
+    extends $Notifier<PlaybackSettings> {
+  PlaybackSettings build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<PlaybackSettings, PlaybackSettings>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<PlaybackSettings, PlaybackSettings>,
+              PlaybackSettings,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 /// The app's one playback owner (docs/03).
 
@@ -110,7 +177,7 @@ final class PlaybackCoordinatorProvider
 }
 
 String _$playbackCoordinatorHash() =>
-    r'121969251bf2495d01dd680a3eb1e62830392526';
+    r'6bb66ca7fa6ecbafd9b42101ec843ab9467fd837';
 
 /// What plays, as it changes.
 

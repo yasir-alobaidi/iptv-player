@@ -7,7 +7,7 @@ part 'settings_section.g.dart';
 /// Settings' sub-navigation, in the canvas's order (docs/05 §12).
 enum SettingsSection {
   sources('Sources'),
-  playback('Playback', phase: 9),
+  playback('Playback'),
   casting('Casting', phase: 7),
   downloads('Downloads & library', phase: 8),
   guide('Guide', phase: 4),
