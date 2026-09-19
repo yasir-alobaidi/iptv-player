@@ -93,8 +93,8 @@ void main() {
       expect(series.statusCode, HttpStatus.notImplemented);
     });
 
-    test('an extension other than .ts is 501', () async {
-      final response = await get('/live/test/test/1.m3u8');
+    test('an extension other than .ts or .m3u8 is 501', () async {
+      final response = await get('/live/test/test/1.mp4');
       expect(response.statusCode, HttpStatus.notImplemented);
       expect(await response.readAsString(), contains('.m3u8'));
     });
@@ -239,6 +239,204 @@ void main() {
       await bare.close();
     });
   }, skip: mediaSkip);
+
+  group('faults (docs/06)', () {
+    test('http_status answers with that status, per request', () async {
+      for (final (status, marker) in [
+        (401, 'BAD_CREDENTIALS'),
+        (403, maxConnectionsBody),
+        (404, 'no live stream'),
+        (429, 'TOO_MANY_REQUESTS'),
+        (500, 'FAULT 500'),
+      ]) {
+        final response = await get('/live/test/test/1.ts?http_status=$status');
+        expect(response.statusCode, status);
+        expect(await response.readAsString(), contains(marker));
+        expect(state.activeStreams, 0);
+      }
+      final limited = await get('/live/test/test/1.ts?http_status=429');
+      expect(limited.headers['retry-after'], '1');
+    });
+
+    test('the fault set applies to every stream until cleared', () async {
+      state.faults = const FakeFaults(httpStatus: 404);
+      expect((await get('/live/test/test/2.ts')).statusCode, 404);
+      state.faults = const FakeFaults();
+      expect((await get('/live/test/test/999999.ts')).statusCode, 404);
+    });
+
+    test('slow_start_ms holds the answer back', () async {
+      final watch = Stopwatch()..start();
+      final response = await get('/live/test/test/999999.ts?slow_start_ms=300');
+      expect(response.statusCode, 404);
+      expect(watch.elapsedMilliseconds, greaterThanOrEqualTo(300));
+    });
+
+    test('max_connections per request refuses before any work', () async {
+      final response = await get('/live/test/test/1.ts?max_connections=0');
+      expect(response.statusCode, HttpStatus.forbidden);
+      expect(await response.readAsString(), contains(maxConnectionsBody));
+    });
+
+    test(
+      'an expiring redirect: a token, then a 403 once it runs out',
+      () async {
+        final first = await get(
+          '/live/test/test/1.ts?redirect_with_expiring_token=1',
+        );
+        expect(first.statusCode, HttpStatus.found);
+        final location = Uri.parse(first.headers['location']!);
+        expect(location.path, '/live/test/test/1.ts');
+        expect(int.parse(location.queryParameters['token']!), greaterThan(0));
+
+        final expired = await get(
+          '/live/test/test/1.ts?redirect_with_expiring_token=1&token=1',
+        );
+        expect(expired.statusCode, HttpStatus.forbidden);
+        expect(await expired.readAsString(), contains(tokenExpiredBody));
+      },
+    );
+
+    test('drop_after_s ends the body and frees the slot', () async {
+      final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+      addTearDown(() => server.close(force: true));
+      final client = HttpClient();
+      addTearDown(() => client.close(force: true));
+      final response = await (await client.getUrl(
+        Uri.parse(
+          'http://127.0.0.1:${server.port}/live/test/test/1.ts?drop_after_s=1',
+        ),
+      )).close();
+      final watch = Stopwatch()..start();
+      var received = 0;
+      await response
+          .listen((chunk) => received += chunk.length, onError: (Object _) {})
+          .asFuture<void>()
+          .catchError((Object _) {})
+          .timeout(const Duration(seconds: 10));
+      expect(received, greaterThan(0));
+      expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+      await _until(() => state.activeStreams == 0, 'the slot to be freed');
+    }, skip: mediaSkip);
+
+    test('stall_after_s stops sending but keeps the connection open', () async {
+      final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+      addTearDown(() => server.close(force: true));
+      final client = HttpClient();
+      addTearDown(() => client.close(force: true));
+      final response = await (await client.getUrl(
+        Uri.parse(
+          'http://127.0.0.1:${server.port}/live/test/test/1.ts?stall_after_s=1',
+        ),
+      )).close();
+      var received = 0;
+      var done = false;
+      final subscription = response.listen(
+        (chunk) => received += chunk.length,
+        onDone: () => done = true,
+        onError: (Object _) {},
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 2500));
+      final atStall = received;
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      expect(atStall, greaterThan(0));
+      // Only null packets (one a second) after the stall: nothing playable.
+      expect(received - atStall, lessThanOrEqualTo(3 * tsNullPacket.length));
+      expect(done, isFalse, reason: 'still open');
+      expect(state.activeStreams, 1);
+      await subscription.cancel();
+      client.close(force: true);
+      await _until(() => state.activeStreams == 0, 'the slot to be freed');
+    }, skip: mediaSkip);
+
+    test(
+      'codec_switch_after_s carries on with another codec in one body',
+      () async {
+        final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+        addTearDown(() => server.close(force: true));
+        final client = HttpClient();
+        addTearDown(() => client.close(force: true));
+        final response = await (await client.getUrl(
+          Uri.parse(
+            'http://127.0.0.1:${server.port}/live/test/test/1.ts'
+            '?codec_switch_after_s=1',
+          ),
+        )).close();
+        var received = 0;
+        final subscription = response.listen(
+          (chunk) => received += chunk.length,
+          onError: (Object _) {},
+        );
+        final pidsBefore = <String>{};
+        await _until(() {
+          pidsBefore.addAll(_pidFiles(runDir).map((f) => f.path));
+          return pidsBefore.isNotEmpty;
+        }, 'the first ffmpeg');
+        await Future<void>.delayed(const Duration(milliseconds: 2500));
+        final atSwitch = received;
+        await Future<void>.delayed(const Duration(milliseconds: 1000));
+        expect(received, greaterThan(atSwitch), reason: 'still flowing');
+        final pidsAfter = _pidFiles(runDir).map((f) => f.path).toSet();
+        expect(pidsAfter, hasLength(1));
+        expect(pidsAfter.intersection(pidsBefore), isEmpty);
+        expect(state.activeStreams, 1);
+        await subscription.cancel();
+        client.close(force: true);
+        await _until(() => state.activeStreams == 0, 'the slot to be freed');
+      },
+      skip: mediaSkip,
+    );
+  });
+
+  group('HLS', () {
+    test('a playlist of segments served from /hls/, one slot, stopped once '
+        'idle', () async {
+      final idleRelay = StreamRelay(state, hlsIdle: const Duration(seconds: 2));
+      addTearDown(idleRelay.close);
+      final server = await shelf_io.serve(idleRelay.handler, '127.0.0.1', 0);
+      addTearDown(() => server.close(force: true));
+      final client = HttpClient();
+      addTearDown(() => client.close(force: true));
+      Future<(int, String)> fetch(String path) async {
+        final response = await (await client.getUrl(
+          Uri.parse('http://127.0.0.1:${server.port}$path'),
+        )).close();
+        final chunks = await response.fold<List<int>>(
+          [],
+          (all, chunk) => all..addAll(chunk),
+        );
+        return (
+          response.statusCode,
+          response.headers.contentType?.mimeType == 'video/mp2t'
+              ? '${chunks.length}'
+              : String.fromCharCodes(chunks),
+        );
+      }
+
+      final (status, playlist) = await fetch('/live/test/test/1.m3u8');
+      expect(status, 200);
+      expect(playlist, contains('#EXTM3U'));
+      final segment = RegExp(
+        r'^/hls/1/seg_\d+\.ts$',
+        multiLine: true,
+      ).firstMatch(playlist)!.group(0)!;
+      final (segmentStatus, bytes) = await fetch(segment);
+      expect(segmentStatus, 200);
+      expect(int.parse(bytes), greaterThan(1000));
+      expect(state.activeStreams, 1);
+
+      // A second viewer of the same channel shares the session.
+      await fetch('/live/test/test/1.m3u8');
+      expect(state.activeStreams, 1);
+
+      await _until(
+        () => state.activeStreams == 0,
+        'the idle session to stop',
+        timeout: const Duration(seconds: 10),
+      );
+      expect(Directory('${runDir.path}/hls/1').existsSync(), isFalse);
+    }, skip: mediaSkip);
+  });
 }
 
 List<File> _pidFiles(Directory runDir) {
@@ -254,8 +452,13 @@ List<File> _pidFiles(Directory runDir) {
 bool _isAlive(int pid) =>
     Platform.isLinux && File('/proc/$pid/cmdline').existsSync();
 
-Future<void> _until(bool Function() done, String what) async {
-  for (var i = 0; i < 100; i++) {
+Future<void> _until(
+  bool Function() done,
+  String what, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
     if (done()) return;
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }

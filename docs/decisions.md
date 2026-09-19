@@ -434,3 +434,10 @@ One matrix job over **ubuntu-22.04** and windows-latest, with Flutter pinned to 
 - **Found: with no VideoController, media_kit leaves `vid=no`,** so nothing is decoded; the headless engine (`video: false`, `vo=null`) sets `vid=auto` itself.
 - **The xvfb spike (decision 4): the patched engine works under xvfb, with video (GPU copy-back, `nvdec-copy` on this laptop) and with `vo=null` (software).** `integration_test/player_engine_test.dart` (fake provider in its own process with the samples; skipped without them): first frame, a zap, the panel's `active_cons` back to 0 after stop, and a missing channel failing. On the Wayland desktop: **first frame 681 ms, zap 666 ms, `vaapi`**; xvfb with video 1078/975 ms; `vo=null` 333/464 ms.
 
+### The fake provider's stream faults and HLS (step 2)
+- Every live fault docs/06 lists now acts on `/live/…`, from the fault set or **per request as a query parameter** (`FakeFaults.overriddenBy`). Order: credentials → expiring redirect → `http_status` → `slow_start_ms` → the stream checks → `max_connections` → ffmpeg, with `drop_after_s`, `stall_after_s` and `codec_switch_after_s` timed on the body.
+- **A stalled stream still writes 188-byte MPEG-TS null packets once a second.** Found by its test: a server that writes nothing never notices the client leaving, so the slot stayed taken for good. Null packets carry no media, so the player still sees a stall.
+- **The codec switch** starts the second ffmpeg (HEVC for an H.264 channel, and back), swaps it into the same body, and reaps the first without releasing the slot.
+- **HLS:** one ffmpeg per channel (`-f hls`, 2 s segments, 6 listed, `delete_segments`), segment names rewritten to `/hls/<id>/…`, one connection slot per session, stopped after 20 s without a playlist request (a test uses 2 s). The real engine plays it (`player_engine_test`).
+- 97 fake-provider tests (10 new).
+

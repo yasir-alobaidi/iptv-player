@@ -160,6 +160,18 @@ class FakeFaults {
   final bool changeEtag;
   final bool wrongContentLength;
 
+  /// This set with the faults a request's query names laid over it, so a
+  /// test can fault one stream (`/live/u/p/7.ts?drop_after_s=5`) and leave
+  /// the rest alone. A key the query doesn't name keeps this set's value.
+  FakeFaults overriddenBy(Map<String, String> query) {
+    if (query.isEmpty) return this;
+    final json = toJson();
+    for (final key in json.keys) {
+      if (query.containsKey(key)) json[key] = query[key];
+    }
+    return FakeFaults.fromJson(json);
+  }
+
   Map<String, Object?> toJson() => {
     'drop_after_s': dropAfterS,
     'stall_after_s': stallAfterS,

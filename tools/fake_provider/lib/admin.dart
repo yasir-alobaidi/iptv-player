@@ -2,10 +2,11 @@
 /// integration test can change the provider's behaviour between steps
 /// (docs/06 "Admin endpoint to change faults at runtime").
 ///
-/// This is a stub for the fault set only. Step 6 stores and reports faults; it
-/// injects none of them. Each fault starts being honoured in the phase whose
-/// tests need it (drop/stall/slow start with playback, Range and ETag faults
-/// with downloads), and the wiring lives where the fault is served, not here.
+/// This endpoint only stores and reports the set; each fault is honoured
+/// where it is served. The live-stream faults (drop, stall, slow start,
+/// HTTP status, max connections, expiring redirect, codec switch) act in
+/// `streams.dart` since Phase 3; the Range and ETag faults arrive with
+/// downloads (Phase 8).
 library;
 
 import 'dart:convert';

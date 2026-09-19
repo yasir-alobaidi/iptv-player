@@ -91,6 +91,10 @@ void main() {
         'the panel to see the connection closed',
       );
 
+      // ── HLS (the live format a source can choose).
+      final hls = await play(panel.live(1, extension: 'm3u8'));
+      await tester.runAsync(engine.stop);
+
       // ── A channel that isn't there fails, with the reason behind it.
       events.clear();
       await tester.runAsync(
@@ -107,7 +111,8 @@ void main() {
       // ignore: avoid_print
       print(
         'player: first frame ${first.inMilliseconds} ms, zap '
-        '${zap.inMilliseconds} ms, video ${video ? 'on' : 'off'}, '
+        '${zap.inMilliseconds} ms, HLS ${hls.inMilliseconds} ms, '
+        'video ${video ? 'on' : 'off'}, '
         'decoder ${info.hardwareDecoder ?? 'software'}',
       );
     },
