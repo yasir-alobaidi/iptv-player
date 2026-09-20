@@ -26,6 +26,7 @@ import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:logger/logger.dart';
@@ -109,13 +110,17 @@ Future<void> bootstrap() async {
 /// competes with a sync, then records runs the last session left
 /// unfinished and refreshes sources older than their `refresh_hours`
 /// (docs/02). The sync itself runs in a background isolate.
+///
+/// A guide import the last session was killed during is recorded the
+/// same way, and the rows it staged go with it: they are the one thing
+/// an interrupted import leaves behind (Phase 4 decision 2).
 void _syncAfterLaunch(ProviderContainer container) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
-      Future<void>.delayed(
-        _launchSyncDelay,
-        () => container.read(syncServiceProvider).startUp(),
-      ),
+      Future<void>.delayed(_launchSyncDelay, () async {
+        await container.read(epgRepositoryProvider).recoverInterrupted();
+        await container.read(syncServiceProvider).startUp();
+      }),
     );
   });
 }

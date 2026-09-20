@@ -5,12 +5,14 @@ import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
+import 'package:iptv_player/data/db/epg_tables.dart';
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
+import 'generated/schema_v5.dart' as v5;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -239,6 +241,144 @@ void main() {
           expect(await newDb.select(newDb.watchHistory).get(), isEmpty);
         },
       );
+    });
+  });
+
+  group('v4 → v5', () {
+    const created = '2026-09-20T08:00:00.000Z';
+    const source = v4.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const channel = v4.ChannelsData(
+      id: 1,
+      sourceId: 'src-1',
+      remoteKey: '201',
+      position: 0,
+      name: 'Arena Sports 1',
+      archiveDays: 0,
+      isHidden: 0,
+    );
+    const favorite = v4.FavoritesData(
+      id: 1,
+      itemType: 'live',
+      sourceId: 'src-1',
+      remoteKey: '201',
+      addedAt: created,
+    );
+
+    test('keeps the catalogue and adds an empty guide', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 4,
+        newVersion: 5,
+        createOld: v4.DatabaseAtV4.new,
+        createNew: v5.DatabaseAtV5.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.channels, channel)
+            ..insert(oldDb.favorites, favorite);
+        },
+        validateItems: (newDb) async {
+          expect(
+            (await newDb.select(newDb.channels).get()).single.name,
+            'Arena Sports 1',
+          );
+          expect(await newDb.select(newDb.favorites).get(), hasLength(1));
+          expect(await newDb.select(newDb.epgImports).get(), isEmpty);
+          expect(await newDb.select(newDb.epgChannels).get(), isEmpty);
+          expect(await newDb.select(newDb.epgPrograms).get(), isEmpty);
+          expect(await newDb.select(newDb.epgChannelsStaging).get(), isEmpty);
+          expect(await newDb.select(newDb.epgProgramsStaging).get(), isEmpty);
+          expect(await newDb.select(newDb.epgMappings).get(), isEmpty);
+          expect(await newDb.select(newDb.epgMatches).get(), isEmpty);
+        },
+      );
+    });
+
+    test('a migrated database takes a guide, and search indexes it', () async {
+      final schema = await verifier.schemaAt(4);
+      final old = v4.DatabaseAtV4(schema.newConnection());
+      await old.into(old.sources).insert(source);
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+
+      // After the migration, so the catalogue's own index sees it: a row
+      // written into a versioned schema is written without triggers.
+      await database.channelsDao.upsertAll([
+        ChannelsCompanion.insert(
+          sourceId: 'src-1',
+          remoteKey: '201',
+          name: 'Arena Sports 1',
+        ),
+      ]);
+      final channelId = (await database.channelsDao.byRemoteKey(
+        'src-1',
+        '201',
+      ))!.id;
+
+      final start = DateTime.utc(2026, 9, 20, 20);
+      final run = await database.epgDao.startImport('src-1', start);
+      await database.epgDao.stageChannels([
+        EpgChannelsStagingCompanion.insert(
+          importRun: run,
+          xmltvId: 'arena.sports',
+          displayName: const Value('Arena Sports 1'),
+        ),
+      ]);
+      await database.epgDao.stagePrograms([
+        EpgProgramsStagingCompanion.insert(
+          importRun: run,
+          epgChannelId: 'arena.sports',
+          startUtc: start.millisecondsSinceEpoch,
+          endUtc: start.add(const Duration(hours: 2)).millisecondsSinceEpoch,
+          title: 'Continental Cup',
+        ),
+      ]);
+      await database.epgDao.swapIn(
+        sourceId: 'src-1',
+        importRun: run,
+        at: start,
+        countsJson: (totals) => '{"programmes":${totals.programs}}',
+      );
+      await database
+          .into(database.epgMatches)
+          .insert(
+            EpgMatchesCompanion.insert(
+              channelId: Value(channelId),
+              sourceId: 'src-1',
+              xmltvId: 'arena.sports',
+              rule: EpgMatchRule.exactId,
+            ),
+          );
+
+      // The triggers are recreated after the upgrade rather than inside a
+      // step (AppDatabase._recreateTriggers); this is the proof they ran
+      // for the new index too.
+      final hits = await database
+          .customSelect(
+            "SELECT rowid FROM programs_fts WHERE programs_fts MATCH 'cont*'",
+          )
+          .get();
+      expect(hits, hasLength(1));
+
+      await (database.delete(
+        database.sources,
+      )..where((t) => t.id.equals('src-1'))).go();
+      expect(await database.select(database.epgPrograms).get(), isEmpty);
+      expect(await database.select(database.epgImports).get(), isEmpty);
+      expect(await database.select(database.epgMatches).get(), isEmpty);
     });
   });
 }

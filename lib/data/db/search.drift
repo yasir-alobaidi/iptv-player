@@ -11,6 +11,7 @@
 -- content tables, not a data migration.
 
 import 'catalogue_tables.dart';
+import 'epg_tables.dart';
 
 CREATE VIRTUAL TABLE channels_fts USING fts5(
   name, display_name,
@@ -81,4 +82,37 @@ BEGIN
   INSERT INTO series_fts(series_fts, rowid, name)
     VALUES ('delete', old.id, old.name);
   INSERT INTO series_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+-- Programmes (schema v5, queried from Phase 6). The guide's own text, so
+-- the index follows `epg_programs`: the swap deletes a source's live rows
+-- and inserts the imported ones, and these triggers carry the index along
+-- with them.
+
+CREATE VIRTUAL TABLE programs_fts USING fts5(
+  title, subtitle, description,
+  content='epg_programs', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2', prefix='2 3'
+);
+
+CREATE TRIGGER programs_fts_insert AFTER INSERT ON epg_programs BEGIN
+  INSERT INTO programs_fts(rowid, title, subtitle, description)
+    VALUES (new.id, new.title, new.subtitle, new.description);
+END;
+
+CREATE TRIGGER programs_fts_delete AFTER DELETE ON epg_programs BEGIN
+  INSERT INTO programs_fts(programs_fts, rowid, title, subtitle, description)
+    VALUES ('delete', old.id, old.title, old.subtitle, old.description);
+END;
+
+CREATE TRIGGER programs_fts_update
+  AFTER UPDATE OF title, subtitle, description ON epg_programs
+  WHEN old.title IS NOT new.title
+    OR old.subtitle IS NOT new.subtitle
+    OR old.description IS NOT new.description
+BEGIN
+  INSERT INTO programs_fts(programs_fts, rowid, title, subtitle, description)
+    VALUES ('delete', old.id, old.title, old.subtitle, old.description);
+  INSERT INTO programs_fts(rowid, title, subtitle, description)
+    VALUES (new.id, new.title, new.subtitle, new.description);
 END;

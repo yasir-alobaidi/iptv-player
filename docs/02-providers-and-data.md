@@ -80,7 +80,7 @@ How the parser (`lib/data/providers/m3u/`) meets these; fixtures in `test_fixtur
 - `<channel id>` with `<display-name>`, `<icon src>`; `<programme start stop channel>` with `<title>`, `<sub-title>`, `<desc>`, `<category>`, `<episode-num>`
 - Times like `20260914180000 +0200` → store UTC epoch ms; apply the per-source offset setting
 - Retention window: now − 1 day to now + 7 days (configurable); skip everything outside while parsing
-- Insert in batches (~5,000 rows per transaction) into staging tables, then swap atomically so the guide never shows half-loaded data
+- Insert in batches (~5,000 rows per batch, never a transaction inside the isolate — hard rule 2) into staging tables, then swap atomically on the app's side so the guide never shows half-loaded data
 - Refresh daily and on demand; keep the previous guide until the new import completes
 
 ### EPG ↔ channel matching (in order)
@@ -104,9 +104,12 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | movie_details | movie_id, plot, cast_names, director, genre, runtime_minutes, backdrop_url, fetched_at |
 | series | id, source_id, category_id, remote_key, name, poster_url, rating, year, plot, updated_at, episodes_fetched_at, position, seen_run |
 | episodes | id, series_id, season, episode, remote_key, title, ext, duration_seconds, plot, still_url, stream_url, extras_json, seen_run — unique (series_id, remote_key) |
-| epg_channels | id, source_id, xmltv_id, display_name, icon_url |
-| epg_programs | id, source_id, epg_channel_id, start_utc, end_utc, title, subtitle, description, category — index (epg_channel_id, start_utc) |
-| epg_mappings | source_id, channel_remote_key, xmltv_id |
+| epg_imports | id, source_id, started_at, finished_at, outcome, failure (an `AppFailure.code`), failure_status, counts_json, is_live — one import of one source's XMLTV; its own table, because Settings → Sources watches `sync_runs` and a guide import is not a catalogue sync |
+| epg_channels | id, source_id, xmltv_id, display_name, icon_url — unique (source_id, xmltv_id) |
+| epg_programs | id, source_id, epg_channel_id (the XMLTV id the programme names, not a row id), start_utc, end_utc (epoch ms), title, subtitle, description, category — index (source_id, epg_channel_id, start_utc) |
+| epg_channels_staging / epg_programs_staging | the same columns keyed by import_run instead of source_id: where an import writes until the swap |
+| epg_mappings | source_id, channel_remote_key, xmltv_id, updated_at — the user's own mapping, never written by a sync or an import |
+| epg_matches | channel_id, source_id, xmltv_id, rule — what the matcher resolved; derived state, rewritten whole |
 | favorites | id, item_type, source_id, remote_key, group_name, sort_order, added_at |
 | watch_history | id, item_type, source_id, remote_key, position_ms, duration_ms, completed, updated_at |
 | cast_devices | device_id, name, model, last_host, is_manual, hevc_support (auto/yes/no), learned_json, last_used_at |
@@ -115,7 +118,7 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 
 **Secrets (hard rule 3).** A source's secrets live in the system keyring as one JSON document under `credential_ref` (`source.<id>`): the Xtream password, the real playlist URL, and the real EPG override URL. Playlist and EPG URLs go there whole whatever they look like, and the database keeps only their origin: `redact()` can't recognize a token in a path (`/p/9c2e81d4/list.m3u`), so a masked URL is not safe to store, and only the origin is. The Xtream server URL is normalized on save (scheme assumed `http://` if missing; user-info, query, fragment and trailing slashes dropped). `SourceRepository.credentialsFor()` is the only way back to the real values, and it adds every value it returns to the log's `SecretRegistry`. There is no fallback to a file when the keyring is missing or locked: saving fails with a message asking the user to unlock or install one.
 
-Schema versions: v1 (Phase 1), v2 (Phase 2 catalogue), v3 (`sync_runs.failure_status`, Phase 2 step 8).
+Schema versions: v1 (Phase 1), v2 (Phase 2 catalogue), v3 (`sync_runs.failure_status`, Phase 2 step 8), v4 (favorites and watch history, Phase 3), v5 (the EPG store, Phase 4 step 2).
 
 Every schema change: bump the schema version, write a migration, add a migration test (drift schema dumps + verifier).
 

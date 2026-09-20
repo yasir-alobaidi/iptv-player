@@ -6,6 +6,7 @@ import 'package:iptv_player/data/db/app_database.steps.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/daos/categories_dao.dart';
 import 'package:iptv_player/data/db/daos/channels_dao.dart';
+import 'package:iptv_player/data/db/daos/epg_dao.dart';
 import 'package:iptv_player/data/db/daos/favorites_dao.dart';
 import 'package:iptv_player/data/db/daos/movies_dao.dart';
 import 'package:iptv_player/data/db/daos/series_dao.dart';
@@ -13,6 +14,7 @@ import 'package:iptv_player/data/db/daos/settings_dao.dart';
 import 'package:iptv_player/data/db/daos/sources_dao.dart';
 import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
 import 'package:iptv_player/data/db/daos/watch_history_dao.dart';
+import 'package:iptv_player/data/db/epg_tables.dart';
 import 'package:iptv_player/data/db/tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:path/path.dart' as p;
@@ -35,6 +37,13 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     Episodes,
     Favorites,
     WatchHistory,
+    EpgImports,
+    EpgChannels,
+    EpgPrograms,
+    EpgChannelsStaging,
+    EpgProgramsStaging,
+    EpgMappings,
+    EpgMatches,
   ],
   include: {'search.drift'},
   daos: [
@@ -47,6 +56,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     WatchHistoryDao,
     MoviesDao,
     SeriesDao,
+    EpgDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -56,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,7 +75,11 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (m, from, to) async {
       await _upgradeStepByStep(m, from, to);
-      await _recreateTriggers(m);
+      // Only when the database ends up at the version this build knows.
+      // The app always upgrades all the way; the schema verifier stops
+      // at intermediate versions, where a trigger of a later version
+      // would be created on a table that does not exist yet.
+      if (to == schemaVersion) await _recreateTriggers(m);
     },
     beforeOpen: (details) async {
       // Off by default in SQLite, and every child table added from
@@ -75,9 +89,10 @@ class AppDatabase extends _$AppDatabase {
   );
 
   /// Triggers are derived state: they only keep the FTS indexes in step
-  /// with the catalogue. drift's versioned schemas leave them out, so
-  /// instead of creating them inside a step, every upgrade drops them all
-  /// and creates the current ones once the tables are final.
+  /// with the catalogue and the guide. drift's versioned schemas leave
+  /// them out, so instead of creating them inside a step, every upgrade
+  /// drops them all and creates the current ones once the tables are
+  /// final.
   Future<void> _recreateTriggers(Migrator m) async {
     for (final trigger in allSchemaEntities.whereType<Trigger>()) {
       await m.drop(trigger);
@@ -114,6 +129,20 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.createTable(schema.favorites);
     await m.createTable(schema.watchHistory);
     await m.createIndex(schema.watchHistoryRecent);
+  },
+  from4To5: (m, schema) async {
+    // Phase 4: the EPG store. Parents before children, as above.
+    await m.createTable(schema.epgImports);
+    await m.createTable(schema.epgChannels);
+    await m.createTable(schema.epgPrograms);
+    await m.createTable(schema.epgChannelsStaging);
+    await m.createTable(schema.epgProgramsStaging);
+    await m.createTable(schema.epgMappings);
+    await m.createTable(schema.epgMatches);
+    await m.createIndex(schema.epgProgramsChannelStart);
+    await m.createIndex(schema.epgProgramsStagingRun);
+    await m.createIndex(schema.epgMatchesSource);
+    await m.create(schema.programsFts);
   },
 );
 
