@@ -8,6 +8,7 @@ import 'package:fake_provider/get_php.dart';
 import 'package:fake_provider/player_api.dart';
 import 'package:fake_provider/server_state.dart';
 import 'package:fake_provider/streams.dart';
+import 'package:fake_provider/xmltv.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
@@ -31,6 +32,7 @@ class FakeProviderServer {
     final router = Router()
       ..all('/player_api.php', playerApiHandler(state))
       ..get('/get.php', getPhpHandler(state))
+      ..get('/xmltv.php', xmltvHandler(state))
       ..get('/', (Request request) => Response.ok(_index(state)));
 
     var handler = const Pipeline().addHandler(

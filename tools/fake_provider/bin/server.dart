@@ -37,6 +37,14 @@ Future<void> main(List<String> args) async {
     ..addOption('movies', help: 'Movie count, overriding the profile.')
     ..addOption('series', help: 'Series count, overriding the profile.')
     ..addOption('max-connections', help: 'Overrides the profile.')
+    ..addOption(
+      'epg-days',
+      defaultsTo: '3',
+      help:
+          'Days of guide xmltv.php serves after now (a day of history '
+          'always comes with it). A request can ask for another number.',
+    )
+    ..addFlag('epg-gzip', negatable: false, help: 'Gzip xmltv.php by default.')
     ..addFlag('verbose', abbr: 'v', help: 'Log requests and ffmpeg stderr.')
     ..addFlag(
       'exit-with-stdin',
@@ -100,6 +108,8 @@ Future<void> main(List<String> args) async {
     samplesDir: samples,
     ffmpegPath: ffmpeg,
     runDir: runDir,
+    epgDays: count('epg-days') ?? 3,
+    epgGzip: opts.flag('epg-gzip'),
   );
 
   final server = await FakeProviderServer.start(

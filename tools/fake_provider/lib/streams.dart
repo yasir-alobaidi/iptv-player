@@ -301,6 +301,17 @@ class StreamRelay {
       await hangUp();
       return;
     }
+    // `cut_after_s`: the body stops with no last chunk and the connection
+    // closes, as a panel or a network drop does. Unlike `drop_after_s`,
+    // lavf reads that as a cut and reconnects by itself (ADR-010).
+    var cut = false;
+    Timer? cutTimer;
+    if (faults.cutAfterS case final s?) {
+      cutTimer = Timer(Duration(seconds: s), () {
+        cut = true;
+        unawaited(body.stop());
+      });
+    }
     // Chunked, as shelf sent it: a body that ends (drop_after_s) ends with
     // the last chunk, which lavf takes as the end of the stream. Without a
     // length or chunks, lavf takes the close for a cut and reconnects by
@@ -318,10 +329,11 @@ class StreamRelay {
       await outgoing.addStream(
         body.stream.where((data) => data.isNotEmpty).map(_chunk),
       );
-      outgoing.add(_lastChunk);
+      if (!cut) outgoing.add(_lastChunk);
     } on Object {
       // A failed write: the client is gone.
     }
+    cutTimer?.cancel();
     // Idempotent: the body ended (a drop, ffmpeg exited) or the write failed.
     await body.stop();
     await hangUp();

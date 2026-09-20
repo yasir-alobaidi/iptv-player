@@ -25,6 +25,7 @@ class FakeQuirks {
     this.junkIcons = false,
     this.htmlEntities = false,
     this.messyM3u = false,
+    this.messyXmltv = false,
     this.refusedSignInAs404 = false,
   });
 
@@ -39,6 +40,7 @@ class FakeQuirks {
     junkIcons: true,
     htmlEntities: true,
     messyM3u: true,
+    messyXmltv: true,
     refusedSignInAs404: true,
   );
 
@@ -71,6 +73,11 @@ class FakeQuirks {
   /// user agent on every 7th entry, a `#KODIPROP` line on every 9th.
   final bool messyM3u;
 
+  /// `xmltv.php` as real guides come: a programme with no `stop`, a bad
+  /// date, an offset no zone has, an encoding that does not exist, a
+  /// channel declared twice and one that matches no stream (docs/02).
+  final bool messyXmltv;
+
   /// A wrong username or password gets an empty `404` from
   /// `player_api.php` instead of `200` with `auth: 0`, as a real panel
   /// answered (2026-09-19). A page that doesn't exist still gets the web
@@ -87,6 +94,7 @@ class FakeQuirks {
     'junk_icons': junkIcons,
     'html_entities': htmlEntities,
     'messy_m3u': messyM3u,
+    'messy_xmltv': messyXmltv,
     'refused_sign_in_as_404': refusedSignInAs404,
   };
 }
@@ -101,6 +109,7 @@ class FakeFaults {
     this.httpStatus,
     this.maxConnections,
     this.codecSwitchAfterS,
+    this.cutAfterS,
     this.redirectWithExpiringToken = false,
     this.ignoreRange = false,
     this.dropAfterBytes,
@@ -136,6 +145,7 @@ class FakeFaults {
       httpStatus: asInt('http_status'),
       maxConnections: asInt('max_connections'),
       codecSwitchAfterS: asInt('codec_switch_after_s'),
+      cutAfterS: asInt('cut_after_s'),
       redirectWithExpiringToken: asBool('redirect_with_expiring_token'),
       ignoreRange: asBool('ignore_range'),
       dropAfterBytes: asInt('drop_after_bytes'),
@@ -153,6 +163,12 @@ class FakeFaults {
   /// Overrides the profile's limit while set (docs/06 fault list).
   final int? maxConnections;
   final int? codecSwitchAfterS;
+
+  /// The connection is cut mid-body with no clean end, as a panel or a
+  /// network drop does: no last chunk, just a closed socket. mpv's own
+  /// `reconnect_streamed` reconnects under the app, which `drop_after_s`
+  /// (a body that ends properly) never triggers — ADR-010 "The soak run".
+  final int? cutAfterS;
   final bool redirectWithExpiringToken;
   final bool ignoreRange;
   final int? dropAfterBytes;
@@ -179,6 +195,7 @@ class FakeFaults {
     'http_status': httpStatus,
     'max_connections': maxConnections,
     'codec_switch_after_s': codecSwitchAfterS,
+    'cut_after_s': cutAfterS,
     'redirect_with_expiring_token': redirectWithExpiringToken,
     'ignore_range': ignoreRange,
     'drop_after_bytes': dropAfterBytes,

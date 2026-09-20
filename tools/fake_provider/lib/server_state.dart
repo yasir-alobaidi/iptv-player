@@ -11,6 +11,8 @@ class FakeServerState {
     required this.samplesDir,
     required this.ffmpegPath,
     required this.runDir,
+    this.epgDays = 3,
+    this.epgGzip = false,
   }) : faults = profile.faults,
        catalog = FakeCatalog(profile);
 
@@ -25,6 +27,13 @@ class FakeServerState {
 
   /// Where PID files and the MKV loop cache live.
   final String runDir;
+
+  /// Days of guide `xmltv.php` serves after now, unless the request asks
+  /// for another number (`--epg-days`).
+  final int epgDays;
+
+  /// Whether `xmltv.php` gzips by default (`--epg-gzip`).
+  final bool epgGzip;
 
   final DateTime startedAt = DateTime.now();
 

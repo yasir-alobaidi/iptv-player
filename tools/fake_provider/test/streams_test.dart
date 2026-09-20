@@ -368,6 +368,33 @@ void main() {
       await _until(() => state.activeStreams == 0, 'the slot to be freed');
     }, skip: mediaSkip);
 
+    test('cut_after_s ends the body with no last chunk', () async {
+      // Unlike drop_after_s, which ends the chunked body properly, a cut
+      // leaves the response truncated: lavf reads that as a broken
+      // connection and reconnects by itself (ADR-010 "The soak run").
+      final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
+      addTearDown(() => server.close(force: true));
+      final socket = await Socket.connect('127.0.0.1', server.port);
+      addTearDown(socket.destroy);
+      socket.write(
+        'GET /live/test/test/1.ts?cut_after_s=1 HTTP/1.1\r\nHost: x\r\n'
+        'Connection: close\r\n\r\n',
+      );
+      await socket.flush();
+      final bytes = <int>[];
+      await socket.forEach(bytes.addAll).timeout(const Duration(seconds: 20));
+      final text = String.fromCharCodes(bytes.take(200));
+      expect(text, contains('200 OK'));
+      expect(text, contains('transfer-encoding: chunked'));
+      expect(bytes.length, greaterThan(10000), reason: 'it played first');
+      // The terminating chunk never arrives.
+      expect(
+        String.fromCharCodes(bytes.skip(bytes.length - 5)),
+        isNot('0\r\n\r\n'),
+      );
+      await _until(() => state.activeStreams == 0, 'the slot to be freed');
+    }, skip: mediaSkip);
+
     test('stall_after_s stops sending but keeps the connection open', () async {
       final server = await shelf_io.serve(relay.handler, '127.0.0.1', 0);
       addTearDown(() => server.close(force: true));
