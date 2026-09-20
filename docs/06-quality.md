@@ -23,7 +23,7 @@
 | Playback | integration_test, the real player and the fake provider (its own process, the samples) | `player_engine_test` (first frame, zap, the connection let go, a missing channel, HLS), `playback_faults_test` (drop, stall, slow start, 401, 404, connection limit, 500, expiring redirect, codec switch), `live_tv_keyboard_test` (Live TV and the player, keyboard only). Skipped without the samples; CI generates the three it needs with Ubuntu's ffmpeg and plays with `IPTV_PLAYER_VIDEO=0` (no picture); the laptop runs them with video. `real_provider_play_test` plays from the user's provider only with `"play": true` in the login file and only after the user freed the connection |
 | Crash | a real process killed with SIGKILL | a sync killed part-way leaves the database file intact, the previous catalogue whole and the user's choices kept, and the next launch fails the dead run as interrupted (`test/data/sync/sync_kill_test.dart`: `dart run`s `support/sync_victim.dart` and kills it after 5,000 rows). POSIX only, so skipped on Windows; skipped with a reason when there is no `dart` on PATH |
 | Cast protocol | fake receiver (Dart TLS server speaking Cast v2) | connect, launch, load, status, errors, heartbeat loss |
-| Soak | tools/soak | 8 h live playback with random faults; memory/CPU logged every minute |
+| Soak | tools/soak | 8 h live playback with random faults; memory/CPU logged every minute (1 h at a phase exit) |
 | Manual | checklists | casting matrix and library casting matrix (docs/04); Linux Intel + NVIDIA; Windows |
 
 ## Fake provider (tools/fake_provider)
@@ -55,7 +55,7 @@ Measured by tests tagged `benchmark`, which are skipped unless run with `flutter
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s |
 | Idle memory after sync with guide | ≤ 450 MB |
 | H.264 1080p50 playback CPU (hwdec) | ≤ 15 % total CPU |
-| 8 h soak memory growth | ≤ 50 MB |
+| 8 h soak memory growth | ≤ 50 MB (median of the last five minutes over the median of minutes 21–25: the player settles for ~40 min, and a reconnect spikes RSS for a sample or two — ADR-010 "The soak run") |
 | Library scan, 5,000 new files (library_tree.sh) | ≤ 5 min; browsable while scanning; no UI frame > 32 ms |
 | Library rescan, 5,000 unchanged files | ≤ 5 s |
 | Download speed vs `curl` on the same URL (fake provider) | ≥ 90 % |

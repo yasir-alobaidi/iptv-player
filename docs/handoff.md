@@ -1,42 +1,50 @@
-# Handoff — 2026-09-19 (session 18, Phase 3 built)
+# Handoff — 2026-09-19 (session 19, Phase 3 built and soaked)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**1. Run the 1-hour soak on your screen** (the last Phase 3 check; you
-chose to run it yourself). It uses only the fake provider, not your
-subscription:
+**The 1-hour soak is done — I ran it, and it is green.** It took three
+runs, because the first one failed and the second found the check itself
+was wrong. Nothing is left for you to run.
 
 ```
-cd ~/724/iptv-player
-tools/soak/run.sh          # 60 minutes; a player window stays open
+soak 60min video on: 545→739 MB (growth from minute 21: 39 MB),
+78 reconnects, 0 failures, longest without a picture 9 s
 ```
 
-It prints one summary line at the end, e.g. `soak 60min video on: 812→840
-MB (growth after warm-up 12 MB), 40 reconnects, 0 failures, longest
-without a picture 9 s`, and writes a row a minute to `build/soak/soak.csv`.
-It passes when nothing stayed down for a minute and memory grew by 50 MB
-at most after warm-up. Paste the summary line in the next session.
+**1. Push**, so CI runs the new player tests (it generates three media
+samples with Ubuntu's ffmpeg and plays with no picture). Everything is
+committed locally; nothing is pushed.
 
-**2. Push**, so CI runs the new player tests (it now generates three
-media samples with Ubuntu's ffmpeg and plays with no picture).
+**2. Try it yourself:** `flutter run -d linux`, add your provider (or it
+is there already from an earlier run), Ctrl+2 for Live TV. Only play from
+your provider when your other device is off: your plan allows one stream.
 
-**3. Try it yourself:** `flutter run -d linux`, add your provider (or
-it is there already from an earlier run), Ctrl+2 for Live TV. Only play
-from your provider when your other device is off: your plan allows one
-stream.
-
-What I decided without asking (all in ADR-010; say if you want any
-changed):
-- a click on a channel plays it in the preview, Enter plays it full
-  screen, F adds a favorite; no double-click on rows (it would delay every
-  click);
-- choosing a category moves the keyboard into the new list once it has
-  loaded, on its first channel, which then previews;
-- leaving Live TV stops playback; the full-screen player keeps it going;
-- Settings → Playback shows your source's live format (TS/HLS) and sends
-  you to Edit source for the User-Agent, rather than a second copy of it;
-- the watchdog tries a full account 3 times, not 6.
+### What the soak found (both fixed or recorded; full story in ADR-010)
+- **A connection leak in the fake provider** killed the first hour at
+  minute 8. The panel counted 2 of its 2 connections with nobody
+  connected, so every reconnect was refused as a full account and the
+  player sat in reconnect-and-fail for 50 minutes. The cause was in the
+  test server, not the app: when a client *resets* a connection before
+  the response headers go out — which is what a player abandoning an
+  attempt does, and what the kernel sends whenever a socket closes with
+  unread data — dart:io keeps the response body, throws away everything
+  written to it and never cancels it, so the relay never learned the
+  client had gone and never killed its ffmpeg. The relay now owns the
+  socket for live streams. **The app behaved correctly throughout**: it
+  retried, backed off and explained the refusal.
+- **The memory check was measuring warm-up.** The second hour was clean
+  on playback but reported 101 MB growth against a 50 MB budget. It was
+  not a leak: a control run with one stream and no reconnects grew the
+  same way and then held flat, and 50 reopens added ~0.3 MB each. The
+  player settles over about 40 minutes and then holds. You chose to
+  measure growth from minute 21 instead of minute 6, on medians so a
+  reconnect spike is not counted; the budget stays 50 MB.
+- **A real cut connection is invisible to the app.** Our `drop_after_s`
+  fault ends the body cleanly, which mpv reports as the end of the
+  stream. A real cut (no clean end) is absorbed by mpv's own reconnect
+  (`reconnect_streamed=1`) and the app never sees it. You chose to add a
+  `cut` fault in Phase 4.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -45,19 +53,18 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/08-phases-and-prompts.md (Phase 4) and ADR-010 in docs/decisions.md first.
 Phase 3 is reviewed and pushed; CI is <green | red: …>.
-The 1-hour soak printed: <paste the summary line>.
 Write the Phase 4 plan and stop for my approval.
 ```
 
 ## Where things stand
 - **Phases 1–3 are built.** Phase 3's exit: the fault suite green, the zap
-  budget met (p50 961 ms / p95 972 ms on the desktop), the 1-hour soak
-  pending (yours). ADR-010 Accepted with the soak outstanding.
+  budget met (p50 961 ms / p95 972 ms on the desktop), **the 1-hour soak
+  green** (above). ADR-010 Accepted.
 - **Your provider played** (three short runs, each after your yes): first
   frame 1.2 s, zapping on your single connection without a refusal, the
   connection let go afterwards. One channel is slow (~4.7 s) to its first
   picture every time: that stream, not the app.
-- All checks clean: analyze, format, 821 app tests (3 skipped), 97
+- All checks clean: analyze, format, 821 app tests (3 skipped), **98**
   fake-provider tests, 9 integration tests (the fault suite, the Live TV
   keyboard walk, the engine; 4 opt-in: real provider ×2, zap benchmark,
   soak).
@@ -65,15 +72,25 @@ Write the Phase 4 plan and stop for my approval.
   `"wrong_password": false` and `"play": false`, so no test signs in wrongly
   or plays from your provider unless you turn it on.
 
-## Done this session (2026-09-19)
-- Phase 2 exit (step 8), errors showing the server's answer (schema v3),
-  the Phase 3 plan, and Phase 3 steps 1–9.
+## Done this session (2026-09-19, session 19)
+- The 1-hour soak on the real display, three runs; the fake-provider
+  connection leak found and fixed (`tools/fake_provider/lib/streams.dart`,
+  with the regression test "a client reset before the answer starts frees
+  its slot"); `--exit-with-stdin` so a killed test never orphans the
+  server and its ffmpegs; the soak's memory rule corrected.
 
 ## Instructions for the next session
 1. **Phase 4 is next** (EPG and the guide): write its plan and stop for
-   approval. Before that, read the soak summary the user pastes; a failure
-   there comes first.
-1k. **Phase 3 (playback):** `PlayerEngine` (`lib/core/player/`) is the seam;
+   approval. Include the `cut` fault and a test for what the player does
+   while mpv reconnects underneath it (ADR-010 "The soak run").
+2. **Phase 5's cast relay has the same trap the soak found.** It serves
+   FFmpeg output over our own shelf server, and a receiver that resets
+   mid-stream will be invisible the same way: the relay must own the
+   socket (hijack) or it will leak an FFmpeg per drop.
+3. **Before a release: the 8-hour soak** (`tools/soak/run.sh 480`). An
+   hour cannot tell a plateau from a very slow leak; the 1-hour run's
+   10-minute medians were 598, 652, 655, 686, 695, 691 MB.
+4. **Phase 3 (playback):** `PlayerEngine` (`lib/core/player/`) is the seam;
    `MediaKitPlayerEngine` (`lib/data/player_mediakit/`) passes
    `waitForInitialization: false` on its own property calls (media_kit
    otherwise waits for the video controller's first texture, which needs

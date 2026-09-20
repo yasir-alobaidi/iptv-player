@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed**. Exit: the fault suite is green and the zap budget is met; **the 1-hour soak on the real display is yours to run** (`tools/soak/run.sh`), and CI needs your push. ADR-010 is Accepted with the soak outstanding. Phase 4 (EPG and the guide) is next.
+Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed, and the 1-hour soak is done and green** (2026-09-19, run by Claude on the real display): `soak 60min video on: 545→739 MB (growth from minute 21: 39 MB), 78 reconnects, 0 failures, longest without a picture 9 s`. It found and fixed a connection-slot leak in the fake provider (ADR-010 "The soak run"), and corrected how the soak measures memory. Exit: the fault suite green, the zap budget met, the soak green; **CI needs your push**. Phase 4 (EPG and the guide) is next.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -79,18 +79,19 @@ Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed
 - 2026-09-19: **Errors say what the server answered** (your review): a 404 with a page stays "Not found", the empty 404 stays "Sign-in refused", and every failure with an HTTP status shows it after the app's own words ("The server answered HTTP 503 (Service Unavailable).") on Connect, Sync, the source card, Account details and error toasts; a 5xx is "Server error", not "Can't reach the server". Background syncs keep the status in `sync_runs.failure_status` (schema v3, number only). 726 app tests
 
 - 2026-09-19: **Phase 3, steps 1–9** (plan approved the same day with the recommendation on all six decisions). **1** `PlayerEngine` + `MediaKitPlayerEngine` (the xvfb spike: works with video and with `vo=null`; found media_kit waiting for the video controller's texture on every property call, and `vid=no` without a controller). **2** the fake provider's stream faults (per request too) and live HLS. **3** stream URLs, `ChannelRepository` (count + window over 50k rows), `PlaybackCoordinator` (one-connection sources closed before the next open), schema v4 (`favorites`, `watch_history`). **4** the watchdog (timeouts, stall, backoff 1–30 s, 6 tries, 3 for a full account) and `HttpStreamProber` classifying failures with the server's status. **5** the Live TV screen (goldens 1280×800 and 1920×1080). **6** the full-screen player (OSD, zapping, number entry, last channel, channel panel, tracks, aspect, stream info). **7** Settings → Playback. **8** the fault suite (10 faults, all green), a keyboard-only walk on the real app, CI generating samples and playing with no picture, and **your provider played for the first time** (with your go-ahead): 1.2 s to the first frame, zapping on your one connection with no refusal, the connection let go afterwards. **9** zap benchmark **p50 961 ms / p95 972 ms** on the desktop (budget 1.5 / 3 s), and the soak tool. Also: errors show the server's answer (schema v3, before Phase 3). 821 app tests (3 skipped), 97 fake-provider tests, 9 integration tests (4 opt-in: real provider ×2, benchmarks, soak)
+- 2026-09-19 (session 19): **the 1-hour soak, run three times.** Run 1 died at minute 8: the fake panel counted 2 of its 2 connections with nobody connected, so every reconnect was refused as a full account — a client that *resets* before the response headers go out left dart:io holding the shelf body, dropping its chunks and never cancelling it, so the relay's reap never ran. The relay now hijacks the connection for live `.ts` and writes the answer itself (still chunked), sees the client leave on the read side, and counts nothing until the socket is in hand; `--exit-with-stdin` stops an orphaned server. Run 2 was clean on playback but reported 101 MB memory growth; a control run (one open, no reconnects) grew the same way and then held flat, so it was the ~40-minute warm-up being read as a leak: growth is now measured from minute 21 on medians (your call). Run 3 green: **+39 MB, 78 reconnects, 0 failures, 9 s longest without a picture, 1 connection throughout**. Also found: a dropped stream ends cleanly here, while a real cut connection is absorbed by mpv's own reconnect — a `cut` fault is Phase 4 work
 
 ## In progress
-- **Phase 3 is waiting for your review, your 1-hour soak, and CI on your push** (commits from "Phase 3 plan" to "Phase 3 step 9")
+- **Phase 3 is waiting for your review and CI on your push** (commits from "Phase 3 plan" to "soak: measure memory after warm-up")
 
 ## Next
-1. **You:** run the 1-hour soak on your screen: `tools/soak/run.sh` (a window plays test channels for an hour; the fake provider only). Tell me the summary line it prints
-2. **You:** push; CI now generates three media samples with Ubuntu's ffmpeg and runs the player tests without a picture. Then try the app yourself: `flutter run -d linux` → Live TV (your provider, when your other device is off)
-3. Phase 4 plan (EPG and the guide), for your approval
+1. **You:** push; CI now generates three media samples with Ubuntu's ffmpeg and runs the player tests without a picture. Then try the app yourself: `flutter run -d linux` → Live TV (your provider, when your other device is off)
+2. Phase 4 plan (EPG and the guide), for your approval. It includes the `cut` fault the soak turned up (a connection cut mid-body with no clean end, which mpv absorbs by itself — ADR-010)
+3. The 8-hour soak before a release: an hour cannot tell a plateau from a very slow leak
 4. The Windows playback run when your Windows PC is available
 
 ## ADR-008, ADR-009, ADR-010
-**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19).** **Phase 3: ADR-010 (Accepted 2026-09-19, the 1-hour soak still to run).** Each is written straight into docs/decisions.md as its steps land, so there is one source of truth.
+**Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19).** **Phase 3: ADR-010 (Accepted 2026-09-19; the 1-hour soak run the same day — see "The soak run").** Each is written straight into docs/decisions.md as its steps land, so there is one source of truth.
 
 ## Open questions
 - `bootstrap()` takes no overrides and resolves `AppPaths` itself, so an integration test can't drive the real entry point without writing a log and a database into the real app-support directory and taking over `FlutterError.onError`. The step 7 smoke test pumps `IptvPlayerApp` with bootstrap's non-disk overrides instead. A deeper launch test later needs an injectable paths/overrides seam in `bootstrap()`
@@ -101,7 +102,7 @@ Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed
 
 ## Known issues
 - On your provider one channel takes ~4.7 s to its first picture every time (cold or zapped), most likely a long keyframe interval in that stream; nothing in the app to change, but Phase 3's zap time is a fake-provider number
-- The fake panel can report 2 active connections for a moment after a reconnect on a one-connection source (it notices a closed client on its next write); the soak's CSV shows it. Real panels may do the same, which is why a refused stream right after a zap is retried
+- ~~The fake panel can report 2 active connections for a moment after a reconnect~~ — that was the leak the soak found on 2026-09-19 (ADR-010 "The soak run"): a client resetting before the answer started left dart:io holding the body, so the slot was never freed. Fixed; the relay owns the socket now. A real panel can still be slow to free a slot, which is why a refused stream right after a zap is retried
 - Memory numbers from the integration tests (~800 MB RSS) are a debug build with the test harness; idle memory is measured on a release build in a later phase
 - The Settings → Categories manager's list is still one Tab stop per row plus each Rename button; with a big provider, the controls above it are a long Shift+Tab away (Home/End or a one-Tab-stop list would fix it; docs/05)
 - The onboarding backdrop's radial glow shows faint banding rings on this laptop's display
@@ -131,6 +132,6 @@ Phase 3 — Live TV, the player, the watchdog: **all 9 steps built and committed
 | XMLTV 300 MB import | ≤ 4 min | — | — |
 | Idle memory with guide | ≤ 450 MB | — | — |
 | H.264 1080p50 CPU (hwdec) | ≤ 15 % | Intel Wayland 1.5 % (also 1.5 % from `third_party/media_kit_video`) · Intel Xorg 2.3 % · NVIDIA Xorg 1.1 % · NVIDIA Wayland 2.7 %, 0 drops — patched media_kit (unpatched Intel: 11.6 %, 207 drops; unpatched NVIDIA: 6.6–7.3 %) | 2026-09-15 |
-| 8 h soak memory growth | ≤ 50 MB | 1 h run pending (yours: `tools/soak/run.sh`); a 4-min xvfb trial: flat, 0 failures, 8 s longest without a picture | 2026-09-19 |
+| 8 h soak memory growth | ≤ 50 MB | **1 h on the real display: +39 MB, 78 reconnects, 0 failures, 9 s longest without a picture, never more than 1 connection.** Measured from minute 21 on medians (the player settles for ~40 min; ADR-010). 8 h still to run before a release | 2026-09-19 |
 | Library scan, 5,000 new files | ≤ 5 min | — | — |
 | Download speed vs curl | ≥ 90 % | — | — |

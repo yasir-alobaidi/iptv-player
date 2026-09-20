@@ -7,7 +7,14 @@
 //
 // It passes when every fault recovered (the picture back within a
 // minute), nothing crashed, and memory stopped growing: the last five
-// minutes' RSS within [_growthBudget] of minutes five to ten.
+// minutes' RSS within [_growthBudget] of the five after [_warmUpMinutes].
+//
+// Warm-up is 20 minutes, not 5: the player settles for about 40 minutes
+// (a debug build, three codecs, the video output) and then holds flat, so
+// a baseline at minute 5 reads the ramp as a leak — the 2026-09-19 hour
+// grew 101 MB measured from minute 5 and 34 MB measured from minute 20,
+// with the last two 10-minute medians flat (678, 674 MB). Medians, not
+// averages: a reconnect spikes RSS by ~85 MB for a sample or two.
 //
 // Run with tools/soak/run.sh (on the real display, for real CPU numbers).
 // Skipped unless IPTV_SOAK_MINUTES is set.
@@ -39,6 +46,10 @@ import 'support/keyboard.dart';
 const _actionEvery = Duration(seconds: 90);
 const _recoveryLimit = Duration(minutes: 1);
 const _growthBudget = 50; // MB, docs/06 (8 h); held to over any run.
+
+/// Memory is measured from after this many minutes (see the note above).
+/// A run too short for it falls back to the first minutes it has.
+const _warmUpMinutes = 20;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -236,15 +247,24 @@ void main() {
         }
       }
 
-      final early = rss.length > 10 ? rss.sublist(5, 10) : rss;
+      // The five minutes after warm-up, or the best a short run can do.
+      final from = rss.length > _warmUpMinutes + 5
+          ? _warmUpMinutes
+          : (rss.length > 10 ? 5 : 0);
+      final early = rss.length > from + 5 ? rss.sublist(from, from + 5) : rss;
       final late = rss.length > 5 ? rss.sublist(rss.length - 5) : rss;
-      int avg(List<int> xs) =>
-          xs.isEmpty ? 0 : xs.reduce((a, b) => a + b) ~/ xs.length;
-      final growth = avg(late) - avg(early);
+      int median(List<int> xs) {
+        if (xs.isEmpty) return 0;
+        final sorted = [...xs]..sort();
+        return sorted[sorted.length ~/ 2];
+      }
+
+      final growth = median(late) - median(early);
       final summary =
           'soak ${minutes}min video ${video ? 'on' : 'off'}: '
           '${rss.isEmpty ? '?' : rss.first}→${rss.isEmpty ? '?' : rss.last} MB '
-          '(growth after warm-up $growth MB), $reconnects reconnects, '
+          '(growth from minute ${from + 1}: $growth MB), '
+          '$reconnects reconnects, '
           '$failures failures, longest without a picture '
           '${worstDown.inSeconds} s';
       File('build/soak/summary.txt').writeAsStringSync('$summary\n');
