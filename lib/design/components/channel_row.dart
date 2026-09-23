@@ -13,6 +13,7 @@ class ChannelRow extends StatelessWidget {
     this.number,
     this.image,
     this.nowTitle,
+    this.upNext,
     this.guideKnown = true,
     this.progress,
     this.badges = const [],
@@ -30,8 +31,14 @@ class ChannelRow extends StatelessWidget {
   final int? number;
   final ImageProvider? image;
 
-  /// The programme on now; null shows "No guide data".
+  /// The programme on now; null shows [upNext], or "No guide
+  /// information".
   final String? nowTitle;
+
+  /// What comes on next ("21:00 · The News"), for a channel with nothing
+  /// on now but more to come (a gap in the guide). Shown as "Next …" in
+  /// place of the title.
+  final String? upNext;
 
   /// False while nothing was looked up for this channel yet: the second
   /// line stays empty rather than claiming there is no guide.
@@ -49,6 +56,12 @@ class ChannelRow extends StatelessWidget {
   final VoidCallback? onToggleFavorite;
   final bool autofocus;
   final FocusNode? focusNode;
+
+  String get _noProgramme => switch (upNext) {
+    final next? => 'Next $next',
+    null when guideKnown => 'No guide information',
+    null => '',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -111,13 +124,13 @@ class ChannelRow extends StatelessWidget {
                         ],
                       ],
                     ),
-                    if (guideKnown || nowTitle != null) ...[
+                    if (guideKnown || nowTitle != null || upNext != null) ...[
                       SizedBox(height: tokens.spacing.s4 - 2),
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              nowTitle ?? (guideKnown ? 'No guide data' : ''),
+                              nowTitle ?? _noProgramme,
                               overflow: TextOverflow.ellipsis,
                               style: tokens.text.caption.copyWith(
                                 color: nowTitle == null

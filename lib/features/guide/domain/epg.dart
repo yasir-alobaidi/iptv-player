@@ -386,6 +386,11 @@ abstract interface class EpgRepository {
 
   Stream<GuideCoverage> watchCoverage(String sourceId);
 
+  /// Fires after anything that can change what [nowNextForChannels]
+  /// answers has been written: an import swapped in or finished, a guide
+  /// cleared, the matcher's results rewritten. Never errors.
+  Stream<void> watchChanges();
+
   /// Now and next for a page of the provider's channels, by row id,
   /// through whatever the matcher attached to them.
   Future<Result<Map<int, EpgNowNext>>> nowNextForChannels(

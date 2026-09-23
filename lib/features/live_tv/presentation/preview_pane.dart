@@ -124,7 +124,9 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
                   child: _Details(
                     channel: fresh,
                     guide: guide?.value,
-                    loading: guide?.isLoading ?? false,
+                    // Only the first lookup: a refresh (the guide
+                    // changed, a programme ended) keeps what it shows.
+                    loading: (guide?.isLoading ?? false) && !guide!.hasValue,
                   ),
                 ),
                 SizedBox(height: tokens.spacing.s12),
@@ -259,7 +261,11 @@ class _Details extends ConsumerWidget {
             ],
           ] else
             Text(
-              loading ? 'Looking up what’s on…' : 'No guide information',
+              switch (next) {
+                _ when loading => 'Looking up what’s on…',
+                null => 'No guide information',
+                _ => 'Nothing on right now',
+              },
               style: tokens.text.caption.copyWith(
                 color: colors.textTertiary,
                 fontStyle: FontStyle.italic,

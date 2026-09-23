@@ -18,13 +18,19 @@ import 'package:iptv_player/features/sources/domain/sync.dart';
 /// plugin answers on this isolate only), hands everything to the sync
 /// isolate, relays its progress, and finishes the run — sweep, outcome,
 /// `last_synced_at` — in one transaction. The isolate does the fetching,
-/// parsing and upserting, and is simply killed on cancel or timeout
-/// (`runSyncWork` never holds a transaction open, so killing it is safe).
+/// parsing and upserting in single batches, and is stopped on cancel or
+/// timeout between two of them (`startGuardedJob`: a kill inside a batch
+/// would leave its transaction open for everyone, ADR-011 step 3).
+///
+/// `onSynced` hears of every sync that succeeds, once it is recorded:
+/// the guide's matcher rematches the source's channels from it. The sync
+/// doesn't wait for it, and nothing it does can fail the sync.
 final class SyncEngine implements SyncService {
   new({
     required AppDatabase database,
     required this._sources,
     required this._log,
+    this._onSynced,
     DateTime Function()? clock,
     this.timeout = const Duration(minutes: 20),
     this.batchSize = 5000,
@@ -34,6 +40,7 @@ final class SyncEngine implements SyncService {
   final AppDatabase _db;
   final SourceRepository _sources;
   final AppLog _log;
+  final void Function(String sourceId)? _onSynced;
   final DateTime Function() _clock;
 
   /// A run still going after this is killed and fails with a
@@ -99,9 +106,27 @@ final class SyncEngine implements SyncService {
               Err(:final failure) => SyncFailed(failure),
             });
             run.result.complete(result);
+            if (result.isOk) _synced(sourceId);
           }),
     );
     return run.result.future;
+  }
+
+  /// Tells [_onSynced] about a sync that succeeded, which it must not
+  /// be able to undo.
+  void _synced(String sourceId) {
+    final onSynced = _onSynced;
+    if (onSynced == null) return;
+    try {
+      onSynced(sourceId);
+    } on Object catch (error, stackTrace) {
+      _log.warning(
+        _tag,
+        'Sync $sourceId: what follows a sync failed to start',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override

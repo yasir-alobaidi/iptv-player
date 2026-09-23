@@ -53,11 +53,20 @@ final class NowNext {
   int get hashCode => Object.hash(now, next);
 }
 
-/// Now and next for the channels on screen (Phase 3: the provider's short
-/// EPG, decision 2; Phase 4 puts the XMLTV guide behind it).
+/// Now and next for the channels on screen: the imported XMLTV guide, with
+/// the provider's short EPG behind it (Phase 4 decision 1).
 abstract interface class GuideService {
-  /// What the last lookup found, without asking again.
+  /// What the last lookup found, without asking again; null while nothing
+  /// was looked up for [channel] (or what was has run out).
   NowNext? cached(ChannelItem channel);
 
   Future<Result<NowNext>> nowNext(ChannelItem channel);
+
+  /// Looks a page of channels up in one go, so [cached] can answer for
+  /// every row. A no-op where that would cost a request per channel.
+  Future<void> warm(List<ChannelItem> channels);
+
+  /// Fires when answers may be stale (a new guide, new matches): whoever
+  /// shows one should ask again.
+  Stream<void> get changes;
 }

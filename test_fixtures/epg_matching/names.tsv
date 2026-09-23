@@ -1,0 +1,178 @@
+# EPG name-matching corpus (docs/02 "EPG ↔ channel matching", rule 3).
+# One case per line: provider name <TAB> guide display name <TAB> match|no-match.
+# "match" means the two normalize to the same non-empty key, so the matcher
+# attaches the channel by `normalizedName`; "no-match" means it must not.
+# Real-shaped names, as panels and public guides write them. Lines starting
+# with # are comments.
+
+# UK: country tags, quality tags, superscript tags
+UK: BBC One HD	BBC One	match
+UK: BBC One HD	BBC One HD	match
+UK | BBC Two FHD	BBC Two	match
+UK ▎ BBC Three	BBC Three HD	match
+|UK| Sky Sports Main Event FHD	Sky Sports Main Event	match
+UK: Sky Sports F1 ᴴᴰ	Sky Sports F1	match
+UK: Sky Cinema Premiere ᶠᴴᴰ	Sky Cinema Premiere HD	match
+[UK] BT Sport 1 HD	BT Sport 1	match
+UK • Sky Atlantic	Sky Atlantic HD	match
+UK - Channel 4 HD	Channel 4	match
+UK: CBeebies HD	CBeebies	match
+UK: Sky Sports Premier League UHD	Sky Sports Premier League	match
+UK: Sky Sports Premier League 4K	Sky Sports Premier League HD	match
+UK: Dave	Dave	match
+UK: Dave	Dave ja vu	no-match
+UK: BT Sport 1	BT Sport 2	no-match
+# Known miss: spacing inside a name is not folded (the mapping page covers it).
+UK: 5 USA	5USA	no-match
+
+# US
+[US] CNN	CNN	match
+US: CNN HD	CNN	match
+USA | ESPN 2 (Backup)	ESPN 2	match
+US: ESPN 2	ESPN	no-match
+US: A&amp;E HD	A&E	match
+US: A&E	A and E	match
+US: ABC News Live	ABC News Live	match
+US: Fox News Channel FHD	Fox News Channel	match
+US: NBC Sports Bay Area 1080p	NBC Sports Bay Area	match
+US: Nick Jr.	Nick Jr	match
+US: Cartoon Network (East)	Cartoon Network East	match
+
+# Arabic panels
+AR | MBC 1 HEVC	MBC 1	match
+AR: MBC Drama HD	MBC Drama	match
+AR: MBC Max	MBC MAX	match
+AR - Al Jazeera	Al Jazeera	match
+AR: Al-Jazeera	Al Jazeera	match
+|AR| beIN Sports 1 HD	beIN Sports 1	match
+AR: beIN Sports 1	beIN Sports 2	no-match
+AR: Dubai Sports 1	Dubai Sports 1 HD	match
+AR: قناة الجزيرة	قناة الجزيرة	match
+AR | الجزيرة HD	الجزيرة	match
+
+# French
+FR: TF1 HD	TF1	match
+FR | France 2 FHD	France 2	match
+FR: France 3	France 2	no-match
+FR: TV 5 Monde	TV 5 Monde	match
+FR: Canal+ Sport	Canal+ Sport	match
+FR: Canal+ Cinéma	Canal+ Cinema	match
+FR | Arte	ARTE	match
+FR: M6 HD	M6	match
+FR: Télé-Québec	Tele Quebec	match
+FR: RMC Découverte	RMC Decouverte	match
+(FR) BFM TV	BFM TV	match
+
+# German
+DE: Das Erste HD	Das Erste	match
+DE: ZDF	ZDF	match
+DE: ProSieben Maxx	ProSieben MAXX	match
+DE: Sky Sport Bundesliga 1 UHD	Sky Sport Bundesliga 1	match
+DE: WDR Köln HD	WDR Koln	match
+# Known miss: ö folds to o, not to the German transliteration oe.
+DE: WDR Köln	WDR Koeln	no-match
+DE | Kabel Eins Doku	kabel eins Doku	match
+DE: BR Fernsehen Süd HD	BR Fernsehen Sud	match
+DE: ServusTV Österreich	ServusTV Osterreich	match
+AT: ORF 1 HD	ORF 1	match
+DE: RTL-2	RTL 2	match
+DE: Sport1	SPORT1	match
+
+# Spanish
+ES: La 1 HD	La 1	match
+ES: La 2	La 1	no-match
+ES | Antena 3 FHD	Antena 3	match
+ES: Telecinco	Telecinco	match
+ES: Cuatro HD	Cuatro	match
+ES: Canal Sur Andalucía	Canal Sur Andalucia	match
+ES: TV3 Catalunya	TV3	no-match
+
+# Italian
+IT: Rai 1 HD	Rai 1	match
+IT | Rai 2	RAI 2	match
+IT: Rai 1	Rai 2	no-match
+IT: Canale 5	Canale 5	match
+IT: Sky Sport Uno FHD	Sky Sport Uno	match
+IT: Rai Storia	Rai Storia HD	match
+IT: Italia 1 +1	Italia 1	no-match
+IT: TV8	TV8	match
+
+# ex-YU panels
+EX-YU: RTS 1 HD	RTS 1	match
+EX-YU | HRT 1	HRT 1	match
+EXYU: Nova S	Nova S	match
+EX YU: Arena Sport 1	Arena Sport 1	match
+EX-YU: Arena Sport 1	Arena Sport 2	no-match
+[EX-YU] Pink	Pink	match
+EX-YU: RTCG	RTCG	match
+EX-YU: N1 Srbija	N1 Srbija	match
+EX-YU: Nova BH	Nova BH	match
+EX-YU: TV Vijesti	TV Vijesti	match
+EX-YU: Klasik TV HD	Klasik TV	match
+EX-YU: Tanjug Tačno	Tanjug Tacno	match
+EX-YU: RTV Šabac	RTV Sabac	match
+RS: RTS Svet	RTS Svet	match
+HR: Doma TV	Doma TV	match
+SI: POP TV	POP TV	match
+BA: Face TV	Face TV	match
+MK: Sitel	Sitel	match
+
+# Quality and technical tags, anywhere
+Eurosport 1 H.265	Eurosport 1	match
+Eurosport 1 1080p 50fps	Eurosport 1	match
+ESPN [FHD]	ESPN	match
+Discovery Channel VIP	Discovery Channel	match
+National Geographic HEVC	National Geographic	match
+Sky Cinema Action Full HD	Sky Cinema Action	match
+Sky Sports Racing RAW	Sky Sports Racing	match
+Sky Sports Golf MULTI	Sky Sports Golf	match
+Sky News HDR	Sky News	match
+History (Backup)	History	match
+BBC One SD	BBC One HD	match
+BBC One	BBC Two	no-match
+4K	UHD	no-match
+
+# Entities, double-escaped ones too
+Sky Sports News &amp; Weather	Sky Sports News & Weather	match
+Children&#39;s Channel	Children's Channel	match
+AT&amp;amp;T SportsNet	AT&T SportsNet	match
+Q&amp;A TV	Q & A TV	match
+
+# Diacritics
+Télé-Québec	Tele Quebec	match
+ČT1 HD	CT1	match
+TVP Łódź	TVP Lodz	match
+TV2 Sjælland	TV2 Sjaelland	match
+TV 2 Østlandet	TV 2 Ostlandet	match
+Kanal D România	Kanal D Romania	match
+TRT Türk	TRT Turk	match
+Stöð 2	Stod 2	match
+
+# Timeshift channels are other channels
+UK: Film4 +1	Film4 +1	match
+UK: Film4 +1	Film4	no-match
+Film4 Plus 1	Film4 +1	match
+UK: More4+1	More4 +1	match
+UK: E4 +1 HD	E4 +1	match
+UK: ITV2 +1	ITV2	no-match
+UK: ITV 2 +1	ITV 2+1	match
+UK: Channel 4 +1	Channel 4+1	match
+Comedy Central +1	Comedy Central Plus 1	match
+Comedy Central +1	Comedy Central	no-match
+Sky Cinema Premiere +1 HD	Sky Cinema Premiere +1	match
+
+# Separators, and the first word that has none
+UK:BBC Four	BBC Four	match
+UK| BBC Four	BBC Four	match
+UK – BBC Four	BBC Four	match
+UK┃BBC Four	BBC Four	match
+(UK) BBC Four	BBC Four	match
+|UK| |EN| BBC Four	BBC Four	match
+🇬🇧 UK: BBC Four	BBC Four	match
+UK BBC Four	BBC Four	no-match
+TV 5 Monde	5 Monde	no-match
+ABC News	News	no-match
+BT Sport 1	Sport 1	no-match
+Al-Jazeera	Jazeera	no-match
+RTL-2	2	no-match
+CNN	CNN	match

@@ -752,4 +752,67 @@ void main() {
     expect(result.failureOrNull, isA<NotFoundFailure>());
     expect(await _count(env.db, 'sync_runs'), 0);
   });
+
+  group('after a sync', () {
+    SyncEngine engine(_Env env, void Function(String sourceId) onSynced) {
+      final engine = SyncEngine(
+        database: env.db,
+        sources: env.repository,
+        log: env.log,
+        onSynced: onSynced,
+        batchSize: 50,
+      );
+      addTearDown(engine.dispose);
+      return engine;
+    }
+
+    test('onSynced hears each sync that succeeded, once it is '
+        'recorded', () async {
+      final env = await _Env.open();
+      final id = await env.add(_file(env.playlist('list.m3u', _playlistV1)));
+      final heard = <String>[];
+      final recorded = <Future<SyncOutcome>>[];
+      final hooked = engine(env, (sourceId) {
+        heard.add(sourceId);
+        recorded.add(env.latestRun(sourceId).then((run) => run.outcome));
+      });
+
+      expect((await hooked.sync(id)).isOk, isTrue);
+
+      expect(heard, [id]);
+      expect(await recorded.single, SyncOutcome.succeeded);
+      await hooked.sync(id);
+      expect(heard, [id, id]);
+    });
+
+    test('a sync that fails is not heard', () async {
+      final env = await _Env.open();
+      final id = await env.add(_file('${env.directory.path}/missing.m3u'));
+      final heard = <String>[];
+      final hooked = engine(env, heard.add);
+
+      expect((await hooked.sync(id)).isOk, isFalse);
+
+      await pumpEventQueue();
+      expect(heard, isEmpty);
+    });
+
+    test('a hook that throws fails nothing, and is logged', () async {
+      final env = await _Env.open();
+      final id = await env.add(_file(env.playlist('list.m3u', _playlistV1)));
+      final hooked = engine(env, (_) => throw StateError('boom'));
+
+      final result = await hooked.sync(id);
+
+      expect(result.isOk, isTrue);
+      expect(hooked.statusOf(id), isA<SyncSucceeded>());
+      expect((await env.latestRun(id)).outcome, SyncOutcome.succeeded);
+      expect(
+        env.logLines.where(
+          (l) => l.contains('Sync $id: what follows a sync failed to start'),
+        ),
+        hasLength(1),
+      );
+    });
+  });
 }

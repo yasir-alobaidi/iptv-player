@@ -14,8 +14,10 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/providers/xmltv/xmltv_parser.dart';
 import 'package:iptv_player/data/providers/xmltv/xmltv_reader.dart';
 import 'package:iptv_player/data/sync/epg_importer.dart';
+import 'package:iptv_player/data/sync/epg_match_service.dart';
 import 'package:iptv_player/features/guide/data/db_epg_repository.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
+import 'package:iptv_player/features/guide/domain/epg_match_summary.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:logger/logger.dart';
@@ -765,6 +767,108 @@ void main() {
       expect('$failure', isNot(contains(_password)));
       expect('$failure', isNot(contains(_token)));
       expect((await env.coverage(id)).lastImport!.failureStatus, 500);
+    });
+  });
+
+  group('matching after the swap', () {
+    EpgMatchService service(_Env env, EpgMatchRunner runner) {
+      final service = EpgMatchService(
+        database: env.db,
+        log: env.log,
+        runner: runner,
+      );
+      addTearDown(service.dispose);
+      return service;
+    }
+
+    EpgImporter importer(_Env env, EpgMatchService matches) {
+      final importer = EpgImporter(
+        database: env.db,
+        guide: env.guide,
+        sources: env.sources,
+        log: env.log,
+        matches: matches,
+        batchSize: 500,
+      );
+      addTearDown(importer.dispose);
+      return importer;
+    }
+
+    test('the source is rematched once its guide is live, and the import '
+        'answers after that', () async {
+      final server = await _fakeProvider();
+      final env = await _Env.open();
+      final id = await env.add(_xtream(server.url));
+      final asked = Completer<(String, bool)>();
+      final matched = Completer<Result<EpgMatchSummary>>();
+      final withMatching = importer(
+        env,
+        service(env, (sourceId, _) async {
+          asked.complete((sourceId, (await env.coverage(sourceId)).hasGuide));
+          return await matched.future;
+        }),
+      );
+      var answered = false;
+
+      final imported = withMatching
+          .importGuide(id)
+          .whenComplete(() => answered = true);
+
+      expect(await asked.future, (id, true));
+      await pumpEventQueue();
+      expect(answered, isFalse);
+      expect(withMatching.isImporting(id), isTrue);
+      matched.complete(const Ok(EpgMatchSummary(channels: 36)));
+      expect((await imported).valueOrNull?.channels, 32);
+    });
+
+    test('a rematch that fails leaves the import succeeded, and the log '
+        'says so', () async {
+      final server = await _fakeProvider();
+      final env = await _Env.open();
+      final id = await env.add(_xtream(server.url));
+      final withMatching = importer(
+        env,
+        service(
+          env,
+          (_, _) async => Err(StorageFailure('guide match: database is full')),
+        ),
+      );
+
+      final result = await withMatching.importGuide(id);
+
+      expect(result.isOk, isTrue, reason: '${result.failureOrNull}');
+      final coverage = await env.coverage(id);
+      expect(coverage.lastImport!.outcome, GuideImportOutcome.succeeded);
+      expect(coverage.lastImport!.isLive, isTrue);
+      expect(
+        env.logLines.where(
+          (l) => l.contains(
+            'Guide import $id: the guide is in, but its '
+            'channels were not matched to it (storage)',
+          ),
+        ),
+        hasLength(1),
+      );
+    });
+
+    test('a failed import matches nothing', () async {
+      final server = await _fakeProvider();
+      final env = await _Env.open();
+      final id = await env.add(_xtream(server.url, password: 'wrong'));
+      final asked = <String>[];
+      final withMatching = importer(
+        env,
+        service(env, (sourceId, _) async {
+          asked.add(sourceId);
+          return const Ok(EpgMatchSummary(channels: 0));
+        }),
+      );
+
+      final result = await withMatching.importGuide(id);
+
+      expect(result.isOk, isFalse);
+      expect(asked, isEmpty);
     });
   });
 }

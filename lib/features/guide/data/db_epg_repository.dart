@@ -171,6 +171,19 @@ final class DbEpgRepository implements EpgRepository {
     );
   }
 
+  /// Drift's own table notifications, which reach this connection from
+  /// every isolate that writes (the import and match jobs connect to the
+  /// same database isolate). Not `epg_programs`: an import writes hundreds
+  /// of thousands of rows, and its swap ends by updating its
+  /// `epg_imports` row in the same transaction anyway.
+  @override
+  Stream<void> watchChanges() => _db
+      .tableUpdates(
+        TableUpdateQuery.onAllTables([_db.epgImports, _db.epgMatches]),
+      )
+      .map((_) {})
+      .handleError((Object _) {});
+
   @override
   Future<Result<Map<int, EpgNowNext>>> nowNextForChannels(
     List<int> channelIds,

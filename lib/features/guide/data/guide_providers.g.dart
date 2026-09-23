@@ -50,6 +50,117 @@ final class EpgRepositoryProvider
 
 String _$epgRepositoryHash() => r'6eb225bd715c7894de32ae8f530813e966f2f377';
 
+/// The one match service: rematches a source after an import's swap and
+/// after a sync (`syncServiceProvider` wires the second). Stops its runs
+/// when the app closes.
+///
+/// It depends on nothing but the database and the log, so both the sync
+/// engine and the importer can depend on it without a cycle.
+
+@ProviderFor(epgMatchService)
+final epgMatchServiceProvider = EpgMatchServiceProvider._();
+
+/// The one match service: rematches a source after an import's swap and
+/// after a sync (`syncServiceProvider` wires the second). Stops its runs
+/// when the app closes.
+///
+/// It depends on nothing but the database and the log, so both the sync
+/// engine and the importer can depend on it without a cycle.
+
+final class EpgMatchServiceProvider
+    extends
+        $FunctionalProvider<EpgMatchService, EpgMatchService, EpgMatchService>
+    with $Provider<EpgMatchService> {
+  /// The one match service: rematches a source after an import's swap and
+  /// after a sync (`syncServiceProvider` wires the second). Stops its runs
+  /// when the app closes.
+  ///
+  /// It depends on nothing but the database and the log, so both the sync
+  /// engine and the importer can depend on it without a cycle.
+  EpgMatchServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'epgMatchServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$epgMatchServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<EpgMatchService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  EpgMatchService create(Ref ref) {
+    return epgMatchService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(EpgMatchService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<EpgMatchService>(value),
+    );
+  }
+}
+
+String _$epgMatchServiceHash() => r'4cc99273195e860baff2e2eaaa9aefae7ded4f1a';
+
+/// The one guide importer, which rematches after every swap. Cancels its
+/// imports when the app closes.
+
+@ProviderFor(epgImporter)
+final epgImporterProvider = EpgImporterProvider._();
+
+/// The one guide importer, which rematches after every swap. Cancels its
+/// imports when the app closes.
+
+final class EpgImporterProvider
+    extends $FunctionalProvider<EpgImporter, EpgImporter, EpgImporter>
+    with $Provider<EpgImporter> {
+  /// The one guide importer, which rematches after every swap. Cancels its
+  /// imports when the app closes.
+  EpgImporterProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'epgImporterProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$epgImporterHash();
+
+  @$internal
+  @override
+  $ProviderElement<EpgImporter> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  EpgImporter create(Ref ref) {
+    return epgImporter(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(EpgImporter value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<EpgImporter>(value),
+    );
+  }
+}
+
+String _$epgImporterHash() => r'e6a57cf72e3d9ebd4b0aca3be00413750cf40d03';
+
 /// What the guide covers for [sourceId], live: Settings → Guide and the
 /// Guide screen's empty states read it.
 

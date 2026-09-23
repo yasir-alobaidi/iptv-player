@@ -91,6 +91,8 @@ How the parser (`lib/data/providers/m3u/`) meets these; fixtures in `test_fixtur
 3. Normalized name match: lowercase; strip quality tags (HD, FHD, UHD, 4K, SD, H265); strip country/language prefixes (`UK:`, `|EN|`, `[US]`); strip punctuation; collapse spaces
 4. Manual mapping (Settings → Guide), stored per source and never overwritten by sync
 
+The mapping is applied first and always wins. Rule 3 also strips accents, `&` → `and`, keeps `+1` channels apart (`plus1`), and tries guide ids without their country suffix after display names; when a name fits several guide channels, the one in the channel's own country (the tag its name carried) wins, else the id that sorts first. Matches are derived state in `epg_matches`, rewritten by a background job after every import and every successful sync (ADR-011 step 4).
+
 ## Database (drift)
 All provider items are keyed by `(source_id, remote_key)` so user data survives re-syncs.
 

@@ -55,7 +55,7 @@ void main() {
       expect(find.byType(ProgressBar), findsOneWidget);
     });
 
-    testWidgets('says so when there is no guide data', (tester) async {
+    testWidgets('says so when there is no guide information', (tester) async {
       await pumpDesign(
         tester,
         SizedBox(
@@ -64,7 +64,43 @@ void main() {
         ),
       );
 
-      expect(find.text('No guide data'), findsOneWidget);
+      expect(find.text('No guide information'), findsOneWidget);
+    });
+
+    testWidgets('says nothing while the guide was not looked up', (
+      tester,
+    ) async {
+      await pumpDesign(
+        tester,
+        SizedBox(
+          width: 420,
+          child: ChannelRow(
+            name: 'City News',
+            guideKnown: false,
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('No guide information'), findsNothing);
+    });
+
+    testWidgets('in a gap in the guide, says what comes next', (tester) async {
+      await pumpDesign(
+        tester,
+        SizedBox(
+          width: 420,
+          child: ChannelRow(
+            name: 'City News',
+            upNext: '21:00 · The Late News',
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Next 21:00 · The Late News'), findsOneWidget);
+      expect(find.text('No guide information'), findsNothing);
+      expect(find.byType(ProgressBar), findsNothing);
     });
 
     testWidgets('Enter opens it and Shift+F10 opens the menu', (tester) async {

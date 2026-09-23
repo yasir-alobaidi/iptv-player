@@ -128,7 +128,10 @@ class OsdBottom extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              current?.title ?? 'No guide information',
+              current?.title ??
+                  (next == null
+                      ? 'No guide information'
+                      : 'Nothing on right now'),
               overflow: TextOverflow.ellipsis,
               style: tokens.text.h1.copyWith(
                 color: current == null

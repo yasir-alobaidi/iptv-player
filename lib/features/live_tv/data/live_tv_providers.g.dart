@@ -134,17 +134,69 @@ final class ChannelCountFamily extends $Family
   String toString() => r'channelCountProvider';
 }
 
-/// Now and next for the channels on screen (decision 2).
+/// The provider's short EPG (ADR-010 decision 2), behind the imported
+/// guide for the channels it has nothing for.
+
+@ProviderFor(shortEpgGuide)
+final shortEpgGuideProvider = ShortEpgGuideProvider._();
+
+/// The provider's short EPG (ADR-010 decision 2), behind the imported
+/// guide for the channels it has nothing for.
+
+final class ShortEpgGuideProvider
+    extends $FunctionalProvider<GuideService, GuideService, GuideService>
+    with $Provider<GuideService> {
+  /// The provider's short EPG (ADR-010 decision 2), behind the imported
+  /// guide for the channels it has nothing for.
+  ShortEpgGuideProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shortEpgGuideProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shortEpgGuideHash();
+
+  @$internal
+  @override
+  $ProviderElement<GuideService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GuideService create(Ref ref) {
+    return shortEpgGuide(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GuideService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GuideService>(value),
+    );
+  }
+}
+
+String _$shortEpgGuideHash() => r'358c8b3d242681f50e793fce31cf14505a579713';
+
+/// Now and next for the channels on screen: the imported guide first, the
+/// short EPG behind it (Phase 4 decision 1).
 
 @ProviderFor(guideService)
 final guideServiceProvider = GuideServiceProvider._();
 
-/// Now and next for the channels on screen (decision 2).
+/// Now and next for the channels on screen: the imported guide first, the
+/// short EPG behind it (Phase 4 decision 1).
 
 final class GuideServiceProvider
     extends $FunctionalProvider<GuideService, GuideService, GuideService>
     with $Provider<GuideService> {
-  /// Now and next for the channels on screen (decision 2).
+  /// Now and next for the channels on screen: the imported guide first, the
+  /// short EPG behind it (Phase 4 decision 1).
   GuideServiceProvider._()
     : super(
         from: null,
@@ -178,19 +230,28 @@ final class GuideServiceProvider
   }
 }
 
-String _$guideServiceHash() => r'bddec89bf14d71dbd2a83843e8df8df08f76c6ce';
+String _$guideServiceHash() => r'ec0470fcf5ae72c88df6fe0edc0d3185b6fbd625';
 
-/// What's on [channel] now and next; [NowNext.none] when unknown.
+/// What's on [channel] now and next; [NowNext.none] when unknown. Asks
+/// again when the guide changes, and when the answer changes shape (the
+/// programme on now ends, or the next one starts), so the preview and the
+/// player's OSD move on by themselves.
 
 @ProviderFor(nowNext)
 final nowNextProvider = NowNextFamily._();
 
-/// What's on [channel] now and next; [NowNext.none] when unknown.
+/// What's on [channel] now and next; [NowNext.none] when unknown. Asks
+/// again when the guide changes, and when the answer changes shape (the
+/// programme on now ends, or the next one starts), so the preview and the
+/// player's OSD move on by themselves.
 
 final class NowNextProvider
     extends $FunctionalProvider<AsyncValue<NowNext>, NowNext, FutureOr<NowNext>>
     with $FutureModifier<NowNext>, $FutureProvider<NowNext> {
-  /// What's on [channel] now and next; [NowNext.none] when unknown.
+  /// What's on [channel] now and next; [NowNext.none] when unknown. Asks
+  /// again when the guide changes, and when the answer changes shape (the
+  /// programme on now ends, or the next one starts), so the preview and the
+  /// player's OSD move on by themselves.
   NowNextProvider._({
     required NowNextFamily super.from,
     required ChannelItem super.argument,
@@ -234,9 +295,12 @@ final class NowNextProvider
   }
 }
 
-String _$nowNextHash() => r'805ff81ed29ddeee6e29c82da3ed1af0f94abcf0';
+String _$nowNextHash() => r'a0ebab5d8f1be18c2540610310b152bec5aaebd0';
 
-/// What's on [channel] now and next; [NowNext.none] when unknown.
+/// What's on [channel] now and next; [NowNext.none] when unknown. Asks
+/// again when the guide changes, and when the answer changes shape (the
+/// programme on now ends, or the next one starts), so the preview and the
+/// player's OSD move on by themselves.
 
 final class NowNextFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<NowNext>, ChannelItem> {
@@ -249,7 +313,10 @@ final class NowNextFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// What's on [channel] now and next; [NowNext.none] when unknown.
+  /// What's on [channel] now and next; [NowNext.none] when unknown. Asks
+  /// again when the guide changes, and when the answer changes shape (the
+  /// programme on now ends, or the next one starts), so the preview and the
+  /// player's OSD move on by themselves.
 
   NowNextProvider call(ChannelItem channel) =>
       NowNextProvider._(argument: channel, from: this);
@@ -303,6 +370,71 @@ String _$guideRevisionHash() => r'30773efd336c1fc3f7debaf3ad62aeae1da20d87';
 /// redraw when a lookup lands.
 
 abstract class _$GuideRevision extends $Notifier<int> {
+  int build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<int, int>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<int, int>,
+              int,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Counts the times the guide said its answers may be stale (an import,
+/// the matcher): [nowNext] asks again, and a list looks its rows up again.
+/// Each one also bumps [GuideRevision], so what is on screen redraws.
+
+@ProviderFor(GuideChanges)
+final guideChangesProvider = GuideChangesProvider._();
+
+/// Counts the times the guide said its answers may be stale (an import,
+/// the matcher): [nowNext] asks again, and a list looks its rows up again.
+/// Each one also bumps [GuideRevision], so what is on screen redraws.
+final class GuideChangesProvider extends $NotifierProvider<GuideChanges, int> {
+  /// Counts the times the guide said its answers may be stale (an import,
+  /// the matcher): [nowNext] asks again, and a list looks its rows up again.
+  /// Each one also bumps [GuideRevision], so what is on screen redraws.
+  GuideChangesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'guideChangesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideChangesHash();
+
+  @$internal
+  @override
+  GuideChanges create() => GuideChanges();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$guideChangesHash() => r'3b3bfd80200c47a90c4af690fca908e96cbf7b93';
+
+/// Counts the times the guide said its answers may be stale (an import,
+/// the matcher): [nowNext] asks again, and a list looks its rows up again.
+/// Each one also bumps [GuideRevision], so what is on screen redraws.
+
+abstract class _$GuideChanges extends $Notifier<int> {
   int build();
   @$mustCallSuper
   @override

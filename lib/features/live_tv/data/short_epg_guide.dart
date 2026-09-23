@@ -9,7 +9,8 @@ import 'package:iptv_player/features/sources/domain/source.dart';
 /// [GuideService] from Xtream's `get_short_epg` (ADR-010 decision 2): for
 /// the channels the screen asks about only, cached for [ttl], one request
 /// at a time per source (the client queues them). M3U sources have no
-/// short EPG and get [NowNext.none] until the Phase 4 guide.
+/// short EPG and get [NowNext.none]. Behind the imported guide since
+/// Phase 4 (decision 1), for the channels it has nothing for.
 final class ShortEpgGuide implements GuideService {
   new(
     this._sources, {
@@ -40,6 +41,14 @@ final class ShortEpgGuide implements GuideService {
     return _inFlight[key] ??= _fetch(channel)
         .whenComplete(() => _inFlight.remove(key));
   }
+
+  /// Never: a page would be a request per channel (decision 2).
+  @override
+  Future<void> warm(List<ChannelItem> channels) async {}
+
+  /// Answers only go stale by [ttl], which [cached] already applies.
+  @override
+  Stream<void> get changes => const Stream.empty();
 
   Future<Result<NowNext>> _fetch(ChannelItem channel) async {
     final client = await _client(channel.sourceId);

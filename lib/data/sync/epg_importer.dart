@@ -8,6 +8,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/providers/xmltv/xmltv_parser.dart';
 import 'package:iptv_player/data/providers/xmltv/xmltv_reader.dart';
 import 'package:iptv_player/data/sync/epg_import_work.dart';
+import 'package:iptv_player/data/sync/epg_match_service.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
@@ -129,9 +130,14 @@ String _filePath(String value) {
 /// keyring answers on this isolate only), opens the import, starts the
 /// isolate, relays its progress, and then either swaps the staged rows in
 /// (`EpgRepository.commitImport`, one transaction) or abandons them. The
-/// isolate fetches, parses and stages, and is simply killed on cancel or
-/// timeout (`runEpgImportWork` never holds a transaction open). A failed
+/// isolate fetches, parses and stages in single batches, and is stopped
+/// on cancel or timeout between two of them (`startGuardedJob`). A failed
 /// or cancelled import leaves the live guide as it was (decision 5).
+///
+/// After a swap, the source's channels are matched to the new guide
+/// ([EpgMatchService]) before the import reports back, so its result
+/// means "the guide is in, and attached". A match that fails is logged
+/// and leaves the import as it is: the guide is in either way.
 ///
 /// When to import (daily, after a sync, one source at a time) is the
 /// scheduler's business, not this class's.
@@ -141,6 +147,7 @@ final class EpgImporter {
     required this._guide,
     required this._sources,
     required this._log,
+    this._matches,
     DateTime Function()? clock,
     this.timeout = const Duration(minutes: 30),
     this.batchSize = 5000,
@@ -154,6 +161,9 @@ final class EpgImporter {
   final EpgRepository _guide;
   final SourceRepository _sources;
   final AppLog _log;
+
+  /// Rematches a source after its swap; none in tests that don't care.
+  final EpgMatchService? _matches;
   final DateTime Function() _clock;
 
   /// An import still going after this is killed and fails with a
@@ -278,7 +288,24 @@ final class EpgImporter {
       await _abandon(sourceId, importRun, clean, run.last, clock.elapsed);
       return Err(clean);
     }
+    await _rematch(sourceId);
     return finished;
+  }
+
+  /// Attaches the source's channels to the guide just swapped in. The
+  /// service logs how it went; a failure costs the matches, never the
+  /// import.
+  Future<void> _rematch(String sourceId) async {
+    final matches = _matches;
+    if (matches == null) return;
+    final matched = await matches.rematch(sourceId);
+    if (matched case Err(:final failure) when failure is! CancelledFailure) {
+      _log.warning(
+        _tag,
+        'Guide import $sourceId: the guide is in, but its channels were not '
+        'matched to it (${failure.code})',
+      );
+    }
   }
 
   /// The isolate, from start to its result. Every failure comes back as a

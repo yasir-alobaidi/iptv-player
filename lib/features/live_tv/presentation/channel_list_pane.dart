@@ -18,6 +18,9 @@ import 'package:iptv_player/features/sources/domain/sync.dart';
 /// The channel list: a header (the category, its count, the filter, No. /
 /// A–Z) and a virtualized list of `ChannelRow`s that can hold 50,000
 /// channels (hard rule 2: a count, then pages of [pageSize] on demand).
+/// Each page's guide is looked up in one go as it shows, and again every
+/// [guideRefresh] and whenever the guide changes, so every row says what
+/// is on.
 /// One Tab stop; ↑↓ move and select (the preview follows after a moment),
 /// Enter plays at once, F toggles the favorite, the menu key opens the
 /// row's menu, ← goes back to the categories, → to the preview.
@@ -49,6 +52,10 @@ class ChannelListPane extends ConsumerStatefulWidget {
 
   static const pageSize = 100;
 
+  /// How often the rows on screen look their guide up again, so a
+  /// programme that ends gives way to the next one.
+  static const guideRefresh = Duration(minutes: 1);
+
   @override
   ConsumerState<ChannelListPane> createState() => _ChannelListPaneState();
 }
@@ -57,6 +64,15 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   final _scroll = ScrollController();
   final _pages = <int, List<ChannelItem>>{};
   final _loading = <int>{};
+
+  /// Pages whose guide was looked up since the last [_rewarm]. A page
+  /// that shows and is not in here is looked up (one query).
+  final _warmed = <int>{};
+  Timer? _guideTimer;
+
+  /// False while another destination or the player covers Live TV: the
+  /// shell keeps the pane built, and nothing it looks up would be seen.
+  bool _onScreen = true;
   ChannelQuery? _query;
   AppFailure? _error;
   bool _wantFocus = false;
@@ -65,6 +81,10 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   void initState() {
     super.initState();
     widget.focusRequests?.addListener(_onFocusRequest);
+    _guideTimer = Timer.periodic(
+      ChannelListPane.guideRefresh,
+      (_) => _rewarm(),
+    );
   }
 
   @override
@@ -79,6 +99,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   @override
   void dispose() {
     widget.focusRequests?.removeListener(_onFocusRequest);
+    _guideTimer?.cancel();
     _scroll.dispose();
     super.dispose();
   }
@@ -98,6 +119,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     _query = query;
     _pages.clear();
     _loading.clear();
+    _warmed.clear();
     _error = null;
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
@@ -109,8 +131,24 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
       unawaited(_load(page));
       return null;
     }
+    if (_onScreen && _warmed.add(page)) unawaited(_warm(rows));
     final offset = index % ChannelListPane.pageSize;
     return offset < rows.length ? rows[offset] : null;
+  }
+
+  /// Looks a page's guide up, then redraws the rows, which read what it
+  /// found from the guide's cache.
+  Future<void> _warm(List<ChannelItem> rows) async {
+    await ref.read(guideServiceProvider).warm(rows);
+    if (mounted) ref.read(guideRevisionProvider.notifier).bump();
+  }
+
+  /// Every page on screen looks its guide up again as it is drawn; the
+  /// ones scrolled away (or covered) do when they come back.
+  void _rewarm() {
+    if (!mounted) return;
+    _warmed.clear();
+    if (_onScreen) setState(() {});
   }
 
   Future<void> _load(int page) async {
@@ -141,6 +179,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     setState(() {
       _pages.clear();
       _loading.clear();
+      _warmed.clear();
     });
   }
 
@@ -148,13 +187,18 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final onScreen = TickerMode.valuesOf(context).enabled;
+    if (onScreen && !_onScreen) _warmed.clear();
+    _onScreen = onScreen;
     final view = ref.watch(liveTvControllerProvider);
     if (view == null) return const SizedBox.shrink();
     final query = view.query;
     if (query != _query) _reset(query);
     ref.listen(channelCountProvider(query), (_, _) => _refresh());
     final count = ref.watch(channelCountProvider(query));
-    ref.watch(guideRevisionProvider);
+    ref
+      ..watch(guideRevisionProvider)
+      ..listen(guideChangesProvider, (_, _) => _rewarm());
     final title = _title(query.filter);
     final notifier = ref.read(liveTvControllerProvider.notifier);
 
@@ -483,6 +527,7 @@ class _RowState extends ConsumerState<_Row> {
     final guide = ref.watch(guideServiceProvider).cached(channel);
     final now = ref.watch(appClockProvider)();
     final programme = guide?.now;
+    final next = guide?.next;
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
@@ -499,6 +544,9 @@ class _RowState extends ConsumerState<_Row> {
             number: channel.number,
             image: _logo(channel.logoUrl),
             nowTitle: programme?.title,
+            upNext: programme == null && next != null
+                ? '${formatClock(next.start)} · ${next.title}'
+                : null,
             guideKnown: guide != null,
             progress: programme?.progressAt(now),
             isFavorite: channel.isFavorite,

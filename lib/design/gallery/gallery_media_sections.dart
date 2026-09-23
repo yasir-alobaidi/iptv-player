@@ -60,7 +60,7 @@ List<Widget> mediaSections(BuildContext context) {
             SizedBox(
               width: 420,
               child: Specimen(
-                label: 'Favorited, no guide data',
+                label: 'Favorited, no guide information',
                 child: ChannelRow(
                   name: 'City News',
                   number: 202,

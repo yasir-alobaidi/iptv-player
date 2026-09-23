@@ -99,17 +99,23 @@ final class SourcesProvider
 
 String _$sourcesHash() => r'f09e477b25080c9ab0360280dc9a6bab664301d3';
 
-/// The one sync engine. Cancels every run when the app closes.
+/// The one sync engine. Cancels every run when the app closes. A sync
+/// that succeeds rematches the source's channels to its guide, which
+/// the sync doesn't wait for (the match service logs how it went).
 
 @ProviderFor(syncService)
 final syncServiceProvider = SyncServiceProvider._();
 
-/// The one sync engine. Cancels every run when the app closes.
+/// The one sync engine. Cancels every run when the app closes. A sync
+/// that succeeds rematches the source's channels to its guide, which
+/// the sync doesn't wait for (the match service logs how it went).
 
 final class SyncServiceProvider
     extends $FunctionalProvider<SyncService, SyncService, SyncService>
     with $Provider<SyncService> {
-  /// The one sync engine. Cancels every run when the app closes.
+  /// The one sync engine. Cancels every run when the app closes. A sync
+  /// that succeeds rematches the source's channels to its guide, which
+  /// the sync doesn't wait for (the match service logs how it went).
   SyncServiceProvider._()
     : super(
         from: null,
@@ -143,7 +149,7 @@ final class SyncServiceProvider
   }
 }
 
-String _$syncServiceHash() => r'8c3286facc3008a7104e48c9ed47dcd3f1e245f4';
+String _$syncServiceHash() => r'3fd1903b57f57e83709d7efe8392b796908aad43';
 
 /// A source's sync as it happens: idle, running with progress, or how the
 /// last run this session ended.

@@ -1,10 +1,11 @@
-# Handoff — 2026-09-23 (Phase 4 step 3 built)
+# Handoff — 2026-09-23 (Phase 4 steps 3 and 4 built)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**1. Review step 3 and push it.** Everything is committed locally
-("Phase 4 step 3: the XMLTV parser and the import isolate").
+**1. Review steps 3 and 4 and push them.** Both are committed locally
+("Phase 4 step 3: the XMLTV parser and the import isolate", "Phase 4
+step 4: matching, and now/next everywhere").
 
 **2. CI was red on your step 2 push, on both systems.**
 - **Linux (4 failures): found and fixed in this commit.** Phase 3's
@@ -23,24 +24,28 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md first.
-Step 3 is reviewed and pushed; CI is <green | red: …>. Windows failures: <names, or "not checked">.
-Do Phase 4 step 4 (matching, and now/next everywhere) and stop for my review.
+Steps 3 and 4 are reviewed and pushed; CI is <green | red: …>. Windows failures: <names, or "not checked">.
+Do Phase 4 step 5 (Settings → Guide) and stop for my review.
 ```
 
 ## Where things stand
-- **Phases 1–3 are built; Phase 4 has steps 1–3 of 7.** The fake panel
+- **Phases 1–3 are built; Phase 4 has steps 1–4 of 7.** The fake panel
   serves a guide (step 1). Schema v5 stores it, with staging and an atomic
   swap (step 2). Step 3 adds the XMLTV parser and the import isolate.
+  Step 4 matches channels to the guide and shows its now/next on every
+  Live TV row, in the preview and in the player.
 - **The parser:** 300 MB in 4.3 s, +23 MB RSS. The time for the full
   300 MB import (batch writes and the swap) is still to measure, in step 7.
-- **Nothing in the app starts an import yet**, and nothing shows the guide.
-  `EpgImporter` exists but is not wired to Riverpod or `bootstrap()`. The
-  scheduler is step 7, now/next is step 4, and the grid is step 6.
-- All checks clean: analyze, format, **1,174 app tests** (4 skipped
-  benchmarks) under `TZ=UTC`, the fake provider's 114, and the app-launch
-  and sources-keyboard integration tests under xvfb (the sync now runs
-  guarded). The other integration tests (the fault suite, the Live TV
-  walk, the engine) were not rerun: nothing they drive changed.
+- **Nothing in the app starts an import yet.** `epgImporterProvider`
+  exists, but nothing calls it outside tests: the scheduler is step 7.
+  So on a real run the rows show the short EPG as before until a guide
+  has been imported. The grid is step 6.
+- All checks clean: analyze, format, **1,409 app tests** (4 skipped
+  benchmarks) under `TZ=UTC`, the fake provider's 114, and under xvfb the
+  app launch, the sources and Live TV keyboard walks and the fault suite
+  (the sync and the match job run guarded; the OSD shows the imported
+  guide). The player-engine integration test was not rerun: nothing it
+  drives changed.
 
 ## Done this session (2026-09-23)
 - Phase 4 step 3, built by three parallel agents working from one written
@@ -65,16 +70,24 @@ Do Phase 4 step 4 (matching, and now/next everywhere) and stop for my review.
   are only killed between transactions (ADR-011 step 3, with a regression
   test that deadlocks under the old kill).
 
+- Phase 4 step 4, again three agents from one spec: the matcher, the
+  match job (`epg_match_work.dart`, `EpgMatchService`, run after every
+  import and sync), and the guide the screens see (`DbGuide`,
+  `CompositeGuide`, page warming in Live TV, "No guide information"). My
+  one change to the matcher's design: a name tie goes to the channel's own
+  country, or a UK channel took the French feed.
+
 ## Instructions for the next session
 1. **Check CI first** (`curl` on the Actions API, see memory). Run the
    full suite with **`TZ=UTC flutter test`**, since CI runs in UTC and this
    laptop does not.
-2. **Phase 4 step 4 is next** (the plan's section): `EpgMatcher` in docs/02's
-   order, filling `epg_matches` (`EpgDao.replaceMatches`), `DbGuide` from the
-   imported guide and `CompositeGuide` in front of `ShortEpgGuide` (decision
-   1), and "No guide information" for an unmatched channel. The matcher's
-   name rule should use the same cleaning as the names it compares:
-   XMLTV display names already went through `cleanText`.
+2. **Phase 4 step 5 is next**: Settings → Guide as sketched in the plan.
+   Setting or removing a mapping must rematch the source
+   (`EpgMatchService.rematch`); the unmatched list reads `epg_matches`
+   against `channels`; "Match…" ranks guide channels with the matcher's own
+   `normalizeChannelName`. The guide screens ask `guideServiceProvider`
+   (a `CompositeGuide`) and redraw on `guideRevisionProvider`; a list warms
+   its rows with `GuideService.warm` (see `channel_list_pane.dart`).
 1a. **Any isolate that writes to the database starts with
    `startGuardedJob` and connects with `openJobDatabase`**, never
    `startBackgroundJob` + `connection.connect()`: a kill inside a drift

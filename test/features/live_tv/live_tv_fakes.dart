@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -22,7 +24,8 @@ import '../playback/support/playback_fakes.dart';
 
 /// The Live TV screen on a real in-memory catalogue (channels, categories,
 /// favorites read through the real repositories), a coordinator on the
-/// fake player, and a guide that answers from [guide].
+/// fake player, and a guide that answers from [guide] — or, with
+/// [importedGuideOverrides], the app's own guide over the database.
 final class LiveTvFakes {
   new()
     : fakes = OnboardingFakes(),
@@ -93,6 +96,18 @@ final class LiveTvFakes {
   }
 
   List<Override> get overrides => [
+    ..._common,
+    guideServiceProvider.overrideWithValue(guide),
+  ];
+
+  /// The real guide: the imported one read from [db], with [shortEpg] in
+  /// place of the provider's short EPG behind it.
+  List<Override> importedGuideOverrides(GuideService shortEpg) => [
+    ..._common,
+    shortEpgGuideProvider.overrideWithValue(shortEpg),
+  ];
+
+  List<Override> get _common => [
     sourceRepositoryProvider.overrideWithValue(fakes.sources),
     syncServiceProvider.overrideWithValue(fakes.sync),
     sourceOverviewRepositoryProvider.overrideWithValue(fakes.overviews),
@@ -102,7 +117,6 @@ final class LiveTvFakes {
     channelRepositoryProvider.overrideWithValue(
       DbChannelRepository(db, clock: () => fakes.now),
     ),
-    guideServiceProvider.overrideWithValue(guide),
     playerEngineProvider.overrideWithValue(rig.engine),
     playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
     windowControlsProvider.overrideWithValue(window),
@@ -113,6 +127,10 @@ final class FakeGuide implements GuideService {
   final Map<String, NowNext> byKey = {};
   final List<String> asked = [];
 
+  /// Each warm's channels, by remote key.
+  final List<List<String>> warmed = [];
+  final _changes = StreamController<void>.broadcast();
+
   @override
   NowNext? cached(ChannelItem channel) => byKey[channel.remoteKey];
 
@@ -121,6 +139,17 @@ final class FakeGuide implements GuideService {
     asked.add(channel.remoteKey);
     return Ok(byKey[channel.remoteKey] ?? NowNext.none);
   }
+
+  @override
+  Future<void> warm(List<ChannelItem> channels) async {
+    warmed.add([for (final channel in channels) channel.remoteKey]);
+  }
+
+  @override
+  Stream<void> get changes => _changes.stream;
+
+  /// Says the answers went stale, as a new guide would.
+  void change() => _changes.add(null);
 }
 
 final class FakeWindow implements WindowControls {

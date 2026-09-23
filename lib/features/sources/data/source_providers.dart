@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/sync_engine.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/db_category_repository.dart';
 import 'package:iptv_player/features/sources/data/db_source_overview_repository.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
@@ -27,13 +30,17 @@ SourceRepository sourceRepository(Ref ref) => DbSourceRepository(
 Stream<List<Source>> sources(Ref ref) =>
     ref.watch(sourceRepositoryProvider).watchAll();
 
-/// The one sync engine. Cancels every run when the app closes.
+/// The one sync engine. Cancels every run when the app closes. A sync
+/// that succeeds rematches the source's channels to its guide, which
+/// the sync doesn't wait for (the match service logs how it went).
 @Riverpod(keepAlive: true)
 SyncService syncService(Ref ref) {
+  final matches = ref.watch(epgMatchServiceProvider);
   final engine = SyncEngine(
     database: ref.watch(appDatabaseProvider),
     sources: ref.watch(sourceRepositoryProvider),
     log: ref.watch(appLogProvider),
+    onSynced: (sourceId) => unawaited(matches.rematch(sourceId)),
   );
   ref.onDispose(engine.dispose);
   return engine;
