@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<!-- Declared ISO-8859-15: Latin-1 but for eight bytes, 0xA4 the euro sign among them. -->
+<tv>
+  <channel id="f.one">
+    <display-name>Cinéma</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="f.one">
+    <title>Prix € 10</title>
+    <desc>Cœur de pierre</desc>
+  </programme>
+</tv>

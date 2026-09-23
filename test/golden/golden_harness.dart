@@ -24,3 +24,12 @@ void hideDebugBanner() {
   WidgetsApp.debugAllowBannerOverride = false;
   addTearDown(() => WidgetsApp.debugAllowBannerOverride = true);
 }
+
+/// The moment a golden is drawn at, as a *local* wall-clock time.
+///
+/// Screens show times in the viewer's zone, so a golden pinned to an
+/// instant draws different clock labels in every zone: the Phase 3
+/// images, recorded here in America/New_York, failed on the UTC runner.
+/// A local 8 AM is the same instant the fakes' 12:00 UTC was when they
+/// were recorded, and 8 AM wherever the test runs.
+DateTime goldenNow() => DateTime(2026, 9, 14, 8);

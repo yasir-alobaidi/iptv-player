@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!-- A UTF-8 byte order mark before the declaration, as Windows tools write. -->
+<tv>
+  <channel id="bom.one">
+    <display-name>Bom Channel</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="bom.one">
+    <title>Über Alles</title>
+  </programme>
+</tv>

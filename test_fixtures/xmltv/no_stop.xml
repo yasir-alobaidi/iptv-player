@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Missing and unusable stops: each ends where the next programme on its channel starts; the last one per channel has nothing to end it. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="c.fill">
+    <display-name>Fill</display-name>
+  </channel>
+  <channel id="d.alone">
+    <display-name>Alone</display-name>
+  </channel>
+  <channel id="e.gap">
+    <display-name>Gap</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" channel="c.fill">
+    <title>No Stop At All</title>
+  </programme>
+  <programme start="20260914110000 +0000" stop="soon" channel="c.fill">
+    <title>Garbage Stop</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +2500" channel="c.fill">
+    <title>Stop With A Bad Zone</title>
+  </programme>
+  <programme start="20260914123000 +0000" stop="20260914250000 +0000" channel="c.fill">
+    <title>Stop At Hour 25</title>
+  </programme>
+  <programme start="20260914130000 +0000" stop="" channel="c.fill">
+    <title>Empty Stop</title>
+  </programme>
+  <programme start="20260914140000 +0000" stop="20260914150000 +0000" channel="c.fill">
+    <title>Proper Stop</title>
+  </programme>
+  <programme start="20260914150000 +0000" channel="c.fill">
+    <title>Last Without A Stop</title>
+  </programme>
+  <programme start="20260914090000 +0000" channel="d.alone">
+    <title>Only Programme</title>
+  </programme>
+  <programme start="20260914080000 +0000" channel="e.gap">
+    <title>Before The Bad One</title>
+  </programme>
+  <programme start="soon" stop="20260914083000 +0000" channel="e.gap">
+    <title>Bad Start</title>
+  </programme>
+  <programme start="20260914090000 +0000" stop="20260914093000 +0000" channel="e.gap">
+    <title>After The Bad One</title>
+  </programme>
+</tv>

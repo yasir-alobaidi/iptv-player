@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every date length and zone form the spec accepts, and dates and zones it does not; one channel per case. -->
+<tv>
+  <programme start="20260914180000 +0200" stop="20260914190000 +0200" channel="t01">
+    <title>14 digits, +0200</title>
+  </programme>
+  <programme start="202609141800 +0000" stop="202609141830 +0000" channel="t02">
+    <title>12 digits</title>
+  </programme>
+  <programme start="2026091418 +0000" stop="2026091419 +0000" channel="t03">
+    <title>10 digits</title>
+  </programme>
+  <programme start="20260914 +0000" stop="20260915 +0000" channel="t04">
+    <title>8 digits, a whole day</title>
+  </programme>
+  <programme start="20260914180000" stop="20260914183000" channel="t05">
+    <title>No zone is UTC</title>
+  </programme>
+  <programme start="20260914180000 Z" stop="20260914183000 Z" channel="t06">
+    <title>Z</title>
+  </programme>
+  <programme start="20260914180000 UTC" stop="20260914183000 UTC" channel="t07">
+    <title>UTC</title>
+  </programme>
+  <programme start="20260914180000 gmt" stop="20260914183000 gmt" channel="t08">
+    <title>gmt, lower case</title>
+  </programme>
+  <programme start="20260914180000+0200" stop="20260914190000+0200" channel="t09">
+    <title>No space before the zone</title>
+  </programme>
+  <programme start="20260914180000 +05:30" stop="20260914190000 +05:30" channel="t10">
+    <title>+HH:MM</title>
+  </programme>
+  <programme start="20260914180000 +02" stop="20260914190000 +02" channel="t11">
+    <title>+HH</title>
+  </programme>
+  <programme start="20260914080000 -0930" stop="20260914090000 -0930" channel="t12">
+    <title>-0930</title>
+  </programme>
+  <programme start="20260915080000 +1400" stop="20260915083000 +1400" channel="t13">
+    <title>+1400, the furthest east</title>
+  </programme>
+  <programme start="20260914180000 +0100" stop="20260914180000 +0000" channel="t14">
+    <title>Start and stop in different zones</title>
+  </programme>
+  <programme start="20260914180000Z" stop="20260914183000Z" channel="t15">
+    <title>Z with no space</title>
+  </programme>
+  <programme start="20260914120000 -03:30" stop="20260914130000 -03:30" channel="t16">
+    <title>-HH:MM</title>
+  </programme>
+
+  <programme start="whenever" stop="20260914190000 +0000" channel="b01">
+    <title>bad: not digits</title>
+  </programme>
+  <programme start="2026091418000 +0000" stop="20260914190000 +0000" channel="b02">
+    <title>bad: 13 digits</title>
+  </programme>
+  <programme start="202609141 +0000" stop="20260914190000 +0000" channel="b03">
+    <title>bad: 9 digits</title>
+  </programme>
+  <programme start="20261314180000 +0000" stop="20260914190000 +0000" channel="b04">
+    <title>bad: month 13</title>
+  </programme>
+  <programme start="20260230180000 +0000" stop="20260914190000 +0000" channel="b05">
+    <title>bad: 30 February</title>
+  </programme>
+  <programme start="20250229180000 +0000" stop="20260914190000 +0000" channel="b06">
+    <title>bad: 29 February in a common year</title>
+  </programme>
+  <programme start="20260914240000 +0000" stop="20260914190000 +0000" channel="b07">
+    <title>bad: hour 24</title>
+  </programme>
+  <programme start="20260914186000 +0000" stop="20260914190000 +0000" channel="b08">
+    <title>bad: minute 60</title>
+  </programme>
+  <programme start="20260914180060 +0000" stop="20260914190000 +0000" channel="b09">
+    <title>bad: second 60</title>
+  </programme>
+  <programme start="20260900180000 +0000" stop="20260914190000 +0000" channel="b10">
+    <title>bad: day 00</title>
+  </programme>
+  <programme start="" stop="20260914190000 +0000" channel="b11">
+    <title>bad: empty start</title>
+  </programme>
+  <programme stop="20260914190000 +0000" channel="b12">
+    <title>bad: no start</title>
+  </programme>
+  <programme start="2026-09-14T18:00:00Z" stop="20260914190000 +0000" channel="b13">
+    <title>bad: ISO 8601 with dashes</title>
+  </programme>
+  <programme start="2026091X180000 +2500" stop="20260914190000 +0000" channel="b14">
+    <title>bad: not digits, and a bad zone too</title>
+  </programme>
+  <programme start="20260014180000 +0000" stop="20260914190000 +0000" channel="b15">
+    <title>bad: month 00</title>
+  </programme>
+
+  <programme start="20260914180000 +2500" stop="20260914190000 +0000" channel="z01">
+    <title>zone: +2500</title>
+  </programme>
+  <programme start="20260914180000 +0160" stop="20260914190000 +0000" channel="z02">
+    <title>zone: +0160</title>
+  </programme>
+  <programme start="20260914180000 EST" stop="20260914190000 +0000" channel="z03">
+    <title>zone: EST</title>
+  </programme>
+  <programme start="20260914180000 CET" stop="20260914190000 +0000" channel="z04">
+    <title>zone: CET</title>
+  </programme>
+  <programme start="20260914180000 +ab" stop="20260914190000 +0000" channel="z05">
+    <title>zone: +ab</title>
+  </programme>
+  <programme start="20260914180000 +1500" stop="20260914190000 +0000" channel="z06">
+    <title>zone: +1500, past +14</title>
+  </programme>
+  <programme start="20260914180000 +02:60" stop="20260914190000 +0000" channel="z07">
+    <title>zone: +02:60</title>
+  </programme>
+</tv>

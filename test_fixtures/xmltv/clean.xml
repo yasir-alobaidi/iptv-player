@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<!-- A clean panel export: four channels, zones +0100 / +0000 / -0500, every field a guide carries. -->
+<tv generator-info-name="panel-epg/2.3" generator-info-url="http://epg.example.test/" source-info-name="Example Panel">
+  <channel id="north.news.uk">
+    <display-name lang="en">Northwind News</display-name>
+    <display-name lang="en">NWN</display-name>
+    <display-name>101</display-name>
+    <icon src="http://logos.example.test/north-news.png" />
+    <url>http://north.example.test/</url>
+  </channel>
+  <channel id="aurora.movies.de">
+    <display-name lang="de">Aurora Filme</display-name>
+    <icon src="https://logos.example.test/aurora.png" width="200" height="200" />
+  </channel>
+  <channel id="kestrel.sport.us">
+    <display-name lang="en">Kestrel Sport</display-name>
+    <icon src="https://logos.example.test/kestrel.png" />
+  </channel>
+  <channel id="lumen.kids.fr">
+    <display-name lang="fr">Lumen Enfants</display-name>
+  </channel>
+  <programme start="20260914180000 +0100" stop="20260914190000 +0100" channel="north.news.uk">
+    <title lang="en">Evening News</title>
+    <sub-title lang="en">Headlines at Six</sub-title>
+    <desc lang="en">The day's main stories, with sport and weather.</desc>
+    <category lang="en">News</category>
+    <category lang="en">Current Affairs</category>
+    <episode-num system="onscreen">S2026E257</episode-num>
+    <video>
+      <quality>HDTV</quality>
+    </video>
+    <new />
+  </programme>
+  <programme start="20260914190000 +0100" stop="20260914193000 +0100" channel="north.news.uk">
+    <title lang="en">Weather Outlook</title>
+    <desc lang="en">The forecast for the week ahead.</desc>
+    <category lang="en">News</category>
+  </programme>
+  <programme start="20260914200000 +0000" stop="20260914220500 +0000" channel="aurora.movies.de">
+    <title lang="de">Der lange Hafen</title>
+    <title lang="en">The Long Harbour</title>
+    <desc lang="de">Ein Kapitän kehrt nach zwanzig Jahren zurück.</desc>
+    <credits>
+      <director>Ann Example</director>
+      <actor role="Kapitän">Ben Example</actor>
+    </credits>
+    <date>2019</date>
+    <category lang="de">Spielfilm</category>
+    <category lang="de">Drama</category>
+    <icon src="https://art.example.test/long-harbour.jpg" />
+    <rating system="FSK">
+      <value>12</value>
+    </rating>
+    <star-rating>
+      <value>7/10</value>
+    </star-rating>
+  </programme>
+  <programme start="20260914220500 +0000" stop="20260915000000 +0000" channel="aurora.movies.de">
+    <title lang="de">Spätfilm</title>
+    <desc lang="de">Ein Klassiker zur Nacht.</desc>
+    <category lang="de">Spielfilm</category>
+    <rating system="FSK">
+      <value>16</value>
+    </rating>
+  </programme>
+  <programme start="20260914190000 -0500" stop="20260914210000 -0500" channel="kestrel.sport.us">
+    <title lang="en">Harbour Cup Final</title>
+    <sub-title lang="en">Northport v Southport</sub-title>
+    <desc lang="en">Live coverage of the final.</desc>
+    <category lang="en">Sports</category>
+    <episode-num system="xmltv_ns">0.11.</episode-num>
+    <rating system="VCHIP">
+      <value>TV-G</value>
+    </rating>
+  </programme>
+  <programme start="20260914210000 -0500" stop="20260914223000 -0500" channel="kestrel.sport.us">
+    <title lang="en">Post-Match</title>
+    <category lang="en">Sports</category>
+  </programme>
+  <programme start="20260915060000 +0000" stop="20260915063000 +0000" channel="lumen.kids.fr">
+    <title lang="fr">Dessins animés</title>
+    <title lang="en">Cartoons</title>
+    <desc lang="fr">Des histoires pour les petits.</desc>
+    <category lang="fr">Jeunesse</category>
+    <episode-num system="xmltv_ns">2.4.0/1</episode-num>
+  </programme>
+</tv>

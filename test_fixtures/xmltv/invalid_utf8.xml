@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bytes that are not UTF-8 in a UTF-8 file: replaced and cleaned out, never thrown on. -->
+<tv>
+  <channel id="v.one">
+    <display-name>CafÃ Noir</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="v.one">
+    <title>Bad ÿ Byte</title>
+    <desc>CafÃ© au laitÿ</desc>
+  </programme>
+</tv>

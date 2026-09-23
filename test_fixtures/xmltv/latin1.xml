@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Declared ISO-8859-1: accented letters are single bytes. -->
+<tv>
+  <channel id="l.one">
+    <display-name>Café Zürich</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="l.one">
+    <title>Straßenfest</title>
+    <desc>Grüße aus München.</desc>
+  </programme>
+</tv>

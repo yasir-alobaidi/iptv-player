@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A declaration, a doctype and this comment, and no element at all. -->
+<!DOCTYPE tv SYSTEM "xmltv.dtd">

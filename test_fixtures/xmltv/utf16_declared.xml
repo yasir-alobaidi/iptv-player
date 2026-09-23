@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<!-- The header says UTF-16 but there is no UTF-16 BOM: the header lies, the bytes are ASCII. -->
+<tv>
+  <channel id="h.one">
+    <display-name>Header Lies</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="h.one">
+    <title>Plain Title</title>
+  </programme>
+</tv>

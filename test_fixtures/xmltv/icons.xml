@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Junk channel icons, as panels send them: each is skipped until one is worth requesting. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="i.first-valid">
+    <display-name>First Valid</display-name>
+    <icon src="n/a" />
+    <icon src="null" />
+    <icon src="htp:/broken.logo" />
+    <icon src="/images/404/missing.png" />
+    <icon src="about:blank" />
+    <icon src="http://logos.example.test/" />
+    <icon src="ftp://logos.example.test/ftp.png" />
+    <icon src="https://logos.example.test/first-valid.png" />
+    <icon src="https://logos.example.test/second-valid.png" />
+  </channel>
+  <channel id="i.none">
+    <display-name>None Usable</display-name>
+    <icon src="" />
+    <icon src="   " />
+    <icon />
+    <icon src="http://" />
+  </channel>
+  <channel id="i.padded">
+    <icon src="  http://logos.example.test/padded.png  " />
+    <display-name>Padded</display-name>
+  </channel>
+  <channel id="i.no-icon">
+    <display-name>No Icon</display-name>
+  </channel>
+</tv>

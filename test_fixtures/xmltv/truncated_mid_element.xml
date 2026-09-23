@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A download that stopped inside a programme: what came before it is kept, the half-read one is not. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="t.cut">
+    <display-name>Cut</display-name>
+  </channel>
+  <channel id="t.other">
+    <display-name>Other</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="t.cut">
+    <title>Complete</title>
+  </programme>
+  <programme start="20260914100000 +0000" stop="20260914120000 +0000" channel="t.other">
+    <title>Other Channel</title>
+  </programme>
+  <programme start="20260914110000 +0000" channel="t.cut">
+    <title>Waiting For A Stop</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +0000" channel="t.cut">
+    <title>Cut Sh

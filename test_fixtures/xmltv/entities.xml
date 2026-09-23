@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="xmltv.xsl"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd" [
+  <!ENTITY custom "never expanded">
+  <!ELEMENT extra ANY>
+]>
+<!-- Markup a real file throws at a parser: entities, CDATA, comments, PIs, odd attribute quoting, nesting. -->
+<tv generator-info-name='hand &amp; made'>
+  <!-- <channel id="commented.out"><display-name>Commented Out</display-name></channel> -->
+  <channel id='e.single'>
+    <display-name lang=en>Tom &amp; Jerry &lt;TV&gt;</display-name>
+    <icon src="http://logos.example.test/e.png?w=100&amp;h=100" />
+  </channel>
+  <channel id=e.unquoted>
+    <display-name></display-name>
+    <display-name>Caf&#233; &#x2615; Kids</display-name>
+  </channel>
+  <channel id="e.bare-attr" hidden>
+    <display-name>Quote &quot;Q&quot; &apos;A&apos;</display-name>
+  </channel>
+  <channel id="e.nested">
+    <!-- a comment between children -->
+    <extra><display-name>Nested, Wrong</display-name><icon src="http://logos.example.test/wrong.png" /></extra>
+    <display-name>Right Name</display-name>
+  </channel>
+  <channel id="news&amp;weather.uk">
+    <display-name>News and Weather</display-name>
+  </channel>
+  <?panel-hint refresh="daily"?>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="e.single">
+    <title>Tom & Jerry</title>
+    <desc>Fish &chips; &unknown; night</desc>
+  </programme>
+  <programme start="20260914110000 +0000" stop="20260914120000 +0000" channel="e.single">
+    <title><![CDATA[Rock & Roll <Live>]]></title>
+    <desc><![CDATA[  Spaced   out  ]]></desc>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +0000" channel="e.single">
+    <title>Before <!-- hidden --> After</title>
+  </programme>
+  <programme start="20260914130000 +0000" stop="20260914140000 +0000" channel="e.single">
+    <title>Caf&#233; &#xE9;t&#233;&nbsp;&nbsp;night&#10;</title>
+    <desc>Line one.&#10;Line two.
+      Line three.</desc>
+  </programme>
+  <programme start="20260914140000 +0000" stop="20260914150000 +0000" channel="e.single">
+    <title lang="en"></title>
+    <title lang="de">Zweiter Titel</title>
+    <sub-title></sub-title>
+    <sub-title>Real Sub</sub-title>
+  </programme>
+  <programme start='20260914150000 +0000' stop='20260914160000 +0000' channel=e.single>
+    <title>Single Quotes</title>
+  </programme>
+  <programme catchup
+      start="20260914160000 +0000"
+      stop="20260914170000 +0000"
+      channel="e.single" catchup-id>
+    <title>Bare Attributes</title>
+  </programme>
+  <programme start="20260914170000 +0000" stop="20260914180000 +0000" channel="e.single">
+    <episode-num system="xmltv_ns">1.2.</episode-num>
+    <rating system="VCHIP"><value>TV-G</value><icon src="http://logos.example.test/tv-g.png" /></rating>
+    <extra><title>Nested Title</title><extra><title>Deeper</title></extra></extra>
+    <title>After Nesting</title>
+  </programme>
+  <programme start="20260914180000 +0000" stop="20260914190000 +0000" channel="e.single">
+    <title>&lt;b&gt;Bold&lt;/b&gt; &amp; Brash</title>
+  </programme>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="news&#38;weather.uk">
+    <title>Numeric Entity In The Channel</title>
+  </programme>
+</tv>

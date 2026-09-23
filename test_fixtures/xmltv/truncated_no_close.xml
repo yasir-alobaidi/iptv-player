@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every element complete, but no closing tv tag: a download cut between elements. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="n.one">
+    <display-name>One</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" channel="n.one">
+    <title>First</title>
+  </programme>
+  <programme start="20260914110000 +0000" stop="20260914120000 +0000" channel="n.one">
+    <title>Second</title>
+  </programme>

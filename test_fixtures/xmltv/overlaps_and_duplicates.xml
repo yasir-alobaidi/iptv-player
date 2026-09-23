@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Overlaps cut at the next start, programmes that go back in time (out of order), a programme and channels listed twice, too long, ends before it starts. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="o.one">
+    <display-name>One</display-name>
+  </channel>
+  <channel id="o.two">
+    <display-name>Two</display-name>
+  </channel>
+  <channel id="o.three">
+    <display-name>Three</display-name>
+  </channel>
+  <channel id="o.three">
+    <display-name>Three Again</display-name>
+  </channel>
+  <channel id=" o.one ">
+    <display-name>One, Padded</display-name>
+  </channel>
+  <channel id="o.four">
+    <display-name>Four</display-name>
+  </channel>
+  <channel id="o.five">
+    <display-name>Five</display-name>
+  </channel>
+
+  <programme start="20260914100000 +0000" stop="20260914113000 +0000" channel="o.one">
+    <title>Runs Over</title>
+  </programme>
+  <programme start="20260914110000 +0000" stop="20260914120000 +0000" channel="o.one">
+    <title>Next Show</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +0000" channel="o.one">
+    <title>Noon Show</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914124500 +0000" channel="o.one">
+    <title>Noon Show, Listed Twice</title>
+  </programme>
+  <programme start="20260914113000 +0000" stop="20260914123000 +0000" channel="o.one">
+    <title>Out Of Order</title>
+  </programme>
+  <programme start="20260914130000 +0000" stop="20260914140000 +0000" channel="o.one">
+    <title>Afternoon</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +0000" channel="o.one">
+    <title>Noon Show, Listed Again Later</title>
+  </programme>
+
+  <programme start="20260914200000 +0000" channel="o.two">
+    <title>Late, No Stop</title>
+  </programme>
+  <programme start="20260914190000 +0000" stop="20260914200000 +0000" channel="o.two">
+    <title>Earlier</title>
+  </programme>
+  <programme start="20260914200000 +0000" stop="20260914210000 +0000" channel="o.two">
+    <title>Later</title>
+  </programme>
+
+  <programme start="20260914000000 +0000" stop="20260915000100 +0000" channel="o.four">
+    <title>Over A Day</title>
+  </programme>
+  <programme start="20260916000000 +0000" channel="o.four">
+    <title>Filled Past A Day</title>
+  </programme>
+  <programme start="20260917020000 +0000" stop="20260917030000 +0000" channel="o.four">
+    <title>Ends It</title>
+  </programme>
+
+  <programme start="20260914100000 +0000" stop="20260914100000 +0000" channel="o.five">
+    <title>Ends As It Starts</title>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914110000 +0000" channel="o.five">
+    <title>Ends Before It Starts</title>
+  </programme>
+</tv>

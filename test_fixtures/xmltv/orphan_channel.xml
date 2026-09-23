@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Programmes for a channel the file never declares: kept, since a playlist can still name it. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel id="declared.one">
+    <display-name>Declared</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="declared.one">
+    <title>Declared Show</title>
+  </programme>
+  <programme start="20260914100000 +0000" stop="20260914103000 +0000" channel="ghost.zz">
+    <title>Ghost Show</title>
+  </programme>
+  <programme start="20260914103000 +0000" stop="20260914110000 +0000" channel="ghost.zz">
+    <title>Ghost Show Two</title>
+  </programme>
+</tv>

@@ -107,6 +107,47 @@ final class EpgNowNext {
   int get hashCode => Object.hash(now, next);
 }
 
+/// How far a running import has got, as its isolate reports it. Plain
+/// values, so it crosses isolates.
+@immutable
+final class EpgImportProgress {
+  const new({
+    this.bytesRead = 0,
+    this.totalBytes,
+    this.channels = 0,
+    this.programmes = 0,
+  });
+
+  /// Bytes of the body read so far, as they arrived (compressed when the
+  /// guide is gzipped), so they compare with [totalBytes].
+  final int bytesRead;
+
+  /// The body's length when the server said it; null otherwise.
+  final int? totalBytes;
+
+  /// Rows staged so far.
+  final int channels;
+  final int programmes;
+
+  /// 0..1 when the length is known.
+  double? get fraction {
+    final total = totalBytes;
+    if (total == null || total <= 0) return null;
+    return (bytesRead / total).clamp(0, 1).toDouble();
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is EpgImportProgress &&
+      other.bytesRead == bytesRead &&
+      other.totalBytes == totalBytes &&
+      other.channels == channels &&
+      other.programmes == programmes;
+
+  @override
+  int get hashCode => Object.hash(bytesRead, totalBytes, channels, programmes);
+}
+
 /// How an import ended, as Settings → Guide shows it.
 enum GuideImportOutcome { running, succeeded, failed, cancelled }
 

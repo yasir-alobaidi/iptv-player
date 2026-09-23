@@ -1,95 +1,101 @@
-# Handoff — 2026-09-19 (session 19, Phase 3 built and soaked)
+# Handoff — 2026-09-23 (Phase 4 step 3 built)
 
 For the next Claude Code session on this project, and for the user starting it.
 
 ## Before you start the next session (user)
-**The 1-hour soak is done — I ran it, and it is green.** It took three
-runs, because the first one failed and the second found the check itself
-was wrong. Nothing is left for you to run.
+**1. Review step 3 and push it.** Everything is committed locally
+("Phase 4 step 3: the XMLTV parser and the import isolate").
 
-```
-soak 60min video on: 545→739 MB (growth from minute 21: 39 MB),
-78 reconnects, 0 failures, longest without a picture 9 s
-```
-
-**1. Push**, so CI runs the new player tests (it generates three media
-samples with Ubuntu's ffmpeg and plays with no picture). Everything is
-committed locally; nothing is pushed.
-
-**2. Try it yourself:** `flutter run -d linux`, add your provider (or it
-is there already from an earlier run), Ctrl+2 for Live TV. Only play from
-your provider when your other device is off: your plan allows one stream.
-
-### What the soak found (both fixed or recorded; full story in ADR-010)
-- **A connection leak in the fake provider** killed the first hour at
-  minute 8. The panel counted 2 of its 2 connections with nobody
-  connected, so every reconnect was refused as a full account and the
-  player sat in reconnect-and-fail for 50 minutes. The cause was in the
-  test server, not the app: when a client *resets* a connection before
-  the response headers go out — which is what a player abandoning an
-  attempt does, and what the kernel sends whenever a socket closes with
-  unread data — dart:io keeps the response body, throws away everything
-  written to it and never cancels it, so the relay never learned the
-  client had gone and never killed its ffmpeg. The relay now owns the
-  socket for live streams. **The app behaved correctly throughout**: it
-  retried, backed off and explained the refusal.
-- **The memory check was measuring warm-up.** The second hour was clean
-  on playback but reported 101 MB growth against a 50 MB budget. It was
-  not a leak: a control run with one stream and no reconnects grew the
-  same way and then held flat, and 50 reopens added ~0.3 MB each. The
-  player settles over about 40 minutes and then holds. You chose to
-  measure growth from minute 21 instead of minute 6, on medians so a
-  reconnect spike is not counted; the budget stays 50 MB.
-- **A real cut connection is invisible to the app.** Our `drop_after_s`
-  fault ends the body cleanly, which mpv reports as the end of the
-  stream. A real cut (no clean end) is absorbed by mpv's own reconnect
-  (`reconnect_streamed=1`) and the app never sees it. You chose to add a
-  `cut` fault in Phase 4.
+**2. CI was red on your step 2 push, on both systems.**
+- **Linux (4 failures): found and fixed in this commit.** Phase 3's
+  goldens print clock times in the machine's zone. They were recorded here
+  in New York time, and the runner is on UTC. They now pass under UTC, New
+  York and Tokyo, and no image was re-recorded.
+- **Windows (3 failures): not diagnosed.** The same 3 failed at the Phase 2
+  exit, when the job also hit its 45-minute limit. GitHub only shows job
+  logs to repo admins, so I can't read them. Please open run 35494753305 →
+  Windows → "Test (Windows, goldens excluded)" and paste the names of the
+  failing tests into the next session.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/08-phases-and-prompts.md (Phase 4) and ADR-010 in docs/decisions.md first.
-Phase 3 is reviewed and pushed; CI is <green | red: …>.
-Write the Phase 4 plan and stop for my approval.
+docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md first.
+Step 3 is reviewed and pushed; CI is <green | red: …>. Windows failures: <names, or "not checked">.
+Do Phase 4 step 4 (matching, and now/next everywhere) and stop for my review.
 ```
 
 ## Where things stand
-- **Phases 1–3 are built.** Phase 3's exit: the fault suite green, the zap
-  budget met (p50 961 ms / p95 972 ms on the desktop), **the 1-hour soak
-  green** (above). ADR-010 Accepted.
-- **Your provider played** (three short runs, each after your yes): first
-  frame 1.2 s, zapping on your single connection without a refusal, the
-  connection let go afterwards. One channel is slow (~4.7 s) to its first
-  picture every time: that stream, not the app.
-- All checks clean: analyze, format, 821 app tests (3 skipped), **98**
-  fake-provider tests, 9 integration tests (the fault suite, the Live TV
-  keyboard walk, the engine; 4 opt-in: real provider ×2, zap benchmark,
-  soak).
-- Your login file (`~/.config/iptv-player-dev/real_provider.json`) has
-  `"wrong_password": false` and `"play": false`, so no test signs in wrongly
-  or plays from your provider unless you turn it on.
+- **Phases 1–3 are built; Phase 4 has steps 1–3 of 7.** The fake panel
+  serves a guide (step 1). Schema v5 stores it, with staging and an atomic
+  swap (step 2). Step 3 adds the XMLTV parser and the import isolate.
+- **The parser:** 300 MB in 4.3 s, +23 MB RSS. The time for the full
+  300 MB import (batch writes and the swap) is still to measure, in step 7.
+- **Nothing in the app starts an import yet**, and nothing shows the guide.
+  `EpgImporter` exists but is not wired to Riverpod or `bootstrap()`. The
+  scheduler is step 7, now/next is step 4, and the grid is step 6.
+- All checks clean: analyze, format, **1,174 app tests** (4 skipped
+  benchmarks) under `TZ=UTC`, the fake provider's 114, and the app-launch
+  and sources-keyboard integration tests under xvfb (the sync now runs
+  guarded). The other integration tests (the fault suite, the Live TV
+  walk, the engine) were not rerun: nothing they drive changed.
 
-## Done this session (2026-09-19, session 19)
-- The 1-hour soak on the real display, three runs; the fake-provider
-  connection leak found and fixed (`tools/fake_provider/lib/streams.dart`,
-  with the regression test "a client reset before the answer starts frees
-  its slot"); `--exit-with-stdin` so a killed test never orphans the
-  server and its ffmpegs; the soak's memory rule corrected.
+## Done this session (2026-09-23)
+- Phase 4 step 3, built by three parallel agents working from one written
+  behaviour spec:
+  - the parser (`lib/data/providers/xmltv/`);
+  - the import pipeline (`xmltv_reader.dart`, `lib/data/sync/epg_import_work.dart`,
+    `epg_importer.dart`);
+  - fixture tests (`test_fixtures/xmltv/`, 29 files), written from the spec
+    rather than from the parser's output.
+- The fixture tests caught one disagreement: entities are now decoded twice,
+  as XML and then by `cleanText`, so a guide's channel names match the
+  Xtream client's.
+- The end-to-end tests caught the fake panel's HD/SD pairs sharing one guide
+  id with two schedules. That led to the `out_of_order` rule: the first
+  schedule wins.
+- CI: the golden time-zone fix above, and `goldenNow()`.
+- **A deadlock, found by a flaky test and fixed at the root.** Cancelling a
+  job that writes (the import, and the Phase 2 sync too) could kill its
+  isolate between a batch's begin and its commit. drift never rolls back a
+  dead client's transaction, so every query in the app then waited for
+  good. Writing isolates now use `startGuardedJob` + `openJobDatabase` and
+  are only killed between transactions (ADR-011 step 3, with a regression
+  test that deadlocks under the old kill).
 
 ## Instructions for the next session
-1. **Phase 4 is next** (EPG and the guide): write its plan and stop for
-   approval. Include the `cut` fault and a test for what the player does
-   while mpv reconnects underneath it (ADR-010 "The soak run").
-2. **Phase 5's cast relay has the same trap the soak found.** It serves
-   FFmpeg output over our own shelf server, and a receiver that resets
-   mid-stream will be invisible the same way: the relay must own the
-   socket (hijack) or it will leak an FFmpeg per drop.
-3. **Before a release: the 8-hour soak** (`tools/soak/run.sh 480`). An
-   hour cannot tell a plateau from a very slow leak; the 1-hour run's
-   10-minute medians were 598, 652, 655, 686, 695, 691 MB.
+1. **Check CI first** (`curl` on the Actions API, see memory). Run the
+   full suite with **`TZ=UTC flutter test`**, since CI runs in UTC and this
+   laptop does not.
+2. **Phase 4 step 4 is next** (the plan's section): `EpgMatcher` in docs/02's
+   order, filling `epg_matches` (`EpgDao.replaceMatches`), `DbGuide` from the
+   imported guide and `CompositeGuide` in front of `ShortEpgGuide` (decision
+   1), and "No guide information" for an unmatched channel. The matcher's
+   name rule should use the same cleaning as the names it compares:
+   XMLTV display names already went through `cleanText`.
+1a. **Any isolate that writes to the database starts with
+   `startGuardedJob` and connects with `openJobDatabase`**, never
+   `startBackgroundJob` + `connection.connect()`: a kill inside a drift
+   batch leaves its transaction open and blocks the whole database.
+2a. **The EPG pipeline (step 3):**
+   - `parseXmltv` is the parser's only API; the rules are in ADR-011
+     step 3, and the skip codes in `XmltvSkip` are stored, never renamed.
+   - `EpgImporter.importGuide(sourceId)` resolves the guide (override →
+     `xmltv.php` → the playlist's `url-tvg`) and runs `runEpgImportWork` in
+     an isolate. That isolate writes **single batches only**.
+   - The importer then swaps the rows in, or abandons the import and sweeps.
+   - A guide URL is hidden from everything the isolate returns
+     (`hideUrl` / `failureWithoutUrl` in `xmltv_reader.dart`); use them for
+     anything new that can print a guide URL.
+   - Tests start the fake provider in-process (`epg_importer_test.dart`
+     shows how, with `xmltv.php`'s query flags on an EPG override URL).
+3. **With the user's yes only:** one guide import from their real panel (no
+   stream, so no connection is used), to see its real shape before step 5.
+3a. **Before a release: the 8-hour soak** (`tools/soak/run.sh 480`), and
+   the cast relay (Phase 7) must own its sockets as the fake provider's does
+   (ADR-010 "The soak run").
 4. **Phase 3 (playback):** `PlayerEngine` (`lib/core/player/`) is the seam;
    `MediaKitPlayerEngine` (`lib/data/player_mediakit/`) passes
    `waitForInitialization: false` on its own property calls (media_kit
@@ -153,8 +159,10 @@ Write the Phase 4 plan and stop for my approval.
    fails when presentation or design code imports drift, dio, media_kit,
    sqlite3, `dart:io`, `dart:isolate` or `lib/data/`.
 1g. **The sync engine (step 5):** the sync isolate writes **only single
-   batches, never a transaction** — a killed isolate's open transaction
-   blocks the database for everyone (spiked). Start and finish happen on
+   batches, never a longer transaction** — a killed isolate's open
+   transaction blocks the database for everyone (spiked), and since
+   Phase 4 step 3 it is stopped with `startGuardedJob`, so it is never
+   killed inside a batch either. Start and finish happen on
    the UI isolate; the finish is one transaction. `openAppDatabase` must
    stay a `createBackgroundConnection` (not a `LazyDatabase`), or sync
    writes go through a proxy on the UI isolate; `app_database_open_test`
@@ -245,12 +253,19 @@ Write the Phase 4 plan and stop for my approval.
 13. Re-recording a golden: `flutter test --tags golden --update-goldens`,
     then look at the PNG before trusting it.
 14. Commit messages carry no trailers. Commit locally; the user pushes.
-15. At the end: analyze, format check, `flutter test`, the fake provider's
-    `dart test`, each integration test under `xvfb-run -a … -d linux` (one
-    file per run), add to ADR-009, update `docs/progress.md`, overwrite
-    this file, and commit.
+15. At the end: analyze, format check, `TZ=UTC flutter test`, the fake
+    provider's `dart test`, each integration test under `xvfb-run -a … -d
+    linux` (one file per run), add to ADR-011, update `docs/progress.md`,
+    overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 4 (ADR-011): the seven plan decisions; the swap on the app's side;
+  seven v5 tables; the XMLTV parser as our own byte scanner (the `xml`
+  package is dropped); entities decoded twice; `out_of_order` — the first
+  schedule read wins; an import with nothing to keep fails and the old
+  guide stays.
+- Goldens are drawn at `goldenNow()`, a local time, never an instant: a
+  screen formats times in the viewer's zone.
 - Flutter + media_kit for desktop with the patched `media_kit_video` in
   `third_party/` (ADR-001, ADR-003). fvp only if Windows fails.
 - Casting through our own Cast v2 client, the Default Media Receiver and a

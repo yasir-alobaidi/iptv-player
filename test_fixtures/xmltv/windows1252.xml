@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!-- Declared windows-1252: 0x80-0x9F are the euro sign and curly quotes, not C1 controls. -->
+<tv>
+  <channel id="w.one">
+    <display-name>Cinéma</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="w.one">
+    <title>Price € 5</title>
+    <desc>“Quoted” – café…</desc>
+  </programme>
+</tv>

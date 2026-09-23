@@ -4,8 +4,8 @@ import 'package:drift/native.dart';
 import 'package:iptv_player/core/isolates/background.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/result.dart';
-import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
+import 'package:iptv_player/data/db/job_database.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_reader.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_client.dart';
 import 'package:iptv_player/data/sync/m3u_sync.dart';
@@ -86,12 +86,14 @@ final class SyncWorkResult {
 }
 
 /// Starts [work] in a new isolate. Top level, so the closure sent to the
-/// isolate captures [work] and nothing else.
+/// isolate captures [work] and nothing else. Guarded: cancel and the
+/// timeout never kill it inside a batch (`startGuardedJob`).
 BackgroundJob<SyncProgress, Result<SyncWorkResult>> startSyncJob(
   SyncWork work, {
   Duration? timeout,
-}) => startBackgroundJob<SyncProgress, Result<SyncWorkResult>>(
-  (report) => runSyncWork(work, report),
+}) => startGuardedJob<SyncProgress, Result<SyncWorkResult>>(
+  (report, cancellation) =>
+      runSyncWork(work, report, cancellation: cancellation),
   timeout: timeout,
   debugName: 'sync',
 );
@@ -99,17 +101,19 @@ BackgroundJob<SyncProgress, Result<SyncWorkResult>> startSyncJob(
 /// The sync isolate's body: connects to the app's database, reads the
 /// provider, and upserts what it sends, reporting progress as it goes.
 ///
-/// **Every write is a single batch, never a transaction.** The engine can
-/// kill this isolate at any moment (cancel, timeout), and a batch is
-/// applied whole by the database isolate or not at all, whereas a killed
-/// isolate's open transaction blocks the database for everyone (ADR-009,
-/// step 5 spike). Sweeping and finishing the run happen on the engine's
-/// side, in one transaction, once this returns.
+/// **Every write is a single batch, never a longer transaction.** The
+/// engine stops this isolate at any moment (cancel, timeout), and a
+/// killed isolate's open transaction blocks the database for everyone
+/// (ADR-009, step 5 spike). A batch is a transaction too, which
+/// [openJobDatabase] marks on [cancellation], so the isolate is only ever
+/// killed between batches (ADR-011 step 3). Sweeping and finishing the run
+/// happen on the engine's side, in one transaction, once this returns.
 Future<Result<SyncWorkResult>> runSyncWork(
   SyncWork work,
-  void Function(SyncProgress progress) report,
-) async {
-  final db = AppDatabase(await work.connection.connect());
+  void Function(SyncProgress progress) report, {
+  JobCancellation? cancellation,
+}) async {
+  final db = await openJobDatabase(work.connection, cancellation);
   XtreamClient? client;
   try {
     switch (work.type) {

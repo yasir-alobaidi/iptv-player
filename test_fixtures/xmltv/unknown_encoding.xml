@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="X-MADE-UP-8"?>
+<!-- An encoding no one has heard of, over UTF-8 bytes: read as UTF-8. -->
+<tv>
+  <channel id="u.one">
+    <display-name>Unknown</display-name>
+  </channel>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="u.one">
+    <title>Crème brûlée</title>
+    <desc>Déjà vu</desc>
+  </programme>
+</tv>

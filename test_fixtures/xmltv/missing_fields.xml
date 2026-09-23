@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Missing ids, channels and titles: channels with no id, programmes with no channel or no usable title. -->
+<tv generator-info-name="panel-epg/2.3">
+  <channel>
+    <display-name>No Id</display-name>
+  </channel>
+  <channel id="">
+    <display-name>Empty Id</display-name>
+  </channel>
+  <channel id="   ">
+    <display-name>Blank Id</display-name>
+  </channel>
+  <channel id="m.named">
+    <display-name></display-name>
+    <display-name>   </display-name>
+    <display-name lang="en">Named Channel</display-name>
+  </channel>
+  <channel id="m.bare">
+    <icon src="http://logos.example.test/bare.png" />
+  </channel>
+
+  <programme start="20260914060000 +0000" stop="20260914070000 +0000" channel="m.named">
+    <desc>No title element at all.</desc>
+  </programme>
+  <programme start="20260914070000 +0000" stop="20260914080000 +0000" channel="m.named">
+    <title></title>
+  </programme>
+  <programme start="20260914080000 +0000" stop="20260914090000 +0000" channel="m.named">
+    <title>   </title>
+  </programme>
+  <programme start="20260914090000 +0000" stop="20260914100000 +0000" channel="m.named">
+    <title>&#160;</title>
+  </programme>
+  <programme start="20260914100000 +0000" stop="20260914110000 +0000" channel="m.named">
+    <credits>
+      <presenter>Ann Example</presenter>
+      <title>Hidden In Credits</title>
+    </credits>
+  </programme>
+  <programme start="20260914110000 +0000" stop="20260914120000 +0000" channel="m.named">
+    <TITLE>Upper Case</TITLE>
+  </programme>
+  <programme start="20260914120000 +0000" stop="20260914130000 +0000" channel="m.named">
+    <title>Only A Title</title>
+    <sub-title></sub-title>
+  </programme>
+  <programme start="20260914130000 +0000" stop="20260914140000 +0000" channel=" m.named ">
+    <title>Padded Channel</title>
+    <desc></desc>
+    <desc>Second Desc</desc>
+    <category> </category>
+    <category>Talk</category>
+  </programme>
+
+  <programme start="20260914140000 +0000" stop="20260914150000 +0000">
+    <title>No Channel</title>
+  </programme>
+  <programme start="20260914140000 +0000" stop="20260914150000 +0000" channel="">
+    <title>Empty Channel</title>
+  </programme>
+  <programme start="20260914140000 +0000" stop="20260914150000 +0000" channel="   ">
+    <title>Blank Channel</title>
+  </programme>
+  <programme start="garbage" stop="20260914150000 +0000">
+    <title>No Channel And A Bad Date</title>
+  </programme>
+
+  <programme start="20260801100000 +0000" stop="20260801110000 +0000" channel="m.old"></programme>
+</tv>

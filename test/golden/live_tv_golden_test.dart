@@ -21,6 +21,7 @@ void main() {
       testWidgets(name, (tester) async {
         hideDebugBanner();
         final live = LiveTvFakes();
+        live.fakes.now = goldenNow();
         addTearDown(() => tester.runAsync(live.db.close));
         await tester.runAsync(live.seed);
         final now = live.fakes.now;

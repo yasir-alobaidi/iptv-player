@@ -76,10 +76,12 @@ How the parser (`lib/data/providers/m3u/`) meets these; fixtures in `test_fixtur
 - **HTTP:** the default User-Agent (or the source's), 15 s to connect, 30 s idle (the cheap `idleTimeout`, not a timer per chunk), 401/403 `AuthFailure`, 404 `NotFoundFailure`. The `url-tvg`/`x-tvg-url`/`tvg-url` header values come back in the summary as sent; they often carry the credentials, so the caller keeps them in the secure store.
 
 ## XMLTV
-- Streamed parse in an isolate (files can be 100–500 MB; gzip)
-- `<channel id>` with `<display-name>`, `<icon src>`; `<programme start stop channel>` with `<title>`, `<sub-title>`, `<desc>`, `<category>`, `<episode-num>`
+- Streamed parse in an isolate (files can be 100–500 MB; gzip, detected by its magic number): our own byte scanner, which decodes only the text it keeps (ADR-011 step 3)
+- `<channel id>` with `<display-name>`, `<icon src>`; `<programme start stop channel>` with `<title>`, `<sub-title>`, `<desc>`, `<category>` (`<episode-num>` and the rest are read past, not stored)
 - Times like `20260914180000 +0200` → store UTC epoch ms; apply the per-source offset setting
 - Retention window: now − 1 day to now + 7 days (configurable); skip everything outside while parsing
+- Tolerant (hard rule 1): a bad row is skipped and counted by reason — `no_id`, `duplicate_channel`, `no_channel`, `bad_date`, `bad_timezone`, `duplicate_programme`, `out_of_order`, `no_stop`, `bad_duration`, `too_long`, `no_title`, `malformed` — in the import's counts. A missing stop ends at the next programme's start; an overlap is cut there; a programme that goes back in time is a second schedule for the same id and the first one wins. A truncated file keeps what it read; an unknown encoding reads as UTF-8; entities are decoded as XML, then by `cleanText` like every provider text. The full rules are in ADR-011 step 3
+- Where the guide comes from: the source's EPG URL override, else the Xtream panel's `xmltv.php`, else the playlist's first `url-tvg`. An import that has nothing to keep fails and keeps the previous guide
 - Insert in batches (~5,000 rows per batch, never a transaction inside the isolate — hard rule 2) into staging tables, then swap atomically on the app's side so the guide never shows half-loaded data
 - Refresh daily and on demand; keep the previous guide until the new import completes
 

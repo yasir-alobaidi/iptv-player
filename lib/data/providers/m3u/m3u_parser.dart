@@ -6,11 +6,11 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:iptv_player/data/providers/m3u/m3u_credentials.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_identity.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_models.dart';
+import 'package:iptv_player/data/providers/provider_bytes.dart';
 import 'package:iptv_player/data/providers/provider_text.dart';
 
 /// Parses [bytes] — plain or gzip, detected by its magic number rather
@@ -68,28 +68,6 @@ Future<M3uSummary> parseM3u(
   );
   await done.future;
   return state.finish();
-}
-
-/// [source], gunzipped when it starts with gzip's magic number (a
-/// `.m3u.gz`, or a server that gzips without saying so). A body sent with
-/// `Content-Encoding: gzip` is already unpacked by the HTTP client.
-Stream<List<int>> gunzipIfNeeded(Stream<List<int>> source) async* {
-  final iterator = StreamIterator(source);
-  final head = <int>[];
-  while (head.length < 2 && await iterator.moveNext()) {
-    head.addAll(iterator.current);
-  }
-  if (head.isEmpty) return;
-
-  Stream<List<int>> rest() async* {
-    yield head;
-    while (await iterator.moveNext()) {
-      yield iterator.current;
-    }
-  }
-
-  final gzipped = head.length >= 2 && head[0] == 0x1f && head[1] == 0x8b;
-  yield* gzipped ? gzip.decoder.bind(rest()) : rest();
 }
 
 /// Longer lines are junk (a binary file, a runaway attribute), not

@@ -84,7 +84,7 @@ iptv-player/
 | Secrets | flutter_secure_storage (libsecret on Linux; on Windows an encrypted file whose AES key is in Credential Manager) | none — no plain-file fallback (hard rule 3) |
 | Images | extended_image or cached_network_image | — |
 | Vector icons | flutter_svg (the canvas's SVGs via the `AppIcons` enum) | — |
-| XML | xml (event/streaming API) | custom streaming tokenizer |
+| XML (XMLTV) | own streaming byte scanner (`lib/data/providers/xmltv/`, ADR-011) | — |
 | File and folder pickers | file_selector | file_picker |
 | Drag and drop | desktop_drop | pickers only |
 | Folder watching | watcher | rescan on launch and on demand |
