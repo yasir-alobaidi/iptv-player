@@ -18,6 +18,8 @@ import 'package:iptv_player/data/sync/epg_match_service.dart';
 import 'package:iptv_player/features/guide/data/db_epg_repository.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_match_summary.dart';
+import 'package:iptv_player/features/guide/domain/guide_matching.dart';
+import 'package:iptv_player/features/guide/domain/guide_settings.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:logger/logger.dart';
@@ -210,6 +212,43 @@ String _smallGuide(DateTime now) {
         '<programme start="${stamp(start)}" '
         'stop="${stamp(start.add(const Duration(hours: 1)))}" '
         'channel="$channel"><title>$channel at $i</title></programme>',
+      );
+    }
+  }
+  buffer.writeln('</tv>');
+  return '$buffer';
+}
+
+/// A playlist file whose header names a guide file with [guide] in it.
+Future<String> _fileGuided(_Env env, String guide) async {
+  final id = await env.add(_playlistFile(env.file('list.m3u', '#EXTM3U\n')));
+  await env.sources.setAdvertisedEpgUrls(id, [env.file('guide.xml', guide)]);
+  return id;
+}
+
+/// Two channels with a programme every two hours, from a day before
+/// [now] to [days] days after it.
+String _longGuide(DateTime now, {int days = 10}) {
+  String stamp(DateTime t) {
+    String p(int v, [int w = 2]) => '$v'.padLeft(w, '0');
+    final u = t.toUtc();
+    return '${p(u.year, 4)}${p(u.month)}${p(u.day)}'
+        '${p(u.hour)}${p(u.minute)}${p(u.second)} +0000';
+  }
+
+  final hour = DateTime.utc(now.year, now.month, now.day, now.hour);
+  final buffer = StringBuffer(
+    '<?xml version="1.0" encoding="UTF-8"?>\n<tv>\n'
+    '<channel id="one.uk"><display-name>One</display-name></channel>\n'
+    '<channel id="two.uk"><display-name>Two</display-name></channel>\n',
+  );
+  for (final channel in ['one.uk', 'two.uk']) {
+    for (var h = -24; h < days * 24; h += 2) {
+      final start = hour.add(Duration(hours: h));
+      buffer.writeln(
+        '<programme start="${stamp(start)}" '
+        'stop="${stamp(start.add(const Duration(hours: 2)))}" '
+        'channel="$channel"><title>$channel at $h</title></programme>',
       );
     }
   }
@@ -869,6 +908,253 @@ void main() {
 
       expect(result.isOk, isFalse);
       expect(asked, isEmpty);
+    });
+  });
+
+  group('the days kept', () {
+    EpgImporter importer(_Env env, GuideSettings Function() settings) {
+      final importer = EpgImporter(
+        database: env.db,
+        guide: env.guide,
+        sources: env.sources,
+        log: env.log,
+        settings: settings,
+        batchSize: 500,
+      );
+      addTearDown(importer.dispose);
+      return importer;
+    }
+
+    /// How far past [from] the source's guide now runs, in hours.
+    Future<int> hoursAhead(_Env env, String id, DateTime from) async =>
+        (await env.coverage(id)).lastEnd!.difference(from).inHours;
+
+    test('come from the setting, read as each import starts', () async {
+      final env = await _Env.open();
+      final id = await _fileGuided(env, _longGuide(DateTime.now()));
+      var settings = const GuideSettings(keepDays: 3);
+      final withSettings = importer(env, () => settings);
+
+      final before = DateTime.now().toUtc();
+      final three = (await withSettings.importGuide(id)).valueOrNull!;
+
+      // Ten days of guide; three are kept, and the programme running at
+      // their end.
+      expect(three.programmes, lessThan(2 * 11 * 12 ~/ 2));
+      expect(await hoursAhead(env, id, before), inInclusiveRange(72, 74));
+      expect(
+        env.logLines.where((l) => l.contains('3 days ahead')),
+        hasLength(1),
+      );
+
+      settings = const GuideSettings(keepDays: 5);
+      final five = (await withSettings.importGuide(id)).valueOrNull!;
+
+      expect(five.programmes, greaterThan(three.programmes));
+      expect(await hoursAhead(env, id, before), inInclusiveRange(120, 122));
+    });
+
+    test('are the importer’s own without the setting', () async {
+      final env = await _Env.open();
+      final id = await _fileGuided(env, _longGuide(DateTime.now()));
+      final plain = EpgImporter(
+        database: env.db,
+        guide: env.guide,
+        sources: env.sources,
+        log: env.log,
+        keepAhead: const Duration(days: 2),
+        batchSize: 500,
+      );
+      addTearDown(plain.dispose);
+
+      final before = DateTime.now().toUtc();
+      await plain.importGuide(id);
+
+      expect(await hoursAhead(env, id, before), inInclusiveRange(48, 50));
+    });
+
+    test('a setting that can’t be read is the importer’s own, and '
+        'logged', () async {
+      final env = await _Env.open();
+      final id = await _fileGuided(env, _longGuide(DateTime.now()));
+      final broken = importer(env, () => throw StateError('disposed'));
+
+      final before = DateTime.now().toUtc();
+      final result = await broken.importGuide(id);
+
+      expect(result.isOk, isTrue, reason: '${result.failureOrNull}');
+      expect(await hoursAhead(env, id, before), inInclusiveRange(168, 170));
+      expect(
+        env.logLines.where(
+          (l) => l.contains('Could not read the guide settings'),
+        ),
+        hasLength(1),
+      );
+    });
+  });
+
+  group('re-importing', () {
+    /// A source whose guide takes hundreds of batches, and a future that
+    /// completes once an import for it is under way.
+    Future<(_Env, String, Future<void>)> slowSource() async {
+      final server = await _fakeProvider();
+      final env = await _Env.open();
+      final id = await env.add(
+        _xtream(server.url, epgUrl: _guideUrl(server, 'days=7')),
+      );
+      final started = Completer<void>();
+      final listening = env.importer.progress.listen((event) {
+        if (!started.isCompleted) started.complete();
+      });
+      addTearDown(listening.cancel);
+      return (env, id, started.future);
+    }
+
+    Future<(_Env, String)> fileSource() async {
+      final env = await _Env.open();
+      final id = await _fileGuided(env, _smallGuide(DateTime.now()));
+      return (env, id);
+    }
+
+    test('cancels the import running and runs a new one', () async {
+      final (env, id, started) = await slowSource();
+      final running = env.importer.importGuide(id);
+      await started;
+
+      final again = env.importer.reimport(id);
+
+      expect((await running).failureOrNull, isA<CancelledFailure>());
+      final result = await again;
+      expect(result.isOk, isTrue, reason: '${result.failureOrNull}');
+      expect(env.importer.isImporting(id), isFalse);
+      expect(await env.count('epg_imports', "outcome = 'cancelled'"), 1);
+      expect(await env.count('epg_imports', "outcome = 'succeeded'"), 1);
+      expect(
+        (await env.coverage(id)).programmes,
+        result.valueOrNull!.programmes,
+      );
+    });
+
+    test('with nothing running, is an import', () async {
+      final (env, id) = await fileSource();
+
+      final result = await env.importer.reimport(id);
+
+      expect(result.valueOrNull?.programmes, 12);
+      expect(await env.count('epg_imports'), 1);
+    });
+
+    test('asked twice in a row, the first gives way to the second', () async {
+      final (env, id) = await fileSource();
+
+      final first = env.importer.reimport(id);
+      final second = env.importer.reimport(id);
+
+      expect((await first).failureOrNull, isA<CancelledFailure>());
+      expect((await second).valueOrNull?.programmes, 12);
+      expect(await env.count('epg_imports'), 1);
+    });
+
+    test('asked again while its import runs, that import is '
+        'cancelled', () async {
+      final (env, id, started) = await slowSource();
+      final first = env.importer.reimport(id);
+      await started;
+
+      final second = env.importer.reimport(id);
+
+      expect((await first).failureOrNull, isA<CancelledFailure>());
+      final result = await second;
+      expect(result.isOk, isTrue, reason: '${result.failureOrNull}');
+      expect(await env.count('epg_imports', "outcome = 'cancelled'"), 1);
+      expect(await env.count('epg_imports', "outcome = 'succeeded'"), 1);
+    });
+
+    test('is cancelled once the importer is disposed', () async {
+      final (env, id) = await fileSource();
+      await env.importer.dispose();
+
+      expect(
+        (await env.importer.reimport(id)).failureOrNull,
+        isA<CancelledFailure>(),
+      );
+      expect(await env.count('epg_imports'), 0);
+    });
+  });
+
+  group('where a source’s guide comes from, for Settings', () {
+    Future<Result<GuideOrigin>> origin(_Env env, SourceDraft draft) async =>
+        await env.importer.guideOrigin(await env.add(draft));
+
+    test('each kind, from a web address or a file', () async {
+      final env = await _Env.open();
+      final list = env.file('list.m3u', '#EXTM3U\n');
+
+      expect(
+        (await origin(env, _xtream('http://panel.test:8080'))).valueOrNull,
+        const GuideOrigin(GuideOriginKind.panel),
+      );
+      expect(
+        (await origin(
+          env,
+          _xtream(
+            'http://panel.test:8080',
+            epgUrl: 'http://epg.test/$_token/guide.xml',
+          ),
+        )).valueOrNull,
+        const GuideOrigin(GuideOriginKind.sourceUrl),
+      );
+
+      final advertised = await env.add(_playlistFile(list));
+      await env.sources.setAdvertisedEpgUrls(advertised, [
+        'http://epg.test/$_token/guide.xml',
+      ]);
+      expect(
+        (await env.importer.guideOrigin(advertised)).valueOrNull,
+        const GuideOrigin(GuideOriginKind.playlist),
+      );
+      await env.sources.setAdvertisedEpgUrls(advertised, [
+        '/home/me/guide.xml',
+      ]);
+      expect(
+        (await env.importer.guideOrigin(advertised)).valueOrNull,
+        const GuideOrigin(GuideOriginKind.playlist, isFile: true),
+      );
+      // Nothing fetched, nothing recorded, no address logged.
+      expect(await env.count('epg_imports'), 0);
+      for (final line in env.logLines) {
+        expect(line, isNot(contains(_token)));
+        expect(line, isNot(contains(_password)));
+      }
+    });
+
+    test('a playlist that names no guide has none', () async {
+      final env = await _Env.open();
+
+      final result = await origin(
+        env,
+        _playlistFile(env.file('list.m3u', '#EXTM3U\n')),
+      );
+
+      expect(result.failureOrNull, isA<NotFoundFailure>());
+    });
+
+    test('a locked keyring is a secure storage failure', () async {
+      final env = await _Env.open();
+      final id = await env.add(_xtream('http://panel.test:8080'));
+      env.store.locked = true;
+
+      final result = await env.importer.guideOrigin(id);
+
+      expect(result.failureOrNull, isA<SecureStorageFailure>());
+    });
+
+    test('an unknown source is not found', () async {
+      final env = await _Env.open();
+
+      final result = await env.importer.guideOrigin('nope');
+
+      expect(result.failureOrNull, isA<NotFoundFailure>());
     });
   });
 }

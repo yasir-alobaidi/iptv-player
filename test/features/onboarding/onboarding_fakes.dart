@@ -140,6 +140,7 @@ final class FakeSourceRepository implements SourceRepository {
       username: draft.username,
       userAgent: draft.userAgent,
       liveFormat: draft.liveFormat,
+      epgOffsetMinutes: draft.epgOffsetMinutes,
     );
     _sources[index] = source;
     _changes.add(List.of(_sources));

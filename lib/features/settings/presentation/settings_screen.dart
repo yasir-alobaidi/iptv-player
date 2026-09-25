@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/presentation/categories_manager.dart';
 import 'package:iptv_player/features/sources/presentation/sources_settings.dart';
 
 /// Settings (canvas `Settings`): a 248 px sub-navigation card on the left
-/// and the chosen section's card beside it. Phase 2 builds Sources and
-/// Categories; the other sections say which phase brings them.
+/// and the chosen section's card beside it. Sources, Playback, Guide and
+/// Categories are built; the other sections say which phase brings them.
 class SettingsScreen extends ConsumerWidget {
   const new({super.key});
 
@@ -49,6 +50,7 @@ class SettingsScreen extends ConsumerWidget {
                     SettingsSection.sources => const SourcesSettings(),
                     SettingsSection.categories => const CategoriesManager(),
                     SettingsSection.playback => const PlaybackSettingsSection(),
+                    SettingsSection.guide => const GuideSettingsSection(),
                     _ => _ComingLater(section: section),
                   },
                 ),
@@ -234,15 +236,15 @@ class _ComingLater extends StatelessWidget {
       SettingsSection.downloads =>
         'Download folder, downloads at a time, speed limit and library '
             'folders.',
-      SettingsSection.guide =>
-        'Guide links, refresh time, time offset and channel matching.',
       SettingsSection.appearance =>
         'Accent colour, density, reduce motion and the clock format.',
       SettingsSection.shortcuts => 'Every keyboard shortcut in one place.',
       SettingsSection.data =>
         'Clear the image cache or the guide, and export or import settings.',
       SettingsSection.about => 'Version, the log viewer and Copy diagnostics.',
-      SettingsSection.sources || SettingsSection.categories => '',
+      SettingsSection.sources ||
+      SettingsSection.categories ||
+      SettingsSection.guide => '',
     };
     return SettingsPanel(
       title: section.label,

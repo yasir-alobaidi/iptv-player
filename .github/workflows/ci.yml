@@ -94,13 +94,19 @@ jobs:
 
       - name: Test (Linux, including goldens)
         if: runner.os == 'Linux'
-        run: flutter test
+        run: flutter test --file-reporter json:test-results.json
 
       - name: Test (Windows, goldens excluded)
         if: runner.os == 'Windows'
-        run: flutter test --exclude-tags golden
+        run: flutter test --exclude-tags golden --file-reporter json:test-results.json
         # Goldens are recorded on Linux only: text rasterizes differently
         # here, so the same widget is a different image (ADR-008).
+
+      - name: Name the failed tests
+        if: failure() && hashFiles('test-results.json') != ''
+        run: dart run tools/ci/failed_tests.dart test-results.json
+        # As annotations, which the run's summary page shows to anyone;
+        # the job log needs rights on the repository.
 
       - name: Fake provider tests
         run: dart test

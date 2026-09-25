@@ -10,6 +10,8 @@ import 'package:iptv_player/data/providers/xmltv/xmltv_reader.dart';
 import 'package:iptv_player/data/sync/epg_import_work.dart';
 import 'package:iptv_player/data/sync/epg_match_service.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
+import 'package:iptv_player/features/guide/domain/guide_matching.dart';
+import 'package:iptv_player/features/guide/domain/guide_settings.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
 /// Where a source's guide was found. Logged instead of the URL.
@@ -141,13 +143,14 @@ String _filePath(String value) {
 ///
 /// When to import (daily, after a sync, one source at a time) is the
 /// scheduler's business, not this class's.
-final class EpgImporter {
+final class EpgImporter implements GuideImportService {
   new({
     required AppDatabase database,
     required this._guide,
     required this._sources,
     required this._log,
     this._matches,
+    this._settings,
     DateTime Function()? clock,
     this.timeout = const Duration(minutes: 30),
     this.batchSize = 5000,
@@ -164,6 +167,10 @@ final class EpgImporter {
 
   /// Rematches a source after its swap; none in tests that don't care.
   final EpgMatchService? _matches;
+
+  /// Settings → Guide's choices, read as each import starts; without it
+  /// the window is [keepAhead].
+  final GuideSettings Function()? _settings;
   final DateTime Function() _clock;
 
   /// An import still going after this is killed and fails with a
@@ -175,8 +182,8 @@ final class EpgImporter {
   final int batchSize;
 
   /// The retention window around now (ADR-011 decision 4): a programme
-  /// is kept when it overlaps it. The days ahead become a setting in
-  /// Settings → Guide.
+  /// is kept when it overlaps it. The days ahead are Settings → Guide's
+  /// when the importer has them; [keepAhead] otherwise.
   final Duration keepBehind;
   final Duration keepAhead;
 
@@ -186,16 +193,23 @@ final class EpgImporter {
   static const _tag = 'epg';
 
   final _running = <String, _Import>{};
+
+  /// The latest [reimport] asked for, by source: an older one still
+  /// waiting for its cancel gives way to it.
+  final _reimports = <String, Object>{};
   final _progress = StreamController<(String, EpgImportProgress)>.broadcast();
   var _disposed = false;
 
   /// Every running import's progress, by source id.
+  @override
   Stream<(String, EpgImportProgress)> get progress => _progress.stream;
 
+  @override
   bool isImporting(String sourceId) => _running.containsKey(sourceId);
 
   /// Imports [sourceId]'s guide and returns what the swap put in place.
   /// Asking again while an import for the source runs joins it.
+  @override
   Future<Result<EpgImportCounts>> importGuide(String sourceId) {
     if (_disposed) {
       return Future.value(Err(CancelledFailure('the app is closing')));
@@ -218,9 +232,58 @@ final class EpgImporter {
     return run.result.future;
   }
 
+  /// Imports [sourceId]'s guide from the start: a running import is
+  /// cancelled (its caller gets a `CancelledFailure`) rather than joined,
+  /// because it read the settings from before the change. Asked again
+  /// before this one's import has started, this one gives way: it returns
+  /// a `CancelledFailure` and only the later one imports.
+  @override
+  Future<Result<EpgImportCounts>> reimport(String sourceId) async {
+    if (_disposed) return Err(CancelledFailure('the app is closing'));
+    final ticket = _reimports[sourceId] = Object();
+    await cancel(sourceId);
+    if (!identical(_reimports[sourceId], ticket)) {
+      return Err(CancelledFailure('guide $sourceId: re-imported again'));
+    }
+    _reimports.remove(sourceId);
+    // Joins an import started since the cancel: it read the new settings.
+    return await importGuide(sourceId);
+  }
+
+  /// Where [sourceId]'s guide comes from, worked out the way an import
+  /// works it out, without fetching anything. Never the URL itself.
+  @override
+  Future<Result<GuideOrigin>> guideOrigin(String sourceId) async {
+    try {
+      final Source source;
+      switch (await _sources.byId(sourceId)) {
+        case Ok(value: final found?):
+          source = found;
+        case Ok():
+          return Err(NotFoundFailure('source $sourceId'));
+        case Err(:final failure):
+          return Err(failure);
+      }
+      return switch (await _sources.credentialsFor(sourceId)) {
+        Ok(:final value) => resolveGuideLocation(source.type, value).map(
+          (location) => GuideOrigin(switch (location.kind) {
+            GuideLocationKind.override => GuideOriginKind.sourceUrl,
+            GuideLocationKind.panel => GuideOriginKind.panel,
+            GuideLocationKind.playlist => GuideOriginKind.playlist,
+          }, isFile: location.isFile),
+        ),
+        Err(:final failure) => Err(failure),
+      };
+    } on Object catch (error) {
+      // Not the error's text: it could quote the URL.
+      return Err(UnexpectedFailure('guide origin: ${error.runtimeType}'));
+    }
+  }
+
   /// Stops [sourceId]'s import, if one runs, and waits until it has been
   /// recorded. A cancelled import leaves the live guide untouched; one
   /// already swapping in finishes.
+  @override
   Future<void> cancel(String sourceId) async {
     final run = _running[sourceId];
     if (run == null) return;
@@ -238,6 +301,9 @@ final class EpgImporter {
 
   Future<Result<EpgImportCounts>> _import(String sourceId, _Import run) async {
     final clock = Stopwatch()..start();
+    // Read before anything is awaited: an import started just after a
+    // change of setting keeps what the change asked for.
+    final ahead = _keepAhead();
     final Source source;
     switch (await _sources.byId(sourceId)) {
       case Ok(value: final found?):
@@ -271,10 +337,11 @@ final class EpgImporter {
     _log.info(
       _tag,
       'Guide import $sourceId started (import $importRun, from the '
-      '${_from(location)}, offset ${source.epgOffsetMinutes} min)',
+      '${_from(location)}, offset ${source.epgOffsetMinutes} min, '
+      '${ahead.inDays} days ahead)',
     );
 
-    final outcome = await _work(source, location, importRun, run);
+    final outcome = await _work(source, location, importRun, run, ahead);
     final finished = switch (outcome) {
       Ok(:final value) => await _commit(sourceId, importRun, value, clock),
       Err(:final failure) => Err<EpgImportCounts>(failure),
@@ -315,12 +382,13 @@ final class EpgImporter {
     GuideLocation location,
     int importRun,
     _Import run,
+    Duration ahead,
   ) async {
     if (run.cancelled) return Err(CancelledFailure('guide ${source.id}'));
     final window = XmltvWindow.around(
       _clock(),
       behind: keepBehind,
-      ahead: keepAhead,
+      ahead: ahead,
     );
     final job = startEpgImportJob(
       EpgImportWork(
@@ -439,6 +507,18 @@ final class EpgImporter {
         'Guide import $sourceId failed after ${elapsed.inMilliseconds} ms: '
         '$failure',
       );
+    }
+  }
+
+  /// The days ahead to keep: the setting when there is one.
+  Duration _keepAhead() {
+    final settings = _settings;
+    if (settings == null) return keepAhead;
+    try {
+      return settings().keepAhead;
+    } on Object catch (error) {
+      _log.warning(_tag, 'Could not read the guide settings: $error');
+      return keepAhead;
     }
   }
 

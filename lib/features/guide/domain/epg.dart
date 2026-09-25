@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/features/guide/domain/guide_matching.dart';
 
 /// A channel the guide declares (`<channel id>` in XMLTV). Not one of the
 /// provider's channels: those are matched to these (docs/02).
@@ -291,11 +292,17 @@ final class GuideCoverage {
     this.lastEnd,
     this.matchedChannels = 0,
     this.totalChannels = 0,
+    this.updatedAt,
   });
 
   /// The source's latest import, running or finished; null when none has
   /// ever run.
   final GuideImport? lastImport;
+
+  /// When the live guide was swapped in: the live import's `finishedAt`.
+  /// Null with no guide. Not [lastImport]'s time: a refresh that failed
+  /// since left this guide in place.
+  final DateTime? updatedAt;
 
   /// Counts from the import whose rows are live, not from the latest one:
   /// a failed refresh leaves the old guide in place and these describe it.
@@ -425,6 +432,48 @@ abstract interface class EpgRepository {
   });
 
   Future<Result<List<EpgMapping>>> mappings(String sourceId);
+
+  /// A page of [sourceId]'s visible channels (not hidden, not in a hidden
+  /// category) with what each is attached to, for Settings → Guide:
+  /// those [filter] keeps whose name (the user's or the provider's)
+  /// contains [query], ignoring case, or whose number is [query]; in
+  /// channel-number order, as Live TV sorts by number. [limit] from
+  /// [offset].
+  Future<Result<List<ChannelGuideMatch>>> channelMatches(
+    String sourceId, {
+    ChannelMatchFilter filter = ChannelMatchFilter.unmatched,
+    String query = '',
+    int offset = 0,
+    int limit = 100,
+  });
+
+  /// How many rows [channelMatches] has for the same arguments.
+  Future<Result<int>> countChannelMatches(
+    String sourceId, {
+    ChannelMatchFilter filter = ChannelMatchFilter.unmatched,
+    String query = '',
+  });
+
+  /// One channel as [channelMatches] shows it, hidden or not; null when
+  /// it no longer exists. For the preview's "Match to a guide channel".
+  Future<Result<ChannelGuideMatch?>> channelMatch(int channelId);
+
+  /// [ChannelMatchCounts] over [sourceId]'s visible channels, again after
+  /// its channels, their categories, or its matches change. Never
+  /// throws: a failed read is a stream error holding an `AppFailure`.
+  Stream<ChannelMatchCounts> watchChannelMatchCounts(String sourceId);
+
+  /// The live guide's channels for the Match… picker, ranked for a
+  /// channel the provider calls [channelName] (`rankGuideChannels`).
+  /// The guide is read once per live import and ranked in a background
+  /// isolate when it is large (hard rule 2). Empty when the source has
+  /// no guide.
+  Future<Result<List<GuideChannelCandidate>>> matchCandidates(
+    String sourceId, {
+    required String channelName,
+    String query = '',
+    int limit = 50,
+  });
 
   /// Drops the source's guide, for instance when its EPG URL is cleared.
   Future<Result<void>> clearGuide(String sourceId);

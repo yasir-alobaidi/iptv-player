@@ -10,7 +10,7 @@ enum SettingsSection {
   playback('Playback'),
   casting('Casting', phase: 7),
   downloads('Downloads & library', phase: 8),
-  guide('Guide', phase: 4),
+  guide('Guide'),
   categories('Categories'),
   appearance('Appearance', phase: 9),
   shortcuts('Keyboard shortcuts', phase: 9),
@@ -25,22 +25,44 @@ enum SettingsSection {
   final int? phase;
 }
 
-/// Which section Settings shows, and which source the Categories section
-/// manages. Kept for the session, so leaving Settings and coming back
-/// returns to the same place.
+/// Where Settings is: the section it shows, and the source each per-source
+/// section manages (Categories, Guide). Kept for the session, so leaving
+/// Settings and coming back returns to the same place.
+typedef SettingsPlace = ({
+  SettingsSection section,
+  String? categoriesSourceId,
+  String? guideSourceId,
+});
+
+/// Which section Settings shows, and which source the Categories and
+/// Guide sections manage.
 @Riverpod(keepAlive: true)
 class SettingsLocation extends _$SettingsLocation {
   @override
-  ({SettingsSection section, String? categoriesSourceId}) build() =>
-      (section: SettingsSection.sources, categoriesSourceId: null);
+  SettingsPlace build() => (
+    section: SettingsSection.sources,
+    categoriesSourceId: null,
+    guideSourceId: null,
+  );
 
-  void show(SettingsSection section) =>
-      state = (section: section, categoriesSourceId: state.categoriesSourceId);
+  void show(SettingsSection section) => state = (
+    section: section,
+    categoriesSourceId: state.categoriesSourceId,
+    guideSourceId: state.guideSourceId,
+  );
 
   /// The Categories section for [sourceId].
   void showCategories(String sourceId) => state = (
     section: SettingsSection.categories,
     categoriesSourceId: sourceId,
+    guideSourceId: state.guideSourceId,
+  );
+
+  /// The Guide section for [sourceId].
+  void showGuide(String sourceId) => state = (
+    section: SettingsSection.guide,
+    categoriesSourceId: state.categoriesSourceId,
+    guideSourceId: sourceId,
   );
 }
 

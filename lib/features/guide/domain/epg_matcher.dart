@@ -107,6 +107,52 @@ String normalizeChannelName(String name) => _normalize(name).key;
 @visibleForTesting
 String? leadingCountryTag(String name) => _normalize(name).country;
 
+/// [leadingCountryTag] for the app's own use: the Match… picker puts the
+/// guide's feed for the channel's own country first, as [EpgMatcher]
+/// does.
+String? channelCountryTag(String name) => _normalize(name).country;
+
+/// A guide id as [EpgMatcher] reads it: trimmed, and split from its
+/// country suffix (`.uk`, `.us`, `.tv`, `.com`). `bare` is the id without
+/// the suffix (`cnn.us` → `cnn`), or the whole trimmed id when it has no
+/// suffix or nothing before one; `country` is the suffix lower-cased,
+/// with `gb` read as `uk` and `usa` as `us`, or null.
+({String bare, String? country}) splitGuideId(String id) {
+  final key = id.trim();
+  final length = key.length;
+  // A dot, then two or three ASCII letters that end the id.
+  var start = length;
+  while (start > 0 &&
+      length - start < 3 &&
+      _isAsciiLetterOfAnyCase(key.codeUnitAt(start - 1))) {
+    start--;
+  }
+  final dot = start - 1;
+  if (length - start < 2 || dot < 0 || key.codeUnitAt(dot) != 0x2e) {
+    return (bare: key, country: null);
+  }
+  return (
+    bare: dot > 0 ? key.substring(0, dot) : key,
+    country: _countryOf(key.substring(start).toLowerCase()),
+  );
+}
+
+/// A guide id read as a name, as [EpgMatcher] reads it for a guide whose
+/// display names say less than its ids: [splitGuideId]'s `bare` id,
+/// normalized (`sky.news.uk` → `sky news`, `BBCOne.uk` → `bbcone`).
+String guideIdKey(String id) {
+  final bare = splitGuideId(id).bare;
+  // Most ids are one run of ASCII letters and digits, which normalizing
+  // only lower-cases (no entity, accent, tag separator or `+` in it), or
+  // empties when the whole id is a quality tag: the same key, without
+  // the regular expressions.
+  if (_isAsciiWord(bare)) {
+    final key = bare.toLowerCase();
+    return _qualityWords.contains(key) ? '' : key;
+  }
+  return normalizeChannelName(bare);
+}
+
 /// [normalizeChannelName], and the [leadingCountryTag] it stripped on the
 /// way.
 ({String key, String? country}) _normalize(String name) {
@@ -136,18 +182,16 @@ final class EpgMatcher {
       if (key.isEmpty) continue;
       _keep(_byId, key, id);
       _keep(_byLowerId, key.toLowerCase(), id);
-      final suffix = _countrySuffix.firstMatch(key);
-      final country = suffix == null
-          ? null
-          : _countryOf(key.substring(suffix.start + 1).toLowerCase());
+      final (:bare, :country) = splitGuideId(key);
       final displayName = channel.displayName;
       if (displayName != null) {
         final name = normalizeChannelName(displayName);
         if (name.isNotEmpty) _Feeds.add(_byName, name, id, country);
       }
-      if (suffix != null && suffix.start > 0) {
-        final bare = normalizeChannelName(key.substring(0, suffix.start));
-        if (bare.isNotEmpty) _Feeds.add(_byBareId, bare, id, country);
+      // Shorter than the id only when a suffix was dropped.
+      if (bare.length < key.length) {
+        final bareName = normalizeChannelName(bare);
+        if (bareName.isNotEmpty) _Feeds.add(_byBareId, bareName, id, country);
       }
     }
   }
@@ -569,6 +613,20 @@ bool _isWordAt(String text, int at) {
 
 bool _isAsciiLetter(int unit) => unit >= 0x61 && unit <= 0x7a;
 
+bool _isAsciiLetterOfAnyCase(int unit) => _isAsciiLetter(unit | 0x20);
+
+/// Only ASCII letters and digits, and at least one.
+bool _isAsciiWord(String text) {
+  if (text.isEmpty) return false;
+  for (var i = 0; i < text.length; i++) {
+    final unit = text.codeUnitAt(i);
+    if (!_isAsciiLetterOfAnyCase(unit) && (unit < 0x30 || unit > 0x39)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool _isSpace(int unit) => unit == 0x20 || (unit >= 0x09 && unit <= 0x0d);
 
 /// `:`, `|`, `¦`, `·`, `•`, `»`, `›`, `★`, and the box-drawing, block and
@@ -667,6 +725,3 @@ bool _isHours(String word) {
   }
   return true;
 }
-
-/// `.uk`, `.us`, `.tv`, `.com` at the end of a guide id.
-final _countrySuffix = RegExp(r'\.[A-Za-z]{2,3}$');

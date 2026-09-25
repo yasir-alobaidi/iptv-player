@@ -1,27 +1,25 @@
-# Handoff — 2026-09-23 (Phase 4 steps 3 and 4 built)
+# Handoff — 2026-09-25 (Phase 4 step 5 built)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
 docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md.
 
 ## Before you start the next session (user)
-1. **Review steps 3 and 4, then push.** Both are committed locally and
-   nothing is pushed:
-   - `75172ea` "Phase 4 step 3: the XMLTV parser and the import isolate"
-   - `e9a9f76` "Phase 4 step 4: matching, and now/next everywhere"
-2. **CI was red on your last push (step 2, run 35494753305).**
-   - **Linux (4 failures): fixed in step 3.** Phase 3's goldens printed
-     clock times in the machine's zone; CI runs in UTC. No image was
-     re-recorded.
-   - **Windows (3 failures): I can't read them.** They were already failing
-     at the Phase 2 exit, when the job also ran past its 45-minute limit.
-     Job logs need admin rights on the repo. Open run 35494753305 → Windows
-     → "Test (Windows, goldens excluded)" and paste the three test names
-     into the next session.
-3. **Optional, with your go-ahead:** one guide import from your real panel.
-   It downloads the guide only, plays no stream, so it uses none of your
-   one connection. It shows your provider's real XMLTV shape before
-   Settings → Guide is built.
+1. **Review step 5, then push.** Committed locally, nothing pushed:
+   - `4ffa4f5` "Handoff: Phase 4 steps 3 and 4, what's next, and the road
+     to v1" (from last session)
+   - "Phase 4 step 5: Settings → Guide"
+2. **Try it:** Settings → Guide. Import guide, then the Unmatched list:
+   Enter on a channel, type, Enter. On Live TV, a channel with "No guide
+   information" has a **Match to a guide channel** button under it.
+3. **CI now names its failed tests in public.** After you push, open the
+   run on GitHub → the Windows job: every failed test is an annotation on
+   the summary page, no admin rights needed. Paste the names into the next
+   session, or leave it: the next session can read them with `curl` (see
+   "How to work here").
+4. **Optional, with your go-ahead:** one guide import from your real panel.
+   Settings → Guide → Import guide does exactly that now. It downloads the
+   guide only and plays no stream, so it uses none of your one connection.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -29,106 +27,68 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md first.
-Steps 3 and 4 are reviewed and pushed; CI is <green | red: …>.
-Windows failing tests: <names, or "not checked">. Real guide import: <yes | not yet>.
-Do Phase 4 step 5 (Settings → Guide) and stop for my review. Use multiple agents where it helps.
+Step 5 is reviewed and pushed; CI is <green | red: …>.
+Windows failing tests: <names, or "read them from the annotations">. Real guide import: <yes | not yet>.
+Do Phase 4 step 6 (the Guide grid) and stop for my review. Use multiple agents where it helps.
 ```
 
 ## Where things stand
 - **Phases 1–3 are built** (foundation, sources and sync, Live TV and the
-  player). Phase 3's exit is met: the fault suite, the zap budget (p50
-  961 ms / p95 972 ms), and the 1-hour soak.
-- **Phase 4 (EPG and the guide) has steps 1–4 of 7:**
+  player).
+- **Phase 4 (EPG and the guide) has steps 1–5 of 7:**
   1. The fake panel serves XMLTV with every quirk.
   2. Schema v5 stores the guide, with staging and an atomic swap.
   3. The XMLTV parser and the import isolate.
   4. Channel matching, and now/next on every Live TV row, in the preview
      and in the player.
-- **What a real run shows today:** nothing starts a guide import outside
-  tests (`epgImporterProvider` exists; the scheduler is step 7). So until a
-  guide is imported, rows show the short EPG as before, and the Guide
-  screen is still a placeholder (step 6).
-- **Checks, all green:** analyze and format clean; **1,409 app tests**
-  (4 skipped benchmarks) under `TZ=UTC`; the fake provider's 114; under
-  xvfb, app launch, the sources and Live TV keyboard walks, and the fault
-  suite.
-- **Measured:** the XMLTV parser reads 300 MB in 4.3 s with +23 MB RSS. The
-  full 300 MB import (batch writes and the swap) is still to measure, in
-  step 7. Matching: 50,000 channels against 5,000 guide channels in
-  ~175 ms.
+  5. Settings → Guide: import and refresh, keep days, the time offset, and
+     the Match… picker for channels without a guide.
+- **What a real run shows today:** a guide comes in only when the user
+  presses Import guide or Refresh guide in Settings → Guide (the scheduler
+  is step 7). Once it's in, Live TV's rows, the preview and the player show
+  its now/next. The Guide screen is still a placeholder (step 6).
+- **Checks, all green:** analyze, format, `build_runner` leaves no diff;
+  **1,546 app tests** (5 skipped) under `TZ=UTC`; the fake provider's 114;
+  under xvfb, the new Settings → Guide keyboard walk, app launch, the
+  sources and Live TV keyboard walks.
+- **CI:** Linux green since step 3. Windows fails 4 tests (unnamed until
+  the step 5 push, which annotates them).
+- **Two one-off failures this session**, neither reproduced (details in
+  progress.md Known issues): the sources keyboard walk once in five runs,
+  and the sync engine's `onSynced` test once in three full runs. If either
+  recurs, save the whole log before filtering it.
 
-## Done this session (2026-09-23)
-- **Step 3: the XMLTV parser and the import.** Built by three parallel
-  agents from one written spec: the parser, the import pipeline, and
-  fixture tests written from the spec rather than from the parser's
-  output.
-  - Entities are decoded twice (as XML, then by `cleanText`), so a guide's
-    channel names match the panel's.
-  - A programme that goes back in time is skipped as `out_of_order`: the
-    first schedule for a channel wins. The fake panel gives HD/SD pairs one
-    guide id with two schedules, which would have shown two programmes on
-    at once.
-- **A database deadlock, found by a flaky test and fixed at the root.** It
-  hit the Phase 2 sync as well as the import. drift's `batch()` is a
-  transaction the client opens and commits, and drift never rolls back a
-  dead client's transaction. So cancelling a job mid-batch froze every
-  query in the app. Writing isolates now start with `startGuardedJob`,
-  connect with `openJobDatabase`, and are only killed between
-  transactions. A regression test deadlocks under the old kill.
-- **CI:** the Linux golden time-zone fix (`goldenNow()` in the golden
-  harness).
-- **Step 4: matching, and now/next everywhere.** Three agents again: the
-  matcher, the match job and its hooks, and the guide the screens see.
-  - My one design change after review: a name tie goes to the channel's
-    own country (`UK:` → the `.uk` feed). Without it, a UK channel with no
-    guide id took the French schedule.
-  - The now/next agent's UI choices are recorded in ADR-011 step 4:
-    "No guide information", "Next 9:00 PM · Title", and nothing is looked
-    up while Live TV is covered.
+## Done this session (2026-09-25)
+- **Step 5: Settings → Guide**, built from one written spec: the lead wrote
+  the contract (domain types and interfaces, stubbed), the page, the
+  picker, the wiring and their tests; one agent the repository reads, the
+  importer's part and then the ranking worker; another the ranking. The UX
+  calls are in ADR-011 step 5 and docs/05 §12. In short:
+  - counts and lists cover the channels the user can see (hidden ones are
+    matched but not listed);
+  - three lists: Unmatched, Matched by you, and All (so a wrong automatic
+    match can be fixed);
+  - the picker keeps the focus in its search field, and ↑/↓ move a
+    highlight;
+  - matching under Unmatched moves the focus to the next channel;
+  - the offset is a ←/→ stepper, saved once it settles;
+  - Keep is global and re-imports sources one at a time;
+  - the preview's "Match to a guide channel" opens the picker for that
+    channel.
+- **A measured hard-rule-2 fix:** ranking a 50,000-channel guide in
+  `Isolate.run` per keystroke cost the UI isolate 305–407 ms (the copy of
+  the prepared guide into the isolate). Replaced by a long-lived worker that
+  reads the guide itself: 0.13–0.18 ms per keystroke.
+- **CI:** `tools/ci/failed_tests.dart` turns the JSON test results into one
+  `::error` annotation per failed test, in a step that runs only when the
+  tests failed.
+- Small fixes the agents' review found: `GuideSettings.fromJson` threw on
+  an infinite number; a Keep choice that couldn't be saved stayed in use.
 
 ## What's next: the rest of Phase 4
 Work one step at a time. After each step: analyze, format, `TZ=UTC flutter
 test`, a local commit, and a stop for review. The user may answer
 "continue", which means do the next step.
-
-### Step 5 — Settings → Guide (the sketch in the plan, approved)
-- **The page.** A new Settings section, built like Settings → Playback:
-  `lib/features/playback/presentation/playback_settings.dart`, with its
-  store in `db_playback_settings_store.dart`. Settings live in
-  `lib/features/settings/presentation/` (`settings_section.dart` lists the
-  sections).
-- **What it shows:**
-  - The source picker.
-  - "Guide data": where the guide came from and when, and "N of M channels
-    matched". Read these from `guideCoverageProvider` / `watchCoverage`.
-  - **Refresh guide**: `epgImporterProvider.importGuide(sourceId)`, with its
-    `progress` stream for a thin progress line.
-  - **Keep N days**: a global setting (default 7). Store it the way
-    playback settings are stored, and pass it to `EpgImporter.keepAhead`
-    (today a constructor value).
-  - **Time offset**: per source. It's `sources.epg_offset_minutes`, already
-    in `SourceForm` and the table.
-  - **Decision 4:** changing the days or the offset re-imports.
-- **The unmatched list.** Channels of the source with no row in
-  `epg_matches`: a new `EpgRepository` read (a `LEFT JOIN`, paged: it can
-  be thousands). It is one Tab stop with the arrows inside
-  (`FocusPane(tabStop: true)`); Enter opens the picker.
-- **The Match… picker.** Type to filter; the guide's channels are ranked by
-  the matcher's own `normalizeChannelName` against the channel's name.
-  - `EpgRepository.guideChannels(query:)` exists but uses `LIKE`. Rank in a
-    background isolate if the guide is big (hard rule 2).
-  - Enter maps (`setMapping`), then `EpgMatchService.rematch(sourceId)`,
-    so the row and the rest of the app update. Esc cancels.
-  - "Change" and remove (`removeMapping` + rematch) for mapped channels.
-- **States (hard rule 4):** loading, no source, no guide URL for the source
-  (`resolveGuideLocation` says why: no `url-tvg` and no override), no guide
-  imported yet, importing, a failed import (with the old guide kept), all
-  matched.
-- **Keyboard first:** a keyboard walk in the style of
-  `integration_test/sources_keyboard_test.dart`.
-- **Tests:** widget tests per state and for the picker.
-- **Needs a user decision? No:** the sketch is approved. Decide small UX
-  points yourself and record them in ADR-011.
 
 ### Step 6 — The Guide grid (canvas artboard `Guide`)
 - **Read the canvas first:** https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
@@ -151,6 +111,11 @@ test`, a local commit, and a stop for review. The user may answer
   importing (a thin progress line, the old guide still shown), offline.
 - **Tests:** goldens at 1280×800 and 1920×1080, drawn at `goldenNow()` (a
   local time, never an instant).
+- **The dashed "No guide information · Match to a guide channel" row**
+  opens the picker for that channel: call `openGuideMatch` (see
+  `preview_pane.dart`) — it switches to Settings → Guide with the picker on
+  top. Or open `showGuideMatchPicker` in place over the grid; either way
+  rematch after a mapping, as `_GuideBodyState._match` does.
 
 ### Step 7 — Scheduler, toast, exit
 - **The scheduler (decision 5):**
@@ -160,6 +125,12 @@ test`, a local commit, and a stop for review. The user may answer
   - A manual refresh from Settings.
   - `SyncEngine.onSynced` already calls the matcher; the scheduler decides
     when to import.
+  - **Wait for the stored Keep setting before the first import at launch:**
+    `GuideSettingsController` loads it asynchronously and an import before
+    then keeps the default 7 days (add a `loaded` future to the
+    controller).
+  - Go through `GuideImportService` (`guideImportServiceProvider`);
+    `reimport` cancels a running import, `importGuide` joins it.
 - **The toast:** "Guide updated · N channels matched", via
   `lib/app/shell/toast_host.dart`; N comes from `EpgMatchSummary`.
 - **Exit measurements**, in `benchmark`-tagged tests:
@@ -177,10 +148,10 @@ test`, a local commit, and a stop for review. The user may answer
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **Phase 4 steps 5–7** (above). Until step 7, the app never imports a
-  guide by itself.
-- **CI green on both systems.** Linux should go green with the step 3
-  commit; Windows needs its 3 failing tests named (see "Before you start").
+- **Phase 4 steps 6–7** (above). Until step 7, the app imports a guide
+  only from Settings → Guide.
+- **CI green on both systems.** Linux is green; Windows fails 4 tests,
+  which the step 5 push names in the run's annotations.
 - **Phase 5 — Movies, Series, Home.** These three screens are placeholders
   today.
   - Grids and details, with lazy, cached `get_vod_info` /
@@ -238,9 +209,13 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   - Use `~/develop/flutter/bin` on PATH in the Bash tool (the shell is
     fish).
 - **CI runs in UTC; this laptop is New York time.** Run the full suite as
-  `TZ=UTC flutter test` before every commit. Check the last CI run at the
-  start of a session:
-  `curl -s "https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=3"`.
+  `TZ=UTC flutter test` before every commit (about 75 s). Check the last CI
+  run at the start of a session:
+  `curl -s "https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=3"`,
+  then each job from its `jobs_url`. **Failed tests by name** (public, no
+  admin rights): `curl -s
+  https://api.github.com/repos/yasir-alobaidi/iptv-player/check-runs/<job id>/annotations`
+  — one "Failed test" annotation per test since the step 5 commit.
 - **The multi-agent pattern that worked (steps 3 and 4)**, when the user
   asks for agents:
   1. Write the shared contract yourself first: the public API as a stub
@@ -253,6 +228,10 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
      Anyone running build_runner goes through
      `flock <scratchpad>/build_runner.lock dart run build_runner build
      --delete-conflicting-outputs`.
+- **Ask agents to measure what the spec only assumes.** In step 5 the spec
+  said "Isolate.run above 2,000 guide channels"; the agent timed it, found
+  it blocked the UI longer than no isolate at all, and reported rather than
+  shipped it.
 - **Verify agents' claims before committing; the reviews found real
   bugs:**
   - Run the full suite under `TZ=UTC`, and stress-run anything flaky
@@ -269,7 +248,39 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session:
+New this session (step 5):
+- **Settings → Guide** is `lib/features/guide/presentation/`:
+  `guide_settings.dart` (the page), `guide_match_picker.dart`
+  (`showGuideMatchPicker` → `MatchToGuideChannel` / `UseAutomaticMatch`),
+  `guide_text.dart` (every phrase), `guide_match_request.dart`
+  (`openGuideMatch` from anywhere). `SettingsLocation` now holds
+  `guideSourceId` (`showGuide`).
+- **The page talks to domain interfaces** in
+  `lib/features/guide/domain/guide_matching.dart`: `GuideImportService`
+  (the importer; `guideOrigin` says where a guide would come from without
+  fetching) and `GuideMatching` (`rematch`). After `setMapping` /
+  `removeMapping`, always `rematch`: the rest of the app reads
+  `epg_matches`, not the mappings.
+- **Visible channels** (not hidden, not in a hidden category) are what
+  `channelMatches` and `ChannelMatchCounts` count — Live TV's
+  `AllChannels` rule.
+- **The Match… picker's ranking** is `rankGuideChannels` (pure,
+  `guide_channel_ranking.dart`); above 2,000 guide channels it runs in
+  `GuideRankingWorker` (`lib/features/guide/data/guide_ranking_worker.dart`),
+  one isolate per (source, live import) that reads the guide itself. Never
+  send a whole guide through `Isolate.run`: the copy happens on the
+  sending isolate (measured 305–407 ms at 50,000).
+- `DbEpgRepository.dispose()` stops the workers (`epgRepositoryProvider`
+  calls it); tests must dispose the repository before closing the
+  database.
+- **Tests:** `test/features/guide/presentation/guide_settings_fakes.dart`
+  has in-memory fakes of the guide store, importer, matcher and settings
+  store (`GuideFakes(OnboardingFakes())`). The page needs two
+  `settleApp` calls: the list arrives a frame after the coverage.
+- `tools/ci/failed_tests.dart` reads `flutter test --file-reporter
+  json:test-results.json` and prints the annotations.
+
+From the session before (steps 3 and 4):
 - **Any isolate that writes to the database** starts with
   `startGuardedJob` and connects with `openJobDatabase`
   (`lib/data/db/job_database.dart`). Never `startBackgroundJob` +
@@ -473,6 +484,10 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 4 step 5: counts cover visible channels; three lists; the picker
+  keeps the focus in its field; the offset stepper saved once it settles;
+  Keep global; the ranking worker instead of `Isolate.run` per keystroke
+  (measured).
 - Phase 4 step 4: the matcher's rule order behind the manual mapping, and
   a name tie going to the channel's own country; the imported guide in
   front of the short EPG; every row warmed from the database.
@@ -547,8 +562,8 @@ From earlier sessions (still true):
 - When the Windows PC is available for the Windows playback run.
 - App name and icon (placeholder "IPTV Player").
 - Light theme: tokens allow one, but it is out of scope for v1 (docs/05).
-- The three failing Windows CI tests: their names, from the job log (needs
-  the user's admin access).
+- The four failing Windows CI tests: named in the run's annotations after
+  the step 5 push.
 - A real guide import from the user's panel: yes or not yet.
 - Windows installer type (MSIX or Inno Setup) is Phase 10's to recommend,
   but the user decides.

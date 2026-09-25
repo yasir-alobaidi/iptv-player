@@ -6,6 +6,7 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/sync/epg_match_work.dart';
 import 'package:iptv_player/features/guide/domain/epg_match_summary.dart';
+import 'package:iptv_player/features/guide/domain/guide_matching.dart';
 
 /// One run of the match for a source, start to result. [stop] completes
 /// when the run is to be cancelled. The service's own starts the guarded
@@ -25,7 +26,7 @@ typedef EpgMatchRunner = Future<Result<EpgMatchSummary>> Function(
 /// follow-up run, which every call made meanwhile shares. So each caller
 /// gets the result of a run that started after it asked, and a burst of
 /// calls costs two runs, not one each.
-final class EpgMatchService {
+final class EpgMatchService implements GuideMatching {
   new({
     required AppDatabase database,
     required this._log,
@@ -52,6 +53,7 @@ final class EpgMatchService {
 
   /// Rematches [sourceId]'s channels against its guide and returns what
   /// the run attached. Never throws.
+  @override
   Future<Result<EpgMatchSummary>> rematch(String sourceId) {
     if (_disposed) {
       return Future.value(Err(CancelledFailure('the app is closing')));

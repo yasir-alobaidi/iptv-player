@@ -56,3 +56,5 @@ logs/
 .env
 # Vendored plugin copies are rebuilt from the pub cache + the .patch next to them
 spike/vendor/*/
+# CI's JSON test results, read by tools/ci/failed_tests.dart
+test-results.json

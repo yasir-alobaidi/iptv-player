@@ -228,6 +228,11 @@ class EpgDao extends DatabaseAccessor<AppDatabase> with _$EpgDaoMixin {
     return query.get();
   }
 
+  /// Every channel of [sourceId]'s live guide, in no particular order:
+  /// what the Match… picker ranks.
+  Future<List<EpgChannelRow>> guideChannelsOf(String sourceId) =>
+      (select(epgChannels)..where((t) => t.sourceId.equals(sourceId))).get();
+
   Future<void> setMapping(
     String sourceId,
     String channelRemoteKey,

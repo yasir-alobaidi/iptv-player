@@ -11,6 +11,7 @@ abstract final class SettingsKeys {
   static const railExpanded = 'shell.rail_expanded';
   static const currentSource = 'shell.current_source';
   static const playback = 'playback.settings';
+  static const guide = 'guide.settings';
 }
 
 /// Reads and writes the `settings` table.

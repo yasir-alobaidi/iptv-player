@@ -8,25 +8,18 @@ part of 'settings_section.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Which section Settings shows, and which source the Categories section
-/// manages. Kept for the session, so leaving Settings and coming back
-/// returns to the same place.
+/// Which section Settings shows, and which source the Categories and
+/// Guide sections manage.
 
 @ProviderFor(SettingsLocation)
 final settingsLocationProvider = SettingsLocationProvider._();
 
-/// Which section Settings shows, and which source the Categories section
-/// manages. Kept for the session, so leaving Settings and coming back
-/// returns to the same place.
+/// Which section Settings shows, and which source the Categories and
+/// Guide sections manage.
 final class SettingsLocationProvider
-    extends
-        $NotifierProvider<
-          SettingsLocation,
-          ({String? categoriesSourceId, SettingsSection section})
-        > {
-  /// Which section Settings shows, and which source the Categories section
-  /// manages. Kept for the session, so leaving Settings and coming back
-  /// returns to the same place.
+    extends $NotifierProvider<SettingsLocation, SettingsPlace> {
+  /// Which section Settings shows, and which source the Categories and
+  /// Guide sections manage.
   SettingsLocationProvider._()
     : super(
         from: null,
@@ -46,45 +39,30 @@ final class SettingsLocationProvider
   SettingsLocation create() => SettingsLocation();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(
-    ({String? categoriesSourceId, SettingsSection section}) value,
-  ) {
+  Override overrideWithValue(SettingsPlace value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride:
-          $SyncValueProvider<
-            ({String? categoriesSourceId, SettingsSection section})
-          >(value),
+      providerOverride: $SyncValueProvider<SettingsPlace>(value),
     );
   }
 }
 
-String _$settingsLocationHash() => r'2510ea10dcb622c0a80de3ca9e21a07d7db78d8b';
+String _$settingsLocationHash() => r'cc55822e8d6f6de872c160ad84cd9103c2e7dc82';
 
-/// Which section Settings shows, and which source the Categories section
-/// manages. Kept for the session, so leaving Settings and coming back
-/// returns to the same place.
+/// Which section Settings shows, and which source the Categories and
+/// Guide sections manage.
 
-abstract class _$SettingsLocation
-    extends $Notifier<({String? categoriesSourceId, SettingsSection section})> {
-  ({String? categoriesSourceId, SettingsSection section}) build();
+abstract class _$SettingsLocation extends $Notifier<SettingsPlace> {
+  SettingsPlace build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref =
-        this.ref
-            as $Ref<
-              ({String? categoriesSourceId, SettingsSection section}),
-              ({String? categoriesSourceId, SettingsSection section})
-            >;
+    final ref = this.ref as $Ref<SettingsPlace, SettingsPlace>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<
-                ({String? categoriesSourceId, SettingsSection section}),
-                ({String? categoriesSourceId, SettingsSection section})
-              >,
-              ({String? categoriesSourceId, SettingsSection section}),
+              AnyNotifier<SettingsPlace, SettingsPlace>,
+              SettingsPlace,
               Object?,
               Object?
             >;

@@ -3,16 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/presentation/guide_match_request.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/presentation/player_surface.dart';
+import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 
 /// The canvas's preview pane (540 px): the selected channel playing in a
 /// rounded 16:9 frame, what's on now and next, and the actions. A new
@@ -259,7 +262,7 @@ class _Details extends ConsumerWidget {
                     .copyWith(color: colors.textSecondary),
               ),
             ],
-          ] else
+          ] else ...[
             Text(
               switch (next) {
                 _ when loading => 'Looking up what’s on…',
@@ -271,6 +274,25 @@ class _Details extends ConsumerWidget {
                 fontStyle: FontStyle.italic,
               ),
             ),
+            // The way to fix it: Settings → Guide's Match… picker for this
+            // channel (ADR-011 step 5).
+            if (next == null && !loading) ...[
+              SizedBox(height: tokens.spacing.s8),
+              AppButton(
+                label: 'Match to a guide channel',
+                icon: AppIcons.guide,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.s,
+                onPressed: () => openGuideMatch(
+                  GoRouter.of(context),
+                  ref.read(settingsLocationProvider.notifier),
+                  ref.read(guideMatchRequestProvider.notifier),
+                  sourceId: channel.sourceId,
+                  channelId: channel.id,
+                ),
+              ),
+            ],
+          ],
           if (next != null) ...[
             SizedBox(height: tokens.spacing.s16 + 2),
             Container(
