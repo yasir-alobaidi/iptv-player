@@ -106,6 +106,41 @@ void main() {
     expect(find.byType(SearchOverlay), findsOneWidget);
   });
 
+  testWidgets('G opens the Guide from anywhere, search included', (
+    tester,
+  ) async {
+    final app = await pumpApp(tester);
+
+    await _press(tester, LogicalKeyboardKey.keyG);
+    expect(app.location, AppDestination.guide.path);
+
+    await _press(tester, LogicalKeyboardKey.digit2, control: true);
+    await _press(tester, LogicalKeyboardKey.keyK, control: true);
+    // Focus off the query field: the overlay's results are still the
+    // overlay.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settleApp(tester);
+    await _press(tester, LogicalKeyboardKey.keyG);
+
+    expect(find.byType(SearchOverlay), findsNothing);
+    expect(app.location, AppDestination.guide.path);
+  });
+
+  testWidgets('G types into a text field instead of opening the Guide', (
+    tester,
+  ) async {
+    final app = await pumpApp(tester);
+
+    await _press(tester, LogicalKeyboardKey.keyK, control: true);
+    await tester.enterText(find.byType(EditableText), 'a');
+    await settleApp(tester);
+    expect(textInputHasFocus(), isTrue);
+
+    await _press(tester, LogicalKeyboardKey.keyG);
+
+    expect(app.location, searchRoutePath);
+  });
+
   testWidgets('Esc with nothing open leaves the screen alone', (tester) async {
     final app = await pumpApp(tester);
 

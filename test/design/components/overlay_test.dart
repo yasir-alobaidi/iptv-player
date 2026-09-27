@@ -152,6 +152,46 @@ void main() {
       await tester.tap(find.text('Cast'));
       await tester.pump();
     });
+
+    testWidgets('a menu longer than the window stays inside it and the '
+        'arrows scroll to its last item', (tester) async {
+      String? chosen;
+      await pumpDesign(
+        tester,
+        Builder(
+          builder: (anchor) => AppButton(
+            label: 'Categories',
+            onPressed: () => showAppMenu(
+              anchor,
+              items: [
+                for (var i = 1; i <= 80; i++)
+                  AppMenuItem(
+                    label: 'Category $i',
+                    onPressed: () => chosen = 'Category $i',
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Categories'));
+      await tester.pumpAndSettle();
+
+      final window = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final menu = tester.getRect(find.byType(AppMenu));
+      expect(menu.top, greaterThanOrEqualTo(0));
+      expect(menu.bottom, lessThanOrEqualTo(window.height));
+
+      for (var i = 1; i < 80; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      }
+      await tester.pumpAndSettle();
+      final last = tester.getRect(find.text('Category 80'));
+      expect(last.bottom, lessThanOrEqualTo(menu.bottom));
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(chosen, 'Category 80');
+    });
   });
 
   group('AppSlider', () {

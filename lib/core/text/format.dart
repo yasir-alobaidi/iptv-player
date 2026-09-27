@@ -112,3 +112,51 @@ String formatTimeLeft(Duration left) {
       ? '${minutes ~/ 60} h left'
       : '${minutes ~/ 60} h $rest min left';
 }
+
+/// `8:05`: [formatClock] without AM/PM, for the Guide's ruler and its
+/// narrow cells, where the half of the day is clear from the labels
+/// around it.
+String formatClockShort(DateTime at) {
+  final clock = formatClock(at);
+  return clock.substring(0, clock.length - 3);
+}
+
+/// `8:00 – 10:00`: [formatTimeRange] without AM/PM.
+String formatTimeRangeShort(DateTime start, DateTime end) =>
+    '${formatClockShort(start)} – ${formatClockShort(end)}';
+
+/// True when [a] and [b] fall in the same half of the day (AM or PM), in
+/// local time.
+bool sameMeridiem(DateTime a, DateTime b) =>
+    (a.toLocal().hour < 12) == (b.toLocal().hour < 12);
+
+/// `Tuesday`, in local time.
+String formatWeekday(DateTime at) => _weekdays[at.toLocal().weekday - 1];
+
+/// `Wed 16`: a day pill in the Guide.
+String formatDayPill(DateTime day) {
+  final local = day.toLocal();
+  return '${_weekdays[local.weekday - 1].substring(0, 3)} ${local.day}';
+}
+
+/// `Today`, `Tomorrow`, `Yesterday`, else `Tue Sep 15` — [day] as seen
+/// from [now], both in local time.
+String formatRelativeDay(DateTime day, DateTime now) {
+  final days = _calendarDays(now, day);
+  if (days == 0) return 'Today';
+  if (days == 1) return 'Tomorrow';
+  if (days == -1) return 'Yesterday';
+  final local = day.toLocal();
+  return '${_weekdays[local.weekday - 1].substring(0, 3)} '
+      '${_months[local.month - 1]} ${local.day}';
+}
+
+const _weekdays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];

@@ -8,6 +8,7 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
+import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart';
@@ -53,11 +54,13 @@ void main() {
       final app = await pumpApp(tester, initialLocation: destination.path);
 
       expect(app.location, destination.path);
-      // Settings (Phase 2) and Live TV (Phase 3) are real screens.
+      // Settings (Phase 2), Live TV (Phase 3) and the Guide (Phase 4)
+      // are real screens.
       expect(
         find.byType(switch (destination) {
           AppDestination.settings => SettingsScreen,
           AppDestination.liveTv => LiveTvScreen,
+          AppDestination.guide => GuideScreen,
           _ => PlaceholderScreen,
         }),
         findsOneWidget,

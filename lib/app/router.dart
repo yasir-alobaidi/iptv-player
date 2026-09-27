@@ -10,6 +10,7 @@ import 'package:iptv_player/features/favorites/presentation/favorites_screen.dar
 import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/library/presentation/library_screen.dart';
+import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/movies/presentation/movies_screen.dart';
 import 'package:iptv_player/features/onboarding/presentation/connect_screen.dart';
@@ -102,8 +103,15 @@ GoRouter buildRouter({String initialLocation = '/'}) {
       GoRoute(
         path: playerRoutePath,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) =>
-            NoTransitionPage(key: state.pageKey, child: const PlayerScreen()),
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: PlayerScreen(
+            zapQuery: switch (state.extra) {
+              final ChannelQuery query => query,
+              _ => null,
+            },
+          ),
+        ),
       ),
       GoRoute(
         path: welcomeRoutePath,

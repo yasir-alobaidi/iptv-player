@@ -331,6 +331,25 @@ final class DbEpgRepository implements EpgRepository {
   });
 
   @override
+  Future<Result<Set<int>>> channelsWithGuide(List<int> channelIds) =>
+      Result.guard(() async {
+        if (channelIds.isEmpty) return const <int>{};
+        final placeholders = List.filled(channelIds.length, '?').join(', ');
+        // One probe of the programmes index per matched channel.
+        final rows = await _db
+            .customSelect(
+              'SELECT m.channel_id AS channel_id FROM epg_matches m '
+              'WHERE m.channel_id IN ($placeholders) AND EXISTS ( '
+              'SELECT 1 FROM epg_programs p WHERE p.source_id = m.source_id '
+              'AND p.epg_channel_id = m.xmltv_id)',
+              variables: [for (final id in channelIds) Variable.withInt(id)],
+              readsFrom: {_db.epgMatches, _db.epgPrograms},
+            )
+            .get();
+        return {for (final row in rows) row.read<int>('channel_id')};
+      });
+
+  @override
   Future<Result<List<GuideChannel>>> guideChannels(
     String sourceId, {
     String? query,

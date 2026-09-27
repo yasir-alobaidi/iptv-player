@@ -302,7 +302,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
       if (!mounted) return;
       setState(() {
         _overrides.remove(channel.channelId);
-        _error = "Couldn't save that match. ${failureMessage(failure)}";
+        _error = matchNotSaved(failure);
       });
       return;
     }
@@ -314,9 +314,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
       _overrides[channel.channelId] = (row: shown, settled: true);
       _listRevision++;
       if (matched case Err(:final failure) when failure is! CancelledFailure) {
-        _error =
-            "Your match is saved, but the channels couldn't be matched "
-            'again. ${failureMessage(failure)}';
+        _error = matchNotApplied(failure);
       }
     });
   }

@@ -387,11 +387,11 @@ void main() {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, 'Source: No source');
-    await _pressCtrl(tester, LogicalKeyboardKey.digit3);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit4);
 
-    expect(app.location, AppDestination.guide.path);
-    // Ctrl+3 means "take me to the guide", so focus is already there —
-    // no Tab walk back into the content, and no ring left behind.
+    expect(app.location, AppDestination.movies.path);
+    // Ctrl+4 means "take me to Movies", so focus is already there — no
+    // Tab walk back into the content, and no ring left behind.
     expect(_focusedLabel(tester), _screenActionLabel);
 
     // The move waits for the new branch to be laid out before it can

@@ -26,7 +26,11 @@ import 'package:iptv_player/features/playback/presentation/player_surface.dart';
 /// audio and subtitles, I shows the stream info, F or a double-click
 /// toggles the window's full screen, Esc goes back.
 class PlayerScreen extends ConsumerStatefulWidget {
-  const new({super.key});
+  const new({this.zapQuery, super.key});
+
+  /// The list ↑/↓ zap through: the Guide's, when it opened the player;
+  /// otherwise the one Live TV shows.
+  final ChannelQuery? zapQuery;
 
   static const osdTimeout = Duration(seconds: 3);
   static const zapDebounce = Duration(milliseconds: 350);
@@ -76,8 +80,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     super.dispose();
   }
 
-  /// The list being zapped through: the one Live TV shows.
+  /// The list being zapped through: the one the player was opened from.
   ChannelQuery? get _query {
+    if (widget.zapQuery case final query?) return query;
     final view = ref.read(liveTvControllerProvider);
     if (view != null) return view.query;
     final current = ref.read(playbackCoordinatorProvider).current;

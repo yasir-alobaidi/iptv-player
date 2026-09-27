@@ -235,6 +235,42 @@ void main() {
     });
   });
 
+  group('channels with a guide', () {
+    test('are the matched channels whose guide channel has programmes, '
+        'whenever those are', () async {
+      final matched = await addChannel('201');
+      final later = await addChannel('202');
+      final unmatched = await addChannel('203');
+      final missing = await addChannel('204');
+      await addSource('s2');
+      final elsewhere = await addChannel('201', source: 's2');
+      await match(matched, 'arena.sports');
+      await match(later, 'velocity');
+      // A mapping to an id this guide doesn't have.
+      await match(missing, 'gone.uk');
+      // Another source's guide has this id; this source's doesn't.
+      await match(elsewhere, 'arena.sports', source: 's2');
+      await import([
+        programme('arena.sports', start: _now),
+        programme('velocity', start: _now.add(const Duration(days: 5))),
+      ]);
+
+      final found = (await repository.channelsWithGuide([
+        matched,
+        later,
+        unmatched,
+        missing,
+        elsewhere,
+      ])).valueOrNull!;
+
+      expect(found, {matched, later});
+      expect(
+        (await repository.channelsWithGuide(const [])).valueOrNull,
+        isEmpty,
+      );
+    });
+  });
+
   group('coverage', () {
     test('a source that never imported has no guide', () async {
       final coverage = (await repository.coverage('s1')).valueOrNull!;

@@ -1,24 +1,27 @@
-# Handoff — 2026-09-25 (Phase 4 step 5 built)
+# Handoff — 2026-09-27 (Phase 4 step 6 built)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
 docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md.
 
 ## Before you start the next session (user)
-1. **Review step 5, then push.** Committed locally, nothing pushed:
+1. **Review steps 5 and 6, then push.** Committed locally, nothing pushed
+   since e9a9f76:
    - `4ffa4f5` "Handoff: Phase 4 steps 3 and 4, what's next, and the road
-     to v1" (from last session)
-   - "Phase 4 step 5: Settings → Guide"
-2. **Try it:** Settings → Guide. Import guide, then the Unmatched list:
-   Enter on a channel, type, Enter. On Live TV, a channel with "No guide
-   information" has a **Match to a guide channel** button under it.
+     to v1"
+   - `8b71091` "Phase 4 step 5: Settings → Guide"
+   - "Phase 4 step 6: the Guide grid"
+2. **Try it:** import a guide in Settings → Guide, then press **G**. The
+   arrows move through programmes and channels, Enter opens a programme,
+   Watch channel plays it full screen, Esc comes back. A channel with no
+   guide has a dashed row; Enter on it opens the Match… picker right there.
 3. **CI now names its failed tests in public.** After you push, open the
    run on GitHub → the Windows job: every failed test is an annotation on
    the summary page, no admin rights needed. Paste the names into the next
    session, or leave it: the next session can read them with `curl` (see
    "How to work here").
 4. **Optional, with your go-ahead:** one guide import from your real panel.
-   Settings → Guide → Import guide does exactly that now. It downloads the
+   Settings → Guide → Import guide does exactly that. It downloads the
    guide only and plays no stream, so it uses none of your one connection.
 
 ## Start prompt
@@ -27,15 +30,15 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md first.
-Step 5 is reviewed and pushed; CI is <green | red: …>.
+Steps 5 and 6 are reviewed and pushed; CI is <green | red: …>.
 Windows failing tests: <names, or "read them from the annotations">. Real guide import: <yes | not yet>.
-Do Phase 4 step 6 (the Guide grid) and stop for my review. Use multiple agents where it helps.
+Do Phase 4 step 7 (the scheduler, the toast and the phase exit) and stop for my review.
 ```
 
 ## Where things stand
 - **Phases 1–3 are built** (foundation, sources and sync, Live TV and the
   player).
-- **Phase 4 (EPG and the guide) has steps 1–5 of 7:**
+- **Phase 4 (EPG and the guide) has steps 1–6 of 7:**
   1. The fake panel serves XMLTV with every quirk.
   2. Schema v5 stores the guide, with staging and an atomic swap.
   3. The XMLTV parser and the import isolate.
@@ -43,79 +46,51 @@ Do Phase 4 step 6 (the Guide grid) and stop for my review. Use multiple agents w
      and in the player.
   5. Settings → Guide: import and refresh, keep days, the time offset, and
      the Match… picker for channels without a guide.
+  6. The Guide grid: the canvas's `Guide`, the keyboard, the detail sheet
+     and Watch, every state.
 - **What a real run shows today:** a guide comes in only when the user
   presses Import guide or Refresh guide in Settings → Guide (the scheduler
-  is step 7). Once it's in, Live TV's rows, the preview and the player show
-  its now/next. The Guide screen is still a placeholder (step 6).
+  is step 7). Once it's in, Live TV's rows, the preview, the player and the
+  Guide show it.
 - **Checks, all green:** analyze, format, `build_runner` leaves no diff;
-  **1,546 app tests** (5 skipped) under `TZ=UTC`; the fake provider's 114;
-  under xvfb, the new Settings → Guide keyboard walk, app launch, the
-  sources and Live TV keyboard walks.
+  **1,595 app tests** (5 skipped) under `TZ=UTC`; the Guide's tests and
+  goldens also under New York, Tokyo and Kathmandu; under xvfb, the new
+  Guide keyboard walk, app launch, the Settings → Guide, Live TV and
+  sources keyboard walks, and the playback fault suite.
 - **CI:** Linux green since step 3. Windows fails 4 tests (unnamed until
   the step 5 push, which annotates them).
-- **Two one-off failures this session**, neither reproduced (details in
-  progress.md Known issues): the sources keyboard walk once in five runs,
-  and the sync engine's `onSynced` test once in three full runs. If either
-  recurs, save the whole log before filtering it.
+- **The two one-off failures from 2026-09-25** (the sources keyboard walk,
+  the sync engine's `onSynced` test) did not come back this session; they
+  stay in progress.md's Known issues.
 
-## Done this session (2026-09-25)
-- **Step 5: Settings → Guide**, built from one written spec: the lead wrote
-  the contract (domain types and interfaces, stubbed), the page, the
-  picker, the wiring and their tests; one agent the repository reads, the
-  importer's part and then the ranking worker; another the ranking. The UX
-  calls are in ADR-011 step 5 and docs/05 §12. In short:
-  - counts and lists cover the channels the user can see (hidden ones are
-    matched but not listed);
-  - three lists: Unmatched, Matched by you, and All (so a wrong automatic
-    match can be fixed);
-  - the picker keeps the focus in its search field, and ↑/↓ move a
-    highlight;
-  - matching under Unmatched moves the focus to the next channel;
-  - the offset is a ←/→ stepper, saved once it settles;
-  - Keep is global and re-imports sources one at a time;
-  - the preview's "Match to a guide channel" opens the picker for that
-    channel.
-- **A measured hard-rule-2 fix:** ranking a 50,000-channel guide in
-  `Isolate.run` per keystroke cost the UI isolate 305–407 ms (the copy of
-  the prepared guide into the isolate). Replaced by a long-lived worker that
-  reads the guide itself: 0.13–0.18 ms per keystroke.
-- **CI:** `tools/ci/failed_tests.dart` turns the JSON test results into one
-  `::error` annotation per failed test, in a step that runs only when the
-  tests failed.
-- Small fixes the agents' review found: `GuideSettings.fromJson` threw on
-  an infinite number; a Keep choice that couldn't be saved stayed in use.
+## Done this session (2026-09-27)
+- **Step 6: the Guide grid**, built by the lead alone (no agents were
+  asked for). ADR-011 step 6 and docs/05 §5 record every call; in short:
+  - every measure in `AppGuideTokens`; `surfaceSunken` for past
+    programmes; `text.small` for times;
+  - rows in one `ListView` over one shared horizontal offset; the channel
+    column inside each row (no second list to keep in step);
+  - `GuideWindowCache` (domain): (channel, hour) pieces, the screen plus a
+    screen and an hour of margin, one query at a time, reset on any guide
+    change; `EpgRepository.channelsWithGuide` tells "no guide" from
+    "nothing now";
+  - one Tab stop with a cursor (a row and a moment); gaps of 5 min or more
+    are "No information" cells;
+  - the toolbar (pills, Jump to now, filter) under the shared top bar;
+  - the sheet's Watch plays full screen and the player zaps through the
+    Guide's list (`PlayerScreen.zapQuery`); back on the Guide it stops;
+  - the dashed row opens the Match… picker in place (`saveGuideMatch`);
+  - G opens the Guide from anywhere; `AppMenu` scrolls.
+- **Bugs the tests found before the commit:** stopping the stream on any
+  router notification killed the one Watch had just started (a sheet
+  closing notifies too); `currentConfiguration` keeps the page under a
+  push, so the top route is `router.state`; the shell places the focus
+  before the Guide's rows exist, so the grid takes it when they show.
 
 ## What's next: the rest of Phase 4
 Work one step at a time. After each step: analyze, format, `TZ=UTC flutter
 test`, a local commit, and a stop for review. The user may answer
 "continue", which means do the next step.
-
-### Step 6 — The Guide grid (canvas artboard `Guide`)
-- **Read the canvas first:** https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99
-  (with the Artifact tool, action `read`), and `design/Guide.dc.html`. The
-  plan's step 6 lists every measure: 240 px per hour, a 220 px channel
-  column, 72 px rows, cells inset 6 px with an 8 px radius, the now line
-  and its pill, and the dashed "No guide information · Match to a guide
-  channel" row. **Every value goes into `lib/design/tokens` (hard rule 9).**
-- **Scrolling (decision 6):** a vertical list of rows sharing one
-  horizontal `ScrollController`, and a second list for the pinned channel
-  column. Not `TwoDimensionalScrollView`.
-- **Data (decision 7):** `EpgRepository.windowForChannels(ids, from, to)`
-  for the visible channels plus one screen and one hour of margin. Cache it
-  by (channel, hour bucket), and cancel in-flight queries on fast scrolls.
-  Channel pages come from the same `ChannelRepository` Live TV uses.
-- **Keyboard:** ←/→ between programmes, ↑/↓ between channels,
-  PageUp/PageDown, Home = now, Enter opens the detail sheet (sketch in the
-  plan), Esc goes back. G opens the Guide from anywhere; Ctrl+3 as today.
-- **States:** loading skeletons, no source, no guide yet, nothing today,
-  importing (a thin progress line, the old guide still shown), offline.
-- **Tests:** goldens at 1280×800 and 1920×1080, drawn at `goldenNow()` (a
-  local time, never an instant).
-- **The dashed "No guide information · Match to a guide channel" row**
-  opens the picker for that channel: call `openGuideMatch` (see
-  `preview_pane.dart`) — it switches to Settings → Guide with the picker on
-  top. Or open `showGuideMatchPicker` in place over the grid; either way
-  rematch after a mapping, as `_GuideBodyState._match` does.
 
 ### Step 7 — Scheduler, toast, exit
 - **The scheduler (decision 5):**
@@ -139,17 +114,24 @@ test`, a local commit, and a stop for review. The user may answer
     tools/fake_provider/bin/server.dart --profile large --port 8899`, guide
     `?channels=2150&days=7`, about 300 MB. If the swap's copy is the
     bottleneck, the fallback in ADR-011 is a generation column.
-  - **The grid's scroll:** no frame over 16 ms, with `flutter drive
-    --profile` (see `integration_test/large_sync_test.dart`).
+  - **The grid's scroll:** no frame over 16 ms with 50,000 channels × 7
+    days, with `flutter drive --profile` (see
+    `integration_test/large_sync_test.dart`). Scroll both ways: the rows
+    (the vertical list) and time (the shared offset — every row on screen
+    rebuilds its cells each frame; if that is the cost, give each row's
+    cells a transform instead and rebuild only on hour boundaries).
 - **An integration test:** import → Live TV shows now/next → open the Guide
   → arrow to a programme → Enter → Watch → the player opens that channel.
+  `integration_test/guide_keyboard_test.dart` already does everything up
+  to Enter against the fake panel; playing needs the samples and
+  `framePolicy = fullyLive`, as `playback_faults_test.dart` does.
 - **The phase exit:** numbers into docs/progress.md, ADR-011 closed out,
   this file rewritten.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **Phase 4 steps 6–7** (above). Until step 7, the app imports a guide
-  only from Settings → Guide.
+- **Phase 4 step 7** (above). Until then, the app imports a guide only
+  from Settings → Guide.
 - **CI green on both systems.** Linux is green; Windows fails 4 tests,
   which the step 5 push names in the run's annotations.
 - **Phase 5 — Movies, Series, Home.** These three screens are placeholders
@@ -248,7 +230,34 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session (step 5):
+New this session (step 6):
+- **The Guide** is `lib/features/guide/presentation/`: `guide_screen.dart`
+  (the states, the toolbar, Watch), `guide_grid.dart` (`GuideGrid`,
+  `GuideGridController` for the toolbar, `guideCells` / `cellAt`),
+  `guide_programme_sheet.dart`, `guide_view_state.dart`
+  (`guideChannelsProvider`, the Guide's own filter). The time axis is
+  `GuideTimeline` (`lib/features/guide/domain/guide_timeline.dart`: local
+  half hours, `viewStartFor(now)` = the half hour before now's), the data
+  `GuideWindowCache` (same folder).
+- **The grid's cursor** is `_row` + `_anchor` (a moment) in
+  `_GuideGridState`; the ring is drawn by the cell that contains the
+  anchor. `_placeCursor` pulls both back on screen before any key.
+- **Tests:** `test/features/guide/guide_grid_fakes.dart` has
+  `GuideFixture`: the canvas's channels and programmes at Tue 15 Sep
+  9:22 PM *local*, on a real in-memory database, with the real guide and
+  fakes for the importer and the matcher. The Guide's widget tests need
+  `_settle` (runAsync + pumps), never `pumpAndSettle` (skeletons shimmer).
+  A test that fails partway can hang the file until the 10-minute timeout
+  (seen once: the Watch test); run it alone with `--timeout 40s`.
+- **Router paths:** `router.state.uri.path` is the top route (the player
+  after a push); `routerDelegate.currentConfiguration.uri` stays on the
+  page under a push. Live TV's `_onLocation` reads the second, so its
+  `startsWith(playerRoutePath)` never matches — harmless (the base path is
+  `/live` while the player is up), but don't copy it.
+- `integration_test/support/keyboard.dart` now maps G, Home, PageUp and
+  PageDown to physical keys too.
+
+From the session before (step 5):
 - **Settings → Guide** is `lib/features/guide/presentation/`:
   `guide_settings.dart` (the page), `guide_match_picker.dart`
   (`showGuideMatchPicker` → `MatchToGuideChannel` / `UseAutomaticMatch`),
@@ -484,6 +493,13 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 4 step 6: the channel column inside each row (one list, one shared
+  horizontal offset); the cache's one query at a time with the newest
+  request waiting; gap cells from 5 minutes; one Tab stop with a cursor
+  whose ↑/↓ keep the moment; Esc in the grid does nothing with nothing
+  open (ADR-008); the toolbar under the shared top bar; the picker in
+  place over the grid; Watch zaps through the Guide's list and stops on
+  the way back.
 - Phase 4 step 5: counts cover visible channels; three lists; the picker
   keeps the focus in its field; the offset stepper saved once it settles;
   Keep global; the ranking worker instead of `Isolate.run` per keystroke

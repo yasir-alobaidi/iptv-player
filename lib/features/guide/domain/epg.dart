@@ -413,6 +413,12 @@ abstract interface class EpgRepository {
     DateTime to,
   );
 
+  /// Those of [channelIds] the guide has at least one programme for,
+  /// through what the matcher attached to them. The Guide grid draws the
+  /// rest as "No guide information": unmatched, or attached to a guide
+  /// channel with no programmes (a mapping to an id the guide lacks).
+  Future<Result<Set<int>>> channelsWithGuide(List<int> channelIds);
+
   /// The guide's own channels, for the Match… picker.
   Future<Result<List<GuideChannel>>> guideChannels(
     String sourceId, {

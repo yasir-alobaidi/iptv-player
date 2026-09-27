@@ -7,11 +7,16 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 
-/// Jump to a destination (Ctrl+1 … Ctrl+7, Ctrl+,).
+/// Jump to a destination (Ctrl+1 … Ctrl+7, Ctrl+,, and G for the
+/// Guide).
 class GoToDestinationIntent extends Intent {
-  const new(this.destination);
+  const new(this.destination, {this.printableKey = false});
 
   final AppDestination destination;
+
+  /// True for G, which has to reach a text field instead when the user
+  /// is typing.
+  final bool printableKey;
 }
 
 /// Open the search overlay (Ctrl+K, and `/` outside a text field).
@@ -44,6 +49,10 @@ class AppGlobalShortcuts extends ConsumerWidget {
           GoToDestinationIntent(AppDestination.forNumberKey(number)!),
     const SingleActivator(LogicalKeyboardKey.comma, control: true):
         const GoToDestinationIntent(AppDestination.settings),
+    const SingleActivator(LogicalKeyboardKey.keyG): const GoToDestinationIntent(
+      AppDestination.guide,
+      printableKey: true,
+    ),
     const SingleActivator(LogicalKeyboardKey.keyK, control: true):
         const OpenSearchIntent(),
     const SingleActivator(LogicalKeyboardKey.slash): const OpenSearchIntent(
@@ -72,21 +81,34 @@ class AppGlobalShortcuts extends ConsumerWidget {
       shortcuts: shortcuts,
       child: Actions(
         actions: {
-          GoToDestinationIntent: CallbackAction<GoToDestinationIntent>(
-            onInvoke: (intent) {
-              // Leave the overlay first, so Ctrl+2 from search lands on
-              // Live TV rather than behind the scrim.
-              if (isSearchOpen(router) && router.canPop()) router.pop();
-              router.go(intent.destination.path);
-              return null;
-            },
-          ),
+          GoToDestinationIntent: _GoToDestinationAction(router),
           OpenSearchIntent: _OpenSearchAction(router),
           CloseTopIntent: _CloseTopAction(router),
         },
         child: child,
       ),
     );
+  }
+}
+
+/// Goes to a destination from anywhere, the player and the search
+/// overlay included. G is disabled in a text field, like `/`.
+class _GoToDestinationAction extends Action<GoToDestinationIntent> {
+  new(this._router);
+
+  final GoRouter _router;
+
+  @override
+  bool isEnabled(GoToDestinationIntent intent, [BuildContext? context]) =>
+      !(intent.printableKey && textInputHasFocus());
+
+  @override
+  Object? invoke(GoToDestinationIntent intent) {
+    // Leave the overlay first, so Ctrl+2 from search lands on Live TV
+    // rather than behind the scrim.
+    if (isSearchOpen(_router) && _router.canPop()) _router.pop();
+    _router.go(intent.destination.path);
+    return null;
   }
 }
 

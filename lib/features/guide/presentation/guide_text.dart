@@ -101,3 +101,67 @@ String matchStatus(ChannelGuideMatch channel) {
   };
   return '→ $target · $how';
 }
+
+/// A match the user chose that couldn't be saved.
+String matchNotSaved(AppFailure failure) =>
+    "Couldn't save that match. ${failureMessage(failure)}";
+
+/// A match that was saved, but the source's channels couldn't be matched
+/// again, so the rest of the app doesn't show it yet.
+String matchNotApplied(AppFailure failure) =>
+    "Your match is saved, but the channels couldn't be matched again. "
+    '${failureMessage(failure)}';
+
+// The Guide screen (Phase 4 step 6).
+
+/// A programme's time in its Guide cell, as wide as the cell allows:
+/// "8:00 – 10:00 PM", "8:00 – 10:00", then "8:00".
+String guideCellTime(
+  EpgProgramme programme, {
+  required bool full,
+  required bool range,
+}) {
+  if (full) return formatTimeRange(programme.start, programme.end);
+  if (range) return formatTimeRangeShort(programme.start, programme.end);
+  return formatClockShort(programme.start);
+}
+
+/// When a programme is on, relative to [now]: "on now", "ended", or
+/// nothing for one to come. For screen readers, after its title and time.
+String? guideProgrammeState(EpgProgramme programme, DateTime now) {
+  if (!programme.end.isAfter(now)) return 'ended';
+  if (!programme.start.isAfter(now)) return 'on now';
+  return null;
+}
+
+/// The detail sheet's line under the title: "Today · 8:00 – 10:00 PM ·
+/// Sport".
+String programmeSheetMeta(EpgProgramme programme, DateTime now) => [
+  formatRelativeDay(programme.start, now),
+  formatTimeRange(programme.start, programme.end),
+  if (programme.category?.trim().isNotEmpty ?? false) programme.category!,
+].join(' · ');
+
+/// [day] inside a sentence, from [now]: "today", "tomorrow",
+/// "yesterday", else "on Thu Sep 17".
+String dayInSentence(DateTime day, DateTime now) {
+  final word = formatRelativeDay(day, now);
+  return switch (word) {
+    'Today' || 'Tomorrow' || 'Yesterday' => word.toLowerCase(),
+    _ => 'on $word',
+  };
+}
+
+/// "Arena Sports 1 · 201".
+String guideChannelLine(String name, int? number) =>
+    number == null ? name : '$name · $number';
+
+/// The Guide toolbar's line about a refresh that failed while an older
+/// guide stays in use: "Offline · guide from 2 h ago".
+String guideStaleLine(GuideCoverage coverage, DateTime now) {
+  final code = coverage.lastImport?.failureCode;
+  final offline = code != null && AppFailure.fromCode(code) is NetworkFailure;
+  final updated = coverage.updatedAt;
+  final age = updated == null ? '' : ' · guide from ${formatAgo(updated, now)}';
+  return '${offline ? 'Offline' : "Couldn't refresh"}$age';
+}

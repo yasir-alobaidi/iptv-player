@@ -29,6 +29,34 @@ final class UseAutomaticMatch extends GuideMatchChoice {
   const new();
 }
 
+/// Saves [choice] for [channel], then matches its source again: the rest
+/// of the app reads the matches, not the user's mappings. Null when both
+/// worked; otherwise what to tell the user.
+Future<String?> saveGuideMatch(
+  EpgRepository guide,
+  GuideMatching matching,
+  ChannelGuideMatch channel,
+  GuideMatchChoice choice,
+) async {
+  final written = switch (choice) {
+    MatchToGuideChannel(channel: final target) => await guide.setMapping(
+      sourceId: channel.sourceId,
+      channelRemoteKey: channel.remoteKey,
+      xmltvId: target.xmltvId,
+    ),
+    UseAutomaticMatch() => await guide.removeMapping(
+      sourceId: channel.sourceId,
+      channelRemoteKey: channel.remoteKey,
+    ),
+  };
+  if (written case Err(:final failure)) return matchNotSaved(failure);
+  final matched = await matching.rematch(channel.sourceId);
+  if (matched case Err(:final failure) when failure is! CancelledFailure) {
+    return matchNotApplied(failure);
+  }
+  return null;
+}
+
 /// Opens the Match… picker for [channel] (the approved sketch): type to
 /// filter the guide's channels, ranked by how close their names are to
 /// the channel's; ↑/↓ move, Enter matches, Esc cancels. Null when

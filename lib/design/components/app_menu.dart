@@ -73,22 +73,26 @@ class AppMenu extends StatelessWidget {
           border: Border.all(color: colors.border),
           boxShadow: tokens.elevation.overlay,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final item in items)
-              if (item is _MenuSeparator)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4),
-                  child: Divider(height: 1, color: colors.border),
-                )
-              else
-                _MenuRow(
-                  item: item,
-                  autofocus: autofocus && identical(item, _firstEnabled),
-                ),
-          ],
+        // A long menu (a provider's categories) scrolls inside the room
+        // it is given; the arrows scroll the focused item into view.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final item in items)
+                if (item is _MenuSeparator)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4),
+                    child: Divider(height: 1, color: colors.border),
+                  )
+                else
+                  _MenuRow(
+                    item: item,
+                    autofocus: autofocus && identical(item, _firstEnabled),
+                  ),
+            ],
+          ),
         ),
       ),
     );

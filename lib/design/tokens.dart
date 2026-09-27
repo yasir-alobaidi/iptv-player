@@ -79,6 +79,10 @@ class AppColors {
 
   // Surfaces.
   Color get bg => const Color(0xFF0A0C10);
+
+  /// Between [bg] and [surface1]: a programme that has ended, on the
+  /// Guide grid's card (canvas `Guide`).
+  Color get surfaceSunken => const Color(0xFF0E1116);
   Color get surface1 => const Color(0xFF11141A);
   Color get surface2 => const Color(0xFF171B23);
   Color get surface3 => const Color(0xFF1F2430);
@@ -244,6 +248,10 @@ class AppTypography {
   /// 12/16 — canvas counts and secondary metadata.
   TextStyle get labelSmall => _font(AppFonts.sans, 12, 16, 600);
 
+  /// 12/16 — the Guide's programme times and channel numbers (canvas
+  /// weight 400).
+  TextStyle get small => _font(AppFonts.sans, 12, 16, 400);
+
   /// 12/16 — group headings inside a panel ("DOWNLOADS", canvas
   /// `Settings`); callers upper-case the text.
   TextStyle get overline =>
@@ -312,6 +320,66 @@ class AppFocusTokens {
   double get tileScale => 1.03;
 }
 
+/// The Guide grid's measures (canvas `Guide`, docs/05 §5). Its colors
+/// are [AppColors] tokens; these are the sizes only the grid uses.
+@immutable
+class AppGuideTokens {
+  const new();
+
+  /// One hour of programmes (docs/05: 1 hour = 240 px).
+  double get hourWidth => 240;
+
+  /// A ruler label every half hour.
+  Duration get rulerStep => const Duration(minutes: 30);
+
+  /// The pinned column of channel numbers, logos and names.
+  double get channelColumnWidth => 220;
+
+  /// A channel's row, its 1 px divider included.
+  double get rowHeight => 72;
+
+  /// The time ruler above the rows.
+  double get rulerHeight => 44;
+
+  /// A ruler label sits this far right of its tick.
+  double get rulerLabelInset => 8;
+
+  /// A programme cell sits this far inside its row, top and bottom…
+  double get cellInsetY => 6;
+
+  /// …and this far from where its programme starts and ends, so two
+  /// programmes back to back are 8 px apart.
+  double get cellInsetX => 4;
+
+  EdgeInsets get cellPadding =>
+      const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+
+  /// Between a cell's title and its time.
+  double get cellLineGap => 4;
+
+  /// Narrower cells drop the AM/PM from their time, then the end time,
+  /// then their text.
+  double get cellFullTimeWidth => 200;
+  double get cellRangeWidth => 120;
+  double get cellTextWidth => 40;
+
+  /// The now line and its time pill on the ruler.
+  double get nowLineWidth => 2;
+  double get nowLineOpacity => 0.9;
+  EdgeInsets get nowPillPadding =>
+      const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
+
+  /// The channel column: number, 32 px logo, name.
+  double get channelPadding => 16;
+  double get channelGap => 10;
+  double get channelNumberWidth => 26;
+  double get logoSize => 32;
+
+  /// The dashed outline of a channel with no guide.
+  double get dashLength => 4;
+  double get dashGap => 3;
+}
+
 /// Shadows. Only floating surfaces get one (docs/05).
 @immutable
 class AppElevation {
@@ -342,6 +410,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.text = const AppTypography(),
     this.focus = const AppFocusTokens(),
     this.elevation = const AppElevation(),
+    this.guide = const AppGuideTokens(),
   });
 
   /// Defaults: blue accent, comfortable rows, full motion.
@@ -363,6 +432,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppTypography text;
   final AppFocusTokens focus;
   final AppElevation elevation;
+  final AppGuideTokens guide;
 
   @override
   AppTokens copyWith({
@@ -374,6 +444,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppTypography? text,
     AppFocusTokens? focus,
     AppElevation? elevation,
+    AppGuideTokens? guide,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -383,6 +454,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     text: text ?? this.text,
     focus: focus ?? this.focus,
     elevation: elevation ?? this.elevation,
+    guide: guide ?? this.guide,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

@@ -127,9 +127,14 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   final Rect anchor;
   final double gap;
 
+  /// Never taller than the window, less a gap at each edge.
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      constraints.loosen();
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final loose = constraints.loosen();
+    return loose.copyWith(
+      maxHeight: (loose.maxHeight - gap * 2).clamp(0, loose.maxHeight),
+    );
+  }
 
   @override
   Offset getPositionForChild(Size size, Size child) {
