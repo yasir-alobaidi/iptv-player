@@ -249,6 +249,9 @@ final class FakeEpgRepository implements EpgRepository {
       throw UnimplementedError();
 
   @override
+  Future<Result<EpgProgramme?>> programme(int id) => throw UnimplementedError();
+
+  @override
   Future<Result<List<GuideChannel>>> guideChannels(
     String sourceId, {
     String? query,

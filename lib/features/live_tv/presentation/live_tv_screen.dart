@@ -60,7 +60,9 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
   /// dispose it: the stream is stopped here instead, unless the player
   /// took over.
   void _onLocation() {
-    final path = _router?.routerDelegate.currentConfiguration.uri.path;
+    // The top route's path: a push (the player, from here or from the
+    // Guide) leaves the delegate's own configuration on the page under it.
+    final path = _router?.state.uri.path;
     if (path == null ||
         path == AppDestination.liveTv.path ||
         path.startsWith(playerRoutePath)) {

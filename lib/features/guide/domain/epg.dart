@@ -406,12 +406,17 @@ abstract interface class EpgRepository {
   );
 
   /// Every programme overlapping `[from, to)` for those channels, in
-  /// start order — what the Guide grid draws a screen from.
+  /// start order — what the Guide grid draws a screen from. Without their
+  /// descriptions: [programme] reads one whole.
   Future<Result<Map<int, List<EpgProgramme>>>> windowForChannels(
     List<int> channelIds,
     DateTime from,
     DateTime to,
   );
+
+  /// One programme, description and all; null when a new guide has
+  /// replaced it. For the Guide's detail sheet.
+  Future<Result<EpgProgramme?>> programme(int id);
 
   /// Those of [channelIds] the guide has at least one programme for,
   /// through what the matcher attached to them. The Guide grid draws the

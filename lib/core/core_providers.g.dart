@@ -273,3 +273,49 @@ final class AppClockProvider
 }
 
 String _$appClockHash() => r'3a160822e94c7452db9eb102245e788a74843edf';
+
+/// Background news for the shell's toast area.
+
+@ProviderFor(appNotices)
+final appNoticesProvider = AppNoticesProvider._();
+
+/// Background news for the shell's toast area.
+
+final class AppNoticesProvider
+    extends $FunctionalProvider<AppNotices, AppNotices, AppNotices>
+    with $Provider<AppNotices> {
+  /// Background news for the shell's toast area.
+  AppNoticesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appNoticesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appNoticesHash();
+
+  @$internal
+  @override
+  $ProviderElement<AppNotices> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AppNotices create(Ref ref) {
+    return appNotices(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppNotices value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppNotices>(value),
+    );
+  }
+}
+
+String _$appNoticesHash() => r'9b37e9a3ad92f1f077c3e4234ee29fb7c256418c';

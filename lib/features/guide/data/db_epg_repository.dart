@@ -102,6 +102,15 @@ final class DbEpgRepository implements EpgRepository {
       'p.subtitle AS subtitle, p.description AS description, '
       'p.category AS category';
 
+  /// [_programColumns] without the description, for the Guide grid: a
+  /// screen of programmes crosses from the database isolate on every
+  /// scroll, and only the detail sheet shows a description.
+  static const _gridColumns =
+      'p.id AS id, p.epg_channel_id AS epg_channel_id, '
+      'p.start_utc AS start_utc, p.end_utc AS end_utc, p.title AS title, '
+      'p.subtitle AS subtitle, NULL AS description, '
+      'p.category AS category';
+
   static const _matchedPrograms =
       'FROM epg_matches m JOIN epg_programs p '
       'ON p.source_id = m.source_id AND p.epg_channel_id = m.xmltv_id';
@@ -309,7 +318,7 @@ final class DbEpgRepository implements EpgRepository {
     final placeholders = List.filled(channelIds.length, '?').join(', ');
     final rows = await _db
         .customSelect(
-          'SELECT m.channel_id AS channel_id, $_programColumns '
+          'SELECT m.channel_id AS channel_id, $_gridColumns '
           '$_matchedPrograms '
           'WHERE m.channel_id IN ($placeholders) '
           'AND p.start_utc >= ? AND p.start_utc < ? AND p.end_utc > ? '
@@ -328,6 +337,18 @@ final class DbEpgRepository implements EpgRepository {
       (found[row.read<int>('channel_id')] ??= []).add(_programme(row));
     }
     return found;
+  });
+
+  @override
+  Future<Result<EpgProgramme?>> programme(int id) => Result.guard(() async {
+    final row = await _db
+        .customSelect(
+          'SELECT $_programColumns FROM epg_programs p WHERE p.id = ?',
+          variables: [Variable.withInt(id)],
+          readsFrom: {_db.epgPrograms},
+        )
+        .getSingleOrNull();
+    return row == null ? null : _programme(row);
   });
 
   @override

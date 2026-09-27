@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -52,9 +53,12 @@ class GuideProgrammeSheet extends ConsumerWidget {
     final colors = tokens.colors;
     // The favorite as it is now, so the button follows its own press.
     final fresh = ref.watch(freshChannelProvider(channel)).value ?? channel;
+    // The grid's copy has no description; the whole one follows.
+    final whole =
+        ref.watch(guideProgrammeProvider(programme.id)).value ?? programme;
     final ended = !programme.end.isAfter(now);
-    final subtitle = programme.subtitle?.trim() ?? '';
-    final description = programme.description?.trim() ?? '';
+    final subtitle = whole.subtitle?.trim() ?? '';
+    final description = whole.description?.trim() ?? '';
 
     return AppDialog(
       title: programme.title,

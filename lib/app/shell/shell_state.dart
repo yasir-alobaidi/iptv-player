@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
@@ -144,6 +145,12 @@ class RailExpanded extends _$RailExpanded {
 @riverpod
 Stream<AppFailure> nonFatalErrors(Ref ref) =>
     ref.watch(errorReporterProvider).nonFatalErrors;
+
+/// What background work did ("Guide updated · 142 channels matched"),
+/// shown as toasts by the shell.
+@riverpod
+Stream<AppNotice> backgroundNotices(Ref ref) =>
+    ref.watch(appNoticesProvider).stream;
 
 /// Where the window's size and position are kept. `bootstrap()`
 /// overrides this with the settings-table implementation; the in-memory

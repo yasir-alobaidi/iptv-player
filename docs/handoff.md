@@ -1,139 +1,93 @@
-# Handoff — 2026-09-27 (Phase 4 step 6 built)
+# Handoff — 2026-09-27 (Phase 4 done: step 7 built)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md.
+docs/08-phases-and-prompts.md (Phase 5) and ADR-011 in docs/decisions.md.
 
 ## Before you start the next session (user)
-1. **Review steps 5 and 6, then push.** Committed locally, nothing pushed
-   since e9a9f76:
-   - `4ffa4f5` "Handoff: Phase 4 steps 3 and 4, what's next, and the road
-     to v1"
-   - `8b71091` "Phase 4 step 5: Settings → Guide"
-   - "Phase 4 step 6: the Guide grid"
-2. **Try it:** import a guide in Settings → Guide, then press **G**. The
-   arrows move through programmes and channels, Enter opens a programme,
-   Watch channel plays it full screen, Esc comes back. A channel with no
-   guide has a dashed row; Enter on it opens the Match… picker right there.
-3. **CI now names its failed tests in public.** After you push, open the
-   run on GitHub → the Windows job: every failed test is an annotation on
-   the summary page, no admin rights needed. Paste the names into the next
-   session, or leave it: the next session can read them with `curl` (see
-   "How to work here").
-4. **Optional, with your go-ahead:** one guide import from your real panel.
-   Settings → Guide → Import guide does exactly that. It downloads the
-   guide only and plays no stream, so it uses none of your one connection.
+1. **Review step 7, then push.** Committed locally: "Phase 4 step 7: the
+   scheduler, the toast, and the phase exit". Steps 5 and 6 are pushed.
+2. **Try it:** launch the app with a source whose guide is a day old, or
+   add a new source: a couple of seconds after the syncs, the guide comes
+   in by itself and a toast says "Guide updated · N channels matched".
+   Then G, the arrows, Enter, Watch channel.
+3. **Optional, with your go-ahead:** one guide import from your real panel.
+   It downloads the guide only and plays no stream, so it uses none of your
+   one connection — and the scheduler now does it by itself at launch, so
+   the next launch with your panel configured will import it (say so if
+   you'd rather it didn't yet).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-4-epg-and-guide.md and ADR-011 in docs/decisions.md first.
-Steps 5 and 6 are reviewed and pushed; CI is <green | red: …>.
-Windows failing tests: <names, or "read them from the annotations">. Real guide import: <yes | not yet>.
-Do Phase 4 step 7 (the scheduler, the toast and the phase exit) and stop for my review.
+docs/08-phases-and-prompts.md (Phase 5) and ADR-011 in docs/decisions.md first.
+Phase 4 step 7 is reviewed and pushed; CI is <green | red: …>.
+Propose the Phase 5 plan (Movies, Series, Home) and stop for my approval.
 ```
 
 ## Where things stand
-- **Phases 1–3 are built** (foundation, sources and sync, Live TV and the
-  player).
-- **Phase 4 (EPG and the guide) has steps 1–6 of 7:**
-  1. The fake panel serves XMLTV with every quirk.
-  2. Schema v5 stores the guide, with staging and an atomic swap.
-  3. The XMLTV parser and the import isolate.
-  4. Channel matching, and now/next on every Live TV row, in the preview
-     and in the player.
-  5. Settings → Guide: import and refresh, keep days, the time offset, and
-     the Match… picker for channels without a guide.
-  6. The Guide grid: the canvas's `Guide`, the keyboard, the detail sheet
-     and Watch, every state.
-- **What a real run shows today:** a guide comes in only when the user
-  presses Import guide or Refresh guide in Settings → Guide (the scheduler
-  is step 7). Once it's in, Live TV's rows, the preview, the player and the
-  Guide show it.
+- **Phases 1–4 are built:** foundation; sources and sync; Live TV and the
+  player; the EPG and the guide (all 7 steps, ADR-011 Accepted).
+- **What a real run does now:** the guide is imported by itself (a day
+  old or missing: after the launch's syncs, hourly, after each sync),
+  matched, and shown on every Live TV row, in the preview, the player's
+  OSD and the Guide grid; Settings → Guide maps channels by hand.
 - **Checks, all green:** analyze, format, `build_runner` leaves no diff;
-  **1,595 app tests** (5 skipped) under `TZ=UTC`; the Guide's tests and
-  goldens also under New York, Tokyo and Kathmandu; under xvfb, the new
-  Guide keyboard walk, app launch, the Settings → Guide, Live TV and
-  sources keyboard walks, and the playback fault suite.
-- **CI:** Linux green since step 3. Windows fails 4 tests (unnamed until
-  the step 5 push, which annotates them).
-- **The two one-off failures from 2026-09-25** (the sources keyboard walk,
-  the sync engine's `onSynced` test) did not come back this session; they
-  stay in progress.md's Known issues.
+  **1,616 app tests** (6 skipped) under `TZ=UTC`; the fake provider's 114;
+  under xvfb app launch, the Guide keyboard walk, the new Guide Watch
+  test, the Settings → Guide, Live TV and sources walks, and the playback
+  fault suite.
+- **Measured at the exit:** the 300 MB import 22 s end to end (+126 MB,
+  worst UI pause 26 ms); the Guide grid's scrolling in profile mode on the
+  real display, 0–6 frames over 16 ms per kind of scroll (flings none), and
+  PageDown 22–28 frames over, worst 59–77 ms (a known issue).
+- **CI:** Linux green. Windows fails 6 tests, named (progress.md Known
+  issues): two leave a file open when a test deletes its folder, three
+  cancels wait for the 30 s last-resort kill, one test expects a POSIX
+  path.
 
 ## Done this session (2026-09-27)
-- **Step 6: the Guide grid**, built by the lead alone (no agents were
-  asked for). ADR-011 step 6 and docs/05 §5 record every call; in short:
-  - every measure in `AppGuideTokens`; `surfaceSunken` for past
-    programmes; `text.small` for times;
-  - rows in one `ListView` over one shared horizontal offset; the channel
-    column inside each row (no second list to keep in step);
-  - `GuideWindowCache` (domain): (channel, hour) pieces, the screen plus a
-    screen and an hour of margin, one query at a time, reset on any guide
-    change; `EpgRepository.channelsWithGuide` tells "no guide" from
-    "nothing now";
-  - one Tab stop with a cursor (a row and a moment); gaps of 5 min or more
-    are "No information" cells;
-  - the toolbar (pills, Jump to now, filter) under the shared top bar;
-  - the sheet's Watch plays full screen and the player zaps through the
-    Guide's list (`PlayerScreen.zapQuery`); back on the Guide it stops;
-  - the dashed row opens the Match… picker in place (`saveGuideMatch`);
-  - G opens the Guide from anywhere; `AppMenu` scrolls.
-- **Bugs the tests found before the commit:** stopping the stream on any
-  router notification killed the one Watch had just started (a sheet
-  closing notifies too); `currentConfiguration` keeps the page under a
-  push, so the top route is `router.state`; the shell places the focus
-  before the Guide's rows exist, so the grid takes it when they show.
+- **Step 6 — the Guide grid** (committed and pushed earlier this session;
+  ADR-011 step 6).
+- **Step 7 — the scheduler, the toast, the phase exit** (ADR-011 step 7):
+  - `GuideScheduler` (`lib/data/sync/guide_scheduler.dart`) and its
+    policy `guideRefreshDue` (`lib/features/guide/domain/guide_refresh.dart`);
+    `bootstrap()` starts it after `SyncService.startUp()`; the sync engine's
+    `onSynced` tells it of every sync.
+  - `GuideSettingsController.loaded`, which the first import waits for.
+  - `AppNotices` (`lib/core/notices/`), shown by the shell as toasts.
+  - The import benchmark and the grid's scroll measurement, and the grid
+    reworked until its scrolling met the budget (see "Codebase notes").
+  - A bug the end-to-end test found: Live TV stopped the Guide's Watch
+    stream once Live TV had been visited (it read the page under the
+    player's push as "left Live TV").
 
-## What's next: the rest of Phase 4
-Work one step at a time. After each step: analyze, format, `TZ=UTC flutter
-test`, a local commit, and a stop for review. The user may answer
-"continue", which means do the next step.
-
-### Step 7 — Scheduler, toast, exit
-- **The scheduler (decision 5):**
-  - Refresh a guide older than 24 h: checked at launch (after
-    `startUp()`) and hourly.
-  - After a sync, never beside it, and one source at a time.
-  - A manual refresh from Settings.
-  - `SyncEngine.onSynced` already calls the matcher; the scheduler decides
-    when to import.
-  - **Wait for the stored Keep setting before the first import at launch:**
-    `GuideSettingsController` loads it asynchronously and an import before
-    then keeps the default 7 days (add a `loaded` future to the
-    controller).
-  - Go through `GuideImportService` (`guideImportServiceProvider`);
-    `reimport` cancels a running import, `importGuide` joins it.
-- **The toast:** "Guide updated · N channels matched", via
-  `lib/app/shell/toast_host.dart`; N comes from `EpgMatchSummary`.
-- **Exit measurements**, in `benchmark`-tagged tests:
-  - **The 300 MB import:** ≤ 4 min, peak RSS +300 MB, no UI frame over
-    32 ms. Run the fake provider in its own process: `dart run
-    tools/fake_provider/bin/server.dart --profile large --port 8899`, guide
-    `?channels=2150&days=7`, about 300 MB. If the swap's copy is the
-    bottleneck, the fallback in ADR-011 is a generation column.
-  - **The grid's scroll:** no frame over 16 ms with 50,000 channels × 7
-    days, with `flutter drive --profile` (see
-    `integration_test/large_sync_test.dart`). Scroll both ways: the rows
-    (the vertical list) and time (the shared offset — every row on screen
-    rebuilds its cells each frame; if that is the cost, give each row's
-    cells a transform instead and rebuild only on hour boundaries).
-- **An integration test:** import → Live TV shows now/next → open the Guide
-  → arrow to a programme → Enter → Watch → the player opens that channel.
-  `integration_test/guide_keyboard_test.dart` already does everything up
-  to Enter against the fake panel; playing needs the samples and
-  `framePolicy = fullyLive`, as `playback_faults_test.dart` does.
-- **The phase exit:** numbers into docs/progress.md, ADR-011 closed out,
-  this file rewritten.
+## What's next
+- **Phase 5 — Movies, Series, Home** (docs/08): propose the plan first, as
+  Phase 4 did (`docs/plans/phase-4-epg-and-guide.md` is the model: context,
+  what is carried in, decisions with a recommendation, steps with their
+  verification, risks). docs/08's exit criteria: lazy, cached details (a
+  second open makes no request); map and list episode shapes pass fixture
+  tests; resume prompt, progress saving, completion at 95 % and the
+  next-episode countdown pass integration tests against the fake provider;
+  Home shows every row and the first-run hero; every new screen has widget
+  tests for loading, empty, error and content.
+  - Read the canvas first (Home, Movies grid, Movie details, Series
+    details: https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99 with the
+    Artifact tool, action `read`, and `design/*.dc.html`).
+  - Home's "Favorite Channels (with now/next)" row can use `GuideService`
+    and `nowNextProvider` as Live TV does.
+- **The Windows failures** can go in alongside, one small commit each,
+  confirmed by the CI run after the user pushes (no Windows machine here).
+- **The Guide's PageDown** (progress.md Known issues), if a later phase
+  touches the grid.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **Phase 4 step 7** (above). Until then, the app imports a guide only
-  from Settings → Guide.
-- **CI green on both systems.** Linux is green; Windows fails 4 tests,
-  which the step 5 push names in the run's annotations.
+- **CI green on both systems.** Linux is green; Windows fails 6 named
+  tests (progress.md Known issues).
 - **Phase 5 — Movies, Series, Home.** These three screens are placeholders
   today.
   - Grids and details, with lazy, cached `get_vod_info` /
@@ -230,7 +184,41 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session (step 6):
+New this session (step 7):
+- **The scheduler** (`GuideScheduler`, provider `guideSchedulerProvider`)
+  reads the sync engine and the settings controller lazily (closures), and
+  the sync engine reads it lazily in `onSynced`: watching either way would
+  make a provider cycle. Nothing runs before `startUp()`; `synced()`
+  before it only queues. Tests drive it with `fakeAsync` — **make every
+  future a fake hands out inside the fake zone** (a `Completer` made in
+  `setUp` never completes there).
+- **Toasts from anywhere:** `ref.read(appNoticesProvider).show(AppNotice(…))`.
+  `AppNotice` has no `const` and no `==` on purpose.
+- **The Guide grid's structure after the rework** (`guide_grid.dart`):
+  - `_Strip` builds a row's cells for a stretch (±2 h, ±45 min when just
+    scrolled in) in a `RepaintBoundary`, slid by a `Transform` from the
+    shared offset `_x`; rebuilt every half hour the view moves (`_holds`,
+    `slack`), reusing unchanged cells' widgets (`_MadeCell`).
+  - `_edge` draws, per frame, the cell the view's edge cuts (its words laid
+    out once at the programme's width, `_CellView.layoutWidth`) and the
+    focus ring; `_PastTheCut` clips the sliding layer past it.
+  - `_BuildBudget` lets four rows a frame build their cells, and stretch
+    rebuilds take turns while the view is still inside.
+  - Rows redraw for the cache only on their channel's
+    `GuideWindowCache.revisionOf`.
+  - The grid's `windowForChannels` has no descriptions; the sheet reads
+    `EpgRepository.programme(id)` through `guideProgrammeProvider`.
+  - Measure with `integration_test/guide_scroll_test.dart` on the real
+    display (`--dart-define=GUIDE_TIMELINE=true` traces the keys instead,
+    `GUIDE_TIMELINE_WIDGETS=true` adds per-widget events). **In profile
+    builds `FocusNode.debugLabel` is empty**: find nodes by their place.
+- **`router.state.uri.path` is the top route**; the delegate's
+  `currentConfiguration` stays on the page under a push. Both Live TV and
+  the Guide read `router.state` now.
+- `testWidgets` builds the semantics tree unless `semanticsEnabled: false`;
+  a frame-time test should say which it measures.
+
+From the session before (step 6):
 - **The Guide** is `lib/features/guide/presentation/`: `guide_screen.dart`
   (the states, the toolbar, Watch), `guide_grid.dart` (`GuideGrid`,
   `GuideGridController` for the toolbar, `guideCells` / `cellAt`),
@@ -493,6 +481,11 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 4 step 7: the scheduler's policy (a day old; failures wait 6 h; no
+  guide address or a locked keyring left alone until a sync); the toast's
+  N counts visible channels; only the scheduler's imports toast; the grid's
+  sliding stretches and edge layer (measured: per-frame rebuilds of every
+  cell cost 12–13 ms a frame).
 - Phase 4 step 6: the channel column inside each row (one list, one shared
   horizontal offset); the cache's one query at a time with the newest
   request waiting; gap cells from 5 minutes; one Tab stop with a cursor
@@ -578,8 +571,7 @@ From earlier sessions (still true):
 - When the Windows PC is available for the Windows playback run.
 - App name and icon (placeholder "IPTV Player").
 - Light theme: tokens allow one, but it is out of scope for v1 (docs/05).
-- The four failing Windows CI tests: named in the run's annotations after
-  the step 5 push.
-- A real guide import from the user's panel: yes or not yet.
+- A real guide import from the user's panel: the scheduler will do it at
+  the next launch with the panel configured, unless told not to yet.
 - Windows installer type (MSIX or Inno Setup) is Phase 10's to recommend,
   but the user decides.

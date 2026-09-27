@@ -381,6 +381,48 @@ final class NonFatalErrorsProvider
 
 String _$nonFatalErrorsHash() => r'9bf39c8246816e3448d74e675308ca78f2aaccee';
 
+/// What background work did ("Guide updated · 142 channels matched"),
+/// shown as toasts by the shell.
+
+@ProviderFor(backgroundNotices)
+final backgroundNoticesProvider = BackgroundNoticesProvider._();
+
+/// What background work did ("Guide updated · 142 channels matched"),
+/// shown as toasts by the shell.
+
+final class BackgroundNoticesProvider
+    extends
+        $FunctionalProvider<AsyncValue<AppNotice>, AppNotice, Stream<AppNotice>>
+    with $FutureModifier<AppNotice>, $StreamProvider<AppNotice> {
+  /// What background work did ("Guide updated · 142 channels matched"),
+  /// shown as toasts by the shell.
+  BackgroundNoticesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'backgroundNoticesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$backgroundNoticesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<AppNotice> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<AppNotice> create(Ref ref) {
+    return backgroundNotices(ref);
+  }
+}
+
+String _$backgroundNoticesHash() => r'8efc072d4a009ee8180e62b5a688faf0f431502c';
+
 /// Where the window's size and position are kept. `bootstrap()`
 /// overrides this with the settings-table implementation; the in-memory
 /// default keeps widget tests free of a database.

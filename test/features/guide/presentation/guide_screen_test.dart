@@ -52,7 +52,8 @@ void main() {
       expect(find.text('World News'), findsNothing, reason: 'hidden');
       // The view starts at 8:30 PM: what began before it says so.
       expect(find.text('‹ Continental Cup · Semi-final'), findsOneWidget);
-      expect(find.text('8:00 – 10:00 PM'), findsOneWidget);
+      // Drawn from the view's edge, over its own clipped-away copy.
+      expect(find.text('8:00 – 10:00 PM'), findsNWidgets(2));
       expect(
         find.text('Match of the Week: Extended Highlights'),
         findsOneWidget,
@@ -251,6 +252,30 @@ void main() {
       await _key(tester, LogicalKeyboardKey.escape);
       await _settle(tester);
       expect(app.location, AppDestination.guide.path);
+      expect(fixture.live.rig.coordinator.current, isNull);
+      await _finish(tester);
+    });
+
+    testWidgets('Watch keeps playing with Live TV built behind the Guide', (
+      tester,
+    ) async {
+      final (fixture, app) = await pump(tester);
+      // Live TV built and left: it stops its own playback when left, and
+      // must not take the Guide's player for leaving.
+      app.router.go(AppDestination.liveTv.path);
+      await _settle(tester);
+      app.router.go(AppDestination.guide.path);
+      await _settle(tester);
+      await _focusGrid(tester);
+      await _key(tester, LogicalKeyboardKey.enter);
+
+      await tester.tap(find.text('Watch channel'));
+      await _settle(tester);
+
+      expect(app.location, '/player');
+      expect(fixture.live.rig.coordinator.current?.name, 'Arena Sports 1');
+      await _key(tester, LogicalKeyboardKey.escape);
+      await _settle(tester);
       expect(fixture.live.rig.coordinator.current, isNull);
       await _finish(tester);
     });
@@ -533,27 +558,27 @@ EpgProgramme _programme(String channel, String title, int from, int to) =>
 /// The title of the programme the focus ring is on, or "No guide
 /// information" on that row; null with no ring.
 String? _ringed() {
+  final grid = find.byWidgetPredicate(
+    (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
+  );
   final rings = find.descendant(
-    of: find.byWidgetPredicate(
-      (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
-    ),
+    of: grid,
     matching: find.byWidgetPredicate((w) => w is FocusRing && w.visible),
   );
-  final evaluated = rings.evaluate().toList();
-  if (evaluated.isEmpty) return null;
-  final texts = find.descendant(
-    of: find.byWidget(evaluated.single.widget),
-    matching: find.byType(Text),
-  );
-  for (final element in texts.evaluate()) {
-    final text = element.widget as Text;
-    final value = text.data ?? text.textSpan?.toPlainText() ?? '';
-    if (value.startsWith('No guide information')) {
-      return 'No guide information';
-    }
-    return value.replaceFirst('‹ ', '');
-  }
-  return null;
+  if (rings.evaluate().isEmpty) return null;
+  // The focused cell is the one its semantics call selected.
+  final selected = find
+      .descendant(
+        of: grid,
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.selected ?? false),
+        ),
+      )
+      .evaluate();
+  if (selected.isEmpty) return null;
+  final label = (selected.first.widget as Semantics).properties.label ?? '';
+  if (label.startsWith('No guide information')) return 'No guide information';
+  return label.split(', ').first;
 }
 
 bool _gridHasFocus(WidgetTester tester) =>

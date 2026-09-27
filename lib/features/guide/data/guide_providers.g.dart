@@ -161,6 +161,58 @@ final class EpgImporterProvider
 
 String _$epgImporterHash() => r'f337ee0f1378480bb0e23ed03915d1a4221da365';
 
+/// Imports guides on its own: after the launch's syncs, hourly, and
+/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
+/// engine tells it of every sync that succeeds.
+
+@ProviderFor(guideScheduler)
+final guideSchedulerProvider = GuideSchedulerProvider._();
+
+/// Imports guides on its own: after the launch's syncs, hourly, and
+/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
+/// engine tells it of every sync that succeeds.
+
+final class GuideSchedulerProvider
+    extends $FunctionalProvider<GuideScheduler, GuideScheduler, GuideScheduler>
+    with $Provider<GuideScheduler> {
+  /// Imports guides on its own: after the launch's syncs, hourly, and
+  /// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
+  /// engine tells it of every sync that succeeds.
+  GuideSchedulerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'guideSchedulerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideSchedulerHash();
+
+  @$internal
+  @override
+  $ProviderElement<GuideScheduler> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GuideScheduler create(Ref ref) {
+    return guideScheduler(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GuideScheduler value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GuideScheduler>(value),
+    );
+  }
+}
+
+String _$guideSchedulerHash() => r'1c802a4fadc1a11569399115f44b93f35ab68fb3';
+
 /// The importer as the screens see it.
 
 @ProviderFor(guideImportService)
@@ -347,6 +399,95 @@ final class GuideCoverageFamily extends $Family
 
   @override
   String toString() => r'guideCoverageProvider';
+}
+
+/// One programme whole, description and all, for the Guide's detail
+/// sheet: the grid reads programmes without their descriptions.
+
+@ProviderFor(guideProgramme)
+final guideProgrammeProvider = GuideProgrammeFamily._();
+
+/// One programme whole, description and all, for the Guide's detail
+/// sheet: the grid reads programmes without their descriptions.
+
+final class GuideProgrammeProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<EpgProgramme?>,
+          EpgProgramme?,
+          FutureOr<EpgProgramme?>
+        >
+    with $FutureModifier<EpgProgramme?>, $FutureProvider<EpgProgramme?> {
+  /// One programme whole, description and all, for the Guide's detail
+  /// sheet: the grid reads programmes without their descriptions.
+  GuideProgrammeProvider._({
+    required GuideProgrammeFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'guideProgrammeProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideProgrammeHash();
+
+  @override
+  String toString() {
+    return r'guideProgrammeProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<EpgProgramme?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<EpgProgramme?> create(Ref ref) {
+    final argument = this.argument as int;
+    return guideProgramme(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is GuideProgrammeProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$guideProgrammeHash() => r'cef1ec12c57ed6de51c4ba884af382a912546344';
+
+/// One programme whole, description and all, for the Guide's detail
+/// sheet: the grid reads programmes without their descriptions.
+
+final class GuideProgrammeFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<EpgProgramme?>, int> {
+  GuideProgrammeFamily._()
+    : super(
+        retry: null,
+        name: r'guideProgrammeProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// One programme whole, description and all, for the Guide's detail
+  /// sheet: the grid reads programmes without their descriptions.
+
+  GuideProgrammeProvider call(int id) =>
+      GuideProgrammeProvider._(argument: id, from: this);
+
+  @override
+  String toString() => r'guideProgrammeProvider';
 }
 
 /// How far [sourceId]'s running import has got; nothing while none runs.
@@ -708,7 +849,7 @@ final class GuideSettingsControllerProvider
 }
 
 String _$guideSettingsControllerHash() =>
-    r'a06b6670c350198904c12975cdbe8d94985fffd0';
+    r'186f4932b7f754c6187674d58d11101907285d1f';
 
 /// Settings → Guide's choices: the days kept (global) and a source's time
 /// offset. The defaults at once, the stored choices as soon as they are

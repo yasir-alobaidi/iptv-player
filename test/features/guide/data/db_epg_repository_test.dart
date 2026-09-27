@@ -235,6 +235,35 @@ void main() {
     });
   });
 
+  test(
+    'the window leaves descriptions out; one programme has its own',
+    () async {
+      final channel = await addChannel('201');
+      await match(channel, 'arena.sports');
+      await import([
+        programme(
+          'arena.sports',
+          start: _now,
+          title: 'Final',
+          description: 'A long description the grid never shows.',
+        ),
+      ]);
+
+      final window = (await repository.windowForChannels(
+        [channel],
+        _now,
+        _now.add(const Duration(hours: 1)),
+      )).valueOrNull![channel]!.single;
+      expect(window.title, 'Final');
+      expect(window.description, isNull);
+
+      final whole = (await repository.programme(window.id)).valueOrNull!;
+      expect(whole.description, 'A long description the grid never shows.');
+      expect(whole.start, window.start);
+      expect((await repository.programme(-1)).valueOrNull, isNull);
+    },
+  );
+
   group('channels with a guide', () {
     test('are the matched channels whose guide channel has programmes, '
         'whenever those are', () async {

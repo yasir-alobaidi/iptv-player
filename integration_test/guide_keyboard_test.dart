@@ -155,29 +155,27 @@ void main() {
 /// The title under the grid's focus ring, or "No guide information";
 /// null with no ring in the grid.
 String? _ringed() {
-  final rings = find
-      .descendant(
-        of: find.byWidgetPredicate(
-          (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
-        ),
-        matching: find.byWidgetPredicate((w) => w is FocusRing && w.visible),
-      )
-      .evaluate()
-      .toList();
-  if (rings.isEmpty) return null;
-  final texts = find.descendant(
-    of: find.byWidget(rings.single.widget),
-    matching: find.byType(Text),
+  final grid = find.byWidgetPredicate(
+    (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
   );
-  for (final element in texts.evaluate()) {
-    final text = element.widget as Text;
-    final value = text.data ?? text.textSpan?.toPlainText() ?? '';
-    if (value.startsWith('No guide information')) {
-      return 'No guide information';
-    }
-    return value.replaceFirst('‹ ', '');
-  }
-  return null;
+  final rings = find.descendant(
+    of: grid,
+    matching: find.byWidgetPredicate((w) => w is FocusRing && w.visible),
+  );
+  if (rings.evaluate().isEmpty) return null;
+  // The focused cell is the one its semantics call selected.
+  final selected = find
+      .descendant(
+        of: grid,
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.selected ?? false),
+        ),
+      )
+      .evaluate();
+  if (selected.isEmpty) return null;
+  final label = (selected.first.widget as Semantics).properties.label ?? '';
+  if (label.startsWith('No guide information')) return 'No guide information';
+  return label.split(', ').first;
 }
 
 final class _App {

@@ -5,13 +5,18 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/epg_importer.dart';
 import 'package:iptv_player/data/sync/epg_match_service.dart';
+import 'package:iptv_player/data/sync/guide_scheduler.dart';
 import 'package:iptv_player/features/guide/data/db_epg_repository.dart';
 import 'package:iptv_player/features/guide/data/db_guide_settings_store.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/guide_matching.dart';
 import 'package:iptv_player/features/guide/domain/guide_settings.dart';
+import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/sources/domain/sync.dart';
+import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'guide_providers.g.dart';
@@ -60,6 +65,38 @@ EpgImporter epgImporter(Ref ref) {
   return importer;
 }
 
+/// Imports guides on its own: after the launch's syncs, hourly, and
+/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
+/// engine tells it of every sync that succeeds.
+@Riverpod(keepAlive: true)
+GuideScheduler guideScheduler(Ref ref) {
+  final scheduler = GuideScheduler(
+    guide: ref.watch(epgRepositoryProvider),
+    imports: ref.watch(guideImportServiceProvider),
+    sources: ref.watch(sourceRepositoryProvider),
+    log: ref.watch(appLogProvider),
+    // Read when needed, not watched: the sync engine and the settings
+    // read this scheduler in turn, and a watch would make a cycle.
+    settingsLoaded: () =>
+        ref.read(guideSettingsControllerProvider.notifier).loaded,
+    syncing: (sourceId) =>
+        ref.read(syncServiceProvider).statusOf(sourceId) is SyncRunning,
+    busy: (sourceId) {
+      // Never created means nothing ever played.
+      if (!ref.exists(playbackCoordinatorProvider)) return false;
+      return switch (ref.read(playbackCoordinatorProvider).state) {
+        PlaybackOpening(:final channel) ||
+        PlaybackReconnecting(:final channel) => channel.sourceId == sourceId,
+        _ => false,
+      };
+    },
+    notify: ref.watch(appNoticesProvider).show,
+    clock: ref.watch(appClockProvider),
+  );
+  ref.onDispose(scheduler.dispose);
+  return scheduler;
+}
+
 /// The importer as the screens see it.
 @Riverpod(keepAlive: true)
 GuideImportService guideImportService(Ref ref) =>
@@ -74,6 +111,12 @@ GuideMatching guideMatching(Ref ref) => ref.watch(epgMatchServiceProvider);
 @riverpod
 Stream<GuideCoverage> guideCoverage(Ref ref, String sourceId) =>
     ref.watch(epgRepositoryProvider).watchCoverage(sourceId);
+
+/// One programme whole, description and all, for the Guide's detail
+/// sheet: the grid reads programmes without their descriptions.
+@riverpod
+Future<EpgProgramme?> guideProgramme(Ref ref, int id) async =>
+    (await ref.watch(epgRepositoryProvider).programme(id)).valueOrNull;
 
 /// How far [sourceId]'s running import has got; nothing while none runs.
 @riverpod
@@ -113,15 +156,41 @@ class GuideSettingsController extends _$GuideSettingsController {
   }
 
   var _changed = false;
+  final _loaded = Completer<void>();
+
+  /// Completes once the stored choices have been read, or couldn't be.
+  /// An import at launch waits for it, or it would keep the default days.
+  Future<void> get loaded => _loaded.future;
 
   /// Bumped by every change of the days kept, so an older round of
   /// re-imports stops at its next source.
   var _round = 0;
+  Future<void> _reimporting = Future.value();
+
+  /// The latest round of re-imports a change of the days kept started,
+  /// for tests that must not race it.
+  @visibleForTesting
+  Future<void> get reimporting => _reimporting;
 
   Future<void> _load() async {
-    final stored = await ref.read(guideSettingsStoreProvider).load();
-    // A choice made while loading wins over what was stored.
-    if (!_changed) state = stored.valueOrNull ?? const GuideSettings();
+    try {
+      final stored = await ref.read(guideSettingsStoreProvider).load();
+      // A choice made while loading wins over what was stored.
+      if (!_changed) state = stored.valueOrNull ?? const GuideSettings();
+    } on Object catch (error, stackTrace) {
+      // The store answers with a Result; this is the last line of
+      // defence, and the defaults stay.
+      ref
+          .read(appLogProvider)
+          .warning(
+            'guide',
+            'Could not read the guide settings',
+            error: error,
+            stackTrace: stackTrace,
+          );
+    } finally {
+      if (!_loaded.isCompleted) _loaded.complete();
+    }
   }
 
   /// Keeps [days] of programmes ahead, then re-imports every source that
@@ -147,15 +216,17 @@ class GuideSettingsController extends _$GuideSettingsController {
     final sources = ref.read(sourceRepositoryProvider);
     final guide = ref.read(epgRepositoryProvider);
     final imports = ref.read(guideImportServiceProvider);
-    unawaited(() async {
-      final all = (await sources.all()).valueOrNull ?? const <Source>[];
-      for (final source in all) {
-        if (round != _round) return;
-        if (await _hasGuide(guide, imports, source.id)) {
-          await imports.reimport(source.id);
+    unawaited(
+      _reimporting = () async {
+        final all = (await sources.all()).valueOrNull ?? const <Source>[];
+        for (final source in all) {
+          if (round != _round) return;
+          if (await _hasGuide(guide, imports, source.id)) {
+            await imports.reimport(source.id);
+          }
         }
-      }
-    }());
+      }(),
+    );
     return const Ok(null);
   }
 

@@ -71,6 +71,12 @@ final class GuideWindowCache extends ChangeNotifier {
     return GuideRow(hasGuide: true, programmes: channel.overlapping(from, to));
   }
 
+  /// Changes whenever what [row] answers for [channelId] may have: a load
+  /// for it landed, it was forgotten, or everything was [reset]. A row
+  /// on screen redraws only when its own revision moved.
+  int revisionOf(int channelId) =>
+      _generation * 1000000 + (_channels[channelId]?.revision ?? -1);
+
   /// Every programme read for [channelId], in start order; empty when
   /// none has been.
   List<EpgProgramme> known(int channelId) =>
@@ -172,7 +178,9 @@ final class GuideWindowCache extends ChangeNotifier {
           // Forgotten while it loaded.
           if (channel == null) continue;
           if (unknown.contains(id)) channel.hasGuide = guided.contains(id);
-          channel.add(programmes[id] ?? const []);
+          channel
+            ..add(programmes[id] ?? const [])
+            ..revision += 1;
           for (var hour = firstHour; hour < endHour; hour++) {
             channel.hours.add(hour);
           }
@@ -219,6 +227,9 @@ final class GuideWindowCache extends ChangeNotifier {
 final class _Channel {
   /// Null until the first load that asked about it lands.
   bool? hasGuide;
+
+  /// Bumped by every load that lands for it.
+  int revision = 0;
   final hours = <int>{};
   final _byId = <int, EpgProgramme>{};
   List<EpgProgramme>? _sorted;

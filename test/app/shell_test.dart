@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components.dart';
 
@@ -207,6 +209,31 @@ void main() {
       await settleApp(tester);
 
       expect(find.byType(AppToast), findsOneWidget);
+    });
+
+    testWidgets('background news becomes a toast, and the same news '
+        'another day becomes another', (tester) async {
+      final notices = AppNotices();
+      addTearDown(notices.dispose);
+      await pumpApp(
+        tester,
+        overrides: [appNoticesProvider.overrideWithValue(notices)],
+      );
+      const message = 'Guide updated · 142 channels matched';
+
+      notices.show(AppNotice(message, tone: NoticeTone.success));
+      await settleApp(tester);
+      expect(find.text(message), findsOneWidget);
+
+      await tester.pump(AppToast.defaultDuration);
+      await settleApp(tester);
+      expect(find.byType(AppToast), findsNothing);
+
+      notices.show(AppNotice(message, tone: NoticeTone.success));
+      await settleApp(tester);
+      expect(find.text(message), findsOneWidget);
+      await tester.pump(AppToast.defaultDuration);
+      await settleApp(tester);
     });
 
     testWidgets('a toast goes away by itself', (tester) async {

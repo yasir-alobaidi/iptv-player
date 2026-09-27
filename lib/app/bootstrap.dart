@@ -109,7 +109,8 @@ Future<void> bootstrap() async {
 /// Waits for the first frame and a moment after it, so starting up never
 /// competes with a sync, then records runs the last session left
 /// unfinished and refreshes sources older than their `refresh_hours`
-/// (docs/02). The sync itself runs in a background isolate.
+/// (docs/02), then imports the guides that are due. The sync and the
+/// import each run in a background isolate.
 ///
 /// A guide import the last session was killed during is recorded the
 /// same way, and the rows it staged go with it: they are the one thing
@@ -120,6 +121,8 @@ void _syncAfterLaunch(ProviderContainer container) {
       Future<void>.delayed(_launchSyncDelay, () async {
         await container.read(epgRepositoryProvider).recoverInterrupted();
         await container.read(syncServiceProvider).startUp();
+        // Guides after the syncs, never beside them (ADR-011 decision 5).
+        await container.read(guideSchedulerProvider).startUp();
       }),
     );
   });

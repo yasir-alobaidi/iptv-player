@@ -9,6 +9,7 @@ import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/toast_host.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -125,13 +126,31 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     final tokens = context.tokens;
     final colors = tokens.colors;
 
-    ref.listen(nonFatalErrorsProvider, (previous, next) {
-      final failure = next.value;
-      if (failure == null) return;
-      _toasts.show(
-        ShellToast(message: failureWithAnswer(failure), tone: ToastTone.error),
-      );
-    });
+    ref
+      ..listen(nonFatalErrorsProvider, (previous, next) {
+        final failure = next.value;
+        if (failure == null) return;
+        _toasts.show(
+          ShellToast(
+            message: failureWithAnswer(failure),
+            tone: ToastTone.error,
+          ),
+        );
+      })
+      ..listen(backgroundNoticesProvider, (previous, next) {
+        final notice = next.value;
+        if (notice == null) return;
+        _toasts.show(
+          ShellToast(
+            message: notice.message,
+            tone: switch (notice.tone) {
+              NoticeTone.neutral => ToastTone.neutral,
+              NoticeTone.success => ToastTone.success,
+              NoticeTone.error => ToastTone.error,
+            },
+          ),
+        );
+      });
 
     final wantsExpanded = ref.watch(railExpandedProvider);
     final source = ref.watch(shellSourceProvider);

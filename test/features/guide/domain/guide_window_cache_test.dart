@@ -25,11 +25,11 @@ void main() {
     notified = 0;
     // Channel 1: back-to-back programmes; 2: one long one; 3: no guide.
     guide
-      ..programme(1, 1, 'Early', -120, 90)
-      ..programme(1, 2, 'Now', -30, 60)
-      ..programme(1, 3, 'Next', 30, 60)
-      ..programme(1, 4, 'Late', 300, 60)
-      ..programme(2, 5, 'Marathon', -600, 900)
+      ..add(1, 1, 'Early', -120, 90)
+      ..add(1, 2, 'Now', -30, 60)
+      ..add(1, 3, 'Next', 30, 60)
+      ..add(1, 4, 'Late', 300, 60)
+      ..add(2, 5, 'Marathon', -600, 900)
       ..withGuide.addAll({1, 2});
   });
   tearDown(() => cache.dispose());
@@ -119,7 +119,7 @@ void main() {
     cache.reset();
     expect(cache.row(1, _t0, _at(60)), isNull);
 
-    guide.programme(1, 9, 'Replaced', 60, 60);
+    guide.add(1, 9, 'Replaced', 60, 60);
     guide.gate!.complete();
     guide.gate = null;
     await settle();
@@ -176,6 +176,22 @@ void main() {
     ]);
   });
 
+  test("a channel's revision moves when a load for it lands or the cache "
+      'resets, not for other channels', () async {
+    final before = cache.revisionOf(1);
+    cache.request([2], _t0, _at(60));
+    await settle();
+    expect(cache.revisionOf(1), before, reason: 'another channel');
+
+    cache.request([1], _t0, _at(60));
+    await settle();
+    final loaded = cache.revisionOf(1);
+    expect(loaded, isNot(before));
+
+    cache.reset();
+    expect(cache.revisionOf(1), isNot(loaded));
+  });
+
   test('a row between two programmes holds both halves once', () async {
     cache.request([1], _at(-60), _at(60));
     await settle();
@@ -195,7 +211,7 @@ final class _Guide implements EpgRepository {
   Completer<void>? gate;
   AppFailure? failure;
 
-  void programme(int channel, int id, String title, int from, int minutes) {
+  void add(int channel, int id, String title, int from, int minutes) {
     (_programmes[channel] ??= []).add(
       EpgProgramme(
         id: id,

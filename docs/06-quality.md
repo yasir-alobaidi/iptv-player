@@ -44,12 +44,13 @@ Live samples are 30–120 s long and the fake provider loops them; VOD samples a
 `tools/media_samples/library_tree.sh <dir> <count>` builds a fake library (movies, episodes, junk release names, subtitles, nested seasons) from short low-resolution clips, each with a unique title tag so quick hashes differ; fictional names only. Tests lower the scanner's 20 MB minimum file size.
 
 ## Performance budgets (profile mode, dev laptop)
-Measured by tests tagged `benchmark`, which are skipped unless run with `flutter test --tags benchmark --run-skipped` (timings on shared CI runners are noise); the numbers go in docs/progress.md. The sync budget: `test/data/sync/sync_benchmark_test.dart`, with the fake provider in its own process.
+Measured by tests tagged `benchmark`, which are skipped unless run with `flutter test --tags benchmark --run-skipped` (timings on shared CI runners are noise); the numbers go in docs/progress.md. The sync budget: `test/data/sync/sync_benchmark_test.dart`, with the fake provider in its own process. The XMLTV import: `test/data/sync/epg_import_benchmark_test.dart` (the `large` catalogue synced, then a ~300 MB guide from the fake provider in its own process, end to end). The Guide grid's scroll: `integration_test/guide_scroll_test.dart` with `flutter drive --profile -d linux --driver=test_driver/integration_test.dart`, on the real display (under xvfb the software rasterizer competes with the app for the CPU and the numbers wander run to run); it reports each kind of scroll apart — flings, the wheel down, the wheel sideways, →, PageDown.
 
 | Metric | Budget |
 |---|---|
 | Cold start to interactive Home (cached data) | ≤ 2.0 s |
 | Channel list scroll, 50k rows | no frame > 16 ms at 60 Hz |
+| Guide grid scroll, 50k channels × 7 days | no frame > 16 ms at 60 Hz |
 | Sync 50k channels + 30k movies (fake provider) | ≤ 60 s; no UI frame > 32 ms |
 | XMLTV 300 MB import | ≤ 4 min; UI unaffected; peak RAM +300 MB max |
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s |

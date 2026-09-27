@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
@@ -91,6 +92,11 @@ class GuideGrid extends ConsumerStatefulWidget {
 
   static const pageSize = 100;
 
+  /// How many rows scrolled into view build their cells in one frame; the
+  /// rest show a placeholder until the next. A page of new rows (PageDown)
+  /// then fills in over a few frames instead of taking one long one.
+  static const rowsPerFrame = 4;
+
   /// A gap in a channel's guide shorter than this is left empty; a longer
   /// one is a cell of its own ("No information"), so the keyboard can
   /// stand on it.
@@ -112,6 +118,10 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     vsync: this,
   )..addListener(() => _x.value = _xMotion.value);
   late GuideWindowCache _cache;
+  bool _failed = false;
+
+  /// New rows' cells, a few a frame.
+  final _budget = _BuildBudget(GuideGrid.rowsPerFrame);
 
   final _pages = <int, List<ChannelItem>>{};
   final _loading = <int>{};
@@ -196,8 +206,11 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     });
   }
 
+  /// The rows redraw themselves from the cache; the grid only when a load
+  /// failed or a retry cleared the failure.
   void _onCache() {
-    if (mounted) setState(() {});
+    final failed = _cache.failure != null;
+    if (failed != _failed && mounted) setState(() => _failed = failed);
   }
 
   void _onX() => _scheduleRequest();
@@ -291,7 +304,8 @@ class _GuideGridState extends ConsumerState<GuideGrid>
       final channel = _channelAt(index);
       if (channel != null) ids.add(channel.id);
     }
-    const margin = Duration(hours: 1);
+    // The stretch every row builds around the view, and an hour more.
+    final margin = _Strip.margin + const Duration(hours: 1);
     _cache.request(ids, _viewStart.subtract(margin), _viewEnd.add(margin));
   }
 
@@ -733,6 +747,8 @@ class _GuideGridState extends ConsumerState<GuideGrid>
               return _GuideRowView(
                 channel: channel,
                 timeline: _timeline,
+                cache: _cache,
+                budget: _budget,
                 x: _x,
                 viewWidth: _viewWidth,
                 now: _now,
@@ -914,11 +930,12 @@ class _RowFrame extends StatelessWidget {
   }
 }
 
-/// A channel's row: its number, logo and name, and its cells for the
-/// view, redrawn as the view moves.
+/// A channel's row: its number, logo and name, and its cells.
 class _GuideRowView extends StatelessWidget {
   const new({
     required this.channel,
+    required this.cache,
+    required this.budget,
     required this.timeline,
     required this.x,
     required this.viewWidth,
@@ -929,6 +946,8 @@ class _GuideRowView extends StatelessWidget {
   });
 
   final ChannelItem? channel;
+  final GuideWindowCache cache;
+  final _BuildBudget budget;
   final GuideTimeline timeline;
   final ValueListenable<double> x;
   final double viewWidth;
@@ -946,22 +965,276 @@ class _GuideRowView extends StatelessWidget {
     if (channel == null) return const _SkeletonRow();
     return _RowFrame(
       channel: _ChannelCell(channel: channel),
-      strip: ValueListenableBuilder<double>(
-        valueListenable: x,
-        builder: (context, offset, _) => _strip(context, offset),
+      strip: _Strip(
+        channelId: channel.id,
+        cache: cache,
+        budget: budget,
+        timeline: timeline,
+        x: x,
+        viewWidth: viewWidth,
+        now: now,
+        cells: cells,
+        cursor: cursor,
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+/// A row's cells. They are built once for a stretch of about two hours
+/// either side of the view and slid along with a transform as the view
+/// moves, so scrolling through time rebuilds nothing but the programme
+/// the view's left edge cuts (drawn again on top, from the edge, with its
+/// ‹) and the focus ring; the stretch is built again when the view nears
+/// its end. The row redraws for the cache only when a load for its own
+/// channel lands. One mouse region and one tap handler for the whole
+/// strip, not one per cell.
+class _Strip extends StatefulWidget {
+  const new({
+    required this.channelId,
+    required this.cache,
+    required this.budget,
+    required this.timeline,
+    required this.x,
+    required this.viewWidth,
+    required this.now,
+    required this.cells,
+    required this.cursor,
+    required this.onTap,
+  });
+
+  final int channelId;
+  final GuideWindowCache cache;
+  final _BuildBudget budget;
+  final GuideTimeline timeline;
+  final ValueListenable<double> x;
+  final double viewWidth;
+  final DateTime now;
+  final List<GuideCell>? Function(DateTime from, DateTime to) cells;
+  final DateTime? cursor;
+  final ValueChanged<GuideCell>? onTap;
+
+  /// The stretch built either side of the view, and how near its end the
+  /// view may come before it is built again: narrow for a row just
+  /// scrolled in (a page of new rows builds as little as it can), wide
+  /// once the view moves through time. The wide one is built again every
+  /// half hour the view moves, so each time adds a cell or so to lay out,
+  /// never a screen's worth in one frame.
+  static const freshMargin = Duration(minutes: 45);
+  static const freshSlack = Duration(minutes: 15);
+  static const margin = Duration(hours: 2);
+  static const slack = Duration(minutes: 90);
+
+  @override
+  State<_Strip> createState() => _StripState();
+}
+
+class _StripState extends State<_Strip> {
+  /// The stretch the cells are built for; null to work it out again.
+  DateTime? _from;
+  DateTime? _to;
+
+  /// The stretch had not been read yet, so the view alone was drawn.
+  var _partial = false;
+  var _revision = 0;
+
+  /// The start of the cell under the mouse.
+  DateTime? _hovered;
+
+  /// Whether the view has moved through time since this row was built:
+  /// then its stretch is the wide one.
+  var _wide = false;
+
+  /// Each cell's widget as last built, reused while nothing it shows
+  /// changed, so a new stretch builds only the cells new to it.
+  var _made = <Object, _MadeCell>{};
+
+  /// Whether this row has had its turn to build its cells.
+  var _ready = false;
+
+  void _retry() {
+    if (mounted) setState(() {});
+  }
+
+  Duration get _margin => _wide ? _Strip.margin : _Strip.freshMargin;
+  Duration get _slack => _wide ? _Strip.slack : _Strip.freshSlack;
+
+  GuideTimeline get _timeline => widget.timeline;
+  DateTime get _viewFrom => _timeline.timeAt(widget.x.value);
+  DateTime get _viewTo => _timeline.timeAt(widget.x.value + widget.viewWidth);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.x.addListener(_onX);
+    widget.cache.addListener(_onCache);
+    _revision = widget.cache.revisionOf(widget.channelId);
+  }
+
+  @override
+  void didUpdateWidget(_Strip old) {
+    super.didUpdateWidget(old);
+    if (old.x != widget.x) {
+      old.x.removeListener(_onX);
+      widget.x.addListener(_onX);
+    }
+    if (old.cache != widget.cache) {
+      old.cache.removeListener(_onCache);
+      widget.cache.addListener(_onCache);
+    }
+    if (old.timeline != widget.timeline ||
+        old.viewWidth != widget.viewWidth ||
+        old.channelId != widget.channelId) {
+      _from = null;
+    }
+    _revision = widget.cache.revisionOf(widget.channelId);
+  }
+
+  @override
+  void dispose() {
+    widget.x.removeListener(_onX);
+    widget.cache.removeListener(_onCache);
+    super.dispose();
+  }
+
+  /// Whether the stretch built still holds the view with room to spare.
+  bool _holds(DateTime from, DateTime to) {
+    final start = _from;
+    final end = _to;
+    if (start == null || end == null || _partial) return false;
+    if (from.isBefore(start) || to.isAfter(end)) return false;
+    final roomBefore =
+        !start.isAfter(_timeline.origin) || from.difference(start) >= _slack;
+    final roomAfter =
+        !end.isBefore(_timeline.end) || end.difference(to) >= _slack;
+    return roomBefore && roomAfter;
+  }
+
+  void _onX() {
+    // Also called back after a frame, by the budget.
+    if (!mounted) return;
+    final from = _viewFrom;
+    final to = _viewTo;
+    if (_holds(from, to)) return;
+    // Every row nears its stretch's end in the same frame (they share the
+    // view): while the view is still inside it, the rows take turns.
+    if (_inside(from, to) && !widget.budget.take(_onX)) return;
+    setState(() {
+      _from = null;
+      _wide = true;
+    });
+  }
+
+  /// Whether the stretch built still holds the view at all.
+  bool _inside(DateTime from, DateTime to) {
+    final start = _from;
+    final end = _to;
+    return start != null &&
+        end != null &&
+        !_partial &&
+        !from.isBefore(start) &&
+        !to.isAfter(end);
+  }
+
+  /// The cell the view's left edge at [edge] cuts, if one does: a
+  /// programme, or a gap, whose words would otherwise be off screen.
+  static GuideCell? _cutAt(List<GuideCell> cells, DateTime edge) {
+    for (final cell in cells) {
+      if (!cell.noGuide &&
+          cell.start.isBefore(edge) &&
+          cell.end.isAfter(edge)) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
+  void _onCache() {
+    final revision = widget.cache.revisionOf(widget.channelId);
+    if (revision == _revision) return;
+    setState(() {
+      _revision = revision;
+      _from = null;
+    });
+  }
+
+  /// The cell under [dx] pixels from the strip's left edge.
+  GuideCell? _cellAt(double dx) {
+    final at = _timeline.timeAt(widget.x.value + dx);
+    final found = widget.cells(_viewFrom, _viewTo);
+    if (found == null) return null;
+    for (final cell in found) {
+      if (cell.contains(at)) return cell;
+    }
+    return null;
+  }
+
+  void _hover(DateTime? start) {
+    if (start != _hovered) setState(() => _hovered = start);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final onTap = widget.onTap;
+    return MouseRegion(
+      cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+      onHover: (event) => _hover(_cellAt(event.localPosition.dx)?.start),
+      onExit: (_) => _hover(null),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapUp: onTap == null
+            ? null
+            : (details) {
+                final cell = _cellAt(details.localPosition.dx);
+                if (cell != null) onTap(cell);
+              },
+        child: _cells(context),
       ),
     );
   }
 
-  Widget _strip(BuildContext context, double offset) {
+  Widget _cells(BuildContext context) {
     final tokens = context.tokens;
     final guide = tokens.guide;
-    final from = timeline.timeAt(offset);
-    final to = timeline.timeAt(offset + viewWidth);
-    final found = cells(from, to);
+    final viewFrom = _viewFrom;
+    final viewTo = _viewTo;
+    if (!_holds(viewFrom, viewTo)) {
+      final hour = floorToHalfHour(viewFrom);
+      var from = hour.subtract(_margin);
+      var to = viewTo.add(_margin);
+      if (from.isBefore(_timeline.origin)) from = _timeline.origin;
+      if (to.isAfter(_timeline.end)) to = _timeline.end;
+      _from = from;
+      _to = to;
+      _partial = false;
+    }
+    var from = _from!;
+    var to = _to!;
+    var found = widget.cells(from, to);
+    if (found == null) {
+      // The stretch around the view isn't read yet: the view alone.
+      found = widget.cells(viewFrom, viewTo);
+      from = viewFrom;
+      to = viewTo;
+      _from = from;
+      _to = to;
+      _partial = true;
+    }
     if (found == null) return const _StripSkeleton();
-    final focused = cursor == null ? null : cellAt(found, cursor!);
-    if (found.length == 1 && found.single.noGuide) {
+    if (!_ready) {
+      if (!widget.budget.take(_retry)) return const _StripPlaceholder();
+      _ready = true;
+    }
+    final cells = found;
+    // From the stretch, not the view: the view may be sliding towards
+    // the cursor (Home), and this is built once for the whole slide.
+    final cursor = widget.cursor;
+    final focused =
+        cursor == null || cursor.isBefore(from) || !cursor.isBefore(to)
+        ? null
+        : cellAt(cells, cursor);
+    final onTap = widget.onTap;
+    if (cells.length == 1 && cells.single.noGuide) {
       return Padding(
         padding: EdgeInsets.symmetric(
           horizontal: guide.cellInsetX,
@@ -969,41 +1242,205 @@ class _GuideRowView extends StatelessWidget {
         ),
         child: _NoGuideCell(
           focused: focused != null,
-          onTap: onTap == null ? null : () => onTap!(found.single),
+          onTap: onTap == null ? null : () => onTap(cells.single),
         ),
       );
     }
-    final children = <Widget>[];
-    Widget? ringed;
-    for (final cell in found) {
-      final left = timeline.xOf(cell.start.isBefore(from) ? from : cell.start);
-      final right = timeline.xOf(cell.end);
-      final width = right - left - guide.cellInsetX * 2;
-      if (width <= 0) continue;
-      final isFocused = identical(cell, focused);
-      final view = Positioned(
-        key: ValueKey(cell.programme?.id ?? 'gap ${cell.start}'),
-        left: left - offset + guide.cellInsetX,
-        top: guide.cellInsetY,
-        bottom: guide.cellInsetY,
-        width: width,
-        child: _CellView(
-          cell: cell,
-          width: width,
-          clipped: cell.start.isBefore(from),
-          now: now,
-          focused: isFocused,
-          onTap: onTap == null ? null : () => onTap!(cell),
+
+    // Every cell at its own place in the stretch.
+    final base = _timeline.xOf(from);
+    final stretch = _timeline.xOf(to) - base;
+    final made = <Object, _MadeCell>{};
+    final placed = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        for (final cell in cells)
+          if (_timeline.xOf(cell.end) - _timeline.xOf(cell.start) >
+              guide.cellInsetX * 2)
+            Positioned(
+              key: ValueKey(_keyOf(cell)),
+              left: _timeline.xOf(cell.start) - base + guide.cellInsetX,
+              top: guide.cellInsetY,
+              bottom: guide.cellInsetY,
+              width:
+                  _timeline.xOf(cell.end) -
+                  _timeline.xOf(cell.start) -
+                  guide.cellInsetX * 2,
+              child: _cellWidget(
+                made,
+                cell,
+                _timeline.xOf(cell.end) -
+                    _timeline.xOf(cell.start) -
+                    guide.cellInsetX * 2,
+                focused: cell.start == focused?.start,
+              ),
+            ),
+      ],
+    );
+    _made = made;
+    return Stack(
+      children: [
+        Positioned.fill(
+          // Nothing left of where the cut programme ends: the edge layer
+          // draws that one, from the edge. Moved on every frame, never
+          // rebuilt for it.
+          child: ClipRect(
+            clipper: _PastTheCut(
+              x: widget.x,
+              timeline: _timeline,
+              cells: cells,
+            ),
+            child: ValueListenableBuilder<double>(
+              valueListenable: widget.x,
+              builder: (context, offset, child) => Transform.translate(
+                offset: Offset(base - offset, 0),
+                child: child,
+              ),
+              // A layer of its own: sliding it moves the layer, and the
+              // cells are painted again only when the stretch is rebuilt.
+              child: RepaintBoundary(
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  minWidth: stretch,
+                  maxWidth: stretch,
+                  child: placed,
+                ),
+              ),
+            ),
+          ),
         ),
-      );
-      if (isFocused) {
-        ringed = view;
-      } else {
-        children.add(view);
+        Positioned.fill(
+          child: ValueListenableBuilder<double>(
+            valueListenable: widget.x,
+            builder: (context, offset, _) =>
+                _edge(context, offset, cells, focused),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Object _keyOf(GuideCell cell) =>
+      cell.programme?.id ?? 'gap ${cell.start.millisecondsSinceEpoch}';
+
+  /// [cell]'s widget: the one built last time when what it shows is the
+  /// same, else a new one. Recorded in [made].
+  Widget _cellWidget(
+    Map<Object, _MadeCell> made,
+    GuideCell cell,
+    double width, {
+    required bool focused,
+  }) {
+    final key = _keyOf(cell);
+    final shows = _MadeCell(
+      end: cell.end,
+      width: width,
+      phase: _phase(cell.programme, widget.now),
+      focused: focused,
+      hovered: cell.start == _hovered,
+    );
+    final last = _made[key];
+    final onTap = widget.onTap;
+    final built = last != null && last.same(shows)
+        ? last.widget!
+        : _CellView(
+            cell: cell,
+            width: width,
+            clipped: false,
+            now: widget.now,
+            focused: focused,
+            ring: false,
+            hovered: shows.hovered,
+            onTap: onTap == null ? null : () => onTap(cell),
+          );
+    made[key] = shows..widget = built;
+    return built;
+  }
+
+  /// Ended (0), on now (1), to come (2), or a gap (3): what the minute
+  /// changes about a cell.
+  static int _phase(EpgProgramme? programme, DateTime now) {
+    if (programme == null) return 3;
+    if (!programme.end.isAfter(now)) return 0;
+    if (!programme.start.isAfter(now)) return 1;
+    return 2;
+  }
+
+  /// Drawn over the sliding cells, on every frame the view moves: the
+  /// programme the view's left edge cuts, again from the edge with its ‹,
+  /// and the focus ring around the focused cell's visible part.
+  Widget _edge(
+    BuildContext context,
+    double offset,
+    List<GuideCell> cells,
+    GuideCell? focused,
+  ) {
+    final tokens = context.tokens;
+    final guide = tokens.guide;
+    final colors = tokens.colors;
+    final cut = _cutAt(cells, _timeline.timeAt(offset));
+    final children = <Widget>[];
+    if (cut != null) {
+      final width = _timeline.xOf(cut.end) - offset - guide.cellInsetX * 2;
+      if (width > 0) {
+        final isFocused = cut.start == focused?.start;
+        children.add(
+          Positioned(
+            left: guide.cellInsetX,
+            top: guide.cellInsetY,
+            bottom: guide.cellInsetY,
+            width: width,
+            // The sliding copy, clipped to what shows, speaks for it.
+            child: ExcludeSemantics(
+              child: _CellView(
+                cell: cut,
+                width: width,
+                layoutWidth:
+                    _timeline.xOf(cut.end) -
+                    _timeline.xOf(cut.start) -
+                    guide.cellInsetX * 2,
+                clipped: true,
+                now: widget.now,
+                focused: isFocused,
+                ring: isFocused,
+                hovered: cut.start == _hovered,
+                onTap: null,
+              ),
+            ),
+          ),
+        );
       }
     }
-    // The focused cell last, so its ring draws over its neighbours.
-    return Stack(clipBehavior: Clip.none, children: [...children, ?ringed]);
+    if (focused != null && focused.start != cut?.start) {
+      final left = math.max(_timeline.xOf(focused.start), offset);
+      final width = _timeline.xOf(focused.end) - left - guide.cellInsetX * 2;
+      if (width > 0) {
+        children.add(
+          Positioned(
+            left: left - offset + guide.cellInsetX,
+            top: guide.cellInsetY,
+            bottom: guide.cellInsetY,
+            width: width,
+            child: IgnorePointer(
+              child: FocusRing(
+                visible: true,
+                borderRadius: tokens.radii.smAll,
+                ringColor: colors.accentBase,
+                glowColor: colors.accentBase.withValues(
+                  alpha: tokens.focus.glowOpacity,
+                ),
+                ringWidth: tokens.focus.ringWidth,
+                glowWidth: tokens.focus.glowWidth,
+                duration: Duration.zero,
+                curve: tokens.motion.fastCurve,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    return Stack(clipBehavior: Clip.none, children: children);
   }
 }
 
@@ -1059,41 +1496,49 @@ class _ChannelCell extends StatelessWidget {
 }
 
 /// A programme (now, later or past, as the canvas colours them) or a gap
-/// in the guide.
-class _CellView extends StatefulWidget {
+/// in the guide. Only the focused one carries a focus ring: a ring is an
+/// animation, and a screen holds a hundred cells.
+class _CellView extends StatelessWidget {
   const new({
     required this.cell,
     required this.width,
     required this.clipped,
     required this.now,
     required this.focused,
+    required this.ring,
+    required this.hovered,
     required this.onTap,
+    this.layoutWidth,
   });
 
   final GuideCell cell;
   final double width;
 
+  /// For the cell the view's edge cuts, which shrinks on every frame the
+  /// view moves: its words are laid out once at this width (the whole
+  /// programme's) and clipped, instead of again on every frame.
+  final double? layoutWidth;
+
   /// The programme started before the view: its title gets a ‹.
   final bool clipped;
   final DateTime now;
+
+  /// Under the keyboard's cursor: its title bolder.
   final bool focused;
+
+  /// Draws the focus ring too (the strip draws it apart otherwise).
+  final bool ring;
+  final bool hovered;
+
+  /// For assistive technology; the strip handles the pointer.
   final VoidCallback? onTap;
-
-  @override
-  State<_CellView> createState() => _CellViewState();
-}
-
-class _CellViewState extends State<_CellView> {
-  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final guide = tokens.guide;
-    final programme = widget.cell.programme;
-    final width = widget.width;
-    final now = widget.now;
+    final programme = cell.programme;
     final ended = programme != null && !programme.end.isAfter(now);
     final onNow = programme != null && !ended && !programme.start.isAfter(now);
 
@@ -1101,33 +1546,36 @@ class _CellViewState extends State<_CellView> {
     final Color title;
     final Color time;
     if (programme == null) {
-      background = _hovered ? colors.surface2 : Colors.transparent;
+      background = hovered ? colors.surface2 : Colors.transparent;
       title = colors.textTertiary;
       time = colors.textTertiary;
     } else if (ended) {
-      background = _hovered ? colors.surface2 : colors.surfaceSunken;
+      background = hovered ? colors.surface2 : colors.surfaceSunken;
       title = colors.textTertiary;
       time = colors.textTertiary;
     } else if (onNow) {
-      background = _hovered ? colors.border : colors.surface3;
+      background = hovered ? colors.border : colors.surface3;
       title = colors.textPrimary;
       time = colors.textSecondary;
     } else {
-      background = _hovered ? colors.surface3 : colors.surface2;
+      background = hovered ? colors.surface3 : colors.surface2;
       title = colors.textPrimary;
       time = colors.textTertiary;
     }
 
-    final showText = width >= guide.cellTextWidth;
-    final label = programme == null
-        ? 'No information'
-        : '${widget.clipped ? '‹ ' : ''}${programme.title}';
-    final titleStyle =
-        (widget.focused ? tokens.text.label.withWeight(700) : tokens.text.label)
-            .copyWith(color: title);
-    Widget content = Padding(
-      padding: guide.cellPadding,
-      child: Column(
+    final labels = programme == null ? null : _Labels.of(programme);
+    final laidOut = math.max(width, layoutWidth ?? 0);
+    Widget content = const SizedBox.expand();
+    if (width >= guide.cellTextWidth) {
+      final label = programme == null
+          ? 'No information'
+          : clipped
+          ? labels!.clippedTitle
+          : programme.title;
+      final titleStyle =
+          (focused ? tokens.text.label.withWeight(700) : tokens.text.label)
+              .copyWith(color: title);
+      Widget lines = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1140,14 +1588,16 @@ class _CellViewState extends State<_CellView> {
                 ? tokens.text.caption.copyWith(color: title)
                 : titleStyle,
           ),
-          if (programme != null) ...[
+          if (labels != null) ...[
             SizedBox(height: guide.cellLineGap),
+            // The form by the width that shows: it changes at two widths
+            // only, so the text is laid out again twice at most.
             Text(
-              guideCellTime(
-                programme,
-                full: width >= guide.cellFullTimeWidth,
-                range: width >= guide.cellRangeWidth,
-              ),
+              width >= guide.cellFullTimeWidth
+                  ? labels.full
+                  : width >= guide.cellRangeWidth
+                  ? labels.range
+                  : labels.start,
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.clip,
@@ -1155,9 +1605,20 @@ class _CellViewState extends State<_CellView> {
             ),
           ],
         ],
-      ),
-    );
-    if (!showText) content = const SizedBox.expand();
+      );
+      if (laidOut > width) {
+        final inner = laidOut - guide.cellPadding.horizontal;
+        lines = ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            minWidth: inner,
+            maxWidth: inner,
+            child: lines,
+          ),
+        );
+      }
+      content = Padding(padding: guide.cellPadding, child: lines);
+    }
 
     final radius = tokens.radii.smAll;
     Widget box = DecoratedBox(
@@ -1175,48 +1636,171 @@ class _CellViewState extends State<_CellView> {
         child: box,
       );
     }
+    if (ring) {
+      box = FocusRing(
+        visible: true,
+        borderRadius: radius,
+        ringColor: colors.accentBase,
+        glowColor: colors.accentBase.withValues(
+          alpha: tokens.focus.glowOpacity,
+        ),
+        ringWidth: tokens.focus.ringWidth,
+        glowWidth: tokens.focus.glowWidth,
+        duration: Duration.zero,
+        curve: tokens.motion.fastCurve,
+        child: box,
+      );
+    }
 
-    final state = programme == null
-        ? null
-        : guideProgrammeState(programme, now);
     return Semantics(
       button: programme != null,
-      selected: widget.focused,
-      label: programme == null
-          ? 'No information'
-          : [
-              programme.title,
-              formatTimeRange(programme.start, programme.end),
-              ?state,
-            ].join(', '),
-      onTap: widget.onTap,
+      selected: focused,
+      label: programme == null ? 'No information' : labels!.spoken(now),
+      onTap: onTap,
       excludeSemantics: true,
-      child: MouseRegion(
-        cursor: programme == null
-            ? MouseCursor.defer
-            : SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: FocusRing(
-            visible: widget.focused,
-            borderRadius: radius,
-            ringColor: colors.accentBase,
-            glowColor: colors.accentBase.withValues(
-              alpha: tokens.focus.glowOpacity,
-            ),
-            ringWidth: tokens.focus.ringWidth,
-            glowWidth: tokens.focus.glowWidth,
-            duration: Duration.zero,
-            curve: tokens.motion.fastCurve,
-            child: box,
-          ),
+      child: box,
+    );
+  }
+}
+
+/// A programme's words, worked out once rather than on every frame the
+/// grid moves: the cache hands out the same programme objects.
+final class _Labels {
+  new _(EpgProgramme programme)
+    : clippedTitle = '‹ ${programme.title}',
+      full = guideCellTime(programme, full: true, range: true),
+      range = guideCellTime(programme, full: false, range: true),
+      start = guideCellTime(programme, full: false, range: false),
+      _programme = programme;
+
+  factory of(EpgProgramme programme) =>
+      _cache[programme] ??= _Labels._(programme);
+
+  static final _cache = Expando<_Labels>('guide cell labels');
+
+  final EpgProgramme _programme;
+  final String clippedTitle;
+  final String full;
+  final String range;
+  final String start;
+
+  /// "Title, 8:00 – 10:00 PM, on now", for screen readers.
+  String spoken(DateTime now) => [
+    _programme.title,
+    full,
+    ?guideProgrammeState(_programme, now),
+  ].join(', ');
+}
+
+/// Hands out the building of new rows' cells, a few a frame: the rest
+/// wait for the next frame.
+final class _BuildBudget {
+  new(this.perFrame);
+
+  final int perFrame;
+  var _used = 0;
+  var _resetting = false;
+  final _waiting = <VoidCallback>[];
+
+  /// True when [retry]'s row may build now; otherwise [retry] is called
+  /// after this frame, to ask again in the next.
+  bool take(VoidCallback retry) {
+    if (!_resetting) {
+      _resetting = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _resetting = false;
+        _used = 0;
+        final waiting = List.of(_waiting);
+        _waiting.clear();
+        for (final again in waiting) {
+          again();
+        }
+      });
+    }
+    if (_used < perFrame) {
+      _used++;
+      return true;
+    }
+    _waiting.add(retry);
+    return false;
+  }
+}
+
+/// A row waiting for its turn to build: a still block, not a shimmer, for
+/// the frame or two it shows.
+class _StripPlaceholder extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final guide = tokens.guide;
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: guide.cellInsetX,
+        vertical: guide.cellInsetY,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tokens.colors.surface2,
+          borderRadius: tokens.radii.smAll,
         ),
+        child: const SizedBox.expand(),
       ),
     );
   }
+}
+
+/// What a cell's widget shows, to tell whether the last one can be used
+/// again.
+final class _MadeCell {
+  new({
+    required this.end,
+    required this.width,
+    required this.phase,
+    required this.focused,
+    required this.hovered,
+  });
+
+  final DateTime end;
+  final double width;
+  final int phase;
+  final bool focused;
+  final bool hovered;
+  Widget? widget;
+
+  bool same(_MadeCell other) =>
+      other.end == end &&
+      other.width == width &&
+      other.phase == phase &&
+      other.focused == focused &&
+      other.hovered == hovered;
+}
+
+/// Clips a row's sliding cells to the right of the programme the view's
+/// left edge cuts, halfway into the gap after it, so the edge layer's copy
+/// is the only one drawn. Re-clips as the view moves.
+class _PastTheCut extends CustomClipper<Rect> {
+  new({required this.x, required this.timeline, required this.cells})
+    : super(reclip: x);
+
+  final ValueListenable<double> x;
+  final GuideTimeline timeline;
+  final List<GuideCell> cells;
+
+  @override
+  Rect getClip(Size size) {
+    final offset = x.value;
+    final cut = _StripState._cutAt(cells, timeline.timeAt(offset));
+    final left = cut == null
+        ? 0.0
+        : (timeline.xOf(cut.end) - offset).clamp(0.0, size.width);
+    return Rect.fromLTRB(left, 0, size.width, size.height);
+  }
+
+  @override
+  bool shouldReclip(_PastTheCut old) =>
+      old.x != x || old.timeline != timeline || !identical(old.cells, cells);
 }
 
 /// The dashed row of a channel the guide doesn't cover (canvas: "No
@@ -1233,60 +1817,58 @@ class _NoGuideCell extends StatelessWidget {
     final colors = tokens.colors;
     final guide = tokens.guide;
     final radius = tokens.radii.smAll;
+    final outline = CustomPaint(
+      painter: _DashedOutline(
+        color: colors.border,
+        radius: tokens.radii.sm,
+        dash: guide.dashLength,
+        gap: guide.dashGap,
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: guide.cellPadding.left + 2),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: 'No guide information · '),
+                // The strip takes the tap, anywhere on the row.
+                TextSpan(
+                  text: 'Match to a guide channel',
+                  style: tokens.text.caption
+                      .withWeight(700)
+                      .copyWith(color: colors.accentBase),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.text.caption.copyWith(color: colors.textTertiary),
+          ),
+        ),
+      ),
+    );
     return Semantics(
       button: true,
       selected: focused,
       label: 'No guide information. Match to a guide channel',
       onTap: onTap,
       excludeSemantics: true,
-      child: FocusRing(
-        visible: focused,
-        borderRadius: radius,
-        ringColor: colors.accentBase,
-        glowColor: colors.accentBase.withValues(
-          alpha: tokens.focus.glowOpacity,
-        ),
-        ringWidth: tokens.focus.ringWidth,
-        glowWidth: tokens.focus.glowWidth,
-        duration: Duration.zero,
-        curve: tokens.motion.fastCurve,
-        child: CustomPaint(
-          painter: _DashedOutline(
-            color: colors.border,
-            radius: tokens.radii.sm,
-            dash: guide.dashLength,
-            gap: guide.dashGap,
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: guide.cellPadding.left + 2,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(text: 'No guide information · '),
-                    TextSpan(
-                      text: 'Match to a guide channel',
-                      style: tokens.text.caption
-                          .withWeight(700)
-                          .copyWith(color: colors.accentBase),
-                      recognizer: onTap == null
-                          ? null
-                          : (TapGestureRecognizer()..onTap = onTap),
-                      mouseCursor: SystemMouseCursors.click,
-                    ),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.caption.copyWith(color: colors.textTertiary),
+      child: focused
+          ? FocusRing(
+              visible: true,
+              borderRadius: radius,
+              ringColor: colors.accentBase,
+              glowColor: colors.accentBase.withValues(
+                alpha: tokens.focus.glowOpacity,
               ),
-            ),
-          ),
-        ),
-      ),
+              ringWidth: tokens.focus.ringWidth,
+              glowWidth: tokens.focus.glowWidth,
+              duration: Duration.zero,
+              curve: tokens.motion.fastCurve,
+              child: outline,
+            )
+          : outline,
     );
   }
 }
@@ -1457,7 +2039,10 @@ class _NowLine extends StatelessWidget {
   }
 }
 
-/// A dashed rounded outline (Flutter draws no dashed borders).
+/// A dashed rounded outline (Flutter draws no dashed borders): dashes
+/// along the four straight sides, the corners as plain arcs. Drawn as
+/// lines rather than cut from a path, which a row-wide outline would make
+/// cost several milliseconds a paint.
 class _DashedOutline extends CustomPainter {
   const new({
     required this.color,
@@ -1477,20 +2062,57 @@ class _DashedOutline extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(0.5),
-          Radius.circular(radius),
-        ),
-      );
-    for (final metric in outline.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += dash + gap) {
-        canvas.drawPath(
-          metric.extractPath(d, math.min(d + dash, metric.length)),
+    final box = (Offset.zero & size).deflate(0.5);
+    final r = math.min(radius, math.min(box.width, box.height) / 2);
+    void side(Offset from, Offset to) {
+      final length = (to - from).distance;
+      if (length <= 0) return;
+      final step = (to - from) / length;
+      for (var d = 0.0; d < length; d += dash + gap) {
+        canvas.drawLine(
+          from + step * d,
+          from + step * math.min(d + dash, length),
           paint,
         );
       }
+    }
+
+    side(Offset(box.left + r, box.top), Offset(box.right - r, box.top));
+    side(Offset(box.right, box.top + r), Offset(box.right, box.bottom - r));
+    side(Offset(box.right - r, box.bottom), Offset(box.left + r, box.bottom));
+    side(Offset(box.left, box.bottom - r), Offset(box.left, box.top + r));
+    if (r > 0) {
+      const quarter = math.pi / 2;
+      final d = r * 2;
+      canvas
+        ..drawArc(
+          Rect.fromLTWH(box.left, box.top, d, d),
+          math.pi,
+          quarter,
+          false,
+          paint,
+        )
+        ..drawArc(
+          Rect.fromLTWH(box.right - d, box.top, d, d),
+          -quarter,
+          quarter,
+          false,
+          paint,
+        )
+        ..drawArc(
+          Rect.fromLTWH(box.right - d, box.bottom - d, d, d),
+          0,
+          quarter,
+          false,
+          paint,
+        )
+        ..drawArc(
+          Rect.fromLTWH(box.left, box.bottom - d, d, d),
+          quarter,
+          quarter,
+          false,
+          paint,
+        );
     }
   }
 

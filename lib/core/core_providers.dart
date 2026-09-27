@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
+import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -39,3 +40,11 @@ FormFactor formFactor(Ref ref) =>
 /// pin it.
 @Riverpod(keepAlive: true)
 DateTime Function() appClock(Ref ref) => DateTime.now;
+
+/// Background news for the shell's toast area.
+@Riverpod(keepAlive: true)
+AppNotices appNotices(Ref ref) {
+  final notices = AppNotices();
+  ref.onDispose(notices.dispose);
+  return notices;
+}

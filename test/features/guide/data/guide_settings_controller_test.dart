@@ -72,6 +72,15 @@ final class _FailingStore implements GuideSettingsStore {
       Err(StorageFailure('the disk is full'));
 }
 
+/// A store whose read throws, which the real one never does.
+final class _ThrowingStore implements GuideSettingsStore {
+  @override
+  Future<Result<GuideSettings>> load() async => throw StateError('broken');
+
+  @override
+  Future<Result<void>> save(GuideSettings settings) async => const Ok(null);
+}
+
 /// The controller over the real stores and repositories (an in-memory
 /// database, an in-memory keyring) and a recording importer.
 final class _Env {
@@ -176,6 +185,27 @@ void main() {
       await pumpEventQueue();
 
       expect(env.settings, const GuideSettings(keepDays: 3));
+    });
+
+    test('loaded completes once the stored value is in use, so an import '
+        'at launch can wait for it', () async {
+      final env = _Env.open();
+      await env.settingsRepository.writeValue(SettingsKeys.guide, {
+        'keep_days': 3,
+      });
+
+      env.settings;
+      await env.controller.loaded;
+
+      expect(env.settings, const GuideSettings(keepDays: 3));
+    });
+
+    test('loaded completes when the store throws too', () async {
+      final env = _Env.open(settingsStore: _ThrowingStore());
+
+      await env.controller.loaded.timeout(const Duration(seconds: 5));
+
+      expect(env.settings, const GuideSettings());
     });
 
     test('a damaged stored value is the default', () async {
@@ -448,9 +478,10 @@ void main() {
       await env.sources.setAdvertisedEpgUrls(id, [guide.path]);
       final importer = env.container.read(guideImportServiceProvider);
 
-      // No guide yet: the change re-imports nothing.
+      // No guide yet: the change re-imports nothing. Its round reads the
+      // database: waited for, or it can see the import below and cancel it.
       await env.controller.setKeepDays(3);
-      await pumpEventQueue();
+      await env.controller.reimporting;
       expect(importer.isImporting(id), isFalse);
 
       final before = DateTime.now().toUtc();

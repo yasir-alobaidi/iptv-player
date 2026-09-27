@@ -32,7 +32,8 @@ Stream<List<Source>> sources(Ref ref) =>
 
 /// The one sync engine. Cancels every run when the app closes. A sync
 /// that succeeds rematches the source's channels to its guide, which
-/// the sync doesn't wait for (the match service logs how it went).
+/// the sync doesn't wait for (the match service logs how it went), and
+/// tells the guide scheduler, which imports the guide when it is due.
 @Riverpod(keepAlive: true)
 SyncService syncService(Ref ref) {
   final matches = ref.watch(epgMatchServiceProvider);
@@ -40,7 +41,11 @@ SyncService syncService(Ref ref) {
     database: ref.watch(appDatabaseProvider),
     sources: ref.watch(sourceRepositoryProvider),
     log: ref.watch(appLogProvider),
-    onSynced: (sourceId) => unawaited(matches.rematch(sourceId)),
+    onSynced: (sourceId) {
+      unawaited(matches.rematch(sourceId));
+      // Read here, not watched: the scheduler reads this engine too.
+      ref.read(guideSchedulerProvider).synced(sourceId);
+    },
   );
   ref.onDispose(engine.dispose);
   return engine;

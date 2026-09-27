@@ -1,6 +1,6 @@
 # Phase 4 — EPG & guide: plan
 
-**Status: proposed 2026-09-19** — waiting for your approval on the seven decisions and the two sketches.
+**Status: approved 2026-09-19; built 2026-09-20 – 2026-09-27.** What was built, and every departure from this plan, is in ADR-011 (docs/decisions.md).
 
 ## Context
 Phase 3 left a player that zaps, recovers and explains itself, and a `GuideService` seam whose only implementation is Xtream's `get_short_epg` (ADR-010 decision 2): now/next for the previewed channel and its neighbours, cached 5 minutes, nothing for M3U sources. Phase 4 fills that seam with a real guide: XMLTV imported in an isolate, matched to channels, shown as now/next everywhere and as the Guide grid, refreshed daily.
