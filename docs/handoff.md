@@ -1,100 +1,149 @@
-# Handoff — 2026-09-27 (Phase 4 done: step 7 built)
+# Handoff — 2026-09-28 (Phase 5: steps 1–5 of 8 built)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/08-phases-and-prompts.md (Phase 5) and ADR-011 in docs/decisions.md.
+docs/plans/phase-5-movies-series-home.md (the approved plan) and ADR-012 in
+docs/decisions.md.
 
 ## Before you start the next session (user)
-1. **Review step 7, then push.** Committed locally: "Phase 4 step 7: the
-   scheduler, the toast, and the phase exit". Steps 5 and 6 are pushed.
-2. **Try it:** launch the app with a source whose guide is a day old, or
-   add a new source: a couple of seconds after the syncs, the guide comes
-   in by itself and a toast says "Guide updated · N channels matched".
-   Then G, the arrows, Enter, Watch channel.
-3. **Optional, with your go-ahead:** one guide import from your real panel.
-   It downloads the guide only and plays no stream, so it uses none of your
-   one connection — and the scheduler now does it by itself at launch, so
-   the next launch with your panel configured will import it (say so if
-   you'd rather it didn't yet).
+1. **Review and push** the five local commits, oldest first:
+   "Phase 5 step 1: the fake panel serves VOD and artwork", "step 2:
+   schema v6, the catalogue and history repositories", "step 3: images",
+   "step 4: the Movies and Series grids", "step 5: Movie details and Series
+   details". The plan commit is already pushed.
+2. **Try it** (a scratch data folder, or your normal one — it will sync
+   and import your panel's guide as before): Ctrl+4 Movies, the chips,
+   the sort, F on a poster, Enter on one → its page (plot, cast, badges
+   once fetched), Esc back to the same card; Ctrl+5 Series → a series →
+   seasons and episodes. **Play does nothing yet**: it goes to the player
+   in step 6.
+3. Nothing needs your go-ahead until step 8's one play from your panel
+   (a pop-up first, as always).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/08-phases-and-prompts.md (Phase 5) and ADR-011 in docs/decisions.md first.
-Phase 4 step 7 is reviewed and pushed; CI is <green | red: …>.
-Propose the Phase 5 plan (Movies, Series, Home) and stop for my approval.
+docs/plans/phase-5-movies-series-home.md and ADR-012 in docs/decisions.md first.
+Phase 5 steps 1–5 are reviewed and pushed; CI is <green | red: …>.
+Go on with step 6 (VOD in the full-screen player), then 7 and 8, committing each step.
 ```
 
 ## Where things stand
-- **Phases 1–4 are built:** foundation; sources and sync; Live TV and the
-  player; the EPG and the guide (all 7 steps, ADR-011 Accepted).
-- **What a real run does now:** the guide is imported by itself (a day
-  old or missing: after the launch's syncs, hourly, after each sync),
-  matched, and shown on every Live TV row, in the preview, the player's
-  OSD and the Guide grid; Settings → Guide maps channels by hand.
-- **Checks, all green:** analyze, format, `build_runner` leaves no diff;
-  **1,616 app tests** (6 skipped) under `TZ=UTC`; the fake provider's 114;
-  under xvfb app launch, the Guide keyboard walk, the new Guide Watch
-  test, the Settings → Guide, Live TV and sources walks, and the playback
-  fault suite.
-- **Measured at the exit:** the 300 MB import 22 s end to end (+126 MB,
-  worst UI pause 26 ms); the Guide grid's scrolling in profile mode on the
-  real display, 0–6 frames over 16 ms per kind of scroll (flings none), and
-  PageDown 22–28 frames over, worst 59–77 ms (a known issue).
-- **CI:** Linux green. Windows fails 6 tests, named (progress.md Known
-  issues): two leave a file open when a test deletes its folder, three
-  cancels wait for the 30 s last-resort kill, one test expects a POSIX
-  path.
+- **Phases 1–4 are built;** Phase 5's plan was approved 2026-09-27 (all
+  seven decisions and the three sketches), and **steps 1–5 of 8 are
+  built and committed locally**.
+- **What works now:** the Movies and Series grids (windowed, one Tab
+  stop, chips, sort, filter, favorites), the details pages (fetched on the
+  first open and read from the database after that), pictures from the
+  app's own disk cache, and Continue watching's data (not yet shown: Home
+  is step 7).
+- **What doesn't yet:** Play / Resume / Continue on the details pages call
+  `VodLauncher`, whose provider does nothing until step 6. Home is still a
+  placeholder.
+- **Checks, all green at 864b1f0:** analyze, format, `build_runner` leaves
+  no diff; **1,729 app tests** (7 skipped) under `TZ=UTC`; the fake
+  provider's **141**; under xvfb the Live TV, Guide and Guide Watch walks
+  and app launch.
+- **CI:** Linux green on the last pushes (Phase 4 step 7, the plan).
+  Windows fails 6–10 tests from run to run, the same named ones
+  (progress.md Known issues) — not touched yet.
 
-## Done this session (2026-09-27)
-- **Step 6 — the Guide grid** (committed and pushed earlier this session;
-  ADR-011 step 6).
-- **Step 7 — the scheduler, the toast, the phase exit** (ADR-011 step 7):
-  - `GuideScheduler` (`lib/data/sync/guide_scheduler.dart`) and its
-    policy `guideRefreshDue` (`lib/features/guide/domain/guide_refresh.dart`);
-    `bootstrap()` starts it after `SyncService.startUp()`; the sync engine's
-    `onSynced` tells it of every sync.
-  - `GuideSettingsController.loaded`, which the first import waits for.
-  - `AppNotices` (`lib/core/notices/`), shown by the shell as toasts.
-  - The import benchmark and the grid's scroll measurement, and the grid
-    reworked until its scrolling met the budget (see "Codebase notes").
-  - A bug the end-to-end test found: Live TV stopped the Guide's Watch
-    stream once Live TV had been visited (it read the page under the
-    player's push as "left Live TV").
+## Done this session (2026-09-27/28)
+- **The plan** (`docs/plans/phase-5-movies-series-home.md`), approved.
+- **Step 1 — the fake panel serves VOD and artwork:** `/movie/` and
+  `/series/` with Range, ETag, If-Range, HEAD on the hijacked socket; a
+  request for an open file takes its slot over (a player's seek on a
+  one-connection panel); `drop_after_bytes` (a byte of the file),
+  `ignore_range`, `throttle_kbps`; generated PNG artwork on the panel's own
+  host; ffprobe blocks in `get_vod_info`; per-action `apiCalls`.
+- **Step 2 — schema v6 and the repositories** (`lib/features/vod/`):
+  `MovieRepository`, `SeriesRepository`, `WatchProgress`; lazy, cached
+  details; Continue watching; three sort indexes for the Movies grid
+  (window of 120 of 30,000: 27–60 ms → 1.6–19 ms).
+- **Step 3 — images:** our own cache (`lib/data/images/`), extended_image
+  dropped; `artworkFor(context, url, width:)`; `ArtworkImage` cross-fade.
+- **Step 4 — the grids** (`catalogue_screen.dart`, `title_grid.dart`),
+  goldens, the details routes, the shell's `immersive`.
+- **Step 5 — the details pages** (`title_details_screen.dart`),
+  `nextUpFor`.
+- **Bugs found and fixed on the way** (all in ADR-012 and progress):
+  - the short EPG's first answer never arrived (Phase 3: a
+    `whenComplete` that returned its own future);
+  - Live TV and the Guide never showed a new favorite's star, and their
+    refresh tore the focused row down (lists now follow a revision and
+    re-read pages in place);
+  - a toast for every picture that failed with nobody waiting (silent
+    Flutter errors are now logged only);
+  - the Guide's keyboard walk and Watch test failed at hours whose
+    programme title held a comma;
+  - a 404's reason replaced by "Route not found" in the fake panel.
 
 ## What's next
-- **Phase 5 — Movies, Series, Home** (docs/08): propose the plan first, as
-  Phase 4 did (`docs/plans/phase-4-epg-and-guide.md` is the model: context,
-  what is carried in, decisions with a recommendation, steps with their
-  verification, risks). docs/08's exit criteria: lazy, cached details (a
-  second open makes no request); map and list episode shapes pass fixture
-  tests; resume prompt, progress saving, completion at 95 % and the
-  next-episode countdown pass integration tests against the fake provider;
-  Home shows every row and the first-run hero; every new screen has widget
-  tests for loading, empty, error and content.
-  - Read the canvas first (Home, Movies grid, Movie details, Series
-    details: https://claude.ai/artifact/TpHN4beb7RandXcH3tEa99 with the
-    Artifact tool, action `read`, and `design/*.dc.html`).
-  - Home's "Favorite Channels (with now/next)" row can use `GuideService`
-    and `nowNextProvider` as Live TV does.
-- **The Windows failures** can go in alongside, one small commit each,
-  confirmed by the CI run after the user pushes (no Windows machine here).
-- **The Guide's PageDown** (progress.md Known issues), if a later phase
-  touches the grid.
+**Step 6 — VOD in the full-screen player** (plan: decision 1, 3, 4; the
+OSD and next-episode sketches). The biggest step left, and the riskiest:
+the coordinator changes under Live TV and the Guide. Suggested order:
+1. `PlayerEngine`: `seek(Duration)`; `PlayRequest` gains `start` (media_kit
+   sets mpv's `start` from `Media(start:)`) and `live: false`; the duration
+   (`player.stream.duration`) and the paused state reported as events.
+   `FakePlayerEngine` (`lib/core/player/fake_player_engine.dart`) grows the
+   same, and the engine tests with it.
+2. `DbStreamResolver`: `movie(...)` and `episode(...)` beside `live(...)` —
+   `xtreamMovieUrl` / `xtreamEpisodeUrl` are already in
+   `lib/features/playback/data/stream_urls.dart`; an M3U row's
+   `stream_url` template is filled like a channel's.
+3. `PlaybackCoordinator` (`lib/features/playback/domain/`):
+   `playVod(item, {from})`, states carrying a sealed item (keep
+   `state.channel` for live so Live TV and the Guide don't change); VOD's
+   watchdog rules (the end of the file = finished unless early; a drop
+   reconnects at the last position with a fresh URL; paused is never a
+   stall); progress through `WatchProgress.save` every 10 s, on pause,
+   after a seek settles, on leaving (it marks watched at 95 % itself).
+4. The `VodLauncher` implementation (the provider is in
+   `lib/features/vod/presentation/details_state.dart`; override it where
+   the playback providers live): start via the coordinator, push the
+   player route; Esc stops, saves and returns to the details page.
+   **Live TV's `_onLocation` stops the coordinator** whenever the top route
+   isn't Live TV or the player — check it doesn't cut VOD short, and that
+   it still stops VOD on leaving the player.
+5. The player's VOD face per the plan's sketch (canvas has none): top
+   title and S · E, badges, clock; `AppSlider` seek bar with buffered range
+   and bubble; Space, ←/→ 10 s, Shift+←/→ 60 s (the bar moves at once, one
+   seek after 300 ms), Home to the start; "Resumed from 24:10 · Home
+   starts over" for 5 s; the next-episode card at 20 s left counting 10 s
+   (`SeriesRepository.episodeAfter` gives the next); the end card after a
+   cancel; the failure card (Retry, Details, Next episode; a 404 says "This
+   movie is no longer available from your provider.").
+6. CI: add `vod_h264_aac_10min` to the "Media samples" step at
+   `VOD_SECONDS=120` (moved here from step 1; `.github/workflows/ci.yml`).
+7. Tests: coordinator unit tests with the fake engine and a fake clock;
+   OSD widget tests; **integration tests with the real player against the
+   fake panel** — the resume choice on Movie details, progress saved and
+   read back, completion at 95 %, the next-episode countdown (and Esc
+   cancelling it), a drop mid-movie resuming where it was. Keep the fault
+   suite, the Live TV walk and the Guide Watch test green.
+
+**Step 7 — Home** (decision 5; the first-run hero sketch):
+`WatchProgress.continueWatching()` already gives the cards;
+`nowNextProvider` / `GuideService` give the channel tiles' programmes as
+Live TV does; recently added = the repositories' `range` with
+`TitleSort.recentlyAdded`, limit 20.
+
+**Step 8 — the phase exit:** the end-to-end keyboard walk, the
+measurements (cold start to Home ≤ 2 s; the grid's scroll over 30,000 with
+artwork; the image cache's memory), ADR-012 Accepted, docs, one play from
+the user's panel with a pop-up first.
+
+**Alongside:** the Windows failures (progress.md Known issues), one commit
+each, confirmed by CI after a push.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems.** Linux is green; Windows fails 6 named
-  tests (progress.md Known issues).
-- **Phase 5 — Movies, Series, Home.** These three screens are placeholders
-  today.
-  - Grids and details, with lazy, cached `get_vod_info` /
-    `get_series_info`.
-  - VOD playback: seek bar, resume prompt, progress saving, completion at
-    95 %, next-episode countdown.
-  - Home's rows and the first-run hero.
+- **CI green on both systems.** Linux is green; Windows fails 6–10 named
+  tests from run to run (progress.md Known issues).
+- **Phase 5 — Movies, Series, Home** (in progress: steps 1–5 of 8 built).
+  Left: VOD in the player (step 6), Home (step 7), the phase exit (step 8).
 - **Phase 6 — Search and polish:** the Ctrl+K overlay over FTS (the
   programmes index is already built), the Favorites screen with reorder
   and groups, display-name cleanup with quality badges, hide/unhide
@@ -176,15 +225,77 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   - Grep new files for literal invisible characters (BOM, zero-width space,
     U+FFFD, NBSP) and write them as escapes.
   - Confirm `build_runner` leaves no diff.
+- **Run widget tests with a timeout** (`flutter test … --timeout 40s`,
+  and `--plain-name` to run one): a widget test that fails part-way can
+  otherwise hang until the 10-minute default, which happened several
+  times this session.
 - **The session's end:** analyze, `dart format --set-exit-if-changed lib
   test integration_test tools`, `TZ=UTC flutter test`, the fake provider's
   `dart test` (in `tools/fake_provider`), and the integration tests that
   touch what changed, each under `xvfb-run -a … -d linux`, one file per
-  run. Then add to ADR-011, update docs/progress.md, rewrite this file,
+  run. Then add to ADR-012, update docs/progress.md, rewrite this file,
   and commit.
 
 ## Codebase notes by area
-New this session (step 7):
+New this session (Phase 5 steps 1–5):
+- **The fake panel** (`tools/fake_provider`): `lib/vod.dart` (VOD files),
+  `lib/artwork.dart` (artwork; the generator still writes
+  `artworkRoot`, which the serializers rewrite to the request's origin
+  with `artworkFor`), `server.dart` routes each path prefix to its own
+  handler (no `Cascade`: it replaced 404 reasons), `state.apiCalls` counts
+  `player_api.php` actions for "a second open makes no request" tests.
+  VOD faults act only on `/movie/` and `/series/`; `drop_after_bytes` is a
+  byte of the file, not of the body.
+- **The VOD feature** (`lib/features/vod/`): `domain/` — `catalogue.dart`
+  (`TitleQuery`, filters, `TitleSort`, `Details<T>`), `titles.dart`
+  (items, details, the two repositories), `watch_progress.dart`
+  (`WatchMark`, `VodRef`, `ContinueItem`, `WatchProgress`, `resumeAfter`,
+  `completeAt`, `isComplete`), `next_up.dart`, `vod_launcher.dart`;
+  `data/` — `db_movie_repository.dart`, `db_series_repository.dart`,
+  `db_watch_progress.dart`, `title_details_source.dart` (one
+  `XtreamClient` per source, rebuilt when the sign-in changes),
+  `vod_rows.dart` (shared SQL: `titleWindow` picks a page's ids on the
+  filtered table, then joins only those rows — keep that shape, the
+  indexes depend on it), `vod_providers.dart`; `presentation/` — the
+  grid, the screens, `details_state.dart`, `title_routes.dart`,
+  `vod_text.dart`. Movies and Series screens are thin wrappers.
+- **Schema v6:** `movies_added`, `movies_name`, `movies_rating` indexes
+  (`@TableIndex.sql`), series genre/cast/director/backdrop (sync writes
+  them with `COALESCE(new, old)`), `movie_details.video_height` /
+  `audio_channels`, `watch_history.series_key` / `dismissed`.
+  "Undated last" / "unrated last" use SQLite's NULLs-last-when-descending
+  — no `IS NULL` term, or the index stops being used.
+- **Never write `.whenComplete(() => map.remove(key))`** to coalesce
+  futures: `remove` returns the future itself, and it waits for itself
+  forever. Use `removeWhere((k, _) => k == key)`.
+- **Riverpod passes no equal value on.** A list that must re-read when a
+  favorite or a mark changes can't listen to a count; use a revision
+  (`channelRevisionProvider`, `TitleCount.revision`). And a refresh must
+  re-read pages in place, never clear them: clearing disposes the focused
+  row and the keyboard's focus with it.
+- **A focus request "after the next frame" needs a frame:** call
+  `scheduleFrame()` with `addPostFrameCallback` when nothing else will
+  (`TitleGrid._move`).
+- **Images:** screens call `artworkFor(context, url, width:)` (never
+  `NetworkImage`); `ArtworkScope` is filled at the app root from
+  `artworkImagesProvider` (`bootstrap()` overrides it with the disk cache;
+  tests get plain network images). `ArtworkImage` is the component;
+  `PosterArtwork` a poster without a card. The cache is
+  `lib/data/images/artwork_cache.dart` (`ArtworkUnavailable` never names
+  the URL).
+- **Silent Flutter errors are logged, not toasted** (`ErrorReporter`).
+- **Details pages** hide the shell's top bar (`DesktopShell.immersive`,
+  from `isTitleDetailsPath`); `AppDetailsTokens` holds the canvas's
+  measures; `tokens.text.movieTitle` / `seriesTitle`; `AppButtonSize.xl`.
+- **Tests:** `test/features/vod/vod_fakes.dart` (`VodFakes`, `settle`),
+  `vod_test_support.dart` (`ScriptedDetails` — scripted answers, a `gate`
+  to hold them, call counts; seed helpers). **Don't write to the database
+  from `runAsync` while a page watches a drift stream:** the write waits
+  on the page's stream, which only moves when the test pumps — write
+  before the page opens, or from the test's own zone
+  (`unawaited(db…)` then `settle`).
+
+From Phase 4 step 7:
 - **The scheduler** (`GuideScheduler`, provider `guideSchedulerProvider`)
   reads the sync engine and the settings controller lazily (closures), and
   the sync engine reads it lazily in `onSynced`: watching either way would
@@ -477,10 +588,19 @@ From earlier sessions (still true):
 - Commit messages carry no trailers. Commit locally; the user pushes.
 - At the end: analyze, format check, `TZ=UTC flutter test`, the fake
     provider's `dart test`, each integration test under `xvfb-run -a … -d
-    linux` (one file per run), add to ADR-011, update `docs/progress.md`,
+    linux` (one file per run), add to ADR-012, update `docs/progress.md`,
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 5 (ADR-012): the seven plan decisions; one `vod` feature for the
+  shared domain; our own image cache instead of extended_image (its cache
+  is fixed to `/tmp`); PNG artwork in the fake panel; the take-over of a
+  VOD slot by a request for the same file; `drop_after_bytes` counted in
+  the file; the window query picking ids first and the three sort
+  indexes; lists refreshing on a revision and in place; no typing into
+  the grid's filter from the grid (F and D are its keys); Download and
+  Cast left off the details pages until their phases; `AppButtonSize.xl`
+  for both details pages.
 - Phase 4 step 7: the scheduler's policy (a day old; failures wait 6 h; no
   guide address or a locked keyring left alone until a sync); the toast's
   N counts visible channels; only the scheduler's imports toast; the grid's
@@ -566,12 +686,13 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
+- Whether a real panel lets a new request for the same VOD file take over
+  the open one (the fake panel does; a seek on a one-connection panel
+  needs it) — step 8's play from the user's panel will show it.
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
 - App name and icon (placeholder "IPTV Player").
 - Light theme: tokens allow one, but it is out of scope for v1 (docs/05).
-- A real guide import from the user's panel: the scheduler will do it at
-  the next launch with the panel configured, unless told not to yet.
 - Windows installer type (MSIX or Inno Setup) is Phase 10's to recommend,
   but the user decides.
