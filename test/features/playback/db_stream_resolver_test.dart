@@ -10,6 +10,7 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:logger/logger.dart';
 
 void main() {
@@ -155,5 +156,123 @@ void main() {
 
     expect((await resolver.live(item(source.id, 'k'))).isOk, isFalse);
     expect((await resolver.live(item('gone', 'k'))).isOk, isFalse);
+  });
+
+  group('movies and episodes', () {
+    MovieItem movie(String sourceId, String key, {String? ext}) => MovieItem(
+      id: 1,
+      sourceId: sourceId,
+      remoteKey: key,
+      name: 'm',
+      ext: ext,
+    );
+
+    EpisodeItem episode(String sourceId, String key, {String? ext}) =>
+        EpisodeItem(
+          id: 1,
+          sourceId: sourceId,
+          seriesKey: 's9',
+          remoteKey: key,
+          season: 1,
+          episode: 1,
+          title: 'e',
+          ext: ext,
+        );
+
+    Future<void> seriesWithEpisode(
+      String sourceId,
+      String key, {
+      String? streamUrl,
+    }) async {
+      await db.seriesDao.upsertAll([
+        SeriesCompanion.insert(sourceId: sourceId, remoteKey: 's9', name: 'S'),
+      ]);
+      final row = (await db.seriesDao.byRemoteKey(sourceId, 's9'))!;
+      await db.seriesDao.upsertEpisodes([
+        EpisodesCompanion.insert(
+          seriesId: row.id,
+          remoteKey: key,
+          season: 1,
+          episode: 1,
+          title: 'e',
+          streamUrl: Value(streamUrl),
+        ),
+      ]);
+    }
+
+    test(
+      "Xtream: /movie/ and /series/ with the item's own extension",
+      () async {
+        final source = await add(
+          const SourceDraft(
+            type: SourceType.xtream,
+            name: 'N',
+            url: 'http://line.test:8080/base',
+            username: 'viewer',
+            password: 'secret',
+          ),
+        );
+
+        final film = (await resolver.movie(movie(source.id, '501', ext: 'MKV')))
+            .valueOrNull!;
+        expect(
+          film.url,
+          'http://line.test:8080/base/movie/viewer/secret/501.mkv',
+        );
+        expect(film.hls, isFalse);
+        expect(film.userAgent, 'VLC/3.0.20 LibVLC/3.0.20');
+        expect(film.maxConnections, 1);
+
+        final show = (await resolver.episode(
+          episode(source.id, '7201', ext: 'mp4'),
+        )).valueOrNull!;
+        expect(
+          show.url,
+          'http://line.test:8080/base/series/viewer/secret/7201.mp4',
+        );
+
+        // No extension from the panel: MP4, the likeliest.
+        final bare = (await resolver.movie(movie(source.id, '502')))
+            .valueOrNull!;
+        expect(bare.url, endsWith('/502.mp4'));
+      },
+    );
+
+    test("M3U: the line's template, filled in", () async {
+      final source = await add(
+        const SourceDraft(
+          type: SourceType.m3uUrl,
+          name: 'P',
+          url: 'http://p.test/get.php?username=ann&password=hunter22',
+        ),
+      );
+      await db.moviesDao.upsertAll([
+        MoviesCompanion.insert(
+          sourceId: source.id,
+          remoteKey: 'film',
+          name: 'Film',
+          streamUrl: const Value(
+            'http://p.test/movie/{username}/{password}/9.mkv',
+          ),
+        ),
+      ]);
+      await seriesWithEpisode(
+        source.id,
+        'ep',
+        streamUrl: 'http://p.test/series/{username}/{password}/10.mp4',
+      );
+
+      expect(
+        (await resolver.movie(movie(source.id, 'film'))).valueOrNull!.url,
+        'http://p.test/movie/ann/hunter22/9.mkv',
+      );
+      expect(
+        (await resolver.episode(episode(source.id, 'ep'))).valueOrNull!.url,
+        'http://p.test/series/ann/hunter22/10.mp4',
+      );
+      // Gone from the playlist: a failure, not a throw.
+      expect((await resolver.episode(episode(source.id, 'x'))).isOk, isFalse);
+      expect((await resolver.movie(movie('gone', 'film'))).isOk, isFalse);
+    });
   });
 }

@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_client.dart';
-import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -139,7 +138,7 @@ final class HttpStreamProber implements StreamProber {
 
   @override
   Future<PlaybackProblem> diagnose(
-    ChannelItem channel,
+    String sourceId,
     ResolvedStream stream, {
     String? detail,
   }) async {
@@ -149,7 +148,7 @@ final class HttpStreamProber implements StreamProber {
         status == 401 ||
         status == 403 ||
         (status == 404 && body.trim().isEmpty);
-    if (refused) account = await _account(channel.sourceId);
+    if (refused) account = await _account(sourceId);
     return classifyStreamFailure(
       status: status,
       body: body,

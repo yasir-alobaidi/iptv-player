@@ -4,8 +4,10 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 const _tag = 'playback';
 
@@ -14,7 +16,7 @@ const _tag = 'playback';
 /// read statuses (docs/03 "Error classes").
 abstract interface class StreamProber {
   Future<PlaybackProblem> diagnose(
-    ChannelItem channel,
+    String sourceId,
     ResolvedStream stream, {
     String? detail,
   });
@@ -34,6 +36,8 @@ final class WatchdogTimings {
     this.stall = const Duration(seconds: 8),
     this.buffering = const Duration(seconds: 15),
     this.connectionLimitAttempts = 3,
+    this.fileOpen = const Duration(seconds: 30),
+    this.earlyEnd = const Duration(seconds: 10),
   });
 
   /// One wait per automatic attempt; its length is the attempt count.
@@ -49,15 +53,29 @@ final class WatchdogTimings {
   /// own, but a panel may still count the stream just closed.
   final int connectionLimitAttempts;
 
+  /// The least a file gets for its first frame, whatever the preset: a
+  /// resume on a panel that ignores Range reads its way to the position.
+  final Duration fileOpen;
+
+  /// A file that ends further than this before its length was cut short:
+  /// it reconnects where it was, rather than counting as finished.
+  final Duration earlyEnd;
+
   int get maxAttempts => backoff.length;
 }
 
-/// The single owner of what is playing (docs/03). It opens channels on the
-/// one [PlayerEngine], keeps a source's connection limit (a one-connection
-/// panel gets the old stream closed before the new one opens), records
-/// history, and watches the stream: an open that never shows a picture, a
-/// stall, a drop or a failure is retried with backoff, and what can't be
-/// retried becomes a [PlaybackFailed] the UI explains.
+/// The single owner of what is playing (docs/03). It opens channels,
+/// movies and episodes on the one [PlayerEngine], keeps a source's
+/// connection limit (a one-connection panel gets the old stream closed
+/// before the new one opens), records history, and watches the stream: an
+/// open that never shows a picture, a stall, a drop or a failure is
+/// retried with backoff, and what can't be retried becomes a
+/// [PlaybackFailed] the UI explains.
+///
+/// A file (Phase 5 decision 1) also seeks and pauses, comes back where it
+/// was after a drop, is never stalled while paused, ends in
+/// [PlaybackEnded], and saves where it was left: every 10 s while it
+/// plays, on pause, after a seek, on leaving and at the end.
 final class PlaybackCoordinator {
   new({
     required this.engine,
@@ -66,11 +84,15 @@ final class PlaybackCoordinator {
     required this._history,
     required this._channels,
     required this._log,
+    this._progress,
     PlaybackSettings Function()? settings,
     this.timings = const WatchdogTimings(),
   }) : _settings = settings ?? (() => const PlaybackSettings()) {
     _events = engine.events.listen(_onEvent);
   }
+
+  /// How often a playing file's position is saved.
+  static const saveEvery = Duration(seconds: 10);
 
   final PlayerEngine engine;
   final StreamResolver _resolver;
@@ -78,11 +100,15 @@ final class PlaybackCoordinator {
   final PlaybackHistory _history;
   final ChannelRepository _channels;
   final AppLog _log;
+
+  /// Null: a file's position isn't saved (tests that only play live).
+  final WatchProgress? _progress;
   final PlaybackSettings Function() _settings;
   final WatchdogTimings timings;
 
   late final StreamSubscription<PlayerEvent> _events;
   final _states = StreamController<PlaybackState>.broadcast(sync: true);
+  final _timelines = StreamController<VodTimeline>.broadcast(sync: true);
   PlaybackState _state = const PlaybackIdle();
 
   /// Bumped by every user action; async work from an older one is dropped.
@@ -109,12 +135,37 @@ final class PlaybackCoordinator {
   int _stillTicks = 0;
   int _bufferingTicks = 0;
 
+  // A file's session.
+  Duration? _startedFrom;
+  Duration? _openAt;
+  Duration? _duration;
+  Duration _buffered = Duration.zero;
+  bool _paused = false;
+  bool _started = false;
+  int _playedSeconds = 0;
+  Duration? _seekTarget;
+  Timer? _seekSettle;
+  VodTimeline _timeline = const VodTimeline();
+
   PlaybackState get state => _state;
 
   /// Every state, as it changes.
   Stream<PlaybackState> get states => _states.stream;
 
+  /// What plays, or last played up to a failure or the end.
+  Playable? get item => _state.item;
+
+  /// The live channel playing; null for a movie or an episode.
   ChannelItem? get current => _state.channel;
+
+  /// Where a movie or an episode is, as it changes.
+  Stream<VodTimeline> get timelines => _timelines.stream;
+
+  VodTimeline get timeline => _timeline;
+
+  /// Where the file playing was asked to start ("Resumed from 24:10");
+  /// null when it started from the beginning, or for live.
+  Duration? get startedFrom => _startedFrom;
 
   /// The stream's address with its credentials masked, for the
   /// stream-info overlay.
@@ -130,34 +181,82 @@ final class PlaybackCoordinator {
   Future<void> playLive(ChannelItem channel) async {
     final now = current;
     if (now != null && now.id != channel.id) _previous = now;
+    await _play(PlayableChannel(channel), null);
+  }
+
+  /// Plays a movie or an episode from [from] (a resume), or from its
+  /// start, replacing whatever plays now.
+  Future<void> playVod(Playable item, {Duration? from}) async {
+    assert(!item.live, 'playLive plays channels');
+    await _play(item, from != null && from > Duration.zero ? from : null);
+  }
+
+  Future<void> _play(Playable item, Duration? from) async {
+    final leaving = _leaving();
     final token = ++_token;
     _attempts = 0;
     _recorded = false;
     _cancelTimers();
-    _set(PlaybackOpening(channel));
-    await _open(channel, token);
+    _startFile(from);
+    if (leaving != null) unawaited(_save(leaving));
+    _set(PlaybackOpening(item));
+    _publish();
+    await _open(item, token);
   }
 
-  /// Tries again after a failure, from the first attempt.
+  /// Tries again after a failure, from the first attempt; a file from
+  /// where it was.
   Future<void> retry() async {
-    final channel = current;
-    if (channel == null) return;
+    final item = this.item;
+    if (item == null) return;
     final token = ++_token;
     _attempts = 0;
     _cancelTimers();
-    _set(PlaybackOpening(channel));
-    await _open(channel, token);
+    if (!item.live) _openAt = _position;
+    _set(PlaybackOpening(item));
+    await _open(item, token);
   }
 
-  /// Stops playback and lets go of the connection.
+  /// Stops playback and lets go of the connection; a file's position is
+  /// saved first.
   Future<void> stop() async {
+    final leaving = _leaving();
     ++_token;
     _cancelTimers();
     _generation = null;
     _stream = null;
+    _startFile(null);
     _set(const PlaybackIdle());
-    await engine.stop();
+    _publish();
+    await Future.wait([engine.stop(), if (leaving != null) _save(leaving)]);
     _openSource = null;
+  }
+
+  /// Moves the file playing to [position], within its length.
+  Future<void> seek(Duration position) async {
+    final item = this.item;
+    if (item == null || item.live || _state is! PlaybackPlaying) return;
+    final length = _duration ?? _knownLength(item);
+    var target = position < Duration.zero ? Duration.zero : position;
+    if (length != null && target > length) target = length;
+    _position = target;
+    _lastTickPosition = target;
+    _stillTicks = 0;
+    // The player may still report where it was for a moment.
+    _seekTarget = target;
+    _seekSettle?.cancel();
+    _seekSettle = Timer(const Duration(seconds: 2), () => _seekTarget = null);
+    _publish();
+    await engine.seek(target);
+    if (_started) unawaited(_save((item.vodRef!, target, length)));
+  }
+
+  /// Pauses or resumes the file playing.
+  Future<void> setPaused({required bool paused}) async {
+    final item = this.item;
+    if (item == null || item.live || _state is! PlaybackPlaying) return;
+    if (paused == _paused) return;
+    await engine.setPaused(paused: paused);
   }
 
   /// The last channel before this one: this session's, or, on a fresh
@@ -175,14 +274,18 @@ final class PlaybackCoordinator {
     return null;
   }
 
-  Future<void> _open(ChannelItem channel, int token) async {
-    final resolved = await _resolver.live(channel);
+  Future<void> _open(Playable item, int token) async {
+    final resolved = await switch (item) {
+      PlayableChannel(:final channel) => _resolver.live(channel),
+      PlayableMovie(:final movie) => _resolver.movie(movie),
+      PlayableEpisode(:final episode) => _resolver.episode(episode),
+    };
     if (token != _token) return;
     final stream = resolved.valueOrNull;
     if (stream == null) {
       _set(
         PlaybackFailed(
-          channel,
+          item,
           PlaybackProblem(
             PlaybackProblemKind.unavailable,
             failure: resolved.failureOrNull,
@@ -193,7 +296,7 @@ final class PlaybackCoordinator {
     }
     // A one-connection source: the old stream has to be closed before the
     // panel lets a new one in (docs/03). Others just replace it.
-    if (_openSource == channel.sourceId && stream.maxConnections <= 1) {
+    if (_openSource == item.sourceId && stream.maxConnections <= 1) {
       final watch = Stopwatch()..start();
       await engine.stop();
       _openSource = null;
@@ -204,32 +307,40 @@ final class PlaybackCoordinator {
       if (token != _token) return;
     }
     _stream = stream;
-    _openSource = channel.sourceId;
+    _openSource = item.sourceId;
     _generation = null;
     _awaitingOpenFor = token;
-    _position = Duration.zero;
-    _lastTickPosition = Duration.zero;
+    _position = _openAt ?? Duration.zero;
+    _lastTickPosition = _position;
     _buffering = false;
+    _paused = false;
     _stillTicks = 0;
     _bufferingTicks = 0;
-    await engine.open(_settings().request(stream));
+    _seekTarget = null;
+    await engine.open(
+      _settings().request(stream, live: item.live, start: _openAt),
+    );
     if (token != _token) return;
     _openTimer?.cancel();
-    _openTimer = Timer(_settings().preset.openTimeout, () {
-      if (token != _token) return;
-      _lost(
-        channel,
-        token,
-        const PlaybackProblem(
-          PlaybackProblemKind.network,
-          detail: 'No picture within the open timeout',
-        ),
-      );
-    });
+    final preset = _settings().preset.openTimeout;
+    _openTimer = Timer(
+      item.live || preset > timings.fileOpen ? preset : timings.fileOpen,
+      () {
+        if (token != _token) return;
+        _lost(
+          item,
+          token,
+          const PlaybackProblem(
+            PlaybackProblemKind.network,
+            detail: 'No picture within the open timeout',
+          ),
+        );
+      },
+    );
   }
 
   void _onEvent(PlayerEvent event) {
-    final channel = current;
+    final item = this.item;
     final token = _token;
     switch (event) {
       case PlayerOpening(:final generation):
@@ -238,72 +349,135 @@ final class PlaybackCoordinator {
           _awaitingOpenFor = null;
         }
       case PlayerFirstFrame(:final generation):
-        if (generation != _generation || channel == null) return;
+        if (generation != _generation || item == null) return;
         _openTimer?.cancel();
         _attempts = 0;
-        _set(PlaybackPlaying(channel));
-        _startTick(channel, token);
-        if (!_recorded) {
+        _started = true;
+        _set(PlaybackPlaying(item));
+        _startTick(item, token);
+        if (item case PlayableChannel(:final channel) when !_recorded) {
           _recorded = true;
           unawaited(_history.recordLive(channel));
         }
-      case PlayerProgress(:final position):
+      case PlayerProgress(:final position, :final buffered):
+        if (_seekTarget case final target?) {
+          // A report from before the seek landed.
+          if ((position - target).abs() > const Duration(seconds: 3)) return;
+          _seekTarget = null;
+        }
         _position = position;
+        _buffered = buffered;
+        if (item != null && !item.live) _publish();
+      case PlayerDuration(:final duration):
+        if (_generation == null || item == null || item.live) return;
+        _duration = duration;
+        _publish();
+      case PlayerPaused(:final paused):
+        if (_generation == null || item == null || item.live) return;
+        if (paused == _paused) return;
+        _paused = paused;
+        _stillTicks = 0;
+        _lastTickPosition = _position;
+        _publish();
+        if (paused) {
+          if (_leaving() case final leaving?) unawaited(_save(leaving));
+        }
       case PlayerBuffering(:final buffering):
-        if (_generation == null || channel == null) return;
+        if (_generation == null || item == null) return;
         _buffering = buffering;
         if (!buffering) _bufferingTicks = 0;
         if (_state is PlaybackPlaying) {
-          _set(PlaybackPlaying(channel, buffering: buffering));
+          _set(PlaybackPlaying(item, buffering: buffering));
         }
       case PlayerEnded():
-        if (_generation == null || channel == null) return;
+        if (_generation == null || item == null) return;
         if (_state is! PlaybackPlaying) return;
-        _lost(
-          channel,
-          token,
-          const PlaybackProblem(
-            PlaybackProblemKind.network,
-            detail: 'The live stream ended',
-          ),
-        );
+        if (item.live) {
+          _lost(
+            item,
+            token,
+            const PlaybackProblem(
+              PlaybackProblemKind.network,
+              detail: 'The live stream ended',
+            ),
+          );
+        } else {
+          _fileEnded(item, token);
+        }
       case PlayerFailed(:final message):
-        if (_generation == null || channel == null) return;
+        if (_generation == null || item == null) return;
         if (_state is! PlaybackOpening &&
             _state is! PlaybackReconnecting &&
             _state is! PlaybackPlaying) {
           return;
         }
-        unawaited(_diagnose(channel, token, message));
+        unawaited(_diagnose(item, token, message));
       case PlayerVideoChanged() || PlayerTracks():
         break;
     }
   }
 
-  Future<void> _diagnose(ChannelItem channel, int token, String detail) async {
+  /// The end of a file: finished, unless it came well before the file's
+  /// length, which is a drop to come back from.
+  void _fileEnded(Playable item, int token) {
+    final length = _duration;
+    if (length != null && _position + timings.earlyEnd < length) {
+      _lost(
+        item,
+        token,
+        PlaybackProblem(
+          PlaybackProblemKind.network,
+          detail: 'The file ended at $_position of $length',
+        ),
+      );
+      return;
+    }
+    _cancelTimers();
+    _generation = null;
+    final end = length ?? _position;
+    _position = end;
+    _publish();
+    unawaited(_save((item.vodRef!, end, length ?? _knownLength(item))));
+    _set(PlaybackEnded(item));
+    _openSource = null;
+    unawaited(engine.stop());
+  }
+
+  Future<void> _diagnose(Playable item, int token, String detail) async {
     _cancelTimers();
     _generation = null;
     final stream = _stream;
     final problem = stream == null
         ? PlaybackProblem(PlaybackProblemKind.network, detail: detail)
-        : await _prober.diagnose(channel, stream, detail: detail);
+        : await _prober.diagnose(item.sourceId, stream, detail: detail);
     if (token != _token) return;
-    _lost(channel, token, problem);
+    _lost(item, token, problem);
   }
 
   /// Once a second while playing: the position has to move unless the
-  /// player is buffering, and buffering may not last forever.
-  void _startTick(ChannelItem channel, int token) {
+  /// player is buffering or paused, and buffering may not last forever. A
+  /// file's position is saved every [saveEvery] it plays.
+  void _startTick(Playable item, int token) {
     _tick?.cancel();
     _lastTickPosition = _position;
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (token != _token) return;
+      if (_paused) {
+        _stillTicks = 0;
+        _bufferingTicks = 0;
+        _lastTickPosition = _position;
+        return;
+      }
+      if (!item.live && ++_playedSeconds >= saveEvery.inSeconds) {
+        _playedSeconds = 0;
+        if (_leaving() case final leaving?) unawaited(_save(leaving));
+      }
       if (_buffering) {
         _bufferingTicks++;
         _stillTicks = 0;
         if (_bufferingTicks >= timings.buffering.inSeconds) {
           _lost(
-            channel,
+            item,
             token,
             const PlaybackProblem(
               PlaybackProblemKind.network,
@@ -317,7 +491,7 @@ final class PlaybackCoordinator {
         _stillTicks++;
         if (_stillTicks >= timings.stall.inSeconds) {
           _lost(
-            channel,
+            item,
             token,
             const PlaybackProblem(
               PlaybackProblemKind.network,
@@ -332,16 +506,19 @@ final class PlaybackCoordinator {
     });
   }
 
-  void _lost(ChannelItem channel, int token, PlaybackProblem problem) {
+  void _lost(Playable item, int token, PlaybackProblem problem) {
     if (token != _token) return;
     _cancelTimers();
     _generation = null;
+    // A file comes back where it was, with a URL built again.
+    if (!item.live) _openAt = _position;
     final limit = problem.kind == PlaybackProblemKind.connectionLimit
         ? timings.connectionLimitAttempts
         : timings.maxAttempts;
     if (!problem.retryable || _attempts >= limit) {
       _log.warning(_tag, 'Playback failed: $problem after $_attempts tries');
-      _set(PlaybackFailed(channel, problem, attempts: _attempts));
+      if (_leaving() case final leaving?) unawaited(_save(leaving));
+      _set(PlaybackFailed(item, problem, attempts: _attempts));
       _openSource = null;
       unawaited(engine.stop());
       return;
@@ -350,7 +527,7 @@ final class PlaybackCoordinator {
     _log.info(_tag, 'Reconnecting (attempt $_attempts of $limit): $problem');
     _set(
       PlaybackReconnecting(
-        channel,
+        item,
         attempt: _attempts,
         maxAttempts: limit,
         problem: problem,
@@ -362,17 +539,72 @@ final class PlaybackCoordinator {
       await engine.stop();
       _openSource = null;
       if (token != _token) return;
-      await _open(channel, token);
+      await _open(item, token);
     });
+  }
+
+  /// A new file session (or none), starting at [from].
+  void _startFile(Duration? from) {
+    _startedFrom = from;
+    _openAt = from;
+    _duration = null;
+    _buffered = Duration.zero;
+    _paused = false;
+    _started = false;
+    _playedSeconds = 0;
+    _seekTarget = null;
+    _position = from ?? Duration.zero;
+  }
+
+  /// What to save for the file playing, once it has shown a picture.
+  (VodRef, Duration, Duration?)? _leaving() {
+    final item = this.item;
+    if (item == null || item.live || !_started) return null;
+    if (_state is PlaybackEnded) return null;
+    return (item.vodRef!, _position, _duration ?? _knownLength(item));
+  }
+
+  Future<void> _save((VodRef, Duration, Duration?) at) async {
+    final (ref, position, duration) = at;
+    final saved = await _progress?.save(
+      ref,
+      position: position,
+      duration: duration,
+    );
+    if (saved?.failureOrNull case final failure?) {
+      _log.warning(_tag, 'Could not save where it was left: $failure');
+    }
+  }
+
+  /// The provider's length, for when the player doesn't know one.
+  static Duration? _knownLength(Playable item) => switch (item) {
+    PlayableMovie(:final movie) => movie.runtime,
+    PlayableEpisode(:final episode) => episode.duration,
+    PlayableChannel() => null,
+  };
+
+  void _publish() {
+    final item = this.item;
+    final next = VodTimeline(
+      position: _position,
+      duration: _duration ?? (item == null ? null : _knownLength(item)),
+      buffered: _buffered,
+      paused: _paused,
+    );
+    if (next == _timeline) return;
+    _timeline = next;
+    if (!_timelines.isClosed) _timelines.add(next);
   }
 
   void _cancelTimers() {
     _openTimer?.cancel();
     _backoffTimer?.cancel();
     _tick?.cancel();
+    _seekSettle?.cancel();
     _openTimer = null;
     _backoffTimer = null;
     _tick = null;
+    _seekSettle = null;
   }
 
   void _set(PlaybackState state) {
@@ -385,5 +617,6 @@ final class PlaybackCoordinator {
     _cancelTimers();
     await _events.cancel();
     await _states.close();
+    await _timelines.close();
   }
 }

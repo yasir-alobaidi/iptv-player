@@ -8,7 +8,6 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
-import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -64,7 +63,7 @@ void main() {
 
   Future<PlaybackProblem> probe(String query, {String password = 'test'}) =>
       prober.diagnose(
-        ChannelItem(id: 1, sourceId: sourceId, remoteKey: '1', name: 'c'),
+        sourceId,
         ResolvedStream(
           url: '${server.url}/live/test/$password/1.ts$query',
           maxConnections: 2,
@@ -117,7 +116,7 @@ void main() {
 
   test('nothing listening → network (retried)', () async {
     final problem = await prober.diagnose(
-      ChannelItem(id: 1, sourceId: sourceId, remoteKey: '1', name: 'c'),
+      sourceId,
       const ResolvedStream(
         url: 'http://127.0.0.1:9/live/a/b/1.ts',
         maxConnections: 1,

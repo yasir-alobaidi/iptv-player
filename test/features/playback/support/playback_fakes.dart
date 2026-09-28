@@ -6,6 +6,8 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
+import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:logger/logger.dart';
 
 ChannelItem channel(int id, {String source = 'src', int? number}) =>
@@ -17,21 +19,67 @@ ChannelItem channel(int id, {String source = 'src', int? number}) =>
       number: number ?? id,
     );
 
+MovieItem movie(int id, {String source = 'src', Duration? runtime}) =>
+    MovieItem(
+      id: id,
+      sourceId: source,
+      remoteKey: 'm$id',
+      name: 'Movie $id',
+      ext: 'mkv',
+      runtime: runtime,
+    );
+
+const series = SeriesItem(
+  id: 1,
+  sourceId: 'src',
+  remoteKey: 's1',
+  name: 'Glass Tide',
+);
+
+EpisodeItem episode(int season, int number, {Duration? duration}) =>
+    EpisodeItem(
+      id: season * 100 + number,
+      sourceId: 'src',
+      seriesKey: 's1',
+      remoteKey: 'e$season$number',
+      season: season,
+      episode: number,
+      title: 'Episode $number',
+      ext: 'mp4',
+      duration: duration,
+    );
+
 final class FakeResolver implements StreamResolver {
   int maxConnections = 1;
   AppFailure? failure;
   final List<ChannelItem> resolved = [];
 
-  @override
-  Future<Result<ResolvedStream>> live(ChannelItem channel) async {
-    resolved.add(channel);
+  /// Every movie's and episode's remote key resolved, in order.
+  final List<String> resolvedFiles = [];
+
+  Future<Result<ResolvedStream>> _answer(String path) async {
     if (failure case final failure?) return Err(failure);
     return Ok(
-      ResolvedStream(
-        url: 'http://fake/live/u/p/${channel.remoteKey}.ts',
-        maxConnections: maxConnections,
-      ),
+      ResolvedStream(url: 'http://fake/$path', maxConnections: maxConnections),
     );
+  }
+
+  @override
+  Future<Result<ResolvedStream>> live(ChannelItem channel) {
+    resolved.add(channel);
+    return _answer('live/u/p/${channel.remoteKey}.ts');
+  }
+
+  @override
+  Future<Result<ResolvedStream>> movie(MovieItem movie) {
+    resolvedFiles.add(movie.remoteKey);
+    return _answer('movie/u/p/${movie.remoteKey}.${movie.ext}');
+  }
+
+  @override
+  Future<Result<ResolvedStream>> episode(EpisodeItem episode) {
+    resolvedFiles.add(episode.remoteKey);
+    return _answer('series/u/p/${episode.remoteKey}.${episode.ext}');
   }
 }
 
@@ -41,7 +89,7 @@ final class FakeProber implements StreamProber {
 
   @override
   Future<PlaybackProblem> diagnose(
-    ChannelItem channel,
+    String sourceId,
     ResolvedStream stream, {
     String? detail,
   }) async {
@@ -105,6 +153,43 @@ final class FakeChannels implements ChannelRepository {
   Future<Result<void>> rename(int id, String? name) async => const Ok(null);
 }
 
+/// [WatchProgress] in memory: every save, in order.
+final class FakeWatchProgress implements WatchProgress {
+  final List<({VodRef ref, Duration position, Duration? duration})> saves = [];
+
+  Duration? get lastPosition => saves.lastOrNull?.position;
+
+  @override
+  Future<Result<void>> save(
+    VodRef ref, {
+    required Duration position,
+    Duration? duration,
+  }) async {
+    saves.add((ref: ref, position: position, duration: duration));
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void>> setWatched(VodRef ref, {required bool watched}) async =>
+      const Ok(null);
+
+  @override
+  Stream<WatchMark?> watch(VodRef ref) => Stream.value(null);
+
+  @override
+  Stream<Map<String, WatchMark>> watchSeries(
+    String sourceId,
+    String seriesKey,
+  ) => Stream.value(const {});
+
+  @override
+  Stream<List<ContinueItem>> continueWatching({int limit = 20}) =>
+      Stream.value(const []);
+
+  @override
+  Future<Result<void>> dismiss(ContinueItem item) async => const Ok(null);
+}
+
 /// A coordinator on fakes, and the states it went through.
 final class Rig {
   new({Duration stopDelay = Duration.zero})
@@ -115,9 +200,11 @@ final class Rig {
       prober: prober,
       history: history,
       channels: channels,
+      progress: progress,
       log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
     );
     coordinator.states.listen(states.add);
+    coordinator.timelines.listen(timelines.add);
   }
 
   final FakePlayerEngine engine;
@@ -125,8 +212,10 @@ final class Rig {
   final prober = FakeProber();
   final history = FakeHistory();
   final channels = FakeChannels();
+  final progress = FakeWatchProgress();
   late final PlaybackCoordinator coordinator;
   final List<PlaybackState> states = [];
+  final List<VodTimeline> timelines = [];
 
   PlaybackState get state => coordinator.state;
 }

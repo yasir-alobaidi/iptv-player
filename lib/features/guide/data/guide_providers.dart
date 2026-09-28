@@ -85,8 +85,8 @@ GuideScheduler guideScheduler(Ref ref) {
       // Never created means nothing ever played.
       if (!ref.exists(playbackCoordinatorProvider)) return false;
       return switch (ref.read(playbackCoordinatorProvider).state) {
-        PlaybackOpening(:final channel) ||
-        PlaybackReconnecting(:final channel) => channel.sourceId == sourceId,
+        PlaybackOpening(:final item) ||
+        PlaybackReconnecting(:final item) => item.sourceId == sourceId,
         _ => false,
       };
     },

@@ -30,6 +30,9 @@ final class UnavailablePlayerEngine implements PlayerEngine {
   Future<void> setPaused({required bool paused}) async {}
 
   @override
+  Future<void> seek(Duration position) async {}
+
+  @override
   Future<void> setVolume(double volume) async {}
 
   @override

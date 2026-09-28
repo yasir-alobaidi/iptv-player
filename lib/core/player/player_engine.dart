@@ -17,7 +17,12 @@ abstract interface class PlayerEngine {
   /// player has closed it, which a one-connection panel waits for.
   Future<void> stop();
 
+  /// Pauses or resumes; the player reports it back as [PlayerPaused].
   Future<void> setPaused({required bool paused});
+
+  /// Moves a file (VOD) to [position] from its start. A live stream has
+  /// nothing to seek in.
+  Future<void> seek(Duration position);
 
   /// 0–100.
   Future<void> setVolume(double volume);
@@ -73,11 +78,15 @@ final class PlayRequest {
     this.audioLanguages = const [],
     this.subtitleLanguages = const [],
     this.deinterlace,
+    this.start,
   });
 
   /// Carries credentials: never log it without `redact()`.
   final String url;
   final String? userAgent;
+
+  /// False for a file (a movie, an episode): it has a length, seeks, and
+  /// keeps more behind the position to seek back into.
   final bool live;
   final BufferPreset preset;
 
@@ -88,8 +97,14 @@ final class PlayRequest {
   /// null = Auto (follow the stream's interlacing).
   final bool? deinterlace;
 
+  /// Where a file starts (a resume): one open that begins there, rather
+  /// than an open and then a seek. Null or zero is the start.
+  final Duration? start;
+
   @override
-  String toString() => 'PlayRequest(live: $live, preset: ${preset.name})';
+  String toString() =>
+      'PlayRequest(live: $live, preset: ${preset.name}'
+      '${start == null ? '' : ', start: $start'})';
 }
 
 /// Something the player reports.
@@ -127,9 +142,24 @@ final class PlayerBuffering extends PlayerEvent {
   final bool buffering;
 }
 
-/// The stream ended. On a live stream that means the connection dropped.
+/// The stream ended. On a live stream that means the connection dropped;
+/// a file may have played to its end, or been cut short.
 final class PlayerEnded extends PlayerEvent {
   const new();
+}
+
+/// A file's length, once the player knows it (never for live).
+final class PlayerDuration extends PlayerEvent {
+  const new(this.duration);
+
+  final Duration duration;
+}
+
+/// Paused or playing again, however it came about.
+final class PlayerPaused extends PlayerEvent {
+  const new({required this.paused});
+
+  final bool paused;
 }
 
 /// The player couldn't open or keep playing. [message] is the player's

@@ -19,10 +19,18 @@ final class FakePlayerEngine implements PlayerEngine {
   /// Calls other than [open], as short strings (`stop`, `mute:true`, …).
   final List<String> calls = [];
 
+  /// Opens (`open`) and every other call, in the order they came.
+  final List<String> sequence = [];
+
   int _generation = 0;
   bool _playing = false;
   bool disposed = false;
   StreamInfo info = const StreamInfo();
+
+  void _call(String call) {
+    calls.add(call);
+    sequence.add(call);
+  }
 
   PlayRequest? get current => _playing ? opened.lastOrNull : null;
   int get generation => _generation;
@@ -42,6 +50,9 @@ final class FakePlayerEngine implements PlayerEngine {
 
   void buffering({required bool on}) => emit(PlayerBuffering(buffering: on));
 
+  /// The file's length, as the player learns it.
+  void duration(Duration duration) => emit(PlayerDuration(duration));
+
   void fail([String message = 'Failed to open']) {
     _playing = false;
     emit(PlayerFailed(message));
@@ -57,6 +68,7 @@ final class FakePlayerEngine implements PlayerEngine {
     _generation++;
     _playing = true;
     opened.add(request);
+    sequence.add('open');
     emit(PlayerOpening(_generation));
   }
 
@@ -64,34 +76,40 @@ final class FakePlayerEngine implements PlayerEngine {
   Future<void> stop() async {
     _generation++;
     _playing = false;
-    calls.add('stop');
+    _call('stop');
     if (stopDelay > Duration.zero) await Future<void>.delayed(stopDelay);
   }
 
+  /// Reported back at once, as mpv does.
   @override
-  Future<void> setPaused({required bool paused}) async =>
-      calls.add('paused:$paused');
+  Future<void> setPaused({required bool paused}) async {
+    _call('paused:$paused');
+    if (_playing) emit(PlayerPaused(paused: paused));
+  }
+
+  /// Recorded as `seek:<ms>`; the test reports the new position.
+  @override
+  Future<void> seek(Duration position) async =>
+      _call('seek:${position.inMilliseconds}');
 
   @override
-  Future<void> setVolume(double volume) async => calls.add('volume:$volume');
+  Future<void> setVolume(double volume) async => _call('volume:$volume');
 
   @override
-  Future<void> setMuted({required bool muted}) async =>
-      calls.add('muted:$muted');
+  Future<void> setMuted({required bool muted}) async => _call('muted:$muted');
 
   @override
-  Future<void> selectAudio(String? id) async => calls.add('audio:$id');
+  Future<void> selectAudio(String? id) async => _call('audio:$id');
 
   @override
-  Future<void> selectSubtitle(String? id) async => calls.add('subtitle:$id');
+  Future<void> selectSubtitle(String? id) async => _call('subtitle:$id');
 
   @override
-  Future<void> setAspect(AspectMode mode) async =>
-      calls.add('aspect:${mode.name}');
+  Future<void> setAspect(AspectMode mode) async => _call('aspect:${mode.name}');
 
   @override
   Future<void> setDeinterlace({required bool on}) async =>
-      calls.add('deinterlace:$on');
+      _call('deinterlace:$on');
 
   @override
   Future<StreamInfo> streamInfo() async => info;

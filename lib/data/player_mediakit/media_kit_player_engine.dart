@@ -144,7 +144,15 @@ final class MediaKitPlayerEngine implements PlayerEngine {
       ..add(_player.stream.error.listen(_onError))
       ..add(_player.stream.videoParams.listen(_onVideoParams))
       ..add(_player.stream.tracks.listen((_) => _emitTracks()))
-      ..add(_player.stream.track.listen((_) => _emitTracks()));
+      ..add(_player.stream.track.listen((_) => _emitTracks()))
+      ..add(_player.stream.duration.listen(_onDuration));
+    // Once a file plays: media_kit pauses and resumes on its own while it
+    // opens one, which is nobody's pause.
+    await _native.observeProperty('pause', waitForInitialization: false, (
+      value,
+    ) async {
+      if (_open && _started) _emit(PlayerPaused(paused: value == 'yes'));
+    });
     await _native.observeProperty(
       'paused-for-cache',
       waitForInitialization: false,
@@ -198,7 +206,13 @@ final class MediaKitPlayerEngine implements PlayerEngine {
     if (request.deinterlace == null) {
       await _set('deinterlace', 'no');
     }
-    await _player.open(Media(request.url));
+    final start = request.start;
+    await _player.open(
+      Media(
+        request.url,
+        start: start != null && start > Duration.zero ? start : null,
+      ),
+    );
     if (generation != _generation) return;
     _pollFirstFrame(generation, autoDeinterlace: request.deinterlace == null);
   }
@@ -255,6 +269,11 @@ final class MediaKitPlayerEngine implements PlayerEngine {
     }
     _lastProgress = now;
     _emit(PlayerProgress(position: _position, buffered: _buffered));
+  }
+
+  void _onDuration(Duration duration) {
+    // Zero between files, and for a live stream.
+    if (_open && duration > Duration.zero) _emit(PlayerDuration(duration));
   }
 
   void _onCompleted(bool completed) {
@@ -325,9 +344,22 @@ final class MediaKitPlayerEngine implements PlayerEngine {
     }
   }
 
+  // Straight to mpv: media_kit's own play() and pause() wait for the
+  // video controller's first texture.
   @override
   Future<void> setPaused({required bool paused}) =>
-      paused ? _player.pause() : _player.play();
+      _set('pause', paused ? 'yes' : 'no');
+
+  @override
+  Future<void> seek(Duration position) async {
+    if (!_open) return;
+    final seconds = (position.inMilliseconds / 1000).toStringAsFixed(3);
+    await _native.command([
+      'seek',
+      seconds,
+      'absolute',
+    ], waitForInitialization: false);
+  }
 
   @override
   Future<void> setVolume(double volume) =>

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
 
 /// A stream ready to open: built from the source at play time and never
 /// kept longer than the session that plays it (hard rule 3).
@@ -32,6 +33,10 @@ final class ResolvedStream {
 /// redirect's token expires, so a reconnect never reuses one).
 abstract interface class StreamResolver {
   Future<Result<ResolvedStream>> live(ChannelItem channel);
+
+  Future<Result<ResolvedStream>> movie(MovieItem movie);
+
+  Future<Result<ResolvedStream>> episode(EpisodeItem episode);
 }
 
 /// What was watched, for the last-channel key and "recently watched".
@@ -114,13 +119,20 @@ final class PlaybackSettings {
     },
   };
 
-  PlayRequest request(ResolvedStream stream) => PlayRequest(
+  /// [live] false opens a file, from [start] when given.
+  PlayRequest request(
+    ResolvedStream stream, {
+    bool live = true,
+    Duration? start,
+  }) => PlayRequest(
     url: stream.url,
     userAgent: stream.userAgent,
+    live: live,
     preset: preset,
     audioLanguages: audioLanguages,
     subtitleLanguages: subtitleLanguages,
     deinterlace: deinterlace,
+    start: start,
   );
 
   @override

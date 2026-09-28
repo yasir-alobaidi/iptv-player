@@ -15,6 +15,14 @@ bool get streamsAvailable =>
     samplesDirectory.existsSync() &&
     File('${samplesDirectory.path}/h264_1080p50_aac.ts').existsSync();
 
+/// The VOD sample CI generates (`VOD_SECONDS=120`); here it may be the full
+/// 10 minutes. Movie [firstMovieId] serves it.
+bool get vodAvailable =>
+    File('${samplesDirectory.path}/vod_h264_aac_10min.mp4').existsSync();
+
+/// The fake panel's first movie: the MP4 sample, as `.mp4`.
+const firstMovieId = 100000;
+
 final class FakePanel {
   new _(this._process, this.port, this._scratch);
 
@@ -68,6 +76,10 @@ final class FakePanel {
   /// A live channel's stream URL with the fake's credentials.
   String live(int id, {String extension = 'ts'}) =>
       '$url/live/test/test/$id.$extension';
+
+  /// A movie's file URL with the fake's credentials.
+  String movie(int id, {String extension = 'mp4'}) =>
+      '$url/movie/test/test/$id.$extension';
 
   /// `user_info.active_cons`: the streams the panel has open right now.
   Future<int> activeConnections() async {
