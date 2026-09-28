@@ -52,6 +52,10 @@ class FocusPaneController extends ChangeNotifier {
     if (identical(_pane, pane)) _pane = null;
   }
 
+  /// Makes [node] the item [focusPane] returns to, before the user was
+  /// ever in the pane: a series' list lands on the episode to continue.
+  void remember(FocusNode node) => _remember(node);
+
   void _remember(FocusNode? node) {
     if (node == null || node == _lastFocused) return;
     _lastFocused = node;

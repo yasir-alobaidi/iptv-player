@@ -6,11 +6,12 @@ import 'package:iptv_player/design/tokens.dart';
 /// Button emphasis (docs/05).
 enum AppButtonVariant { primary, secondary, ghost, danger }
 
-/// Button height (canvas: 36 / 44 / 48 px).
+/// Button height (canvas: 36 / 44 / 48 px, and 52 on a details page).
 enum AppButtonSize {
   s(height: 36, padding: 14, gap: 8),
   m(height: 44, padding: 18, gap: 8),
-  l(height: 48, padding: 22, gap: 10);
+  l(height: 48, padding: 22, gap: 10),
+  xl(height: 52, padding: 24, gap: 10);
 
   new({required this.height, required this.padding, required this.gap});
 

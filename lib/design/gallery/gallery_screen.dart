@@ -81,7 +81,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
     return [
       GallerySection(
         title: 'Buttons',
-        description: 'Primary, secondary, ghost and danger; sizes S, M and L.',
+        description:
+            'Primary, secondary, ghost and danger; sizes S, M, L and XL.',
         children: [
           for (final variant in AppButtonVariant.values)
             SpecimenRow(

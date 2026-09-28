@@ -103,6 +103,17 @@ String formatTimeRange(DateTime start, DateTime end) {
   return sameHalf ? '${a.substring(0, a.length - 3)} – $b' : '$a – $b';
 }
 
+/// A place in a film or an episode, as players write it: `24:10`,
+/// `1:12:40`.
+String formatPosition(Duration at) {
+  final seconds = at.inSeconds < 0 ? 0 : at.inSeconds;
+  String two(int v) => '$v'.padLeft(2, '0');
+  final h = seconds ~/ 3600;
+  final m = (seconds % 3600) ~/ 60;
+  final s = seconds % 60;
+  return h > 0 ? '$h:${two(m)}:${two(s)}' : '$m:${two(s)}';
+}
+
 /// A film's or an episode's length: `52 min`, `1 h 58 min`, `2 h`.
 String formatRuntime(Duration length) {
   final minutes = length.inMinutes < 1 ? 1 : length.inMinutes;

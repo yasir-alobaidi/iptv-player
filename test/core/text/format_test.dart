@@ -45,4 +45,21 @@ void main() {
   test('formatShortDate drops the year', () {
     expect(formatShortDate(DateTime(2026, 11, 3, 12)), 'Nov 3');
   });
+
+  test('a runtime: minutes, then hours and minutes', () {
+    expect(formatRuntime(const Duration(minutes: 52)), '52 min');
+    expect(formatRuntime(const Duration(minutes: 118)), '1 h 58 min');
+    expect(formatRuntime(const Duration(minutes: 120)), '2 h');
+    expect(formatRuntime(const Duration(seconds: 20)), '1 min');
+  });
+
+  test('a position, as players write it', () {
+    expect(formatPosition(const Duration(minutes: 24, seconds: 10)), '24:10');
+    expect(
+      formatPosition(const Duration(hours: 1, minutes: 12, seconds: 40)),
+      '1:12:40',
+    );
+    expect(formatPosition(const Duration(seconds: 5)), '0:05');
+    expect(formatPosition(const Duration(seconds: -3)), '0:00');
+  });
 }

@@ -138,8 +138,12 @@ As built (Phase 5 step 4; ADR-012): the canvas's header ("All movies · 27 movie
 
 **Movie details:** blurred backdrop (or poster-derived gradient), poster, title, year · runtime · rating · genres, plot, director/cast; Play or Resume (with progress), Start over, Download, Favorite, Cast. Once downloaded, Play uses the local file and the poster shows the Downloaded badge.
 
+As built (Phase 5 step 5; ADR-012): the canvas's page with the fetched parts filling in (skeleton lines until then, the reason and Retry if the first fetch fails, "No description from your provider." when there is none); Play, or Resume from 1:12:40 and Start over between a minute and 95 % — this page is the resume prompt — and the favorite (F); the progress line with the time left. Download and Cast wait for their phases (not shown). Esc or the "‹ Movies" chip go back to the same card.
+
 ### 7. Series
 Same grid. **Series details:** backdrop, poster, title, metadata, plot, Favorite; season tabs with "Download season"; episode rows with 16:9 still, "S1 · E3", title, runtime, progress, DownloadButton, description on focus; primary button "Continue S2 · E4".
+
+As built (Phase 5 step 5; ADR-012): the canvas's two columns; the primary action is Play S1 · E1, Continue S2 · E4 or Play again (Continue watching's rule); the page opens on the season of the episode to continue with that episode the list's first Tab stop; Enter on an episode plays it from where it was left, its menu starts over or marks it watched. Download season and the rows' download buttons wait for Phase 8.
 
 ### 8. Favorites
 Tabs: Channels (drag to reorder, groups) · Movies · Series. Empty: "Press F on anything to add it here."
