@@ -9,16 +9,25 @@ library;
 
 import 'dart:convert';
 
+import 'package:fake_provider/artwork.dart';
 import 'package:fake_provider/profile.dart';
 
 /// Applies the representation quirks of one profile.
 class JsonShape {
-  const new(this.quirks);
+  const new(this.quirks, {this.origin});
 
   /// No quirks: what a well-behaved panel sends.
   static const clean = JsonShape(FakeQuirks());
 
   final FakeQuirks quirks;
+
+  /// `http://host:port` as the client reached the server: artwork URLs
+  /// point there. Without one they keep the generator's unresolvable host.
+  final String? origin;
+
+  /// An artwork URL that may be missing, on this server when it is ours.
+  Object? image(String? url) =>
+      text(origin == null ? url : artworkFor(url, origin!));
 
   /// A number, as an int/double or as its string form.
   Object number(num value) => quirks.numbersAsStrings ? '$value' : value;
@@ -100,7 +109,7 @@ class FakeChannel {
     'name': name,
     'stream_type': 'live',
     'stream_id': shape.number(streamId),
-    'stream_icon': shape.text(icon),
+    'stream_icon': shape.image(icon),
     'epg_channel_id': shape.text(epgChannelId),
     'added': shape.timestamp(added),
     'category_id': shape.text(categoryId),
@@ -128,12 +137,21 @@ class FakeMovie {
     required this.genre,
     required this.durationSecs,
     required this.sample,
+    this.backdrop,
+    this.probed = true,
   });
 
   final int streamId;
   final int number;
   final String name;
   final String? icon;
+
+  /// `null` when the panel has none (`backdrop_path: []`).
+  final String? backdrop;
+
+  /// Whether `get_vod_info` carries the `video` / `audio` blocks a panel
+  /// writes after probing the file; many movies have none.
+  final bool probed;
 
   /// 0–10, `null` for an unrated movie.
   final double? rating;
@@ -164,7 +182,7 @@ class FakeMovie {
     'name': name,
     'stream_type': 'movie',
     'stream_id': shape.number(streamId),
-    'stream_icon': shape.text(icon),
+    'stream_icon': shape.image(icon),
     'rating': shape.maybeNumber(rating),
     'rating_5based': shape.maybeNumber(
       rating == null ? null : (rating! / 2 * 10).round() / 10,
@@ -176,23 +194,31 @@ class FakeMovie {
     'direct_source': '',
   };
 
-  /// `action=get_vod_info`: `info` plus the list row as `movie_data`.
-  Map<String, Object?> toInfoJson(JsonShape shape) => {
-    'info': shape.info({
-      'movie_image': shape.text(icon),
-      'plot': plot,
-      'cast': cast,
-      'director': director,
-      'genre': genre,
-      'releasedate': '$year-01-01',
-      'rating': shape.maybeNumber(rating),
-      'duration_secs': shape.number(durationSecs),
-      'duration': duration,
-      'backdrop_path': <String>[],
-      'youtube_trailer': '',
-    }),
-    'movie_data': toJson(shape),
-  };
+  /// `action=get_vod_info`: `info` plus the list row as `movie_data`. A
+  /// probed movie carries ffprobe's `video` and `audio` streams and a
+  /// `bitrate` (kb/s), as panels store them; an unprobed one `[]` and 0.
+  Map<String, Object?> toInfoJson(JsonShape shape) {
+    final probe = probed ? vodProbes[sample] : null;
+    return {
+      'info': shape.info({
+        'movie_image': shape.image(icon),
+        'plot': plot,
+        'cast': cast,
+        'director': director,
+        'genre': genre,
+        'releasedate': '$year-01-01',
+        'rating': shape.maybeNumber(rating),
+        'duration_secs': shape.number(durationSecs),
+        'duration': duration,
+        'backdrop_path': [if (backdrop != null) shape.image(backdrop)],
+        'youtube_trailer': '',
+        'video': probe?.videoJson(shape) ?? const <Object?>[],
+        'audio': probe?.audioJson(shape) ?? const <Object?>[],
+        'bitrate': shape.number(probe?.bitrateKbps ?? 0),
+      }),
+      'movie_data': toJson(shape),
+    };
+  }
 }
 
 class FakeSeries {
@@ -210,12 +236,16 @@ class FakeSeries {
     required this.director,
     required this.lastModified,
     required this.seasonCount,
+    this.backdrop,
   });
 
   final int seriesId;
   final int number;
   final String name;
   final String? cover;
+
+  /// `null` when the panel has none (`backdrop_path: []`).
+  final String? backdrop;
   final double? rating;
   final String? categoryId;
   final int year;
@@ -230,7 +260,7 @@ class FakeSeries {
     'num': shape.number(number),
     'name': name,
     'series_id': shape.number(seriesId),
-    'cover': shape.text(cover),
+    'cover': shape.image(cover),
     'plot': plot,
     'cast': cast,
     'director': director,
@@ -241,7 +271,7 @@ class FakeSeries {
     'rating_5based': shape.maybeNumber(
       rating == null ? null : (rating! / 2 * 10).round() / 10,
     ),
-    'backdrop_path': <String>[],
+    'backdrop_path': [if (backdrop != null) shape.image(backdrop)],
     'youtube_trailer': '',
     'episode_run_time': shape.number(45),
     'category_id': shape.text(categoryId),
@@ -255,7 +285,7 @@ class FakeSeries {
         'name': 'Season $season',
         'overview': '',
         'season_number': shape.number(season),
-        'cover': shape.text(cover),
+        'cover': shape.image(cover),
       };
 }
 
@@ -296,7 +326,7 @@ class FakeEpisode {
           '${'${(durationSecs % 3600) ~/ 60}'.padLeft(2, '0')}:'
           '${'${durationSecs % 60}'.padLeft(2, '0')}',
       'plot': plot,
-      'movie_image': shape.text(still),
+      'movie_image': shape.image(still),
       'rating': shape.number(0),
     }),
     'custom_sid': shape.text(null),
@@ -305,6 +335,79 @@ class FakeEpisode {
     'direct_source': '',
   };
 }
+
+/// What ffprobe says about a VOD sample, in the `get_vod_info` shape
+/// panels store (tools/media_samples/generate.sh makes these files).
+class VodProbe {
+  const new({
+    required this.videoCodec,
+    required this.width,
+    required this.height,
+    required this.audioCodec,
+    required this.channels,
+    required this.channelLayout,
+    required this.bitrateKbps,
+  });
+
+  final String videoCodec;
+  final int width;
+  final int height;
+  final String audioCodec;
+  final int channels;
+  final String channelLayout;
+  final int bitrateKbps;
+
+  Map<String, Object?> videoJson(JsonShape shape) => {
+    'index': shape.number(0),
+    'codec_name': videoCodec,
+    'codec_type': 'video',
+    'width': shape.number(width),
+    'height': shape.number(height),
+    'display_aspect_ratio': '16:9',
+    'pix_fmt': 'yuv420p',
+    'r_frame_rate': '25/1',
+  };
+
+  Map<String, Object?> audioJson(JsonShape shape) => {
+    'index': shape.number(1),
+    'codec_name': audioCodec,
+    'codec_type': 'audio',
+    'sample_rate': '48000',
+    'channels': shape.number(channels),
+    'channel_layout': channelLayout,
+  };
+}
+
+/// The VOD samples, as ffprobe reads them.
+const vodProbes = <String, VodProbe>{
+  'vod_h264_aac_10min.mp4': VodProbe(
+    videoCodec: 'h264',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'aac',
+    channels: 2,
+    channelLayout: 'stereo',
+    bitrateKbps: 2628,
+  ),
+  'vod_h264_ac3_10min.mkv': VodProbe(
+    videoCodec: 'h264',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'ac3',
+    channels: 6,
+    channelLayout: '5.1(side)',
+    bitrateKbps: 2884,
+  ),
+  'vod_hevc_eac3_subs.mkv': VodProbe(
+    videoCodec: 'hevc',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'eac3',
+    channels: 6,
+    channelLayout: '5.1(side)',
+    bitrateKbps: 2884,
+  ),
+};
 
 class FakeProgramme {
   const new({

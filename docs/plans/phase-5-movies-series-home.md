@@ -1,6 +1,6 @@
 # Phase 5 — Movies, series, home: plan
 
-**Status: proposed 2026-09-27, waiting for your approval.** What gets built, and every departure from this plan, will be recorded in ADR-012 (docs/decisions.md) as the steps land.
+**Status: approved 2026-09-27, being built.** What is built, and every departure from this plan, is recorded in ADR-012 (docs/decisions.md) as the steps land.
 
 ## Context
 Phase 4 finished the guide. Home, Movies and Series are still placeholders. Phase 5 fills them: poster grids, details pages that fetch lazily and cache, VOD in the full-screen player (seeking, resume, progress, completion, the next episode), and Home's rows.

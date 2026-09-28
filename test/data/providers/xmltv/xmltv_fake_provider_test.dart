@@ -1,3 +1,4 @@
+import 'package:fake_provider/artwork.dart';
 import 'package:fake_provider/models.dart';
 import 'package:fake_provider/profile.dart';
 import 'package:fake_provider/server_state.dart';
@@ -167,7 +168,10 @@ _Expected _expected(
           displayName: cleanText(
             channel.name.replaceAll(invalidUtf8Marker, '\ufffd'),
           ),
-          iconUrl: cleanImageUrl(channel.icon),
+          // The server points its artwork at the host it was reached on.
+          iconUrl: cleanImageUrl(
+            artworkFor(channel.icon, 'http://panel.test:80'),
+          ),
         ),
       );
     } else {

@@ -59,7 +59,10 @@ Handler playerApiHandler(FakeServerState state) {
     }
 
     final catalog = state.catalog;
-    final shape = JsonShape(state.profile.quirks);
+    final shape = JsonShape(
+      state.profile.quirks,
+      origin: requestOrigin(request),
+    );
     final category = _value(params, 'category_id');
 
     switch (_value(params, 'action')) {

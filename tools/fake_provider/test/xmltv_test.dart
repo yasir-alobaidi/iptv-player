@@ -69,6 +69,16 @@ void main() {
       expect(text, contains('<category lang="en">'));
     });
 
+    test('channel icons point at the server the client reached', () async {
+      final text = await _body(await _get(_state(), 'channels=20'));
+      final icons = RegExp('<icon src="([^"]*)"')
+          .allMatches(text)
+          .map((m) => m[1]!)
+          .toList();
+      expect(icons, isNotEmpty);
+      expect(icons, everyElement(startsWith('http://x:80/art/live/')));
+    });
+
     test('a channel with no epg_channel_id is left out', () async {
       final state = _state();
       final text = await _body(await _get(state, 'channels=40'));

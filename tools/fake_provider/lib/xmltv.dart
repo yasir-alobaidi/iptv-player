@@ -12,6 +12,7 @@ library;
 
 import 'dart:io';
 
+import 'package:fake_provider/artwork.dart';
 import 'package:fake_provider/models.dart';
 import 'package:fake_provider/player_api.dart';
 import 'package:fake_provider/server_state.dart';
@@ -144,7 +145,7 @@ Handler xmltvHandler(FakeServerState state) {
       return Response(401, body: 'Unauthorized');
     }
     final options = XmltvOptions.fromQuery(params, state);
-    final body = _xmltv(state, options);
+    final body = _xmltv(state, options, requestOrigin(request));
     return Response.ok(
       options.gzip ? gzip.encoder.bind(body) : body,
       headers: {
@@ -168,7 +169,12 @@ const _categories = <String>[
   'Children',
 ];
 
-Stream<List<int>> _xmltv(FakeServerState state, XmltvOptions options) async* {
+/// [origin] is where the channels' icons point (see `artwork.dart`).
+Stream<List<int>> _xmltv(
+  FakeServerState state,
+  XmltvOptions options,
+  String origin,
+) async* {
   final quirks = options.quirks;
   final breakUtf8 = state.profile.quirks.invalidUtf8Names;
   final buffer = StringBuffer();
@@ -196,9 +202,10 @@ Stream<List<int>> _xmltv(FakeServerState state, XmltvOptions options) async* {
 
   var first = true;
   for (final channel in guided()) {
-    _writeChannel(buffer, channel.epgChannelId!, channel.name, channel.icon);
+    final icon = artworkFor(channel.icon, origin);
+    _writeChannel(buffer, channel.epgChannelId!, channel.name, icon);
     if (first && quirks.duplicateChannel) {
-      _writeChannel(buffer, channel.epgChannelId!, channel.name, channel.icon);
+      _writeChannel(buffer, channel.epgChannelId!, channel.name, icon);
     }
     first = false;
     if (buffer.length > 32 * 1024) yield take();

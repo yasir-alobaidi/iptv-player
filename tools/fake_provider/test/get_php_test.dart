@@ -51,6 +51,20 @@ void main() {
     expect(response.statusCode, 401);
   });
 
+  test('logos point at the server the client reached', () async {
+    final lines = await linesOf(
+      await call(stateOf(small), '?username=test&password=test'),
+    );
+    final logos = [
+      for (final line in lines)
+        ?RegExp('tvg-logo="([^"]*)"').firstMatch(line)?.group(1),
+    ];
+    expect(logos, isNotEmpty);
+    for (final logo in logos) {
+      expect(logo, startsWith('http://localhost:8899/art/'));
+    }
+  });
+
   test('every channel, movie and episode, each an #EXTINF and a URL', () async {
     final state = stateOf(small);
     final lines = await linesOf(

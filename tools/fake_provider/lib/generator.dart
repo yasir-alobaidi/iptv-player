@@ -11,6 +11,7 @@
 /// movies, 3k series) cheap.
 library;
 
+import 'package:fake_provider/artwork.dart';
 import 'package:fake_provider/models.dart';
 import 'package:fake_provider/profile.dart';
 
@@ -203,7 +204,7 @@ class FakeCatalog {
       streamId: streamId,
       number: index + 1,
       name: _quirkyName(clean, index),
-      icon: _iconOr('$_iconRoot/live/$streamId.png', index),
+      icon: _iconOr('$artworkRoot/live/$streamId.png', index),
       epgChannelId: _everyNth(index, 9)
           ? null
           : '${brand.toLowerCase()}${topic.toLowerCase()}'
@@ -233,7 +234,7 @@ class FakeCatalog {
         mix.below(5) == 0 ? _releaseName(title, year, mix) : '$title ($year)',
         index,
       ),
-      icon: _iconOr('$_iconRoot/movie/$streamId.jpg', index),
+      icon: _iconOr('$artworkRoot/movie/$streamId.jpg', index),
       rating: _ratingFrom(mix),
       categoryId: _categoryIdFor(movieCategories, index),
       added: _dateFrom(mix),
@@ -245,6 +246,11 @@ class FakeCatalog {
       genre: '${mix.pick(_genres)}, ${mix.pick(_genres)}',
       durationSecs: (75 + mix.below(65)) * 60 + mix.below(60),
       sample: sample,
+      // By position, not from the draw stream, so nothing above moves.
+      backdrop: _everyNth(index, 5)
+          ? null
+          : '$artworkRoot/backdrop/movie/$streamId.jpg',
+      probed: !_everyNth(index, 4),
     );
   }
 
@@ -257,7 +263,7 @@ class FakeCatalog {
       seriesId: seriesId,
       number: index + 1,
       name: _quirkyName(mix.below(4) == 0 ? '$title ($year)' : title, index),
-      cover: _iconOr('$_iconRoot/series/$seriesId.jpg', index),
+      cover: _iconOr('$artworkRoot/series/$seriesId.jpg', index),
       rating: _ratingFrom(mix),
       categoryId: _categoryIdFor(seriesCategories, index),
       year: year,
@@ -269,6 +275,9 @@ class FakeCatalog {
       // Read from its own salt, not from this draw stream: episodesOf and
       // episodeById must agree with the list row without rebuilding it.
       seasonCount: _seasonCountOf(index),
+      backdrop: _everyNth(index, 5)
+          ? null
+          : '$artworkRoot/backdrop/series/$seriesId.jpg',
     );
   }
 
@@ -292,7 +301,7 @@ class FakeCatalog {
       durationSecs: (38 + mix.below(20)) * 60 + mix.below(60),
       plot: _plotFrom(mix),
       still: _iconOr(
-        '$_iconRoot/episode/${episodeIdBase + relative}.jpg',
+        '$artworkRoot/episode/${episodeIdBase + relative}.jpg',
         relative,
       ),
       added: _dateFrom(mix),
@@ -475,8 +484,6 @@ const int _epgSlotMs = 30 * 60 * 1000;
 const _episodeIdSeriesStride = 1000;
 const _episodeIdSeasonStride = 100;
 const _maxSeasons = 10;
-
-const _iconRoot = 'https://images.northwind.invalid/art';
 
 /// Invented names only (docs/06): nothing here may match a real broadcaster.
 const _brands = <String>[

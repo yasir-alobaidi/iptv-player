@@ -72,7 +72,25 @@ a map keyed by season, invalid UTF-8 in names, dangling and missing
   every episode (named `Series S01 E02`), streamed an entry at a time. Wrong
   credentials answer **401**. The `messyM3u` quirk (on in `quirky`) adds
   CRLF line ends, `#EXTVLCOPT` and `#KODIPROP` lines.
-- `GET /live/{username}/{password}/{stream_id}.ts` — MPEG-TS, looped forever.
+- `GET /xmltv.php?username=&password=[&days=][&channels=][&gzip=1]` — the
+  guide for every channel with an `epg_channel_id`, from the same schedule
+  `get_short_epg` answers from; the `messyXmltv` quirk (and per-request
+  flags) add docs/02's XMLTV quirks.
+- `GET /live/{username}/{password}/{stream_id}.ts` — MPEG-TS, looped forever;
+  `.m3u8` is live HLS (2 s segments from `/hls/{id}/`).
+- `GET|HEAD /movie/{username}/{password}/{stream_id}.{ext}` and
+  `/series/{username}/{password}/{episode_id}.{ext}` — the item's VOD sample
+  as a panel serves a file: `Range` (206, open ends, suffixes, 416),
+  `ETag`, `Last-Modified`, `If-Range`. The extension must be the item's
+  `container_extension`. An open body holds a connection slot, except that
+  a new request for the same file takes over the open one and closes it —
+  what a player's seek needs on a one-connection panel.
+- `GET /art/{live|movie|series|episode}/{id}.{png|jpg}` and
+  `/art/backdrop/{movie|series}/{id}.jpg` — channel logos (256 px), posters
+  (600 × 900), episode stills (500 × 281) and backdrops (1280 × 720): a few
+  generated PNGs per kind, drawn once, served under every item's name with
+  an `ETag`. Every artwork URL in the API, `get.php` and `xmltv.php` points
+  here, at the host the client used; `junkIcons` still breaks some.
 - `GET|POST|DELETE /admin/faults` — read, replace, or clear the fault set.
 - `GET /` — a plain-text summary of the running profile.
 
@@ -119,12 +137,20 @@ the repo root includes it).
 
 By design — each arrives with the phase that tests it (docs/06):
 
-- `xmltv.php`, including gzip and a 300 MB EPG — Phase 4, which owns the
-  XMLTV parser and the guide.
-- VOD files over HTTP with Range, ETag and `Last-Modified`, `vod_as_hls`,
-  and `size_mb` padding — the download and library phases. `/movie/…` and
-  `/series/…` answer 501 until then.
-- `m3u8` live output.
-- **Fault injection.** The fault set is stored and reported, and nothing
-  reads it yet apart from `max_connections`. Each fault gets injected by the
-  phase whose tests need it.
+- `vod_as_hls`, `size_mb` padding, and the VOD faults `change_etag` and
+  `wrong_content_length` — the downloads (Phase 8). They are stored and
+  reported by `/admin/faults`, and nothing reads them yet.
+
+## Faults
+
+Set with `POST /admin/faults` (the whole set) or per request in the query
+(`/live/test/test/7.ts?drop_after_s=5`):
+
+- Live: `drop_after_s`, `stall_after_s`, `cut_after_s`, `slow_start_ms`,
+  `http_status`, `max_connections`, `redirect_with_expiring_token`,
+  `codec_switch_after_s` (`lib/streams.dart`).
+- VOD files: `http_status`, `slow_start_ms`, `max_connections`,
+  `ignore_range` (the whole file for any range), `drop_after_bytes` (the
+  connection closes once a body passes that byte of the file, so a request
+  starting past it gets through) and `throttle_kbps` (kilobits per second)
+  (`lib/vod.dart`).

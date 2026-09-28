@@ -37,10 +37,20 @@ const tokenLifetime = Duration(seconds: 10);
 /// An HLS session ends this long after its playlist was last asked for.
 const hlsIdleTimeout = Duration(seconds: 20);
 
-/// What `/movie/...` and `/series/...` answer for now.
-const vodNotImplementedBody =
-    'VOD serving (Range, ETag, Last-Modified, size_mb padding — docs/06) '
-    'arrives with the phase that needs it; step 6 is live only.';
+/// An `http_status` fault's answer, with the body a panel would plausibly
+/// send; [what] names the missing thing in a 404.
+Response faultResponse(int status, {String what = 'live stream'}) =>
+    switch (status) {
+      401 => Response.unauthorized('BAD_CREDENTIALS\n'),
+      403 => Response.forbidden('$maxConnectionsBody\n'),
+      404 => Response.notFound('no $what\n'),
+      429 => Response(
+        429,
+        body: 'TOO_MANY_REQUESTS\n',
+        headers: {'retry-after': '1'},
+      ),
+      _ => Response(status, body: 'FAULT $status\n'),
+    };
 
 /// Serves `/live/{u}/{p}/{id}.ts` and owns every ffmpeg it starts.
 ///
@@ -75,9 +85,7 @@ class StreamRelay {
 
   Router _buildRouter() => Router(notFoundHandler: _unknownPath)
     ..get('/live/<username>/<password>/<file>', _serveLive)
-    ..get('/hls/<id>/<file>', _serveSegment)
-    ..all('/movie/<rest|.*>', _vodNotImplemented)
-    ..all('/series/<rest|.*>', _vodNotImplemented);
+    ..get('/hls/<id>/<file>', _serveSegment);
 
   /// Kills every child and removes its PID file.
   Future<void> close() async {
@@ -123,9 +131,6 @@ class StreamRelay {
   Response _unknownPath(Request request) =>
       Response.notFound('no stream at /${request.url.path}\n');
 
-  Response _vodNotImplemented(Request request, String rest) =>
-      Response(HttpStatus.notImplemented, body: '$vodNotImplementedBody\n');
-
   Future<Response> _serveLive(
     Request request,
     String username,
@@ -164,7 +169,7 @@ class StreamRelay {
     }
 
     if (faults.httpStatus case final status?) {
-      return _faultStatus(status);
+      return faultResponse(status);
     }
     if (faults.slowStartMs case final ms? when ms > 0) {
       await Future<void>.delayed(Duration(milliseconds: ms));
@@ -361,19 +366,6 @@ class StreamRelay {
       ...body,
     ];
   }
-
-  /// A fault's status, with the body a panel would plausibly send.
-  Response _faultStatus(int status) => switch (status) {
-    401 => Response.unauthorized('BAD_CREDENTIALS\n'),
-    403 => Response.forbidden('$maxConnectionsBody\n'),
-    404 => Response.notFound('no live stream\n'),
-    429 => Response(
-      429,
-      body: 'TOO_MANY_REQUESTS\n',
-      headers: {'retry-after': '1'},
-    ),
-    _ => Response(status, body: 'FAULT $status\n'),
-  };
 
   /// The sample a `codec_switch_after_s` fault switches to: a different
   /// codec from [current], so the player's decoder really changes.

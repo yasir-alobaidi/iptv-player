@@ -8,6 +8,7 @@
 /// profile's playlist never exists whole.
 library;
 
+import 'package:fake_provider/artwork.dart';
 import 'package:fake_provider/player_api.dart';
 import 'package:fake_provider/server_state.dart';
 import 'package:shelf/shelf.dart';
@@ -66,7 +67,7 @@ Stream<List<int>> _playlist(
         ? _attributes({
             'tvg-id': channel.epgChannelId,
             'tvg-name': channel.name,
-            'tvg-logo': channel.icon,
+            'tvg-logo': artworkFor(channel.icon, origin),
             'group-title': liveGroups[channel.categoryId] ?? '',
             if (channel.archiveDays > 0) 'catchup': 'xc',
             if (channel.archiveDays > 0)
@@ -86,7 +87,7 @@ Stream<List<int>> _playlist(
     final attributes = plus
         ? _attributes({
             'tvg-name': movie.name,
-            'tvg-logo': movie.icon,
+            'tvg-logo': artworkFor(movie.icon, origin),
             'group-title': movieGroups[movie.categoryId] ?? '',
           })
         : '';
@@ -109,7 +110,7 @@ Stream<List<int>> _playlist(
         final attributes = plus
             ? _attributes({
                 'tvg-name': name,
-                'tvg-logo': series.cover,
+                'tvg-logo': artworkFor(series.cover, origin),
                 'group-title': seriesGroups[series.categoryId] ?? '',
               })
             : '';

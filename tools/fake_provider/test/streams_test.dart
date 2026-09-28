@@ -85,13 +85,10 @@ void main() {
       expect(state.activeStreams, 0);
     });
 
-    test('a movie or series path is 501', () async {
-      final movie = await get('/movie/test/test/100001.mp4');
-      expect(movie.statusCode, HttpStatus.notImplemented);
-      expect(await movie.readAsString(), contains('docs/06'));
-
-      final series = await get('/series/test/test/300001.mkv');
-      expect(series.statusCode, HttpStatus.notImplemented);
+    test('movie and series paths are left to vod.dart', () async {
+      final movie = await get('/movie/test/test/100001.mkv');
+      expect(movie.statusCode, HttpStatus.notFound);
+      expect(state.activeStreams, 0);
     });
 
     test('an extension other than .ts or .m3u8 is 501', () async {

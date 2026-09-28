@@ -77,8 +77,9 @@ Future<Map<String, Object?>> mapOf(
 
 Future<List<Map<String, Object?>>> listOf(
   FakeServerState state,
-  String query,
-) async => ((await jsonOf(state, query))! as List<Object?>)
+  String query, {
+  Map<String, String>? headers,
+}) async => ((await jsonOf(state, query, headers: headers))! as List<Object?>)
     .cast<Map<String, Object?>>();
 
 void main() {
@@ -467,6 +468,72 @@ void main() {
         reason: 'keys are season numbers as strings',
       );
       expect(episodes.values.first, isA<List<Object?>>());
+    });
+
+    test(
+      'a probed movie carries video, audio, bitrate and a backdrop',
+      () async {
+        // Movie 1 is probed and has a backdrop; the 4th is unprobed and the
+        // 5th has no backdrop (generator.dart).
+        final first = await mapOf(
+          state,
+          '?$creds&action=get_vod_info&vod_id=100000',
+        );
+        final info = first['info']! as Map<String, Object?>;
+        final video = info['video']! as Map<String, Object?>;
+        final audio = info['audio']! as Map<String, Object?>;
+        expect(video['codec_name'], 'h264');
+        expect(video['height'], 1080);
+        expect(audio['channels'], 2);
+        expect(audio['channel_layout'], 'stereo');
+        expect(info['bitrate'], greaterThan(0));
+        expect(info['backdrop_path'], [
+          'http://localhost:8899/art/backdrop/movie/100000.jpg',
+        ]);
+
+        final unprobed = await mapOf(
+          state,
+          '?$creds&action=get_vod_info&vod_id=100003',
+        );
+        final bare = unprobed['info']! as Map<String, Object?>;
+        expect(bare['video'], isEmpty);
+        expect(bare['audio'], isEmpty);
+        expect(bare['bitrate'], 0);
+
+        final noBackdrop = await mapOf(
+          state,
+          '?$creds&action=get_vod_info&vod_id=100004',
+        );
+        expect(
+          (noBackdrop['info']! as Map<String, Object?>)['backdrop_path'],
+          isEmpty,
+        );
+      },
+    );
+
+    test('artwork URLs point at the server the client reached', () async {
+      final movies = await listOf(
+        state,
+        '?$creds&action=get_vod_streams',
+        headers: {'host': 'panel.test:9000'},
+      );
+      final icon = movies.first['stream_icon']! as String;
+      expect(icon, 'http://panel.test:9000/art/movie/100000.jpg');
+
+      final series = await mapOf(
+        state,
+        '?$creds&action=get_series_info&series_id=200000',
+      );
+      final info = series['info']! as Map<String, Object?>;
+      expect(info['cover'], startsWith('http://localhost:8899/art/series/'));
+      expect(info['backdrop_path'], [
+        'http://localhost:8899/art/backdrop/series/200000.jpg',
+      ]);
+      final episodes = (series['episodes']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      final still =
+          (episodes.first['info']! as Map<String, Object?>)['movie_image'];
+      expect(still, startsWith('http://localhost:8899/art/episode/'));
     });
 
     test('unknown ids answer empty, never an error', () async {

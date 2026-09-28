@@ -201,7 +201,11 @@ String? _ringed() {
       .evaluate();
   if (selected.isEmpty) return null;
   final label = (selected.first.widget as Semantics).properties.label ?? '';
-  return label.split(', ').first;
+  // "<title>, <time range>[, <state>]": a title can hold ", " itself, so
+  // the title is everything before the part with a clock time in it.
+  final parts = label.split(', ');
+  final time = parts.indexWhere((p) => RegExp(r'\d:\d\d').hasMatch(p));
+  return parts.take(time < 1 ? 1 : time).join(', ');
 }
 
 /// The app as `bootstrap()` builds it, with the real player, a throwaway

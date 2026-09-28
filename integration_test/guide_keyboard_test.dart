@@ -175,7 +175,12 @@ String? _ringed() {
   if (selected.isEmpty) return null;
   final label = (selected.first.widget as Semantics).properties.label ?? '';
   if (label.startsWith('No guide information')) return 'No guide information';
-  return label.split(', ').first;
+  // "<title>, <time range>[, <state>]": a title can hold ", " itself (the
+  // fake guide's "Compass Tonight, Ep. 12"), so the title is everything
+  // before the part with a clock time in it.
+  final parts = label.split(', ');
+  final time = parts.indexWhere((p) => RegExp(r'\d:\d\d').hasMatch(p));
+  return parts.take(time < 1 ? 1 : time).join(', ');
 }
 
 final class _App {
