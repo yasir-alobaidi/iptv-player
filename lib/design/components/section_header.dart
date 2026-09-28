@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -37,7 +36,7 @@ class SectionHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: tokens.text.titleSmall.copyWith(
+                style: tokens.text.sectionTitle.copyWith(
                   color: colors.textPrimary,
                 ),
               ),
@@ -65,28 +64,16 @@ class SectionHeader extends StatelessWidget {
                   horizontal: tokens.spacing.s8,
                   vertical: tokens.spacing.s4 + 2,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      seeAllLabel,
-                      style: tokens.text.caption
-                          .withWeight(700)
-                          .copyWith(
-                            color: states.highlighted
-                                ? colors.textPrimary
-                                : colors.textSecondary,
-                          ),
-                    ),
-                    SizedBox(width: tokens.spacing.s4),
-                    AppIcon(
-                      AppIcons.chevronRight,
-                      size: 14,
-                      color: states.highlighted
-                          ? colors.textPrimary
-                          : colors.textSecondary,
-                    ),
-                  ],
+                // The canvas's link: accent, lighter when pointed at.
+                child: Text(
+                  seeAllLabel,
+                  style: tokens.text.caption
+                      .withWeight(700)
+                      .copyWith(
+                        color: states.highlighted
+                            ? colors.accentHover
+                            : colors.accentBase,
+                      ),
                 ),
               ),
             ),

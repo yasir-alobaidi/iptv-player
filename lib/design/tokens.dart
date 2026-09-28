@@ -226,6 +226,10 @@ class AppTypography {
   /// 22/30 — a figure that leads a summary ("17 of 412 on", canvas).
   TextStyle get stat => _font(AppFonts.sans, 22, 30, 800);
 
+  /// 20/28 — a row's title on Home ("Continue watching", canvas `Home`).
+  TextStyle get sectionTitle =>
+      _font(AppFonts.sans, 20, 28, 700, letterSpacing: -0.2);
+
   /// 20/28 — a result card's verdict ("Connected", canvas).
   TextStyle get titleLarge => _font(AppFonts.sans, 20, 28, 800);
 

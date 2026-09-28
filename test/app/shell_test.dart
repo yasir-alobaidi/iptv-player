@@ -258,9 +258,12 @@ void main() {
     testWidgets('every screen says what is coming and offers a next step', (
       tester,
     ) async {
-      final app = await pumpApp(tester);
+      final app = await pumpApp(
+        tester,
+        initialLocation: AppDestination.favorites.path,
+      );
 
-      expect(find.textContaining('Home comes in Phase 5'), findsOneWidget);
+      expect(find.textContaining('Favorites comes in Phase 6'), findsOneWidget);
 
       await tester.tap(find.text('Add a source'));
       await settleApp(tester);

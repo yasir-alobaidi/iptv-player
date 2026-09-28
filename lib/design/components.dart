@@ -22,6 +22,7 @@ export 'package:iptv_player/design/components/artwork_image.dart';
 export 'package:iptv_player/design/components/casting_bar.dart';
 export 'package:iptv_player/design/components/channel_logo.dart';
 export 'package:iptv_player/design/components/channel_row.dart';
+export 'package:iptv_player/design/components/channel_tile.dart';
 export 'package:iptv_player/design/components/choice_card.dart';
 export 'package:iptv_player/design/components/download_button.dart';
 export 'package:iptv_player/design/components/download_row.dart';

@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
-import 'package:iptv_player/core/images/artwork_scope.dart';
-import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -18,6 +16,7 @@ import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
+import 'package:iptv_player/features/vod/presentation/title_cards.dart';
 import 'package:iptv_player/features/vod/presentation/title_grid.dart';
 import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
@@ -179,7 +178,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
           : await movies.range(query, offset, limit),
       onFavorite: (item) => unawaited(_toggleFavorite(item)),
       card: (context, item, focus, width) => switch (item) {
-        final MovieItem movie => _MovieCard(
+        final MovieItem movie => MovieCard(
           movie: movie,
           focus: focus,
           width: width,
@@ -187,7 +186,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
           onOpen: () => _open(movie),
           onMenu: (anchor) => unawaited(_menu(anchor, movie)),
         ),
-        final SeriesItem show => _SeriesCard(
+        final SeriesItem show => SeriesCard(
           series: show,
           focus: focus,
           width: width,
@@ -491,121 +490,4 @@ class _SkeletonGrid extends StatelessWidget {
       },
     );
   }
-}
-
-/// A movie's poster: NEW for a week, a star when it is a favorite, the
-/// progress line while it is being watched; the focused card adds the
-/// runtime once it is known (canvas).
-class _MovieCard extends StatelessWidget {
-  const new({
-    required this.movie,
-    required this.focus,
-    required this.width,
-    required this.now,
-    required this.onOpen,
-    required this.onMenu,
-  });
-
-  final MovieItem movie;
-  final FocusNode focus;
-  final double width;
-  final DateTime now;
-  final VoidCallback onOpen;
-  final void Function(BuildContext anchor) onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    final watch = movie.watch;
-    final year = movie.year;
-    final runtime = movie.runtime;
-    return PosterCard(
-      title: movie.name,
-      image: artworkFor(context, movie.posterUrl, width: width),
-      meta: year == null ? null : '$year',
-      focusedMeta: [
-        if (year != null) '$year',
-        if (runtime != null) formatRuntime(runtime),
-      ].join(' · ').emptyAsNull,
-      rating: movie.rating,
-      progress:
-          watch != null && !watch.completed && watch.position > Duration.zero
-          ? watch.fraction
-          : null,
-      badge: movie.isNewAt(now)
-          ? const AppBadge('NEW', tone: AppBadgeTone.accent)
-          : null,
-      cornerBadge: movie.isFavorite ? const _FavoriteMark() : null,
-      width: width,
-      focusNode: focus,
-      onPressed: onOpen,
-      onMenu: () => onMenu(context),
-    );
-  }
-}
-
-class _SeriesCard extends StatelessWidget {
-  const new({
-    required this.series,
-    required this.focus,
-    required this.width,
-    required this.now,
-    required this.onOpen,
-    required this.onMenu,
-  });
-
-  final SeriesItem series;
-  final FocusNode focus;
-  final double width;
-  final DateTime now;
-  final VoidCallback onOpen;
-  final void Function(BuildContext anchor) onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    final year = series.year;
-    final genre = series.genre?.split(',').first.trim();
-    return PosterCard(
-      title: series.name,
-      image: artworkFor(context, series.posterUrl, width: width),
-      meta: year == null ? null : '$year',
-      focusedMeta: [
-        if (year != null) '$year',
-        if (genre != null && genre.isNotEmpty) genre,
-      ].join(' · ').emptyAsNull,
-      rating: series.rating,
-      badge: series.isNewAt(now)
-          ? const AppBadge('NEW', tone: AppBadgeTone.accent)
-          : null,
-      cornerBadge: series.isFavorite ? const _FavoriteMark() : null,
-      width: width,
-      focusNode: focus,
-      onPressed: onOpen,
-      onMenu: () => onMenu(context),
-    );
-  }
-}
-
-/// The favorite's star, where the canvas pins the Downloaded mark.
-class _FavoriteMark extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final colors = tokens.colors;
-    return Container(
-      width: 26,
-      height: 26,
-      decoration: BoxDecoration(
-        color: colors.bg.withValues(alpha: 0.75),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: AppIcon(AppIcons.starFilled, size: 14, color: colors.warning),
-    );
-  }
-}
-
-extension on String {
-  String? get emptyAsNull => isEmpty ? null : this;
 }

@@ -56,10 +56,11 @@ void main() {
       final app = await pumpApp(tester, initialLocation: destination.path);
 
       expect(app.location, destination.path);
-      // Settings (Phase 2), Live TV (Phase 3), the Guide (Phase 4), Movies
-      // and Series (Phase 5) are real screens.
+      // Settings (Phase 2), Live TV (Phase 3), the Guide (Phase 4), Home,
+      // Movies and Series (Phase 5) are real screens.
       expect(
         find.byType(switch (destination) {
+          AppDestination.home => HomeScreen,
           AppDestination.settings => SettingsScreen,
           AppDestination.liveTv => LiveTvScreen,
           AppDestination.guide => GuideScreen,
