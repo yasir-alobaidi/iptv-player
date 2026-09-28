@@ -1,0 +1,35 @@
+{
+  "seasons": [
+    {
+      "season_number": 1,
+      "name": "Season 1",
+      "episode_count": "1"
+    }
+  ],
+  "info": {
+    "name": "Glass Tide",
+    "cover": "http://img.test/glass_tide.jpg",
+    "plot": "A harbor inspector &amp; the tide logs.",
+    "cast": "Iris Vance, Marek Orlov",
+    "director": "Ada Keller",
+    "genre": "Thriller",
+    "releaseDate": "2023-02-01",
+    "rating": "8.4",
+    "backdrop_path": ["", "http://img.test/glass_tide_bg.jpg"],
+    "episode_run_time": "52"
+  },
+  "episodes": {
+    "1": [
+      {
+        "id": "7101",
+        "episode_num": "1",
+        "title": "Low Water",
+        "container_extension": "mkv",
+        "info": {
+          "duration_secs": "3120"
+        },
+        "season": "1"
+      }
+    ]
+  }
+}

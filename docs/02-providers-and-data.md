@@ -105,8 +105,8 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | categories | id, source_id, kind (live/movie/series), remote_key, name, display_name, is_hidden, sort_order (the user's; null until reordered), position (the provider's), seen_run — unique (source_id, kind, remote_key): Xtream numbers each kind's categories separately |
 | channels | id, source_id, category_id, remote_key, number, name, display_name, logo_url, epg_key, archive_days, stream_url, extras_json, is_hidden, added_at, position, seen_run |
 | movies | id, source_id, category_id, remote_key, name, poster_url, rating, year, ext, stream_url, extras_json, added_at, position, seen_run |
-| movie_details | movie_id, plot, cast_names, director, genre, runtime_minutes, backdrop_url, fetched_at |
-| series | id, source_id, category_id, remote_key, name, poster_url, rating, year, plot, updated_at, episodes_fetched_at, position, seen_run |
+| movie_details | movie_id, plot, cast_names, director, genre, runtime_minutes, backdrop_url, video_height, audio_channels (the panel's probe of the file, v6), fetched_at — fetched when a details page first opens, again after 7 days (ADR-012) |
+| series | id, source_id, category_id, remote_key, name, poster_url, rating, year, plot, genre, cast_names, director, backdrop_url (v6), updated_at, episodes_fetched_at, position, seen_run |
 | episodes | id, series_id, season, episode, remote_key, title, ext, duration_seconds, plot, still_url, stream_url, extras_json, seen_run — unique (series_id, remote_key) |
 | epg_imports | id, source_id, started_at, finished_at, outcome, failure (an `AppFailure.code`), failure_status, counts_json, is_live — one import of one source's XMLTV; its own table, because Settings → Sources watches `sync_runs` and a guide import is not a catalogue sync |
 | epg_channels | id, source_id, xmltv_id, display_name, icon_url — unique (source_id, xmltv_id) |
@@ -115,14 +115,14 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | epg_mappings | source_id, channel_remote_key, xmltv_id, updated_at — the user's own mapping, never written by a sync or an import |
 | epg_matches | channel_id, source_id, xmltv_id, rule — what the matcher resolved; derived state, rewritten whole |
 | favorites | id, item_type, source_id, remote_key, group_name, sort_order, added_at |
-| watch_history | id, item_type, source_id, remote_key, position_ms, duration_ms, completed, updated_at |
+| watch_history | id, item_type, source_id, remote_key, position_ms, duration_ms, completed (at 95 %), series_key (an episode's series, v6), dismissed (out of Continue watching until watched again, v6), updated_at |
 | cast_devices | device_id, name, model, last_host, is_manual, hevc_support (auto/yes/no), learned_json, last_used_at |
 | settings | key, value_json |
 | FTS5 | channels_fts (name, display_name), movies_fts, series_fts (name), programs_fts — external-content tables kept current by triggers |
 
 **Secrets (hard rule 3).** A source's secrets live in the system keyring as one JSON document under `credential_ref` (`source.<id>`): the Xtream password, the real playlist URL, and the real EPG override URL. Playlist and EPG URLs go there whole whatever they look like, and the database keeps only their origin: `redact()` can't recognize a token in a path (`/p/9c2e81d4/list.m3u`), so a masked URL is not safe to store, and only the origin is. The Xtream server URL is normalized on save (scheme assumed `http://` if missing; user-info, query, fragment and trailing slashes dropped). `SourceRepository.credentialsFor()` is the only way back to the real values, and it adds every value it returns to the log's `SecretRegistry`. There is no fallback to a file when the keyring is missing or locked: saving fails with a message asking the user to unlock or install one.
 
-Schema versions: v1 (Phase 1), v2 (Phase 2 catalogue), v3 (`sync_runs.failure_status`, Phase 2 step 8), v4 (favorites and watch history, Phase 3), v5 (the EPG store, Phase 4 step 2).
+Schema versions: v1 (Phase 1), v2 (Phase 2 catalogue), v3 (`sync_runs.failure_status`, Phase 2 step 8), v4 (favorites and watch history, Phase 3), v5 (the EPG store, Phase 4 step 2), v6 (the details pages' and Continue watching's columns, and the Movies grid's three sort indexes `movies_added`, `movies_name`, `movies_rating`, Phase 5 step 2).
 
 Every schema change: bump the schema version, write a migration, add a migration test (drift schema dumps + verifier).
 
@@ -131,6 +131,7 @@ The flow: bump `schemaVersion`, run `dart run build_runner build`, then `dart ru
 Items are keyed by `(source_id, remote_key)`; the columns a sync writes and the ones it never touches are fixed per table:
 - **Provider-owned** (rewritten by every sync): everything that comes from the provider, plus `position` and `seen_run`.
 - **User-owned** (never written by sync): `display_name`, `is_hidden`, a category's `sort_order`, a series' `episodes_fetched_at`, and `movie_details` / `episodes`, which hang off a row id that an upsert keeps.
+- A series' `genre`, `cast_names`, `director` and `backdrop_url` are provider-owned but written with `COALESCE(new, old)`: a list that lacks one keeps what `get_series_info` stored (v6).
 - `stream_url` and `extras_json` are for M3U items only: the stream URL has the source's credentials replaced by placeholders, and the extras hold the per-item `#EXTVLCOPT` and catch-up attributes. Xtream URLs are built from the source instead.
 
 Triggers are derived state: drift's versioned schemas leave them out, and its schema verifier does not compare them. So every upgrade drops and recreates all triggers once the tables are final, and a migration test proves the search index works on a migrated database.

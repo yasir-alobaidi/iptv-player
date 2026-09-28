@@ -53,6 +53,14 @@ class WatchHistory extends Table {
 
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
 
+  /// An episode's series (its remote key), so Continue watching needs no
+  /// join through the episode cache, which a re-fetch replaces (v6).
+  TextColumn get seriesKey => text().nullable()();
+
+  /// Taken out of Continue watching by the user; watching it again clears
+  /// it (v6).
+  BoolColumn get dismissed => boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

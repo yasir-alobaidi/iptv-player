@@ -130,6 +130,18 @@ class Channels extends Table with _ProviderItem {
 
 @DataClassName('MovieRow')
 @TableIndex(name: 'movies_category', columns: {#categoryId})
+// The Movies grid's three orders (v6), walked instead of sorted: a window
+// of 120 out of 30,000 in 0.4–17 ms instead of 27–60 (Phase 5 step 2).
+// SQLite sorts NULLs last when descending, so undated and unrated movies
+// need no extra term.
+@TableIndex.sql('CREATE INDEX movies_added ON movies (source_id, added_at, id)')
+@TableIndex.sql(
+  'CREATE INDEX movies_name ON movies (source_id, name COLLATE NOCASE, id)',
+)
+@TableIndex.sql(
+  'CREATE INDEX movies_rating ON movies '
+  '(source_id, rating DESC, name COLLATE NOCASE, id)',
+)
 class Movies extends Table with _ProviderItem {
   IntColumn get id => integer().autoIncrement()();
 
@@ -184,6 +196,13 @@ class MovieDetails extends Table {
 
   TextColumn get backdropUrl => text().nullable()();
 
+  /// The picture's height from the panel's probe of the file (v6), for the
+  /// FHD / 4K badge; null when the panel didn't probe it.
+  IntColumn get videoHeight => integer().nullable()();
+
+  /// Audio channels from the same probe (v6): 6 is the 5.1 badge.
+  IntColumn get audioChannels => integer().nullable()();
+
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
@@ -210,6 +229,16 @@ class Series extends Table with _ProviderItem {
   IntColumn get year => integer().nullable()();
 
   TextColumn get plot => text().nullable()();
+
+  /// v6: sent by the list and by `get_series_info`. Provider-owned, but a
+  /// sync whose list lacks one keeps the value the details fetch stored.
+  TextColumn get genre => text().nullable()();
+
+  TextColumn get castNames => text().nullable()();
+
+  TextColumn get director => text().nullable()();
+
+  TextColumn get backdropUrl => text().nullable()();
 
   /// The provider's `last_modified`: when it changes, the cached episodes
   /// are stale.

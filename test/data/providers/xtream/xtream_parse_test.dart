@@ -188,7 +188,12 @@ void main() {
       expect(dark.year, 2017);
       expect(dark.lastModified, utc(1726000000));
       expect(dark.rating, 8.7);
+      expect(dark.genre, 'Sci-Fi');
+      expect(dark.cast, 'Louis Hofmann, Lisa Vicari');
+      expect(dark.director, 'Baran bo Odar');
+      expect(dark.backdropUrl, 'http://img.test/dark_bg.jpg');
       expect(broadchurch.year, 2013);
+      expect(broadchurch.backdropUrl, isNull);
       expect(broadchurch.posterUrl, isNull);
       expect(broadchurch.rating, isNull);
       expect(broadchurch.lastModified, isNull);
@@ -215,6 +220,23 @@ void main() {
           ext: 'mkv',
         ),
       );
+    });
+
+    test("the panel's probe: the picture's height and the channels", () {
+      final info = parseMovieInfo(fixture('vod_info_probed.json'));
+
+      expect(info.videoHeight, 2160);
+      expect(info.audioChannels, 6);
+      expect(info.runtimeMinutes, 118);
+      expect(info.backdropUrl, 'http://img.test/harbor_bg.jpg');
+    });
+
+    test('an empty or zero probe is no probe', () {
+      final info = parseMovieInfo(fixture('vod_info_probe_empty.json'));
+
+      expect(info.videoHeight, isNull);
+      expect(info.audioChannels, isNull);
+      expect(info.plot, 'Nobody probed this one.');
     });
 
     test('quirk: info as [] instead of {}', () {
@@ -257,6 +279,25 @@ void main() {
       );
 
       expect(fromList.episodes, fromMap.episodes);
+    });
+
+    test("the series' own info: plot, cast, director, genre, backdrop", () {
+      final info = parseSeriesInfo(fixture('series_info_with_info.json'));
+
+      expect(info.plot, 'A harbor inspector & the tide logs.');
+      expect(info.cast, 'Iris Vance, Marek Orlov');
+      expect(info.director, 'Ada Keller');
+      expect(info.genre, 'Thriller');
+      expect(info.backdropUrl, 'http://img.test/glass_tide_bg.jpg');
+      expect(info.episodes.single.title, 'Low Water');
+    });
+
+    test('info as [] leaves every series field empty', () {
+      final info = parseSeriesInfo(fixture('series_info_episodes_list.json'));
+
+      expect(info.plot, isNull);
+      expect(info.backdropUrl, isNull);
+      expect(info.episodes, isNotEmpty);
     });
 
     test('an unknown series has no episodes, not an error', () {

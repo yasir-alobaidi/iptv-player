@@ -443,6 +443,33 @@ void main() {
       expect(await db.seriesDao.episodesOf(id), hasLength(1));
     });
 
+    test("a list without a series' backdrop keeps the one fetched", () async {
+      await db.seriesDao.upsertAll([
+        show().copyWith(genre: const Value('Drama')),
+      ]);
+      final id = (await db.seriesDao.byRemoteKey('s1', '5'))!.id;
+      await db.seriesDao.replaceEpisodes(
+        id,
+        [episode(id, 1, 1)],
+        fetchedAt: _now,
+        details: const SeriesCompanion(
+          backdropUrl: Value('http://img.test/dark_bg.jpg'),
+          castNames: Value('Louis Hofmann'),
+        ),
+      );
+
+      // The list names a new genre and no backdrop or cast.
+      await db.seriesDao.upsertAll([
+        show(run: 2).copyWith(genre: const Value('Sci-Fi')),
+      ]);
+
+      final row = (await db.seriesDao.byRemoteKey('s1', '5'))!;
+      expect(row.genre, 'Sci-Fi');
+      expect(row.backdropUrl, 'http://img.test/dark_bg.jpg');
+      expect(row.castNames, 'Louis Hofmann');
+      expect(row.episodesFetchedAt, _now);
+    });
+
     test('ids by remote key: only those asked for, in this source', () async {
       await db.seriesDao.upsertAll([
         show(),

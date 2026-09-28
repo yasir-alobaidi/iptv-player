@@ -104,6 +104,9 @@ abstract class XtreamSeries with _$XtreamSeries {
     int? year,
     String? plot,
     String? genre,
+    String? cast,
+    String? director,
+    String? backdropUrl,
     String? categoryId,
 
     /// `last_modified`: when it changes, fetched episodes are stale.
@@ -127,6 +130,11 @@ abstract class XtreamMovieInfo with _$XtreamMovieInfo {
     int? year,
     double? rating,
     String? ext,
+
+    /// From the panel's ffprobe of the file (`info.video` / `info.audio`),
+    /// when it kept one: the picture's height and the audio channels.
+    int? videoHeight,
+    int? audioChannels,
   }) = _XtreamMovieInfo;
 }
 
@@ -144,12 +152,18 @@ abstract class XtreamEpisode with _$XtreamEpisode {
   }) = _XtreamEpisode;
 }
 
-/// `get_series_info`: its episodes, in season then episode order.
+/// `get_series_info`: the series' own `info` and its episodes, in season
+/// then episode order. Every `info` field can be missing (`[]`, `{}`).
 @freezed
 abstract class XtreamSeriesInfo with _$XtreamSeriesInfo {
   const factory({
     @Default(<XtreamEpisode>[]) List<XtreamEpisode> episodes,
     @Default(0) int skipped,
+    String? plot,
+    String? cast,
+    String? director,
+    String? genre,
+    String? backdropUrl,
   }) = _XtreamSeriesInfo;
 }
 

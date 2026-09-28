@@ -1438,7 +1438,7 @@ as DateTime?,
 /// @nodoc
 mixin _$XtreamSeries {
 
- String get seriesId; String get name; int? get number; String? get posterUrl; double? get rating; int? get year; String? get plot; String? get genre; String? get categoryId;/// `last_modified`: when it changes, fetched episodes are stale.
+ String get seriesId; String get name; int? get number; String? get posterUrl; double? get rating; int? get year; String? get plot; String? get genre; String? get cast; String? get director; String? get backdropUrl; String? get categoryId;/// `last_modified`: when it changes, fetched episodes are stale.
  DateTime? get lastModified;
 /// Create a copy of XtreamSeries
 /// with the given fields replaced by the non-null parameter values.
@@ -1451,20 +1451,20 @@ $XtreamSeriesCopyWith<XtreamSeries> get copyWith => _$XtreamSeriesCopyWithImpl<X
 @override
 bool operator ==(Object other) {
   final _this = this as XtreamSeries;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamSeries&&(identical(other.seriesId, _this.seriesId) || other.seriesId == _this.seriesId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.number, _this.number) || other.number == _this.number)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.plot, _this.plot) || other.plot == _this.plot)&&(identical(other.genre, _this.genre) || other.genre == _this.genre)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.lastModified, _this.lastModified) || other.lastModified == _this.lastModified));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamSeries&&(identical(other.seriesId, _this.seriesId) || other.seriesId == _this.seriesId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.number, _this.number) || other.number == _this.number)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.plot, _this.plot) || other.plot == _this.plot)&&(identical(other.genre, _this.genre) || other.genre == _this.genre)&&(identical(other.cast, _this.cast) || other.cast == _this.cast)&&(identical(other.director, _this.director) || other.director == _this.director)&&(identical(other.backdropUrl, _this.backdropUrl) || other.backdropUrl == _this.backdropUrl)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.lastModified, _this.lastModified) || other.lastModified == _this.lastModified));
 }
 
 
 @override
 int get hashCode {
   final _this = this as XtreamSeries;
-  return Object.hash(runtimeType,_this.seriesId,_this.name,_this.number,_this.posterUrl,_this.rating,_this.year,_this.plot,_this.genre,_this.categoryId,_this.lastModified);
+  return Object.hash(runtimeType,_this.seriesId,_this.name,_this.number,_this.posterUrl,_this.rating,_this.year,_this.plot,_this.genre,_this.cast,_this.director,_this.backdropUrl,_this.categoryId,_this.lastModified);
 }
 
 @override
 String toString() {
   final _this = this as XtreamSeries;
-  return 'XtreamSeries(seriesId: ${_this.seriesId}, name: ${_this.name}, number: ${_this.number}, posterUrl: ${_this.posterUrl}, rating: ${_this.rating}, year: ${_this.year}, plot: ${_this.plot}, genre: ${_this.genre}, categoryId: ${_this.categoryId}, lastModified: ${_this.lastModified})';
+  return 'XtreamSeries(seriesId: ${_this.seriesId}, name: ${_this.name}, number: ${_this.number}, posterUrl: ${_this.posterUrl}, rating: ${_this.rating}, year: ${_this.year}, plot: ${_this.plot}, genre: ${_this.genre}, cast: ${_this.cast}, director: ${_this.director}, backdropUrl: ${_this.backdropUrl}, categoryId: ${_this.categoryId}, lastModified: ${_this.lastModified})';
 }
 
 
@@ -1475,7 +1475,7 @@ abstract mixin class $XtreamSeriesCopyWith<$Res>  {
   factory $XtreamSeriesCopyWith(XtreamSeries value, $Res Function(XtreamSeries) _then) = _$XtreamSeriesCopyWithImpl;
 @useResult
 $Res call({
- String seriesId, String name, int? number, String? posterUrl, double? rating, int? year, String? plot, String? genre, String? categoryId, DateTime? lastModified
+ String seriesId, String name, int? number, String? posterUrl, double? rating, int? year, String? plot, String? genre, String? cast, String? director, String? backdropUrl, String? categoryId, DateTime? lastModified
 });
 
 
@@ -1492,7 +1492,7 @@ class _$XtreamSeriesCopyWithImpl<$Res>
 
 /// Create a copy of XtreamSeries
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? seriesId = null,Object? name = null,Object? number = freezed,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? plot = freezed,Object? genre = freezed,Object? categoryId = freezed,Object? lastModified = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? seriesId = null,Object? name = null,Object? number = freezed,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? plot = freezed,Object? genre = freezed,Object? cast = freezed,Object? director = freezed,Object? backdropUrl = freezed,Object? categoryId = freezed,Object? lastModified = freezed,}) {
   return _then(XtreamSeries(
 seriesId: null == seriesId ? _self.seriesId : seriesId // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -1502,6 +1502,9 @@ as String?,rating: freezed == rating ? _self.rating : rating // ignore: cast_nul
 as double?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
 as String?,genre: freezed == genre ? _self.genre : genre // ignore: cast_nullable_to_non_nullable
+as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
+as String?,director: freezed == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
+as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
 as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
 as String?,lastModified: freezed == lastModified ? _self.lastModified : lastModified // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -1589,10 +1592,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? categoryId,  DateTime? lastModified)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? cast,  String? director,  String? backdropUrl,  String? categoryId,  DateTime? lastModified)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _XtreamSeries() when $default != null:
-return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.categoryId,_that.lastModified);case _:
+return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.cast,_that.director,_that.backdropUrl,_that.categoryId,_that.lastModified);case _:
   return orElse();
 
 }
@@ -1610,10 +1613,10 @@ return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? categoryId,  DateTime? lastModified)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? cast,  String? director,  String? backdropUrl,  String? categoryId,  DateTime? lastModified)  $default,) {final _that = this;
 switch (_that) {
 case _XtreamSeries():
-return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.categoryId,_that.lastModified);case _:
+return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.cast,_that.director,_that.backdropUrl,_that.categoryId,_that.lastModified);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1630,10 +1633,10 @@ return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? categoryId,  DateTime? lastModified)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String seriesId,  String name,  int? number,  String? posterUrl,  double? rating,  int? year,  String? plot,  String? genre,  String? cast,  String? director,  String? backdropUrl,  String? categoryId,  DateTime? lastModified)?  $default,) {final _that = this;
 switch (_that) {
 case _XtreamSeries() when $default != null:
-return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.categoryId,_that.lastModified);case _:
+return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rating,_that.year,_that.plot,_that.genre,_that.cast,_that.director,_that.backdropUrl,_that.categoryId,_that.lastModified);case _:
   return null;
 
 }
@@ -1645,7 +1648,7 @@ return $default(_that.seriesId,_that.name,_that.number,_that.posterUrl,_that.rat
 
 
 class _XtreamSeries implements XtreamSeries {
-  const _XtreamSeries({required this.seriesId, required this.name, this.number, this.posterUrl, this.rating, this.year, this.plot, this.genre, this.categoryId, this.lastModified});
+  const _XtreamSeries({required this.seriesId, required this.name, this.number, this.posterUrl, this.rating, this.year, this.plot, this.genre, this.cast, this.director, this.backdropUrl, this.categoryId, this.lastModified});
   
 
 @override final  String seriesId;
@@ -1656,6 +1659,9 @@ class _XtreamSeries implements XtreamSeries {
 @override final  int? year;
 @override final  String? plot;
 @override final  String? genre;
+@override final  String? cast;
+@override final  String? director;
+@override final  String? backdropUrl;
 @override final  String? categoryId;
 /// `last_modified`: when it changes, fetched episodes are stale.
 @override final  DateTime? lastModified;
@@ -1670,18 +1676,18 @@ _$XtreamSeriesCopyWith<_XtreamSeries> get copyWith => __$XtreamSeriesCopyWithImp
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamSeries&&(identical(other.seriesId, seriesId) || other.seriesId == seriesId)&&(identical(other.name, name) || other.name == name)&&(identical(other.number, number) || other.number == number)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.year, year) || other.year == year)&&(identical(other.plot, plot) || other.plot == plot)&&(identical(other.genre, genre) || other.genre == genre)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.lastModified, lastModified) || other.lastModified == lastModified));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamSeries&&(identical(other.seriesId, seriesId) || other.seriesId == seriesId)&&(identical(other.name, name) || other.name == name)&&(identical(other.number, number) || other.number == number)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.year, year) || other.year == year)&&(identical(other.plot, plot) || other.plot == plot)&&(identical(other.genre, genre) || other.genre == genre)&&(identical(other.cast, cast) || other.cast == cast)&&(identical(other.director, director) || other.director == director)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.lastModified, lastModified) || other.lastModified == lastModified));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,seriesId,name,number,posterUrl,rating,year,plot,genre,categoryId,lastModified);
+    return Object.hash(runtimeType,seriesId,name,number,posterUrl,rating,year,plot,genre,cast,director,backdropUrl,categoryId,lastModified);
 }
 
 @override
 String toString() {
-    return 'XtreamSeries(seriesId: $seriesId, name: $name, number: $number, posterUrl: $posterUrl, rating: $rating, year: $year, plot: $plot, genre: $genre, categoryId: $categoryId, lastModified: $lastModified)';
+    return 'XtreamSeries(seriesId: $seriesId, name: $name, number: $number, posterUrl: $posterUrl, rating: $rating, year: $year, plot: $plot, genre: $genre, cast: $cast, director: $director, backdropUrl: $backdropUrl, categoryId: $categoryId, lastModified: $lastModified)';
 }
 
 
@@ -1692,7 +1698,7 @@ abstract mixin class _$XtreamSeriesCopyWith<$Res> implements $XtreamSeriesCopyWi
   factory _$XtreamSeriesCopyWith(_XtreamSeries value, $Res Function(_XtreamSeries) _then) = __$XtreamSeriesCopyWithImpl;
 @override @useResult
 $Res call({
- String seriesId, String name, int? number, String? posterUrl, double? rating, int? year, String? plot, String? genre, String? categoryId, DateTime? lastModified
+ String seriesId, String name, int? number, String? posterUrl, double? rating, int? year, String? plot, String? genre, String? cast, String? director, String? backdropUrl, String? categoryId, DateTime? lastModified
 });
 
 
@@ -1709,7 +1715,7 @@ class __$XtreamSeriesCopyWithImpl<$Res>
 
 /// Create a copy of XtreamSeries
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? seriesId = null,Object? name = null,Object? number = freezed,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? plot = freezed,Object? genre = freezed,Object? categoryId = freezed,Object? lastModified = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? seriesId = null,Object? name = null,Object? number = freezed,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? plot = freezed,Object? genre = freezed,Object? cast = freezed,Object? director = freezed,Object? backdropUrl = freezed,Object? categoryId = freezed,Object? lastModified = freezed,}) {
   return _then(_XtreamSeries(
 seriesId: null == seriesId ? _self.seriesId : seriesId // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -1719,6 +1725,9 @@ as String?,rating: freezed == rating ? _self.rating : rating // ignore: cast_nul
 as double?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
 as String?,genre: freezed == genre ? _self.genre : genre // ignore: cast_nullable_to_non_nullable
+as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
+as String?,director: freezed == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
+as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
 as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
 as String?,lastModified: freezed == lastModified ? _self.lastModified : lastModified // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -1731,7 +1740,9 @@ as DateTime?,
 /// @nodoc
 mixin _$XtreamMovieInfo {
 
- String? get plot; String? get cast; String? get director; String? get genre; int? get runtimeMinutes; String? get backdropUrl; String? get posterUrl; int? get year; double? get rating; String? get ext;
+ String? get plot; String? get cast; String? get director; String? get genre; int? get runtimeMinutes; String? get backdropUrl; String? get posterUrl; int? get year; double? get rating; String? get ext;/// From the panel's ffprobe of the file (`info.video` / `info.audio`),
+/// when it kept one: the picture's height and the audio channels.
+ int? get videoHeight; int? get audioChannels;
 /// Create a copy of XtreamMovieInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1743,20 +1754,20 @@ $XtreamMovieInfoCopyWith<XtreamMovieInfo> get copyWith => _$XtreamMovieInfoCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as XtreamMovieInfo;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamMovieInfo&&(identical(other.plot, _this.plot) || other.plot == _this.plot)&&(identical(other.cast, _this.cast) || other.cast == _this.cast)&&(identical(other.director, _this.director) || other.director == _this.director)&&(identical(other.genre, _this.genre) || other.genre == _this.genre)&&(identical(other.runtimeMinutes, _this.runtimeMinutes) || other.runtimeMinutes == _this.runtimeMinutes)&&(identical(other.backdropUrl, _this.backdropUrl) || other.backdropUrl == _this.backdropUrl)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.ext, _this.ext) || other.ext == _this.ext));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamMovieInfo&&(identical(other.plot, _this.plot) || other.plot == _this.plot)&&(identical(other.cast, _this.cast) || other.cast == _this.cast)&&(identical(other.director, _this.director) || other.director == _this.director)&&(identical(other.genre, _this.genre) || other.genre == _this.genre)&&(identical(other.runtimeMinutes, _this.runtimeMinutes) || other.runtimeMinutes == _this.runtimeMinutes)&&(identical(other.backdropUrl, _this.backdropUrl) || other.backdropUrl == _this.backdropUrl)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.ext, _this.ext) || other.ext == _this.ext)&&(identical(other.videoHeight, _this.videoHeight) || other.videoHeight == _this.videoHeight)&&(identical(other.audioChannels, _this.audioChannels) || other.audioChannels == _this.audioChannels));
 }
 
 
 @override
 int get hashCode {
   final _this = this as XtreamMovieInfo;
-  return Object.hash(runtimeType,_this.plot,_this.cast,_this.director,_this.genre,_this.runtimeMinutes,_this.backdropUrl,_this.posterUrl,_this.year,_this.rating,_this.ext);
+  return Object.hash(runtimeType,_this.plot,_this.cast,_this.director,_this.genre,_this.runtimeMinutes,_this.backdropUrl,_this.posterUrl,_this.year,_this.rating,_this.ext,_this.videoHeight,_this.audioChannels);
 }
 
 @override
 String toString() {
   final _this = this as XtreamMovieInfo;
-  return 'XtreamMovieInfo(plot: ${_this.plot}, cast: ${_this.cast}, director: ${_this.director}, genre: ${_this.genre}, runtimeMinutes: ${_this.runtimeMinutes}, backdropUrl: ${_this.backdropUrl}, posterUrl: ${_this.posterUrl}, year: ${_this.year}, rating: ${_this.rating}, ext: ${_this.ext})';
+  return 'XtreamMovieInfo(plot: ${_this.plot}, cast: ${_this.cast}, director: ${_this.director}, genre: ${_this.genre}, runtimeMinutes: ${_this.runtimeMinutes}, backdropUrl: ${_this.backdropUrl}, posterUrl: ${_this.posterUrl}, year: ${_this.year}, rating: ${_this.rating}, ext: ${_this.ext}, videoHeight: ${_this.videoHeight}, audioChannels: ${_this.audioChannels})';
 }
 
 
@@ -1767,7 +1778,7 @@ abstract mixin class $XtreamMovieInfoCopyWith<$Res>  {
   factory $XtreamMovieInfoCopyWith(XtreamMovieInfo value, $Res Function(XtreamMovieInfo) _then) = _$XtreamMovieInfoCopyWithImpl;
 @useResult
 $Res call({
- String? plot, String? cast, String? director, String? genre, int? runtimeMinutes, String? backdropUrl, String? posterUrl, int? year, double? rating, String? ext
+ String? plot, String? cast, String? director, String? genre, int? runtimeMinutes, String? backdropUrl, String? posterUrl, int? year, double? rating, String? ext, int? videoHeight, int? audioChannels
 });
 
 
@@ -1784,7 +1795,7 @@ class _$XtreamMovieInfoCopyWithImpl<$Res>
 
 /// Create a copy of XtreamMovieInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? runtimeMinutes = freezed,Object? backdropUrl = freezed,Object? posterUrl = freezed,Object? year = freezed,Object? rating = freezed,Object? ext = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? runtimeMinutes = freezed,Object? backdropUrl = freezed,Object? posterUrl = freezed,Object? year = freezed,Object? rating = freezed,Object? ext = freezed,Object? videoHeight = freezed,Object? audioChannels = freezed,}) {
   return _then(XtreamMovieInfo(
 plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
 as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
@@ -1796,7 +1807,9 @@ as String?,posterUrl: freezed == posterUrl ? _self.posterUrl : posterUrl // igno
 as String?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,rating: freezed == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
 as double?,ext: freezed == ext ? _self.ext : ext // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,videoHeight: freezed == videoHeight ? _self.videoHeight : videoHeight // ignore: cast_nullable_to_non_nullable
+as int?,audioChannels: freezed == audioChannels ? _self.audioChannels : audioChannels // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -1881,10 +1894,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext,  int? videoHeight,  int? audioChannels)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _XtreamMovieInfo() when $default != null:
-return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext);case _:
+return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext,_that.videoHeight,_that.audioChannels);case _:
   return orElse();
 
 }
@@ -1902,10 +1915,10 @@ return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext,  int? videoHeight,  int? audioChannels)  $default,) {final _that = this;
 switch (_that) {
 case _XtreamMovieInfo():
-return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext);case _:
+return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext,_that.videoHeight,_that.audioChannels);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1922,10 +1935,10 @@ return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? plot,  String? cast,  String? director,  String? genre,  int? runtimeMinutes,  String? backdropUrl,  String? posterUrl,  int? year,  double? rating,  String? ext,  int? videoHeight,  int? audioChannels)?  $default,) {final _that = this;
 switch (_that) {
 case _XtreamMovieInfo() when $default != null:
-return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext);case _:
+return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMinutes,_that.backdropUrl,_that.posterUrl,_that.year,_that.rating,_that.ext,_that.videoHeight,_that.audioChannels);case _:
   return null;
 
 }
@@ -1937,7 +1950,7 @@ return $default(_that.plot,_that.cast,_that.director,_that.genre,_that.runtimeMi
 
 
 class _XtreamMovieInfo implements XtreamMovieInfo {
-  const _XtreamMovieInfo({this.plot, this.cast, this.director, this.genre, this.runtimeMinutes, this.backdropUrl, this.posterUrl, this.year, this.rating, this.ext});
+  const _XtreamMovieInfo({this.plot, this.cast, this.director, this.genre, this.runtimeMinutes, this.backdropUrl, this.posterUrl, this.year, this.rating, this.ext, this.videoHeight, this.audioChannels});
   
 
 @override final  String? plot;
@@ -1950,6 +1963,10 @@ class _XtreamMovieInfo implements XtreamMovieInfo {
 @override final  int? year;
 @override final  double? rating;
 @override final  String? ext;
+/// From the panel's ffprobe of the file (`info.video` / `info.audio`),
+/// when it kept one: the picture's height and the audio channels.
+@override final  int? videoHeight;
+@override final  int? audioChannels;
 
 /// Create a copy of XtreamMovieInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -1961,18 +1978,18 @@ _$XtreamMovieInfoCopyWith<_XtreamMovieInfo> get copyWith => __$XtreamMovieInfoCo
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamMovieInfo&&(identical(other.plot, plot) || other.plot == plot)&&(identical(other.cast, cast) || other.cast == cast)&&(identical(other.director, director) || other.director == director)&&(identical(other.genre, genre) || other.genre == genre)&&(identical(other.runtimeMinutes, runtimeMinutes) || other.runtimeMinutes == runtimeMinutes)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.year, year) || other.year == year)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.ext, ext) || other.ext == ext));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamMovieInfo&&(identical(other.plot, plot) || other.plot == plot)&&(identical(other.cast, cast) || other.cast == cast)&&(identical(other.director, director) || other.director == director)&&(identical(other.genre, genre) || other.genre == genre)&&(identical(other.runtimeMinutes, runtimeMinutes) || other.runtimeMinutes == runtimeMinutes)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.year, year) || other.year == year)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.ext, ext) || other.ext == ext)&&(identical(other.videoHeight, videoHeight) || other.videoHeight == videoHeight)&&(identical(other.audioChannels, audioChannels) || other.audioChannels == audioChannels));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,plot,cast,director,genre,runtimeMinutes,backdropUrl,posterUrl,year,rating,ext);
+    return Object.hash(runtimeType,plot,cast,director,genre,runtimeMinutes,backdropUrl,posterUrl,year,rating,ext,videoHeight,audioChannels);
 }
 
 @override
 String toString() {
-    return 'XtreamMovieInfo(plot: $plot, cast: $cast, director: $director, genre: $genre, runtimeMinutes: $runtimeMinutes, backdropUrl: $backdropUrl, posterUrl: $posterUrl, year: $year, rating: $rating, ext: $ext)';
+    return 'XtreamMovieInfo(plot: $plot, cast: $cast, director: $director, genre: $genre, runtimeMinutes: $runtimeMinutes, backdropUrl: $backdropUrl, posterUrl: $posterUrl, year: $year, rating: $rating, ext: $ext, videoHeight: $videoHeight, audioChannels: $audioChannels)';
 }
 
 
@@ -1983,7 +2000,7 @@ abstract mixin class _$XtreamMovieInfoCopyWith<$Res> implements $XtreamMovieInfo
   factory _$XtreamMovieInfoCopyWith(_XtreamMovieInfo value, $Res Function(_XtreamMovieInfo) _then) = __$XtreamMovieInfoCopyWithImpl;
 @override @useResult
 $Res call({
- String? plot, String? cast, String? director, String? genre, int? runtimeMinutes, String? backdropUrl, String? posterUrl, int? year, double? rating, String? ext
+ String? plot, String? cast, String? director, String? genre, int? runtimeMinutes, String? backdropUrl, String? posterUrl, int? year, double? rating, String? ext, int? videoHeight, int? audioChannels
 });
 
 
@@ -2000,7 +2017,7 @@ class __$XtreamMovieInfoCopyWithImpl<$Res>
 
 /// Create a copy of XtreamMovieInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? runtimeMinutes = freezed,Object? backdropUrl = freezed,Object? posterUrl = freezed,Object? year = freezed,Object? rating = freezed,Object? ext = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? runtimeMinutes = freezed,Object? backdropUrl = freezed,Object? posterUrl = freezed,Object? year = freezed,Object? rating = freezed,Object? ext = freezed,Object? videoHeight = freezed,Object? audioChannels = freezed,}) {
   return _then(_XtreamMovieInfo(
 plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
 as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
@@ -2012,7 +2029,9 @@ as String?,posterUrl: freezed == posterUrl ? _self.posterUrl : posterUrl // igno
 as String?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,rating: freezed == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
 as double?,ext: freezed == ext ? _self.ext : ext // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,videoHeight: freezed == videoHeight ? _self.videoHeight : videoHeight // ignore: cast_nullable_to_non_nullable
+as int?,audioChannels: freezed == audioChannels ? _self.audioChannels : audioChannels // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -2307,7 +2326,7 @@ as String?,
 /// @nodoc
 mixin _$XtreamSeriesInfo {
 
- List<XtreamEpisode> get episodes; int get skipped;
+ List<XtreamEpisode> get episodes; int get skipped; String? get plot; String? get cast; String? get director; String? get genre; String? get backdropUrl;
 /// Create a copy of XtreamSeriesInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2319,20 +2338,20 @@ $XtreamSeriesInfoCopyWith<XtreamSeriesInfo> get copyWith => _$XtreamSeriesInfoCo
 @override
 bool operator ==(Object other) {
   final _this = this as XtreamSeriesInfo;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamSeriesInfo&&const DeepCollectionEquality().equals(other.episodes, _this.episodes)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is XtreamSeriesInfo&&const DeepCollectionEquality().equals(other.episodes, _this.episodes)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped)&&(identical(other.plot, _this.plot) || other.plot == _this.plot)&&(identical(other.cast, _this.cast) || other.cast == _this.cast)&&(identical(other.director, _this.director) || other.director == _this.director)&&(identical(other.genre, _this.genre) || other.genre == _this.genre)&&(identical(other.backdropUrl, _this.backdropUrl) || other.backdropUrl == _this.backdropUrl));
 }
 
 
 @override
 int get hashCode {
   final _this = this as XtreamSeriesInfo;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.episodes),_this.skipped);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.episodes),_this.skipped,_this.plot,_this.cast,_this.director,_this.genre,_this.backdropUrl);
 }
 
 @override
 String toString() {
   final _this = this as XtreamSeriesInfo;
-  return 'XtreamSeriesInfo(episodes: ${_this.episodes}, skipped: ${_this.skipped})';
+  return 'XtreamSeriesInfo(episodes: ${_this.episodes}, skipped: ${_this.skipped}, plot: ${_this.plot}, cast: ${_this.cast}, director: ${_this.director}, genre: ${_this.genre}, backdropUrl: ${_this.backdropUrl})';
 }
 
 
@@ -2343,7 +2362,7 @@ abstract mixin class $XtreamSeriesInfoCopyWith<$Res>  {
   factory $XtreamSeriesInfoCopyWith(XtreamSeriesInfo value, $Res Function(XtreamSeriesInfo) _then) = _$XtreamSeriesInfoCopyWithImpl;
 @useResult
 $Res call({
- List<XtreamEpisode> episodes, int skipped
+ List<XtreamEpisode> episodes, int skipped, String? plot, String? cast, String? director, String? genre, String? backdropUrl
 });
 
 
@@ -2360,11 +2379,16 @@ class _$XtreamSeriesInfoCopyWithImpl<$Res>
 
 /// Create a copy of XtreamSeriesInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? episodes = null,Object? skipped = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? episodes = null,Object? skipped = null,Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? backdropUrl = freezed,}) {
   return _then(XtreamSeriesInfo(
 episodes: null == episodes ? _self.episodes : episodes // ignore: cast_nullable_to_non_nullable
 as List<XtreamEpisode>,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
-as int,
+as int,plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
+as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
+as String?,director: freezed == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
+as String?,genre: freezed == genre ? _self.genre : genre // ignore: cast_nullable_to_non_nullable
+as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -2449,10 +2473,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<XtreamEpisode> episodes,  int skipped)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<XtreamEpisode> episodes,  int skipped,  String? plot,  String? cast,  String? director,  String? genre,  String? backdropUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _XtreamSeriesInfo() when $default != null:
-return $default(_that.episodes,_that.skipped);case _:
+return $default(_that.episodes,_that.skipped,_that.plot,_that.cast,_that.director,_that.genre,_that.backdropUrl);case _:
   return orElse();
 
 }
@@ -2470,10 +2494,10 @@ return $default(_that.episodes,_that.skipped);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<XtreamEpisode> episodes,  int skipped)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<XtreamEpisode> episodes,  int skipped,  String? plot,  String? cast,  String? director,  String? genre,  String? backdropUrl)  $default,) {final _that = this;
 switch (_that) {
 case _XtreamSeriesInfo():
-return $default(_that.episodes,_that.skipped);case _:
+return $default(_that.episodes,_that.skipped,_that.plot,_that.cast,_that.director,_that.genre,_that.backdropUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2490,10 +2514,10 @@ return $default(_that.episodes,_that.skipped);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<XtreamEpisode> episodes,  int skipped)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<XtreamEpisode> episodes,  int skipped,  String? plot,  String? cast,  String? director,  String? genre,  String? backdropUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _XtreamSeriesInfo() when $default != null:
-return $default(_that.episodes,_that.skipped);case _:
+return $default(_that.episodes,_that.skipped,_that.plot,_that.cast,_that.director,_that.genre,_that.backdropUrl);case _:
   return null;
 
 }
@@ -2505,7 +2529,7 @@ return $default(_that.episodes,_that.skipped);case _:
 
 
 class _XtreamSeriesInfo implements XtreamSeriesInfo {
-  const _XtreamSeriesInfo({ List<XtreamEpisode> episodes = const <XtreamEpisode>[], this.skipped = 0}): _episodes = episodes;
+  const _XtreamSeriesInfo({ List<XtreamEpisode> episodes = const <XtreamEpisode>[], this.skipped = 0, this.plot, this.cast, this.director, this.genre, this.backdropUrl}): _episodes = episodes;
   
 
  final  List<XtreamEpisode> _episodes;
@@ -2516,6 +2540,11 @@ class _XtreamSeriesInfo implements XtreamSeriesInfo {
 }
 
 @override@JsonKey() final  int skipped;
+@override final  String? plot;
+@override final  String? cast;
+@override final  String? director;
+@override final  String? genre;
+@override final  String? backdropUrl;
 
 /// Create a copy of XtreamSeriesInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -2527,18 +2556,18 @@ _$XtreamSeriesInfoCopyWith<_XtreamSeriesInfo> get copyWith => __$XtreamSeriesInf
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamSeriesInfo&&const DeepCollectionEquality().equals(other.episodes, _episodes)&&(identical(other.skipped, skipped) || other.skipped == skipped));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _XtreamSeriesInfo&&const DeepCollectionEquality().equals(other.episodes, _episodes)&&(identical(other.skipped, skipped) || other.skipped == skipped)&&(identical(other.plot, plot) || other.plot == plot)&&(identical(other.cast, cast) || other.cast == cast)&&(identical(other.director, director) || other.director == director)&&(identical(other.genre, genre) || other.genre == genre)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_episodes),skipped);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_episodes),skipped,plot,cast,director,genre,backdropUrl);
 }
 
 @override
 String toString() {
-    return 'XtreamSeriesInfo(episodes: $episodes, skipped: $skipped)';
+    return 'XtreamSeriesInfo(episodes: $episodes, skipped: $skipped, plot: $plot, cast: $cast, director: $director, genre: $genre, backdropUrl: $backdropUrl)';
 }
 
 
@@ -2549,7 +2578,7 @@ abstract mixin class _$XtreamSeriesInfoCopyWith<$Res> implements $XtreamSeriesIn
   factory _$XtreamSeriesInfoCopyWith(_XtreamSeriesInfo value, $Res Function(_XtreamSeriesInfo) _then) = __$XtreamSeriesInfoCopyWithImpl;
 @override @useResult
 $Res call({
- List<XtreamEpisode> episodes, int skipped
+ List<XtreamEpisode> episodes, int skipped, String? plot, String? cast, String? director, String? genre, String? backdropUrl
 });
 
 
@@ -2566,11 +2595,16 @@ class __$XtreamSeriesInfoCopyWithImpl<$Res>
 
 /// Create a copy of XtreamSeriesInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? episodes = null,Object? skipped = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? episodes = null,Object? skipped = null,Object? plot = freezed,Object? cast = freezed,Object? director = freezed,Object? genre = freezed,Object? backdropUrl = freezed,}) {
   return _then(_XtreamSeriesInfo(
 episodes: null == episodes ? _self._episodes : episodes // ignore: cast_nullable_to_non_nullable
 as List<XtreamEpisode>,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
-as int,
+as int,plot: freezed == plot ? _self.plot : plot // ignore: cast_nullable_to_non_nullable
+as String?,cast: freezed == cast ? _self.cast : cast // ignore: cast_nullable_to_non_nullable
+as String?,director: freezed == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
+as String?,genre: freezed == genre ? _self.genre : genre // ignore: cast_nullable_to_non_nullable
+as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

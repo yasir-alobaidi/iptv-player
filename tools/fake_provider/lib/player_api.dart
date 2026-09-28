@@ -58,6 +58,12 @@ Handler playerApiHandler(FakeServerState state) {
       });
     }
 
+    final action = _value(params, 'action');
+    state.apiCalls.update(
+      action ?? 'account',
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
     final catalog = state.catalog;
     final shape = JsonShape(
       state.profile.quirks,
@@ -65,7 +71,7 @@ Handler playerApiHandler(FakeServerState state) {
     );
     final category = _value(params, 'category_id');
 
-    switch (_value(params, 'action')) {
+    switch (action) {
       case null:
         return _object(state, _account(state, request, shape));
       case 'get_live_categories':

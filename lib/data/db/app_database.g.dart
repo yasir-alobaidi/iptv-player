@@ -3946,6 +3946,48 @@ class $SeriesTable extends Series with TableInfo<$SeriesTable, SeriesRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
+    'genre',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _castNamesMeta = const VerificationMeta(
+    'castNames',
+  );
+  @override
+  late final GeneratedColumn<String> castNames = GeneratedColumn<String>(
+    'cast_names',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _directorMeta = const VerificationMeta(
+    'director',
+  );
+  @override
+  late final GeneratedColumn<String> director = GeneratedColumn<String>(
+    'director',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backdropUrlMeta = const VerificationMeta(
+    'backdropUrl',
+  );
+  @override
+  late final GeneratedColumn<String> backdropUrl = GeneratedColumn<String>(
+    'backdrop_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -3982,6 +4024,10 @@ class $SeriesTable extends Series with TableInfo<$SeriesTable, SeriesRow> {
     rating,
     year,
     plot,
+    genre,
+    castNames,
+    director,
+    backdropUrl,
     updatedAt,
     episodesFetchedAt,
   ];
@@ -4066,6 +4112,33 @@ class $SeriesTable extends Series with TableInfo<$SeriesTable, SeriesRow> {
         plot.isAcceptableOrUnknown(data['plot']!, _plotMeta),
       );
     }
+    if (data.containsKey('genre')) {
+      context.handle(
+        _genreMeta,
+        genre.isAcceptableOrUnknown(data['genre']!, _genreMeta),
+      );
+    }
+    if (data.containsKey('cast_names')) {
+      context.handle(
+        _castNamesMeta,
+        castNames.isAcceptableOrUnknown(data['cast_names']!, _castNamesMeta),
+      );
+    }
+    if (data.containsKey('director')) {
+      context.handle(
+        _directorMeta,
+        director.isAcceptableOrUnknown(data['director']!, _directorMeta),
+      );
+    }
+    if (data.containsKey('backdrop_url')) {
+      context.handle(
+        _backdropUrlMeta,
+        backdropUrl.isAcceptableOrUnknown(
+          data['backdrop_url']!,
+          _backdropUrlMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -4138,6 +4211,22 @@ class $SeriesTable extends Series with TableInfo<$SeriesTable, SeriesRow> {
         DriftSqlType.string,
         data['${effectivePrefix}plot'],
       ),
+      genre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}genre'],
+      ),
+      castNames: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cast_names'],
+      ),
+      director: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}director'],
+      ),
+      backdropUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}backdrop_url'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -4172,6 +4261,13 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   final int? year;
   final String? plot;
 
+  /// v6: sent by the list and by `get_series_info`. Provider-owned, but a
+  /// sync whose list lacks one keeps the value the details fetch stored.
+  final String? genre;
+  final String? castNames;
+  final String? director;
+  final String? backdropUrl;
+
   /// The provider's `last_modified`: when it changes, the cached episodes
   /// are stale.
   final DateTime? updatedAt;
@@ -4190,6 +4286,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     this.rating,
     this.year,
     this.plot,
+    this.genre,
+    this.castNames,
+    this.director,
+    this.backdropUrl,
     this.updatedAt,
     this.episodesFetchedAt,
   });
@@ -4218,6 +4318,18 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     }
     if (!nullToAbsent || plot != null) {
       map['plot'] = Variable<String>(plot);
+    }
+    if (!nullToAbsent || genre != null) {
+      map['genre'] = Variable<String>(genre);
+    }
+    if (!nullToAbsent || castNames != null) {
+      map['cast_names'] = Variable<String>(castNames);
+    }
+    if (!nullToAbsent || director != null) {
+      map['director'] = Variable<String>(director);
+    }
+    if (!nullToAbsent || backdropUrl != null) {
+      map['backdrop_url'] = Variable<String>(backdropUrl);
     }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -4249,6 +4361,18 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           : Value(rating),
       year: year == null && nullToAbsent ? const Value.absent() : Value(year),
       plot: plot == null && nullToAbsent ? const Value.absent() : Value(plot),
+      genre: genre == null && nullToAbsent
+          ? const Value.absent()
+          : Value(genre),
+      castNames: castNames == null && nullToAbsent
+          ? const Value.absent()
+          : Value(castNames),
+      director: director == null && nullToAbsent
+          ? const Value.absent()
+          : Value(director),
+      backdropUrl: backdropUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backdropUrl),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -4275,6 +4399,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       rating: serializer.fromJson<double?>(json['rating']),
       year: serializer.fromJson<int?>(json['year']),
       plot: serializer.fromJson<String?>(json['plot']),
+      genre: serializer.fromJson<String?>(json['genre']),
+      castNames: serializer.fromJson<String?>(json['castNames']),
+      director: serializer.fromJson<String?>(json['director']),
+      backdropUrl: serializer.fromJson<String?>(json['backdropUrl']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       episodesFetchedAt: serializer.fromJson<DateTime?>(
         json['episodesFetchedAt'],
@@ -4296,6 +4424,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       'rating': serializer.toJson<double?>(rating),
       'year': serializer.toJson<int?>(year),
       'plot': serializer.toJson<String?>(plot),
+      'genre': serializer.toJson<String?>(genre),
+      'castNames': serializer.toJson<String?>(castNames),
+      'director': serializer.toJson<String?>(director),
+      'backdropUrl': serializer.toJson<String?>(backdropUrl),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'episodesFetchedAt': serializer.toJson<DateTime?>(episodesFetchedAt),
     };
@@ -4313,6 +4445,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     Value<double?> rating = const Value.absent(),
     Value<int?> year = const Value.absent(),
     Value<String?> plot = const Value.absent(),
+    Value<String?> genre = const Value.absent(),
+    Value<String?> castNames = const Value.absent(),
+    Value<String?> director = const Value.absent(),
+    Value<String?> backdropUrl = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
     Value<DateTime?> episodesFetchedAt = const Value.absent(),
   }) => SeriesRow(
@@ -4327,6 +4463,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     rating: rating.present ? rating.value : this.rating,
     year: year.present ? year.value : this.year,
     plot: plot.present ? plot.value : this.plot,
+    genre: genre.present ? genre.value : this.genre,
+    castNames: castNames.present ? castNames.value : this.castNames,
+    director: director.present ? director.value : this.director,
+    backdropUrl: backdropUrl.present ? backdropUrl.value : this.backdropUrl,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     episodesFetchedAt: episodesFetchedAt.present
         ? episodesFetchedAt.value
@@ -4347,6 +4487,12 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       rating: data.rating.present ? data.rating.value : this.rating,
       year: data.year.present ? data.year.value : this.year,
       plot: data.plot.present ? data.plot.value : this.plot,
+      genre: data.genre.present ? data.genre.value : this.genre,
+      castNames: data.castNames.present ? data.castNames.value : this.castNames,
+      director: data.director.present ? data.director.value : this.director,
+      backdropUrl: data.backdropUrl.present
+          ? data.backdropUrl.value
+          : this.backdropUrl,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       episodesFetchedAt: data.episodesFetchedAt.present
           ? data.episodesFetchedAt.value
@@ -4368,6 +4514,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ..write('rating: $rating, ')
           ..write('year: $year, ')
           ..write('plot: $plot, ')
+          ..write('genre: $genre, ')
+          ..write('castNames: $castNames, ')
+          ..write('director: $director, ')
+          ..write('backdropUrl: $backdropUrl, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('episodesFetchedAt: $episodesFetchedAt')
           ..write(')'))
@@ -4387,6 +4537,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     rating,
     year,
     plot,
+    genre,
+    castNames,
+    director,
+    backdropUrl,
     updatedAt,
     episodesFetchedAt,
   );
@@ -4405,6 +4559,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           other.rating == this.rating &&
           other.year == this.year &&
           other.plot == this.plot &&
+          other.genre == this.genre &&
+          other.castNames == this.castNames &&
+          other.director == this.director &&
+          other.backdropUrl == this.backdropUrl &&
           other.updatedAt == this.updatedAt &&
           other.episodesFetchedAt == this.episodesFetchedAt);
 }
@@ -4421,6 +4579,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
   final Value<double?> rating;
   final Value<int?> year;
   final Value<String?> plot;
+  final Value<String?> genre;
+  final Value<String?> castNames;
+  final Value<String?> director;
+  final Value<String?> backdropUrl;
   final Value<DateTime?> updatedAt;
   final Value<DateTime?> episodesFetchedAt;
   const SeriesCompanion({
@@ -4435,6 +4597,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
     this.rating = const Value.absent(),
     this.year = const Value.absent(),
     this.plot = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.castNames = const Value.absent(),
+    this.director = const Value.absent(),
+    this.backdropUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.episodesFetchedAt = const Value.absent(),
   });
@@ -4450,6 +4616,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
     this.rating = const Value.absent(),
     this.year = const Value.absent(),
     this.plot = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.castNames = const Value.absent(),
+    this.director = const Value.absent(),
+    this.backdropUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.episodesFetchedAt = const Value.absent(),
   }) : sourceId = Value(sourceId),
@@ -4467,6 +4637,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
     Expression<double>? rating,
     Expression<int>? year,
     Expression<String>? plot,
+    Expression<String>? genre,
+    Expression<String>? castNames,
+    Expression<String>? director,
+    Expression<String>? backdropUrl,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? episodesFetchedAt,
   }) {
@@ -4482,6 +4656,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
       if (rating != null) 'rating': rating,
       if (year != null) 'year': year,
       if (plot != null) 'plot': plot,
+      if (genre != null) 'genre': genre,
+      if (castNames != null) 'cast_names': castNames,
+      if (director != null) 'director': director,
+      if (backdropUrl != null) 'backdrop_url': backdropUrl,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (episodesFetchedAt != null) 'episodes_fetched_at': episodesFetchedAt,
     });
@@ -4499,6 +4677,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
     Value<double?>? rating,
     Value<int?>? year,
     Value<String?>? plot,
+    Value<String?>? genre,
+    Value<String?>? castNames,
+    Value<String?>? director,
+    Value<String?>? backdropUrl,
     Value<DateTime?>? updatedAt,
     Value<DateTime?>? episodesFetchedAt,
   }) {
@@ -4514,6 +4696,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
       rating: rating ?? this.rating,
       year: year ?? this.year,
       plot: plot ?? this.plot,
+      genre: genre ?? this.genre,
+      castNames: castNames ?? this.castNames,
+      director: director ?? this.director,
+      backdropUrl: backdropUrl ?? this.backdropUrl,
       updatedAt: updatedAt ?? this.updatedAt,
       episodesFetchedAt: episodesFetchedAt ?? this.episodesFetchedAt,
     );
@@ -4555,6 +4741,18 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
     if (plot.present) {
       map['plot'] = Variable<String>(plot.value);
     }
+    if (genre.present) {
+      map['genre'] = Variable<String>(genre.value);
+    }
+    if (castNames.present) {
+      map['cast_names'] = Variable<String>(castNames.value);
+    }
+    if (director.present) {
+      map['director'] = Variable<String>(director.value);
+    }
+    if (backdropUrl.present) {
+      map['backdrop_url'] = Variable<String>(backdropUrl.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -4578,6 +4776,10 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
           ..write('rating: $rating, ')
           ..write('year: $year, ')
           ..write('plot: $plot, ')
+          ..write('genre: $genre, ')
+          ..write('castNames: $castNames, ')
+          ..write('director: $director, ')
+          ..write('backdropUrl: $backdropUrl, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('episodesFetchedAt: $episodesFetchedAt')
           ..write(')'))
@@ -8994,6 +9196,28 @@ class $MovieDetailsTable extends MovieDetails
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _videoHeightMeta = const VerificationMeta(
+    'videoHeight',
+  );
+  @override
+  late final GeneratedColumn<int> videoHeight = GeneratedColumn<int>(
+    'video_height',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _audioChannelsMeta = const VerificationMeta(
+    'audioChannels',
+  );
+  @override
+  late final GeneratedColumn<int> audioChannels = GeneratedColumn<int>(
+    'audio_channels',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
     'fetchedAt',
   );
@@ -9014,6 +9238,8 @@ class $MovieDetailsTable extends MovieDetails
     genre,
     runtimeMinutes,
     backdropUrl,
+    videoHeight,
+    audioChannels,
     fetchedAt,
   ];
   @override
@@ -9076,6 +9302,24 @@ class $MovieDetailsTable extends MovieDetails
         ),
       );
     }
+    if (data.containsKey('video_height')) {
+      context.handle(
+        _videoHeightMeta,
+        videoHeight.isAcceptableOrUnknown(
+          data['video_height']!,
+          _videoHeightMeta,
+        ),
+      );
+    }
+    if (data.containsKey('audio_channels')) {
+      context.handle(
+        _audioChannelsMeta,
+        audioChannels.isAcceptableOrUnknown(
+          data['audio_channels']!,
+          _audioChannelsMeta,
+        ),
+      );
+    }
     if (data.containsKey('fetched_at')) {
       context.handle(
         _fetchedAtMeta,
@@ -9121,6 +9365,14 @@ class $MovieDetailsTable extends MovieDetails
         DriftSqlType.string,
         data['${effectivePrefix}backdrop_url'],
       ),
+      videoHeight: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}video_height'],
+      ),
+      audioChannels: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}audio_channels'],
+      ),
       fetchedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fetched_at'],
@@ -9144,6 +9396,13 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
   final String? genre;
   final int? runtimeMinutes;
   final String? backdropUrl;
+
+  /// The picture's height from the panel's probe of the file (v6), for the
+  /// FHD / 4K badge; null when the panel didn't probe it.
+  final int? videoHeight;
+
+  /// Audio channels from the same probe (v6): 6 is the 5.1 badge.
+  final int? audioChannels;
   final DateTime fetchedAt;
   const MovieDetailsRow({
     required this.movieId,
@@ -9153,6 +9412,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
     this.genre,
     this.runtimeMinutes,
     this.backdropUrl,
+    this.videoHeight,
+    this.audioChannels,
     required this.fetchedAt,
   });
   @override
@@ -9177,6 +9438,12 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
     if (!nullToAbsent || backdropUrl != null) {
       map['backdrop_url'] = Variable<String>(backdropUrl);
     }
+    if (!nullToAbsent || videoHeight != null) {
+      map['video_height'] = Variable<int>(videoHeight);
+    }
+    if (!nullToAbsent || audioChannels != null) {
+      map['audio_channels'] = Variable<int>(audioChannels);
+    }
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -9200,6 +9467,12 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
       backdropUrl: backdropUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(backdropUrl),
+      videoHeight: videoHeight == null && nullToAbsent
+          ? const Value.absent()
+          : Value(videoHeight),
+      audioChannels: audioChannels == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioChannels),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -9217,6 +9490,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
       genre: serializer.fromJson<String?>(json['genre']),
       runtimeMinutes: serializer.fromJson<int?>(json['runtimeMinutes']),
       backdropUrl: serializer.fromJson<String?>(json['backdropUrl']),
+      videoHeight: serializer.fromJson<int?>(json['videoHeight']),
+      audioChannels: serializer.fromJson<int?>(json['audioChannels']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -9231,6 +9506,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
       'genre': serializer.toJson<String?>(genre),
       'runtimeMinutes': serializer.toJson<int?>(runtimeMinutes),
       'backdropUrl': serializer.toJson<String?>(backdropUrl),
+      'videoHeight': serializer.toJson<int?>(videoHeight),
+      'audioChannels': serializer.toJson<int?>(audioChannels),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -9243,6 +9520,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
     Value<String?> genre = const Value.absent(),
     Value<int?> runtimeMinutes = const Value.absent(),
     Value<String?> backdropUrl = const Value.absent(),
+    Value<int?> videoHeight = const Value.absent(),
+    Value<int?> audioChannels = const Value.absent(),
     DateTime? fetchedAt,
   }) => MovieDetailsRow(
     movieId: movieId ?? this.movieId,
@@ -9254,6 +9533,10 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
         ? runtimeMinutes.value
         : this.runtimeMinutes,
     backdropUrl: backdropUrl.present ? backdropUrl.value : this.backdropUrl,
+    videoHeight: videoHeight.present ? videoHeight.value : this.videoHeight,
+    audioChannels: audioChannels.present
+        ? audioChannels.value
+        : this.audioChannels,
     fetchedAt: fetchedAt ?? this.fetchedAt,
   );
   MovieDetailsRow copyWithCompanion(MovieDetailsCompanion data) {
@@ -9269,6 +9552,12 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
       backdropUrl: data.backdropUrl.present
           ? data.backdropUrl.value
           : this.backdropUrl,
+      videoHeight: data.videoHeight.present
+          ? data.videoHeight.value
+          : this.videoHeight,
+      audioChannels: data.audioChannels.present
+          ? data.audioChannels.value
+          : this.audioChannels,
       fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
     );
   }
@@ -9283,6 +9572,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
           ..write('genre: $genre, ')
           ..write('runtimeMinutes: $runtimeMinutes, ')
           ..write('backdropUrl: $backdropUrl, ')
+          ..write('videoHeight: $videoHeight, ')
+          ..write('audioChannels: $audioChannels, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -9297,6 +9588,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
     genre,
     runtimeMinutes,
     backdropUrl,
+    videoHeight,
+    audioChannels,
     fetchedAt,
   );
   @override
@@ -9310,6 +9603,8 @@ class MovieDetailsRow extends DataClass implements Insertable<MovieDetailsRow> {
           other.genre == this.genre &&
           other.runtimeMinutes == this.runtimeMinutes &&
           other.backdropUrl == this.backdropUrl &&
+          other.videoHeight == this.videoHeight &&
+          other.audioChannels == this.audioChannels &&
           other.fetchedAt == this.fetchedAt);
 }
 
@@ -9321,6 +9616,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
   final Value<String?> genre;
   final Value<int?> runtimeMinutes;
   final Value<String?> backdropUrl;
+  final Value<int?> videoHeight;
+  final Value<int?> audioChannels;
   final Value<DateTime> fetchedAt;
   const MovieDetailsCompanion({
     this.movieId = const Value.absent(),
@@ -9330,6 +9627,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
     this.genre = const Value.absent(),
     this.runtimeMinutes = const Value.absent(),
     this.backdropUrl = const Value.absent(),
+    this.videoHeight = const Value.absent(),
+    this.audioChannels = const Value.absent(),
     this.fetchedAt = const Value.absent(),
   });
   MovieDetailsCompanion.insert({
@@ -9340,6 +9639,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
     this.genre = const Value.absent(),
     this.runtimeMinutes = const Value.absent(),
     this.backdropUrl = const Value.absent(),
+    this.videoHeight = const Value.absent(),
+    this.audioChannels = const Value.absent(),
     required DateTime fetchedAt,
   }) : fetchedAt = Value(fetchedAt);
   static Insertable<MovieDetailsRow> custom({
@@ -9350,6 +9651,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
     Expression<String>? genre,
     Expression<int>? runtimeMinutes,
     Expression<String>? backdropUrl,
+    Expression<int>? videoHeight,
+    Expression<int>? audioChannels,
     Expression<DateTime>? fetchedAt,
   }) {
     return RawValuesInsertable({
@@ -9360,6 +9663,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
       if (genre != null) 'genre': genre,
       if (runtimeMinutes != null) 'runtime_minutes': runtimeMinutes,
       if (backdropUrl != null) 'backdrop_url': backdropUrl,
+      if (videoHeight != null) 'video_height': videoHeight,
+      if (audioChannels != null) 'audio_channels': audioChannels,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
     });
   }
@@ -9372,6 +9677,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
     Value<String?>? genre,
     Value<int?>? runtimeMinutes,
     Value<String?>? backdropUrl,
+    Value<int?>? videoHeight,
+    Value<int?>? audioChannels,
     Value<DateTime>? fetchedAt,
   }) {
     return MovieDetailsCompanion(
@@ -9382,6 +9689,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
       genre: genre ?? this.genre,
       runtimeMinutes: runtimeMinutes ?? this.runtimeMinutes,
       backdropUrl: backdropUrl ?? this.backdropUrl,
+      videoHeight: videoHeight ?? this.videoHeight,
+      audioChannels: audioChannels ?? this.audioChannels,
       fetchedAt: fetchedAt ?? this.fetchedAt,
     );
   }
@@ -9410,6 +9719,12 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
     if (backdropUrl.present) {
       map['backdrop_url'] = Variable<String>(backdropUrl.value);
     }
+    if (videoHeight.present) {
+      map['video_height'] = Variable<int>(videoHeight.value);
+    }
+    if (audioChannels.present) {
+      map['audio_channels'] = Variable<int>(audioChannels.value);
+    }
     if (fetchedAt.present) {
       map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
     }
@@ -9426,6 +9741,8 @@ class MovieDetailsCompanion extends UpdateCompanion<MovieDetailsRow> {
           ..write('genre: $genre, ')
           ..write('runtimeMinutes: $runtimeMinutes, ')
           ..write('backdropUrl: $backdropUrl, ')
+          ..write('videoHeight: $videoHeight, ')
+          ..write('audioChannels: $audioChannels, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -10754,6 +11071,32 @@ class $WatchHistoryTable extends WatchHistory
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _seriesKeyMeta = const VerificationMeta(
+    'seriesKey',
+  );
+  @override
+  late final GeneratedColumn<String> seriesKey = GeneratedColumn<String>(
+    'series_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dismissedMeta = const VerificationMeta(
+    'dismissed',
+  );
+  @override
+  late final GeneratedColumn<bool> dismissed = GeneratedColumn<bool>(
+    'dismissed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dismissed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -10774,6 +11117,8 @@ class $WatchHistoryTable extends WatchHistory
     positionMs,
     durationMs,
     completed,
+    seriesKey,
+    dismissed,
     updatedAt,
   ];
   @override
@@ -10821,6 +11166,18 @@ class $WatchHistoryTable extends WatchHistory
       context.handle(
         _completedMeta,
         completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
+      );
+    }
+    if (data.containsKey('series_key')) {
+      context.handle(
+        _seriesKeyMeta,
+        seriesKey.isAcceptableOrUnknown(data['series_key']!, _seriesKeyMeta),
+      );
+    }
+    if (data.containsKey('dismissed')) {
+      context.handle(
+        _dismissedMeta,
+        dismissed.isAcceptableOrUnknown(data['dismissed']!, _dismissedMeta),
       );
     }
     if (data.containsKey('updated_at')) {
@@ -10874,6 +11231,14 @@ class $WatchHistoryTable extends WatchHistory
         DriftSqlType.bool,
         data['${effectivePrefix}completed'],
       )!,
+      seriesKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}series_key'],
+      ),
+      dismissed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dismissed'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -10898,6 +11263,14 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
   final int positionMs;
   final int? durationMs;
   final bool completed;
+
+  /// An episode's series (its remote key), so Continue watching needs no
+  /// join through the episode cache, which a re-fetch replaces (v6).
+  final String? seriesKey;
+
+  /// Taken out of Continue watching by the user; watching it again clears
+  /// it (v6).
+  final bool dismissed;
   final DateTime updatedAt;
   const WatchHistoryRow({
     required this.id,
@@ -10907,6 +11280,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
     required this.positionMs,
     this.durationMs,
     required this.completed,
+    this.seriesKey,
+    required this.dismissed,
     required this.updatedAt,
   });
   @override
@@ -10927,6 +11302,10 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
       map['duration_ms'] = Variable<int>(durationMs);
     }
     map['completed'] = Variable<bool>(completed);
+    if (!nullToAbsent || seriesKey != null) {
+      map['series_key'] = Variable<String>(seriesKey);
+    }
+    map['dismissed'] = Variable<bool>(dismissed);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -10944,6 +11323,10 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
           ? const Value.absent()
           : Value(durationMs),
       completed: Value(completed),
+      seriesKey: seriesKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seriesKey),
+      dismissed: Value(dismissed),
       updatedAt: Value(updatedAt),
     );
   }
@@ -10963,6 +11346,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
       positionMs: serializer.fromJson<int>(json['positionMs']),
       durationMs: serializer.fromJson<int?>(json['durationMs']),
       completed: serializer.fromJson<bool>(json['completed']),
+      seriesKey: serializer.fromJson<String?>(json['seriesKey']),
+      dismissed: serializer.fromJson<bool>(json['dismissed']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -10979,6 +11364,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
       'positionMs': serializer.toJson<int>(positionMs),
       'durationMs': serializer.toJson<int?>(durationMs),
       'completed': serializer.toJson<bool>(completed),
+      'seriesKey': serializer.toJson<String?>(seriesKey),
+      'dismissed': serializer.toJson<bool>(dismissed),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -10991,6 +11378,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
     int? positionMs,
     Value<int?> durationMs = const Value.absent(),
     bool? completed,
+    Value<String?> seriesKey = const Value.absent(),
+    bool? dismissed,
     DateTime? updatedAt,
   }) => WatchHistoryRow(
     id: id ?? this.id,
@@ -11000,6 +11389,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
     positionMs: positionMs ?? this.positionMs,
     durationMs: durationMs.present ? durationMs.value : this.durationMs,
     completed: completed ?? this.completed,
+    seriesKey: seriesKey.present ? seriesKey.value : this.seriesKey,
+    dismissed: dismissed ?? this.dismissed,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   WatchHistoryRow copyWithCompanion(WatchHistoryCompanion data) {
@@ -11015,6 +11406,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
           ? data.durationMs.value
           : this.durationMs,
       completed: data.completed.present ? data.completed.value : this.completed,
+      seriesKey: data.seriesKey.present ? data.seriesKey.value : this.seriesKey,
+      dismissed: data.dismissed.present ? data.dismissed.value : this.dismissed,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -11029,6 +11422,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
           ..write('positionMs: $positionMs, ')
           ..write('durationMs: $durationMs, ')
           ..write('completed: $completed, ')
+          ..write('seriesKey: $seriesKey, ')
+          ..write('dismissed: $dismissed, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -11043,6 +11438,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
     positionMs,
     durationMs,
     completed,
+    seriesKey,
+    dismissed,
     updatedAt,
   );
   @override
@@ -11056,6 +11453,8 @@ class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
           other.positionMs == this.positionMs &&
           other.durationMs == this.durationMs &&
           other.completed == this.completed &&
+          other.seriesKey == this.seriesKey &&
+          other.dismissed == this.dismissed &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -11067,6 +11466,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
   final Value<int> positionMs;
   final Value<int?> durationMs;
   final Value<bool> completed;
+  final Value<String?> seriesKey;
+  final Value<bool> dismissed;
   final Value<DateTime> updatedAt;
   const WatchHistoryCompanion({
     this.id = const Value.absent(),
@@ -11076,6 +11477,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
     this.positionMs = const Value.absent(),
     this.durationMs = const Value.absent(),
     this.completed = const Value.absent(),
+    this.seriesKey = const Value.absent(),
+    this.dismissed = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   WatchHistoryCompanion.insert({
@@ -11086,6 +11489,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
     this.positionMs = const Value.absent(),
     this.durationMs = const Value.absent(),
     this.completed = const Value.absent(),
+    this.seriesKey = const Value.absent(),
+    this.dismissed = const Value.absent(),
     required DateTime updatedAt,
   }) : itemType = Value(itemType),
        remoteKey = Value(remoteKey),
@@ -11098,6 +11503,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
     Expression<int>? positionMs,
     Expression<int>? durationMs,
     Expression<bool>? completed,
+    Expression<String>? seriesKey,
+    Expression<bool>? dismissed,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -11108,6 +11515,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
       if (positionMs != null) 'position_ms': positionMs,
       if (durationMs != null) 'duration_ms': durationMs,
       if (completed != null) 'completed': completed,
+      if (seriesKey != null) 'series_key': seriesKey,
+      if (dismissed != null) 'dismissed': dismissed,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -11120,6 +11529,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
     Value<int>? positionMs,
     Value<int?>? durationMs,
     Value<bool>? completed,
+    Value<String?>? seriesKey,
+    Value<bool>? dismissed,
     Value<DateTime>? updatedAt,
   }) {
     return WatchHistoryCompanion(
@@ -11130,6 +11541,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
       positionMs: positionMs ?? this.positionMs,
       durationMs: durationMs ?? this.durationMs,
       completed: completed ?? this.completed,
+      seriesKey: seriesKey ?? this.seriesKey,
+      dismissed: dismissed ?? this.dismissed,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -11160,6 +11573,12 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);
     }
+    if (seriesKey.present) {
+      map['series_key'] = Variable<String>(seriesKey.value);
+    }
+    if (dismissed.present) {
+      map['dismissed'] = Variable<bool>(dismissed.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -11176,6 +11595,8 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
           ..write('positionMs: $positionMs, ')
           ..write('durationMs: $durationMs, ')
           ..write('completed: $completed, ')
+          ..write('seriesKey: $seriesKey, ')
+          ..write('dismissed: $dismissed, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -11279,6 +11700,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'movies_category',
     'CREATE INDEX movies_category ON movies (category_id)',
   );
+  late final Index moviesAdded = Index(
+    'movies_added',
+    'CREATE INDEX movies_added ON movies (source_id, added_at, id)',
+  );
+  late final Index moviesName = Index(
+    'movies_name',
+    'CREATE INDEX movies_name ON movies (source_id, name COLLATE NOCASE, id)',
+  );
+  late final Index moviesRating = Index(
+    'movies_rating',
+    'CREATE INDEX movies_rating ON movies (source_id, rating DESC, name COLLATE NOCASE, id)',
+  );
   late final Index seriesCategory = Index(
     'series_category',
     'CREATE INDEX series_category ON series (category_id)',
@@ -11344,6 +11777,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     categoriesSourceKind,
     channelsCategory,
     moviesCategory,
+    moviesAdded,
+    moviesName,
+    moviesRating,
     seriesCategory,
     favorites,
     watchHistory,
@@ -15520,6 +15956,10 @@ typedef $$SeriesTableCreateCompanionBuilder = SeriesCompanion Function({
   Value<double?> rating,
   Value<int?> year,
   Value<String?> plot,
+  Value<String?> genre,
+  Value<String?> castNames,
+  Value<String?> director,
+  Value<String?> backdropUrl,
   Value<DateTime?> updatedAt,
   Value<DateTime?> episodesFetchedAt,
 });
@@ -15535,6 +15975,10 @@ typedef $$SeriesTableUpdateCompanionBuilder = SeriesCompanion Function({
   Value<double?> rating,
   Value<int?> year,
   Value<String?> plot,
+  Value<String?> genre,
+  Value<String?> castNames,
+  Value<String?> director,
+  Value<String?> backdropUrl,
   Value<DateTime?> updatedAt,
   Value<DateTime?> episodesFetchedAt,
 });
@@ -15647,6 +16091,26 @@ class $$SeriesTableFilterComposer
 
   ColumnFilters<String> get plot => $composableBuilder(
     column: $table.plot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get genre => $composableBuilder(
+    column: $table.genre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get castNames => $composableBuilder(
+    column: $table.castNames,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get director => $composableBuilder(
+    column: $table.director,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get backdropUrl => $composableBuilder(
+    column: $table.backdropUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15786,6 +16250,26 @@ class $$SeriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get genre => $composableBuilder(
+    column: $table.genre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get castNames => $composableBuilder(
+    column: $table.castNames,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get director => $composableBuilder(
+    column: $table.director,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get backdropUrl => $composableBuilder(
+    column: $table.backdropUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -15878,6 +16362,20 @@ class $$SeriesTableAnnotationComposer
 
   GeneratedColumn<String> get plot =>
       $composableBuilder(column: $table.plot, builder: (column) => column);
+
+  GeneratedColumn<String> get genre =>
+      $composableBuilder(column: $table.genre, builder: (column) => column);
+
+  GeneratedColumn<String> get castNames =>
+      $composableBuilder(column: $table.castNames, builder: (column) => column);
+
+  GeneratedColumn<String> get director =>
+      $composableBuilder(column: $table.director, builder: (column) => column);
+
+  GeneratedColumn<String> get backdropUrl => $composableBuilder(
+    column: $table.backdropUrl,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -16002,6 +16500,10 @@ class $$SeriesTableTableManager
                 Value<double?> rating = const Value.absent(),
                 Value<int?> year = const Value.absent(),
                 Value<String?> plot = const Value.absent(),
+                Value<String?> genre = const Value.absent(),
+                Value<String?> castNames = const Value.absent(),
+                Value<String?> director = const Value.absent(),
+                Value<String?> backdropUrl = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<DateTime?> episodesFetchedAt = const Value.absent(),
               }) => SeriesCompanion(
@@ -16016,6 +16518,10 @@ class $$SeriesTableTableManager
                 rating: rating,
                 year: year,
                 plot: plot,
+                genre: genre,
+                castNames: castNames,
+                director: director,
+                backdropUrl: backdropUrl,
                 updatedAt: updatedAt,
                 episodesFetchedAt: episodesFetchedAt,
               ),
@@ -16032,6 +16538,10 @@ class $$SeriesTableTableManager
                 Value<double?> rating = const Value.absent(),
                 Value<int?> year = const Value.absent(),
                 Value<String?> plot = const Value.absent(),
+                Value<String?> genre = const Value.absent(),
+                Value<String?> castNames = const Value.absent(),
+                Value<String?> director = const Value.absent(),
+                Value<String?> backdropUrl = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<DateTime?> episodesFetchedAt = const Value.absent(),
               }) => SeriesCompanion.insert(
@@ -16046,6 +16556,10 @@ class $$SeriesTableTableManager
                 rating: rating,
                 year: year,
                 plot: plot,
+                genre: genre,
+                castNames: castNames,
+                director: director,
+                backdropUrl: backdropUrl,
                 updatedAt: updatedAt,
                 episodesFetchedAt: episodesFetchedAt,
               ),
@@ -19678,6 +20192,8 @@ typedef $$MovieDetailsTableCreateCompanionBuilder =
       Value<String?> genre,
       Value<int?> runtimeMinutes,
       Value<String?> backdropUrl,
+      Value<int?> videoHeight,
+      Value<int?> audioChannels,
       required DateTime fetchedAt,
     });
 typedef $$MovieDetailsTableUpdateCompanionBuilder =
@@ -19689,6 +20205,8 @@ typedef $$MovieDetailsTableUpdateCompanionBuilder =
       Value<String?> genre,
       Value<int?> runtimeMinutes,
       Value<String?> backdropUrl,
+      Value<int?> videoHeight,
+      Value<int?> audioChannels,
       Value<DateTime> fetchedAt,
     });
 
@@ -19750,6 +20268,16 @@ class $$MovieDetailsTableFilterComposer
 
   ColumnFilters<String> get backdropUrl => $composableBuilder(
     column: $table.backdropUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get videoHeight => $composableBuilder(
+    column: $table.videoHeight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get audioChannels => $composableBuilder(
+    column: $table.audioChannels,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19821,6 +20349,16 @@ class $$MovieDetailsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get videoHeight => $composableBuilder(
+    column: $table.videoHeight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get audioChannels => $composableBuilder(
+    column: $table.audioChannels,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
     column: $table.fetchedAt,
     builder: (column) => ColumnOrderings(column),
@@ -19878,6 +20416,16 @@ class $$MovieDetailsTableAnnotationComposer
 
   GeneratedColumn<String> get backdropUrl => $composableBuilder(
     column: $table.backdropUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get videoHeight => $composableBuilder(
+    column: $table.videoHeight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get audioChannels => $composableBuilder(
+    column: $table.audioChannels,
     builder: (column) => column,
   );
 
@@ -19943,6 +20491,8 @@ class $$MovieDetailsTableTableManager
                 Value<String?> genre = const Value.absent(),
                 Value<int?> runtimeMinutes = const Value.absent(),
                 Value<String?> backdropUrl = const Value.absent(),
+                Value<int?> videoHeight = const Value.absent(),
+                Value<int?> audioChannels = const Value.absent(),
                 Value<DateTime> fetchedAt = const Value.absent(),
               }) => MovieDetailsCompanion(
                 movieId: movieId,
@@ -19952,6 +20502,8 @@ class $$MovieDetailsTableTableManager
                 genre: genre,
                 runtimeMinutes: runtimeMinutes,
                 backdropUrl: backdropUrl,
+                videoHeight: videoHeight,
+                audioChannels: audioChannels,
                 fetchedAt: fetchedAt,
               ),
           createCompanionCallback:
@@ -19963,6 +20515,8 @@ class $$MovieDetailsTableTableManager
                 Value<String?> genre = const Value.absent(),
                 Value<int?> runtimeMinutes = const Value.absent(),
                 Value<String?> backdropUrl = const Value.absent(),
+                Value<int?> videoHeight = const Value.absent(),
+                Value<int?> audioChannels = const Value.absent(),
                 required DateTime fetchedAt,
               }) => MovieDetailsCompanion.insert(
                 movieId: movieId,
@@ -19972,6 +20526,8 @@ class $$MovieDetailsTableTableManager
                 genre: genre,
                 runtimeMinutes: runtimeMinutes,
                 backdropUrl: backdropUrl,
+                videoHeight: videoHeight,
+                audioChannels: audioChannels,
                 fetchedAt: fetchedAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -20857,6 +21413,8 @@ typedef $$WatchHistoryTableCreateCompanionBuilder =
       Value<int> positionMs,
       Value<int?> durationMs,
       Value<bool> completed,
+      Value<String?> seriesKey,
+      Value<bool> dismissed,
       required DateTime updatedAt,
     });
 typedef $$WatchHistoryTableUpdateCompanionBuilder =
@@ -20868,6 +21426,8 @@ typedef $$WatchHistoryTableUpdateCompanionBuilder =
       Value<int> positionMs,
       Value<int?> durationMs,
       Value<bool> completed,
+      Value<String?> seriesKey,
+      Value<bool> dismissed,
       Value<DateTime> updatedAt,
     });
 
@@ -20930,6 +21490,16 @@ class $$WatchHistoryTableFilterComposer
 
   ColumnFilters<bool> get completed => $composableBuilder(
     column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seriesKey => $composableBuilder(
+    column: $table.seriesKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dismissed => $composableBuilder(
+    column: $table.dismissed,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -21001,6 +21571,16 @@ class $$WatchHistoryTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get seriesKey => $composableBuilder(
+    column: $table.seriesKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dismissed => $composableBuilder(
+    column: $table.dismissed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -21060,6 +21640,12 @@ class $$WatchHistoryTableAnnotationComposer
 
   GeneratedColumn<bool> get completed =>
       $composableBuilder(column: $table.completed, builder: (column) => column);
+
+  GeneratedColumn<String> get seriesKey =>
+      $composableBuilder(column: $table.seriesKey, builder: (column) => column);
+
+  GeneratedColumn<bool> get dismissed =>
+      $composableBuilder(column: $table.dismissed, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -21123,6 +21709,8 @@ class $$WatchHistoryTableTableManager
                 Value<int> positionMs = const Value.absent(),
                 Value<int?> durationMs = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
+                Value<String?> seriesKey = const Value.absent(),
+                Value<bool> dismissed = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => WatchHistoryCompanion(
                 id: id,
@@ -21132,6 +21720,8 @@ class $$WatchHistoryTableTableManager
                 positionMs: positionMs,
                 durationMs: durationMs,
                 completed: completed,
+                seriesKey: seriesKey,
+                dismissed: dismissed,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -21143,6 +21733,8 @@ class $$WatchHistoryTableTableManager
                 Value<int> positionMs = const Value.absent(),
                 Value<int?> durationMs = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
+                Value<String?> seriesKey = const Value.absent(),
+                Value<bool> dismissed = const Value.absent(),
                 required DateTime updatedAt,
               }) => WatchHistoryCompanion.insert(
                 id: id,
@@ -21152,6 +21744,8 @@ class $$WatchHistoryTableTableManager
                 positionMs: positionMs,
                 durationMs: durationMs,
                 completed: completed,
+                seriesKey: seriesKey,
+                dismissed: dismissed,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

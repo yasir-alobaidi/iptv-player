@@ -13,6 +13,7 @@ import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
+import 'generated/schema_v6.dart' as v6;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -379,6 +380,90 @@ void main() {
       expect(await database.select(database.epgPrograms).get(), isEmpty);
       expect(await database.select(database.epgImports).get(), isEmpty);
       expect(await database.select(database.epgMatches).get(), isEmpty);
+    });
+  });
+  group('v5 → v6', () {
+    const created = '2026-09-27T08:00:00.000Z';
+    const source = v5.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const movie = v5.MoviesData(
+      id: 1,
+      sourceId: 'src-1',
+      remoteKey: '501',
+      position: 0,
+      name: 'The Quiet Harbor',
+    );
+    const details = v5.MovieDetailsData(
+      movieId: 1,
+      plot: 'A storm strands a ferry.',
+      runtimeMinutes: 118,
+      fetchedAt: created,
+    );
+    const show = v5.SeriesData(
+      id: 1,
+      sourceId: 'src-1',
+      remoteKey: '77',
+      position: 0,
+      name: 'Glass Tide',
+      plot: 'A harbor inspector follows the tide logs.',
+    );
+    const watched = v5.WatchHistoryData(
+      id: 1,
+      itemType: 'movie',
+      sourceId: 'src-1',
+      remoteKey: '501',
+      positionMs: 4360000,
+      durationMs: 7080000,
+      completed: 0,
+      updatedAt: created,
+    );
+
+    test('keeps movies, series, details and history; the new columns start '
+        'empty', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 5,
+        newVersion: 6,
+        createOld: v5.DatabaseAtV5.new,
+        createNew: v6.DatabaseAtV6.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.movies, movie)
+            ..insert(oldDb.movieDetails, details)
+            ..insert(oldDb.series, show)
+            ..insert(oldDb.watchHistory, watched);
+        },
+        validateItems: (newDb) async {
+          final series = (await newDb.select(newDb.series).get()).single;
+          expect(series.plot, 'A harbor inspector follows the tide logs.');
+          expect(series.genre, isNull);
+          expect(series.castNames, isNull);
+          expect(series.director, isNull);
+          expect(series.backdropUrl, isNull);
+
+          final movieDetails =
+              (await newDb.select(newDb.movieDetails).get()).single;
+          expect(movieDetails.runtimeMinutes, 118);
+          expect(movieDetails.videoHeight, isNull);
+          expect(movieDetails.audioChannels, isNull);
+
+          final history = (await newDb.select(newDb.watchHistory).get()).single;
+          expect(history.positionMs, 4360000);
+          expect(history.seriesKey, isNull);
+          expect(history.dismissed, 0);
+        },
+      );
     });
   });
 }

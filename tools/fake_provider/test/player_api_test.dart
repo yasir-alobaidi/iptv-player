@@ -178,6 +178,15 @@ void main() {
     });
   });
 
+  test('every answered call is counted by action', () async {
+    final state = stateOf(fakeProfiles['default']!);
+    await call(state, '?$creds');
+    await call(state, '?$creds&action=get_vod_info&vod_id=100000');
+    await call(state, '?$creds&action=get_vod_info&vod_id=100001');
+    await call(state, '?username=test&password=wrong&action=get_series');
+    expect(state.apiCalls, {'account': 1, 'get_vod_info': 2});
+  });
+
   group('credentials', () {
     test('wrong password is auth 0 with HTTP 200', () async {
       final state = stateOf(fakeProfiles['default']!);

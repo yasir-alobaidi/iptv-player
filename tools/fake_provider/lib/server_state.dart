@@ -41,6 +41,11 @@ class FakeServerState {
   /// `player_api.php` reports it as `user_info.active_cons`.
   int activeStreams = 0;
 
+  /// `player_api.php` calls answered, by action (`account` for the
+  /// sign-in), so a test can prove a client asked once and then cached:
+  /// "a second open makes no request" (Phase 5). `/admin/faults` reports it.
+  final Map<String, int> apiCalls = {};
+
   /// Replaced wholesale by `POST /admin/faults`.
   FakeFaults faults;
 

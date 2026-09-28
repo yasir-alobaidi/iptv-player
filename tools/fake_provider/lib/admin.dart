@@ -46,6 +46,7 @@ Response _faults(FakeServerState state) {
     'quirks': profile.quirks.toJson(),
     'max_connections': state.maxConnections,
     'active_streams': state.activeStreams,
+    'api_calls': state.apiCalls,
     'uptime_s': DateTime.now().difference(state.startedAt).inSeconds,
   });
 }

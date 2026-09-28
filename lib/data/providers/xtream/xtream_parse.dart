@@ -118,6 +118,9 @@ XtreamRows<XtreamSeries> parseSeries(Object? json) =>
             _yearInName(name),
         plot: readText(row['plot']),
         genre: readText(row['genre']),
+        cast: readText(row['cast']),
+        director: readText(row['director']),
+        backdropUrl: readImage(row['backdrop_path']),
         categoryId: readString(row['category_id']),
         lastModified: readUnixTime(row['last_modified']),
       );
@@ -140,8 +143,15 @@ XtreamMovieInfo parseMovieInfo(Object? json) {
     year: readYear(info['releasedate'] ?? info['release_date'] ?? info['year']),
     rating: _rating(info['rating']),
     ext: _extension(data['container_extension']),
+    videoHeight: _positive(readMap(info['video'])['height']),
+    audioChannels: _positive(readMap(info['audio'])['channels']),
   );
 }
+
+int? _positive(Object? value) => switch (readInt(value)) {
+  final v? when v > 0 => v,
+  _ => null,
+};
 
 /// Episodes arrive as a list, or as a map keyed by season number; in a
 /// map the key stands in for a missing `season`.
@@ -191,7 +201,16 @@ XtreamSeriesInfo parseSeriesInfo(Object? json) {
         ? a.season.compareTo(b.season)
         : a.episode.compareTo(b.episode),
   );
-  return XtreamSeriesInfo(episodes: episodes, skipped: skipped);
+  final info = readMap(root['info']);
+  return XtreamSeriesInfo(
+    episodes: episodes,
+    skipped: skipped,
+    plot: readText(info['plot']),
+    cast: readText(info['cast']),
+    director: readText(info['director']),
+    genre: readText(info['genre']),
+    backdropUrl: readImage(info['backdrop_path']),
+  );
 }
 
 /// `get_short_epg`: titles and descriptions are base64 (docs/02). Times

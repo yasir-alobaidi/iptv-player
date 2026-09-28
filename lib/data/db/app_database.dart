@@ -66,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -143,6 +143,20 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.createIndex(schema.epgProgramsStagingRun);
     await m.createIndex(schema.epgMatchesSource);
     await m.create(schema.programsFts);
+  },
+  from5To6: (m, schema) async {
+    // Phase 5: what the details pages and Continue watching need.
+    await m.addColumn(schema.series, schema.series.genre);
+    await m.addColumn(schema.series, schema.series.castNames);
+    await m.addColumn(schema.series, schema.series.director);
+    await m.addColumn(schema.series, schema.series.backdropUrl);
+    await m.addColumn(schema.movieDetails, schema.movieDetails.videoHeight);
+    await m.addColumn(schema.movieDetails, schema.movieDetails.audioChannels);
+    await m.addColumn(schema.watchHistory, schema.watchHistory.seriesKey);
+    await m.addColumn(schema.watchHistory, schema.watchHistory.dismissed);
+    await m.createIndex(schema.moviesAdded);
+    await m.createIndex(schema.moviesName);
+    await m.createIndex(schema.moviesRating);
   },
 );
 

@@ -11,6 +11,8 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
   /// See `ChannelsDao.upsertAll`. The row id must survive: the episodes
   /// hang off it. `episodes_fetched_at` is not rewritten; a changed
   /// `updated_at` is what tells the details page the episodes are stale.
+  /// Genre, cast, director and backdrop are provider-owned, but a list
+  /// that lacks one keeps what the details fetch stored (v6).
   Future<void> upsertAll(List<SeriesCompanion> rows) => batch(
     (b) => b.insertAll(
       series,
@@ -23,6 +25,10 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
           rating: excluded.rating,
           year: excluded.year,
           plot: excluded.plot,
+          genre: coalesce([excluded.genre, old.genre]),
+          castNames: coalesce([excluded.castNames, old.castNames]),
+          director: coalesce([excluded.director, old.director]),
+          backdropUrl: coalesce([excluded.backdropUrl, old.backdropUrl]),
           updatedAt: excluded.updatedAt,
           position: excluded.position,
           seenRun: excluded.seenRun,
@@ -132,17 +138,19 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
           .get();
 
   /// Replaces the series' episodes with a fresh `get_series_info` answer,
-  /// all or nothing. Watch history is keyed by the episode's remote key,
-  /// not its row id, so replacing rows loses nothing.
+  /// all or nothing, and writes the series' own [details] from the same
+  /// answer (only the fields it has). Watch history is keyed by the
+  /// episode's remote key, not its row id, so replacing rows loses nothing.
   Future<void> replaceEpisodes(
     int seriesId,
     List<EpisodesCompanion> rows, {
     required DateTime fetchedAt,
+    SeriesCompanion details = const SeriesCompanion(),
   }) => transaction(() async {
     await (delete(episodes)..where((t) => t.seriesId.equals(seriesId))).go();
     await batch((b) => b.insertAll(episodes, rows));
     await (update(series)..where((t) => t.id.equals(seriesId))).write(
-      SeriesCompanion(episodesFetchedAt: Value(fetchedAt)),
+      details.copyWith(episodesFetchedAt: Value(fetchedAt)),
     );
   });
 }

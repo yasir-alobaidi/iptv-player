@@ -39,7 +39,9 @@ final class ShortEpgGuide implements GuideService {
     if (hit != null) return Future.value(Ok(hit));
     final key = (channel.sourceId, channel.remoteKey);
     return _inFlight[key] ??= _fetch(channel)
-        .whenComplete(() => _inFlight.remove(key));
+        // Nothing handed back: `remove` returns the removed future, which
+        // is this one, and whenComplete would wait for it forever.
+        .whenComplete(() => _inFlight.removeWhere((k, _) => k == key));
   }
 
   /// Never: a page would be a request per channel (decision 2).
