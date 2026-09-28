@@ -14,14 +14,15 @@ const movieColumns =
     'm.id, m.source_id, m.remote_key, m.name, m.poster_url, m.rating, '
     'm.year, m.ext, m.category_id, m.added_at, '
     'f.id IS NOT NULL AS is_favorite, h.position_ms, h.duration_ms, '
-    'h.completed, h.updated_at AS watched_at';
+    'h.completed, h.updated_at AS watched_at, d.runtime_minutes';
 
 const movieJoins =
     'LEFT JOIN categories k ON k.id = m.category_id '
     "LEFT JOIN favorites f ON f.item_type = 'movie' "
     'AND f.source_id = m.source_id AND f.remote_key = m.remote_key '
     "LEFT JOIN watch_history h ON h.item_type = 'movie' "
-    'AND h.source_id = m.source_id AND h.remote_key = m.remote_key';
+    'AND h.source_id = m.source_id AND h.remote_key = m.remote_key '
+    'LEFT JOIN movie_details d ON d.movie_id = m.id';
 
 const movieFrom = 'FROM movies m $movieJoins';
 
@@ -135,6 +136,10 @@ MovieItem movieFromRow(QueryRow row) => MovieItem(
   addedAt: row.readNullable<DateTime>('added_at'),
   isFavorite: row.read<bool>('is_favorite'),
   watch: markFromRow(row, updatedAt: 'watched_at'),
+  runtime: switch (row.readNullable<int>('runtime_minutes')) {
+    final minutes? when minutes > 0 => Duration(minutes: minutes),
+    _ => null,
+  },
 );
 
 SeriesItem seriesFromRow(QueryRow row) => SeriesItem(

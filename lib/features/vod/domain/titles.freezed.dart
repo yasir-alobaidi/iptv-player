@@ -20,7 +20,9 @@ mixin _$MovieItem {
  int get id; String get sourceId; String get remoteKey; String get name; String? get posterUrl;/// Out of 10.
  double? get rating; int? get year;/// The container extension the stream URL needs (`mkv`).
  String? get ext; int? get categoryId; DateTime? get addedAt; bool get isFavorite;/// Where it was left, when it was ever played.
- WatchMark? get watch;
+ WatchMark? get watch;/// From its details, once they were fetched (the focused card shows
+/// it).
+ Duration? get runtime;
 /// Create a copy of MovieItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,20 +34,20 @@ $MovieItemCopyWith<MovieItem> get copyWith => _$MovieItemCopyWithImpl<MovieItem>
 @override
 bool operator ==(Object other) {
   final _this = this as MovieItem;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MovieItem&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.sourceId, _this.sourceId) || other.sourceId == _this.sourceId)&&(identical(other.remoteKey, _this.remoteKey) || other.remoteKey == _this.remoteKey)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.ext, _this.ext) || other.ext == _this.ext)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.addedAt, _this.addedAt) || other.addedAt == _this.addedAt)&&(identical(other.isFavorite, _this.isFavorite) || other.isFavorite == _this.isFavorite)&&(identical(other.watch, _this.watch) || other.watch == _this.watch));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MovieItem&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.sourceId, _this.sourceId) || other.sourceId == _this.sourceId)&&(identical(other.remoteKey, _this.remoteKey) || other.remoteKey == _this.remoteKey)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.posterUrl, _this.posterUrl) || other.posterUrl == _this.posterUrl)&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.ext, _this.ext) || other.ext == _this.ext)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.addedAt, _this.addedAt) || other.addedAt == _this.addedAt)&&(identical(other.isFavorite, _this.isFavorite) || other.isFavorite == _this.isFavorite)&&(identical(other.watch, _this.watch) || other.watch == _this.watch)&&(identical(other.runtime, _this.runtime) || other.runtime == _this.runtime));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MovieItem;
-  return Object.hash(runtimeType,_this.id,_this.sourceId,_this.remoteKey,_this.name,_this.posterUrl,_this.rating,_this.year,_this.ext,_this.categoryId,_this.addedAt,_this.isFavorite,_this.watch);
+  return Object.hash(runtimeType,_this.id,_this.sourceId,_this.remoteKey,_this.name,_this.posterUrl,_this.rating,_this.year,_this.ext,_this.categoryId,_this.addedAt,_this.isFavorite,_this.watch,_this.runtime);
 }
 
 @override
 String toString() {
   final _this = this as MovieItem;
-  return 'MovieItem(id: ${_this.id}, sourceId: ${_this.sourceId}, remoteKey: ${_this.remoteKey}, name: ${_this.name}, posterUrl: ${_this.posterUrl}, rating: ${_this.rating}, year: ${_this.year}, ext: ${_this.ext}, categoryId: ${_this.categoryId}, addedAt: ${_this.addedAt}, isFavorite: ${_this.isFavorite}, watch: ${_this.watch})';
+  return 'MovieItem(id: ${_this.id}, sourceId: ${_this.sourceId}, remoteKey: ${_this.remoteKey}, name: ${_this.name}, posterUrl: ${_this.posterUrl}, rating: ${_this.rating}, year: ${_this.year}, ext: ${_this.ext}, categoryId: ${_this.categoryId}, addedAt: ${_this.addedAt}, isFavorite: ${_this.isFavorite}, watch: ${_this.watch}, runtime: ${_this.runtime})';
 }
 
 
@@ -56,7 +58,7 @@ abstract mixin class $MovieItemCopyWith<$Res>  {
   factory $MovieItemCopyWith(MovieItem value, $Res Function(MovieItem) _then) = _$MovieItemCopyWithImpl;
 @useResult
 $Res call({
- int id, String sourceId, String remoteKey, String name, String? posterUrl, double? rating, int? year, String? ext, int? categoryId, DateTime? addedAt, bool isFavorite, WatchMark? watch
+ int id, String sourceId, String remoteKey, String name, String? posterUrl, double? rating, int? year, String? ext, int? categoryId, DateTime? addedAt, bool isFavorite, WatchMark? watch, Duration? runtime
 });
 
 
@@ -73,7 +75,7 @@ class _$MovieItemCopyWithImpl<$Res>
 
 /// Create a copy of MovieItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? sourceId = null,Object? remoteKey = null,Object? name = null,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? ext = freezed,Object? categoryId = freezed,Object? addedAt = freezed,Object? isFavorite = null,Object? watch = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? sourceId = null,Object? remoteKey = null,Object? name = null,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? ext = freezed,Object? categoryId = freezed,Object? addedAt = freezed,Object? isFavorite = null,Object? watch = freezed,Object? runtime = freezed,}) {
   return _then(MovieItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,sourceId: null == sourceId ? _self.sourceId : sourceId // ignore: cast_nullable_to_non_nullable
@@ -87,7 +89,8 @@ as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // 
 as int?,addedAt: freezed == addedAt ? _self.addedAt : addedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isFavorite: null == isFavorite ? _self.isFavorite : isFavorite // ignore: cast_nullable_to_non_nullable
 as bool,watch: freezed == watch ? _self.watch : watch // ignore: cast_nullable_to_non_nullable
-as WatchMark?,
+as WatchMark?,runtime: freezed == runtime ? _self.runtime : runtime // ignore: cast_nullable_to_non_nullable
+as Duration?,
   ));
 }
 
@@ -172,10 +175,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch,  Duration? runtime)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MovieItem() when $default != null:
-return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch);case _:
+return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch,_that.runtime);case _:
   return orElse();
 
 }
@@ -193,10 +196,10 @@ return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterU
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch,  Duration? runtime)  $default,) {final _that = this;
 switch (_that) {
 case _MovieItem():
-return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch);case _:
+return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch,_that.runtime);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -213,10 +216,10 @@ return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterU
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String sourceId,  String remoteKey,  String name,  String? posterUrl,  double? rating,  int? year,  String? ext,  int? categoryId,  DateTime? addedAt,  bool isFavorite,  WatchMark? watch,  Duration? runtime)?  $default,) {final _that = this;
 switch (_that) {
 case _MovieItem() when $default != null:
-return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch);case _:
+return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterUrl,_that.rating,_that.year,_that.ext,_that.categoryId,_that.addedAt,_that.isFavorite,_that.watch,_that.runtime);case _:
   return null;
 
 }
@@ -228,7 +231,7 @@ return $default(_that.id,_that.sourceId,_that.remoteKey,_that.name,_that.posterU
 
 
 class _MovieItem extends MovieItem {
-  const _MovieItem({required this.id, required this.sourceId, required this.remoteKey, required this.name, this.posterUrl, this.rating, this.year, this.ext, this.categoryId, this.addedAt, this.isFavorite = false, this.watch}): super._();
+  const _MovieItem({required this.id, required this.sourceId, required this.remoteKey, required this.name, this.posterUrl, this.rating, this.year, this.ext, this.categoryId, this.addedAt, this.isFavorite = false, this.watch, this.runtime}): super._();
   
 
 /// The database row id: stable within a sync, not across them. User
@@ -248,6 +251,9 @@ class _MovieItem extends MovieItem {
 @override@JsonKey() final  bool isFavorite;
 /// Where it was left, when it was ever played.
 @override final  WatchMark? watch;
+/// From its details, once they were fetched (the focused card shows
+/// it).
+@override final  Duration? runtime;
 
 /// Create a copy of MovieItem
 /// with the given fields replaced by the non-null parameter values.
@@ -259,18 +265,18 @@ _$MovieItemCopyWith<_MovieItem> get copyWith => __$MovieItemCopyWithImpl<_MovieI
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MovieItem&&(identical(other.id, id) || other.id == id)&&(identical(other.sourceId, sourceId) || other.sourceId == sourceId)&&(identical(other.remoteKey, remoteKey) || other.remoteKey == remoteKey)&&(identical(other.name, name) || other.name == name)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.year, year) || other.year == year)&&(identical(other.ext, ext) || other.ext == ext)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.watch, watch) || other.watch == watch));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MovieItem&&(identical(other.id, id) || other.id == id)&&(identical(other.sourceId, sourceId) || other.sourceId == sourceId)&&(identical(other.remoteKey, remoteKey) || other.remoteKey == remoteKey)&&(identical(other.name, name) || other.name == name)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.year, year) || other.year == year)&&(identical(other.ext, ext) || other.ext == ext)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.watch, watch) || other.watch == watch)&&(identical(other.runtime, runtime) || other.runtime == runtime));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,sourceId,remoteKey,name,posterUrl,rating,year,ext,categoryId,addedAt,isFavorite,watch);
+    return Object.hash(runtimeType,id,sourceId,remoteKey,name,posterUrl,rating,year,ext,categoryId,addedAt,isFavorite,watch,runtime);
 }
 
 @override
 String toString() {
-    return 'MovieItem(id: $id, sourceId: $sourceId, remoteKey: $remoteKey, name: $name, posterUrl: $posterUrl, rating: $rating, year: $year, ext: $ext, categoryId: $categoryId, addedAt: $addedAt, isFavorite: $isFavorite, watch: $watch)';
+    return 'MovieItem(id: $id, sourceId: $sourceId, remoteKey: $remoteKey, name: $name, posterUrl: $posterUrl, rating: $rating, year: $year, ext: $ext, categoryId: $categoryId, addedAt: $addedAt, isFavorite: $isFavorite, watch: $watch, runtime: $runtime)';
 }
 
 
@@ -281,7 +287,7 @@ abstract mixin class _$MovieItemCopyWith<$Res> implements $MovieItemCopyWith<$Re
   factory _$MovieItemCopyWith(_MovieItem value, $Res Function(_MovieItem) _then) = __$MovieItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String sourceId, String remoteKey, String name, String? posterUrl, double? rating, int? year, String? ext, int? categoryId, DateTime? addedAt, bool isFavorite, WatchMark? watch
+ int id, String sourceId, String remoteKey, String name, String? posterUrl, double? rating, int? year, String? ext, int? categoryId, DateTime? addedAt, bool isFavorite, WatchMark? watch, Duration? runtime
 });
 
 
@@ -298,7 +304,7 @@ class __$MovieItemCopyWithImpl<$Res>
 
 /// Create a copy of MovieItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? sourceId = null,Object? remoteKey = null,Object? name = null,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? ext = freezed,Object? categoryId = freezed,Object? addedAt = freezed,Object? isFavorite = null,Object? watch = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? sourceId = null,Object? remoteKey = null,Object? name = null,Object? posterUrl = freezed,Object? rating = freezed,Object? year = freezed,Object? ext = freezed,Object? categoryId = freezed,Object? addedAt = freezed,Object? isFavorite = null,Object? watch = freezed,Object? runtime = freezed,}) {
   return _then(_MovieItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,sourceId: null == sourceId ? _self.sourceId : sourceId // ignore: cast_nullable_to_non_nullable
@@ -312,7 +318,8 @@ as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // 
 as int?,addedAt: freezed == addedAt ? _self.addedAt : addedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isFavorite: null == isFavorite ? _self.isFavorite : isFavorite // ignore: cast_nullable_to_non_nullable
 as bool,watch: freezed == watch ? _self.watch : watch // ignore: cast_nullable_to_non_nullable
-as WatchMark?,
+as WatchMark?,runtime: freezed == runtime ? _self.runtime : runtime // ignore: cast_nullable_to_non_nullable
+as Duration?,
   ));
 }
 

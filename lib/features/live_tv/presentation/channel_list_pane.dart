@@ -174,14 +174,16 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     });
   }
 
-  /// Something changed (a favorite, a rename, a sync): reload what shows.
+  /// Something changed (a favorite, a rename, a sync): read the pages
+  /// again in place. The rows on screen stay until their new ones come, so
+  /// the focused row (and the keyboard's focus in it) is never torn down.
   void _refresh() {
     if (!mounted) return;
-    setState(() {
-      _pages.clear();
-      _loading.clear();
-      _warmed.clear();
-    });
+    _loading.clear();
+    _warmed.clear();
+    for (final page in _pages.keys.toList()) {
+      unawaited(_load(page));
+    }
   }
 
   @override
@@ -195,7 +197,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     if (view == null) return const SizedBox.shrink();
     final query = view.query;
     if (query != _query) _reset(query);
-    ref.listen(channelCountProvider(query), (_, _) => _refresh());
+    ref.listen(channelRevisionProvider(query), (_, _) => _refresh());
     final count = ref.watch(channelCountProvider(query));
     ref
       ..watch(guideRevisionProvider)
@@ -435,10 +437,28 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
         'Channels';
   }
 
+  /// Reads the channel again first: the one selected (or drawn) may be a
+  /// copy from before the last toggle.
   Future<void> _toggleFavorite(ChannelItem channel) async {
-    await ref
-        .read(channelRepositoryProvider)
-        .setFavorite(channel, on: !channel.isFavorite);
+    final repository = ref.read(channelRepositoryProvider);
+    final fresh =
+        (await repository.byRemoteKey(
+          channel.sourceId,
+          channel.remoteKey,
+        )).valueOrNull ??
+        channel;
+    await repository.setFavorite(fresh, on: !fresh.isFavorite);
+    if (!mounted) return;
+    final controller = ref.read(liveTvControllerProvider.notifier);
+    if (ref.read(liveTvControllerProvider)?.selected?.id == fresh.id) {
+      controller.select(
+        (await repository.byRemoteKey(
+              fresh.sourceId,
+              fresh.remoteKey,
+            )).valueOrNull ??
+            fresh,
+      );
+    }
   }
 
   Future<void> _menu(BuildContext anchor, ChannelItem channel) {

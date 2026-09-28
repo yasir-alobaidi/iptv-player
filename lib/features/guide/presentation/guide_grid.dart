@@ -235,13 +235,14 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     if (_vertical.hasClients) _vertical.jumpTo(0);
   }
 
+  /// The channels changed (a favorite, a rename, a sync): read the pages
+  /// again in place, the rows on screen staying until their new ones come.
   void _refreshPages() {
     if (!mounted) return;
-    setState(() {
-      _pages.clear();
-      _loading.clear();
-    });
-    _scheduleRequest();
+    _loading.clear();
+    for (final page in _pages.keys.toList()) {
+      unawaited(_loadPage(page));
+    }
   }
 
   // Channels.
@@ -609,7 +610,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     final query = widget.query;
     if (query != _query) _resetQuery(query);
     ref
-      ..listen(channelCountProvider(query), (_, _) => _refreshPages())
+      ..listen(channelRevisionProvider(query), (_, _) => _refreshPages())
       ..listen(guideChangesProvider, (_, _) => _onGuideChanged());
     final count = ref.watch(channelCountProvider(query));
     _total = count.value;

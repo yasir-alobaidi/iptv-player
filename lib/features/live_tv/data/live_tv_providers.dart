@@ -23,6 +23,19 @@ ChannelRepository channelRepository(Ref ref) =>
 Stream<int> channelCount(Ref ref, ChannelQuery query) =>
     ref.watch(channelRepositoryProvider).watchCount(query);
 
+/// Moves on every change to what a channel list reads — a favorite or a
+/// rename leaves the count as it was, and Riverpod passes no equal value
+/// on, so a list that refreshed on the count never showed the star (a
+/// Phase 3 bug found in Phase 5).
+@riverpod
+Stream<int> channelRevision(Ref ref, ChannelQuery query) {
+  var revision = 0;
+  return ref
+      .watch(channelRepositoryProvider)
+      .watchCount(query)
+      .map((_) => revision++);
+}
+
 /// The provider's short EPG (ADR-010 decision 2), behind the imported
 /// guide for the channels it has nothing for.
 @Riverpod(keepAlive: true)

@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:iptv_player/app/destinations.dart';
-import 'package:iptv_player/app/placeholder_screen.dart';
-import 'package:iptv_player/design/app_icon.dart';
+import 'package:iptv_player/core/catalogue_kind.dart';
+import 'package:iptv_player/features/vod/presentation/catalogue_screen.dart';
 
-/// Movies: the poster grid and details (docs/05).
+/// Movies: the poster grid (docs/05 §6, canvas `Movies`).
 class MoviesScreen extends StatelessWidget {
   const new({super.key});
 
   @override
-  Widget build(BuildContext context) => PlaceholderScreen(
-    title: 'Movies',
-    phase: 5,
-    icon: AppIcons.movies,
-    summary:
-        'A poster grid of the movies your provider offers, with '
-        'details and playback.',
-    actionLabel: 'Add a source',
-    onAction: () => context.go(AppDestination.settings.path),
-  );
+  Widget build(BuildContext context) =>
+      const CatalogueScreen(kind: CatalogueKind.movie);
 }

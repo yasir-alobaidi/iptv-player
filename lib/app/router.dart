@@ -22,6 +22,8 @@ import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/series/presentation/series_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
+import 'package:iptv_player/features/vod/presentation/title_details_screen.dart';
+import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'router.g.dart';
@@ -79,6 +81,8 @@ GoRouter buildRouter({String initialLocation = '/'}) {
         builder: (context, state, navigationShell) => DesktopShell(
           navigationShell: navigationShell,
           onOpenSearch: () => openSearch(context),
+          // The canvas draws no top bar on a title's page.
+          immersive: isTitleDetailsPath(state.uri.path),
         ),
         branches: [
           for (final destination in AppDestination.values)
@@ -87,6 +91,7 @@ GoRouter buildRouter({String initialLocation = '/'}) {
                 GoRoute(
                   path: destination.path,
                   builder: (context, state) => _screenFor(destination),
+                  routes: [?_detailsRouteFor(destination)],
                 ),
               ],
             ),
@@ -153,6 +158,25 @@ GoRouter buildRouter({String initialLocation = '/'}) {
     ],
   );
 }
+
+/// A title's page, inside its branch (Phase 5 step 5).
+GoRoute? _detailsRouteFor(AppDestination destination) => switch (destination) {
+  AppDestination.movies => GoRoute(
+    path: ':sourceId/:remoteKey',
+    builder: (context, state) => MovieDetailsScreen(
+      sourceId: state.pathParameters['sourceId']!,
+      remoteKey: state.pathParameters['remoteKey']!,
+    ),
+  ),
+  AppDestination.series => GoRoute(
+    path: ':sourceId/:remoteKey',
+    builder: (context, state) => SeriesDetailsScreen(
+      sourceId: state.pathParameters['sourceId']!,
+      remoteKey: state.pathParameters['remoteKey']!,
+    ),
+  ),
+  _ => null,
+};
 
 Widget _screenFor(AppDestination destination) => switch (destination) {
   AppDestination.home => const HomeScreen(),

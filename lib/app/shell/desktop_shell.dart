@@ -20,11 +20,20 @@ import 'package:iptv_player/design/tokens.dart';
 /// It owns no domain state. Everything it shows comes from the providers
 /// in `shell_state.dart`, which later phases fill in.
 class DesktopShell extends ConsumerStatefulWidget {
-  const new({required this.navigationShell, this.onOpenSearch, super.key});
+  const new({
+    required this.navigationShell,
+    this.onOpenSearch,
+    this.immersive = false,
+    super.key,
+  });
 
   /// The router's branch container; switching branches keeps each
   /// destination's state.
   final StatefulNavigationShell navigationShell;
+
+  /// A page that draws edge to edge under no top bar: a title's details
+  /// (the canvas draws none there).
+  final bool immersive;
 
   /// Ctrl+K and `/` go through the global shortcuts; the top bar's search
   /// field calls this.
@@ -190,18 +199,21 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                     Expanded(
                       child: Column(
                         children: [
-                          ShellTopBar(
-                            title: _current.label,
-                            source: source,
-                            sourceChoices: sourceChoices,
-                            syncStatus: syncStatus,
-                            downloads: downloads,
-                            onOpenSearch: widget.onOpenSearch ?? () {},
-                            onOpenSource: () => _go(AppDestination.settings),
-                            onOpenDownloads: () => _go(AppDestination.library),
-                            paneController: _topBarPane,
-                          ),
-                          if (notice != null) _NoticeBar(notice: notice),
+                          if (!widget.immersive)
+                            ShellTopBar(
+                              title: _current.label,
+                              source: source,
+                              sourceChoices: sourceChoices,
+                              syncStatus: syncStatus,
+                              downloads: downloads,
+                              onOpenSearch: widget.onOpenSearch ?? () {},
+                              onOpenSource: () => _go(AppDestination.settings),
+                              onOpenDownloads: () =>
+                                  _go(AppDestination.library),
+                              paneController: _topBarPane,
+                            ),
+                          if (notice != null && !widget.immersive)
+                            _NoticeBar(notice: notice),
                           Expanded(
                             child: _ContentPane(
                               controller: _contentPane,

@@ -126,8 +126,7 @@ final class DbWatchProgress implements WatchProgress {
   Future<List<ContinueItem>> _movies(int limit) async {
     final rows = await _db
         .customSelect(
-          'SELECT $movieColumns, d.backdrop_url AS backdrop '
-          '$movieFrom LEFT JOIN movie_details d ON d.movie_id = m.id '
+          'SELECT $movieColumns, d.backdrop_url AS backdrop $movieFrom '
           "WHERE h.item_type = 'movie' AND h.completed = 0 "
           'AND h.dismissed = 0 AND h.position_ms >= ? '
           'ORDER BY h.updated_at DESC LIMIT ?',

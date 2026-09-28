@@ -103,6 +103,14 @@ String formatTimeRange(DateTime start, DateTime end) {
   return sameHalf ? '${a.substring(0, a.length - 3)} – $b' : '$a – $b';
 }
 
+/// A film's or an episode's length: `52 min`, `1 h 58 min`, `2 h`.
+String formatRuntime(Duration length) {
+  final minutes = length.inMinutes < 1 ? 1 : length.inMinutes;
+  if (minutes < 60) return '$minutes min';
+  final rest = minutes % 60;
+  return rest == 0 ? '${minutes ~/ 60} h' : '${minutes ~/ 60} h $rest min';
+}
+
 /// `38 min left`, `1 h 24 min left`.
 String formatTimeLeft(Duration left) {
   final minutes = left.inMinutes < 1 ? 1 : left.inMinutes;

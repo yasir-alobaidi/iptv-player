@@ -32,6 +32,10 @@ abstract class MovieItem with _$MovieItem {
 
     /// Where it was left, when it was ever played.
     WatchMark? watch,
+
+    /// From its details, once they were fetched (the focused card shows
+    /// it).
+    Duration? runtime,
   }) = _MovieItem;
 
   const new _();

@@ -134,6 +134,8 @@ As built (Phase 4 step 6; ADR-011): the canvas's measures, all in `AppGuideToken
 
 ### 6. Movies
 Category chips + sort (Recently added / Name / Rating) + in-grid filter. PosterCard grid (min width 160 px), image fade-in, skeleton grid.
+As built (Phase 5 step 4; ADR-012): the canvas's header ("All movies · 27 movies", the 220 px filter, Recently added / Name / Rating remembered per kind), the chips in one sideways-scrolling row (All, Favorites, the visible categories in the user's order, Uncategorized) with More ▾ pinned at the right, and the grid at 160 px and more per card (6 across at 1280, 7 at 1440, 10 at 1920): NEW for a week, a ★ mark top-right on a favorite, the progress line on a movie in progress, and the runtime added to the focused card's line once known. The grid is one Tab stop: arrows by card, PageUp/PageDown by a screen, Home/End, F favorite, Enter opens the title, Esc comes back to the same card. States: skeleton cards, getting your movies during a sync, a source with none, an empty category, no favorites, no match (Clear filter), an error with Retry.
+
 **Movie details:** blurred backdrop (or poster-derived gradient), poster, title, year · runtime · rating · genres, plot, director/cast; Play or Resume (with progress), Start over, Download, Favorite, Cast. Once downloaded, Play uses the local file and the poster shows the Downloaded badge.
 
 ### 7. Series

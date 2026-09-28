@@ -89,6 +89,7 @@ Future<int> addMovie(
   double? rating,
   DateTime? added,
   String ext = 'mkv',
+  int? year,
 }) => db
     .into(db.movies)
     .insert(
@@ -100,6 +101,7 @@ Future<int> addMovie(
         rating: Value(rating),
         addedAt: Value(added),
         ext: Value(ext),
+        year: Value(year),
       ),
     );
 

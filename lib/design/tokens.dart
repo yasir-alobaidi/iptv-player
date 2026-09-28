@@ -202,6 +202,14 @@ class AppTypography {
   /// 40/48 — details page titles.
   TextStyle get display => _font(AppFonts.sans, 40, 48, 700);
 
+  /// 52/58 — a movie's title on its page (canvas `Movie details`).
+  TextStyle get movieTitle =>
+      _font(AppFonts.sans, 52, 58, 800, letterSpacing: -0.8);
+
+  /// 44/50 — a series' title on its page (canvas `Series details`).
+  TextStyle get seriesTitle =>
+      _font(AppFonts.sans, 44, 50, 800, letterSpacing: -0.6);
+
   /// 34/42 — onboarding step titles (canvas).
   TextStyle get hero => _font(AppFonts.sans, 34, 42, 800, letterSpacing: -0.5);
 
@@ -320,6 +328,47 @@ class AppFocusTokens {
   double get tileScale => 1.03;
 }
 
+/// The details pages' measures (canvas `Movie details`, `Series
+/// details`); sizes only they use.
+@immutable
+class AppDetailsTokens {
+  const new();
+
+  /// A movie's poster: 240 × 360.
+  Size get moviePoster => const Size(240, 360);
+
+  /// A series' poster: 200 × 300.
+  Size get seriesPoster => const Size(200, 300);
+
+  /// Around a movie's page: its poster and text sit 56 in from the edges.
+  double get moviePadding => 56;
+
+  /// Between a movie's poster and its text.
+  double get posterGap => 40;
+
+  /// The text column stops here, however wide the window.
+  double get textMaxWidth => 700;
+
+  /// A series' left column: poster, title, plot, actions.
+  double get seriesColumnWidth => 560;
+
+  /// A series' page: 40 around, 24 at the top.
+  EdgeInsets get seriesPadding => const EdgeInsets.fromLTRB(40, 24, 40, 40);
+
+  /// A movie's actions are 52 tall; a series' 50.
+  double get movieActionHeight => 52;
+  double get seriesActionHeight => 50;
+
+  /// The "‹ Movies" chip back to the grid.
+  double get backChipHeight => 36;
+
+  /// The line under a movie's actions, "46 min left".
+  double get progressWidth => 420;
+
+  /// An episode's still: 176 × 99.
+  Size get episodeStill => const Size(176, 99);
+}
+
 /// The Guide grid's measures (canvas `Guide`, docs/05 §5). Its colors
 /// are [AppColors] tokens; these are the sizes only the grid uses.
 @immutable
@@ -411,6 +460,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.focus = const AppFocusTokens(),
     this.elevation = const AppElevation(),
     this.guide = const AppGuideTokens(),
+    this.details = const AppDetailsTokens(),
   });
 
   /// Defaults: blue accent, comfortable rows, full motion.
@@ -433,6 +483,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppFocusTokens focus;
   final AppElevation elevation;
   final AppGuideTokens guide;
+  final AppDetailsTokens details;
 
   @override
   AppTokens copyWith({
@@ -445,6 +496,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppFocusTokens? focus,
     AppElevation? elevation,
     AppGuideTokens? guide,
+    AppDetailsTokens? details,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -455,6 +507,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     focus: focus ?? this.focus,
     elevation: elevation ?? this.elevation,
     guide: guide ?? this.guide,
+    details: details ?? this.details,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

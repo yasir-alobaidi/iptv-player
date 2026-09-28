@@ -134,6 +134,99 @@ final class ChannelCountFamily extends $Family
   String toString() => r'channelCountProvider';
 }
 
+/// Moves on every change to what a channel list reads — a favorite or a
+/// rename leaves the count as it was, and Riverpod passes no equal value
+/// on, so a list that refreshed on the count never showed the star (a
+/// Phase 3 bug found in Phase 5).
+
+@ProviderFor(channelRevision)
+final channelRevisionProvider = ChannelRevisionFamily._();
+
+/// Moves on every change to what a channel list reads — a favorite or a
+/// rename leaves the count as it was, and Riverpod passes no equal value
+/// on, so a list that refreshed on the count never showed the star (a
+/// Phase 3 bug found in Phase 5).
+
+final class ChannelRevisionProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, Stream<int>>
+    with $FutureModifier<int>, $StreamProvider<int> {
+  /// Moves on every change to what a channel list reads — a favorite or a
+  /// rename leaves the count as it was, and Riverpod passes no equal value
+  /// on, so a list that refreshed on the count never showed the star (a
+  /// Phase 3 bug found in Phase 5).
+  ChannelRevisionProvider._({
+    required ChannelRevisionFamily super.from,
+    required ChannelQuery super.argument,
+  }) : super(
+         retry: null,
+         name: r'channelRevisionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$channelRevisionHash();
+
+  @override
+  String toString() {
+    return r'channelRevisionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<int> create(Ref ref) {
+    final argument = this.argument as ChannelQuery;
+    return channelRevision(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ChannelRevisionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$channelRevisionHash() => r'1e7a6b50733487d1a8b34b1e215613a346d388ac';
+
+/// Moves on every change to what a channel list reads — a favorite or a
+/// rename leaves the count as it was, and Riverpod passes no equal value
+/// on, so a list that refreshed on the count never showed the star (a
+/// Phase 3 bug found in Phase 5).
+
+final class ChannelRevisionFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<int>, ChannelQuery> {
+  ChannelRevisionFamily._()
+    : super(
+        retry: null,
+        name: r'channelRevisionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Moves on every change to what a channel list reads — a favorite or a
+  /// rename leaves the count as it was, and Riverpod passes no equal value
+  /// on, so a list that refreshed on the count never showed the star (a
+  /// Phase 3 bug found in Phase 5).
+
+  ChannelRevisionProvider call(ChannelQuery query) =>
+      ChannelRevisionProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'channelRevisionProvider';
+}
+
 /// The provider's short EPG (ADR-010 decision 2), behind the imported
 /// guide for the channels it has nothing for.
 

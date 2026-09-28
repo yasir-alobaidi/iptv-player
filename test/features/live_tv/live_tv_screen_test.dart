@@ -117,6 +117,25 @@ void main() {
     await _finish(tester);
   });
 
+  testWidgets('F shows the star on the row at once, and F again takes it '
+      'off', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Arena Sports 1').first);
+    await _settle(tester);
+    bool starred() => tester
+        .widget<ChannelRow>(find.widgetWithText(ChannelRow, 'Arena Sports 1'))
+        .isFavorite;
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await _settle(tester);
+    expect(starred(), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await _settle(tester);
+    expect(starred(), isFalse);
+    await _finish(tester);
+  });
+
   testWidgets('an empty category offers to show hidden channels', (
     tester,
   ) async {

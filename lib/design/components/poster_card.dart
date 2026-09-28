@@ -12,9 +12,11 @@ class PosterCard extends StatelessWidget {
     required this.title,
     this.image,
     this.meta,
+    this.focusedMeta,
     this.rating,
     this.progress,
     this.badge,
+    this.cornerBadge,
     this.onPressed,
     this.onMenu,
     this.width = 160,
@@ -29,14 +31,21 @@ class PosterCard extends StatelessWidget {
   /// Year, runtime — whatever belongs under the title.
   final String? meta;
 
+  /// What the line says while the card has the focus: the canvas adds the
+  /// runtime there ("2024 · 1 h 46 min").
+  final String? focusedMeta;
+
   /// Shown next to a star, e.g. 7.1.
   final double? rating;
 
   /// Watch progress, 0..1; null hides the bar.
   final double? progress;
 
-  /// NEW, Downloaded, and so on, pinned to the top-left.
+  /// NEW, and so on, pinned to the top-left.
   final Widget? badge;
+
+  /// Downloaded, a favorite's star, pinned to the top-right.
+  final Widget? cornerBadge;
   final VoidCallback? onPressed;
   final VoidCallback? onMenu;
   final double width;
@@ -80,6 +89,12 @@ class PosterCard extends StatelessWidget {
                         left: tokens.spacing.s8,
                         child: badge!,
                       ),
+                    if (cornerBadge != null)
+                      Positioned(
+                        top: tokens.spacing.s8,
+                        right: tokens.spacing.s8,
+                        child: cornerBadge!,
+                      ),
                     if (progress != null)
                       Positioned(
                         left: 0,
@@ -104,10 +119,10 @@ class PosterCard extends StatelessWidget {
               SizedBox(height: tokens.spacing.s4 - 2),
               Row(
                 children: [
-                  if (meta != null)
+                  if (_metaFor(states) case final line?)
                     Flexible(
                       child: Text(
-                        rating == null ? meta! : '${meta!} ·',
+                        rating == null ? line : '$line ·',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: tokens.text.labelSmall
@@ -138,6 +153,24 @@ class PosterCard extends StatelessWidget {
       ),
     );
   }
+
+  String? _metaFor(SurfaceStates states) =>
+      states.focused ? focusedMeta ?? meta : meta;
+}
+
+/// A poster's picture over its stand-in, for places that draw a poster
+/// without a card around it (a details page).
+class PosterArtwork extends StatelessWidget {
+  const new({required this.title, this.image, super.key});
+
+  final String title;
+  final ImageProvider? image;
+
+  @override
+  Widget build(BuildContext context) => ArtworkImage(
+    image: image,
+    fallback: _ArtworkFallback(title: title),
+  );
 }
 
 /// Artwork stand-in: a gradient derived from the title, with the title
