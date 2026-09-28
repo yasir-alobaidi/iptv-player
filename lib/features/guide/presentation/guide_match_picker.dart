@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -338,7 +339,7 @@ class _CandidateRow extends StatelessWidget {
                   ChannelLogo(
                     name: label,
                     size: 28,
-                    image: _logo(channel.iconUrl),
+                    image: artworkFor(context, channel.iconUrl, width: 28),
                   ),
                   SizedBox(width: tokens.spacing.s12),
                   Expanded(
@@ -381,13 +382,5 @@ class _CandidateRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static ImageProvider? _logo(String? url) {
-    final uri = url == null ? null : Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
-      return null;
-    }
-    return NetworkImage(url!);
   }
 }

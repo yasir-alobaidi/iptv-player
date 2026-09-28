@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -542,7 +543,7 @@ class _RowState extends ConsumerState<_Row> {
           builder: (context) => ChannelRow(
             name: channel.name,
             number: channel.number,
-            image: _logo(channel.logoUrl),
+            image: artworkFor(context, channel.logoUrl, width: 40),
             nowTitle: programme?.title,
             upNext: programme == null && next != null
                 ? '${formatClock(next.start)} · ${next.title}'
@@ -570,14 +571,6 @@ class _RowState extends ConsumerState<_Row> {
         ),
       ),
     );
-  }
-
-  static ImageProvider? _logo(String? url) {
-    final uri = url == null ? null : Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
-      return null;
-    }
-    return NetworkImage(url!);
   }
 }
 

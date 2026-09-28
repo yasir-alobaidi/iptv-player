@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/text/format.dart';
@@ -12,12 +13,6 @@ import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
-
-ImageProvider? logoImage(String? url) {
-  final uri = url == null ? null : Uri.tryParse(url);
-  if (uri == null || !uri.scheme.startsWith('http')) return null;
-  return NetworkImage(url!);
-}
 
 /// The top of the OSD (canvas `Full-screen player`): logo, number, name,
 /// LIVE, the resolution, and the clock.
@@ -52,7 +47,7 @@ class OsdTop extends ConsumerWidget {
             ChannelLogo(
               name: channel.name,
               size: 48,
-              image: logoImage(channel.logoUrl),
+              image: artworkFor(context, channel.logoUrl, width: 48),
             ),
             SizedBox(width: tokens.spacing.s16),
             Expanded(
@@ -222,7 +217,10 @@ class ChannelBanner extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ChannelLogo(name: channel.name, image: logoImage(channel.logoUrl)),
+          ChannelLogo(
+            name: channel.name,
+            image: artworkFor(context, channel.logoUrl, width: 40),
+          ),
           SizedBox(width: tokens.spacing.s12),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -388,7 +386,7 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
                     child: ChannelRow(
                       name: channel.name,
                       number: channel.number,
-                      image: logoImage(channel.logoUrl),
+                      image: artworkFor(context, channel.logoUrl, width: 40),
                       guideKnown: false,
                       selected: channel.id == widget.current?.id,
                       focusNode: i == _currentIndex ? _currentRow : null,

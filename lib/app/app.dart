@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/core/images/artwork_providers.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/design/theme.dart';
 
 /// Root widget: the theme, the router, and the shortcuts that work
@@ -14,13 +16,16 @@ class IptvPlayerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp.router(
-      title: 'IPTV Player',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      routerConfig: ref.watch(routerProvider),
-      builder: (context, child) =>
-          AppGlobalShortcuts(child: child ?? const SizedBox.shrink()),
+    return ArtworkScope(
+      images: ref.watch(artworkImagesProvider),
+      child: MaterialApp.router(
+        title: 'IPTV Player',
+        debugShowCheckedModeBanner: false,
+        theme: buildAppTheme(),
+        routerConfig: ref.watch(routerProvider),
+        builder: (context, child) =>
+            AppGlobalShortcuts(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

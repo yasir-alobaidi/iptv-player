@@ -86,6 +86,27 @@ void main() {
       await reporter.dispose();
     });
 
+    test('a silent error — a picture that failed with nobody waiting — is '
+        'logged, and never a toast', () async {
+      final reporter = ErrorReporter(log);
+      final published = <AppFailure>[];
+      final subscription = reporter.nonFatalErrors.listen(published.add);
+
+      reporter.handleFlutterError(
+        const FlutterErrorDetails(
+          exception: FormatException('Invalid image data'),
+          library: 'image resource service',
+          silent: true,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(published, isEmpty);
+      expect(lines().first, contains('WARN [image resource service]'));
+      await subscription.cancel();
+      await reporter.dispose();
+    });
+
     test('ignores reports after dispose', () async {
       final reporter = ErrorReporter(log);
       await reporter.dispose();

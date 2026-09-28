@@ -18,6 +18,7 @@ export 'package:iptv_player/design/components/app_slider.dart';
 export 'package:iptv_player/design/components/app_text_field.dart';
 export 'package:iptv_player/design/components/app_toast.dart';
 export 'package:iptv_player/design/components/app_tooltip.dart';
+export 'package:iptv_player/design/components/artwork_image.dart';
 export 'package:iptv_player/design/components/casting_bar.dart';
 export 'package:iptv_player/design/components/channel_logo.dart';
 export 'package:iptv_player/design/components/channel_row.dart';

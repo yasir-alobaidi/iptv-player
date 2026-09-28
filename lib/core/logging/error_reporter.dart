@@ -26,12 +26,17 @@ final class ErrorReporter {
     };
   }
 
+  /// A *silent* error is one Flutter itself considers not worth showing —
+  /// a picture that failed after the widget waiting for it had gone, say,
+  /// which a grid of 30,000 posters does all the time. It is logged, and
+  /// never a toast.
   void handleFlutterError(FlutterErrorDetails details) {
-    report(
-      details.exception,
-      details.stack,
-      source: details.library ?? 'flutter',
-    );
+    final source = details.library ?? 'flutter';
+    if (details.silent) {
+      _log.warning(source, 'Silent error', error: details.exception);
+      return;
+    }
+    report(details.exception, details.stack, source: source);
   }
 
   void report(Object error, StackTrace? stackTrace, {required String source}) {

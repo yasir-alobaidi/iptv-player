@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/components/artwork_image.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// A channel's logo, or a generated monogram tile when there is none
@@ -73,14 +74,10 @@ class ChannelLogo extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: image != null
-            ? Image(
-                image: image!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, _, _) =>
-                    _Monogram(name: name, size: size),
-              )
-            : _Monogram(name: name, size: size),
+        child: ArtworkImage(
+          image: image,
+          fallback: _Monogram(name: name, size: size),
+        ),
       ),
     );
   }

@@ -82,7 +82,7 @@ iptv-player/
 | Cast protobuf | protobuf (generated code committed) | minimal hand-written encoder |
 | Window control | window_manager | — |
 | Secrets | flutter_secure_storage (libsecret on Linux; on Windows an encrypted file whose AES key is in Credential Manager) | none — no plain-file fallback (hard rule 3) |
-| Images | extended_image or cached_network_image | — |
+| Images | our own disk cache over `ImageCache` (`lib/data/images/`; ADR-012 step 3) | — |
 | Vector icons | flutter_svg (the canvas's SVGs via the `AppIcons` enum) | — |
 | XML (XMLTV) | own streaming byte scanner (`lib/data/providers/xmltv/`, ADR-011) | — |
 | File and folder pickers | file_selector | file_picker |

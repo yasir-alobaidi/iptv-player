@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
+import 'package:iptv_player/design/components/artwork_image.dart';
 import 'package:iptv_player/design/components/progress_bar.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -69,10 +70,10 @@ class PosterCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (image != null)
-                      Image(image: image!, fit: BoxFit.cover)
-                    else
-                      _ArtworkFallback(title: title),
+                    ArtworkImage(
+                      image: image,
+                      fallback: _ArtworkFallback(title: title),
+                    ),
                     if (badge != null)
                       Positioned(
                         top: tokens.spacing.s8,
@@ -252,10 +253,10 @@ class LandscapeCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (image != null)
-                      Image(image: image!, fit: BoxFit.cover)
-                    else
-                      _ArtworkFallback(title: title, landscape: true),
+                    ArtworkImage(
+                      image: image,
+                      fallback: _ArtworkFallback(title: title, landscape: true),
+                    ),
                     if (badge != null)
                       Positioned(
                         top: tokens.spacing.s8,

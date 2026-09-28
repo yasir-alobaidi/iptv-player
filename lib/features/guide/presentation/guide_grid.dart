@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -1469,7 +1470,7 @@ class _ChannelCell extends StatelessWidget {
         SizedBox(width: guide.channelGap),
         ChannelLogo(
           name: channel.name,
-          image: _logo(channel.logoUrl),
+          image: artworkFor(context, channel.logoUrl, width: guide.logoSize),
           size: guide.logoSize,
           borderRadius: tokens.radii.smAll,
         ),
@@ -1484,14 +1485,6 @@ class _ChannelCell extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  static ImageProvider? _logo(String? url) {
-    final uri = url == null ? null : Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
-      return null;
-    }
-    return NetworkImage(url!);
   }
 }
 

@@ -8,6 +8,8 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/window_setup.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_images.dart';
+import 'package:iptv_player/core/images/artwork_providers.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
@@ -20,6 +22,8 @@ import 'package:iptv_player/core/player/unavailable_player_engine.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/images/artwork_cache.dart';
+import 'package:iptv_player/data/images/cached_artwork.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
 import 'package:iptv_player/data/settings/db_ui_preferences.dart';
@@ -79,6 +83,8 @@ Future<void> bootstrap() async {
   }
 
   final player = await _createPlayer(log, secrets);
+  capDecodedImages(PaintingBinding.instance.imageCache);
+  final artwork = paths == null ? null : ArtworkCache(directory: paths.artwork);
 
   final container = ProviderContainer(
     overrides: [
@@ -94,6 +100,8 @@ Future<void> bootstrap() async {
       startLocationProvider.overrideWithValue(
         firstRun ? welcomeRoutePath : '/',
       ),
+      if (artwork != null)
+        artworkImagesProvider.overrideWithValue(CachedArtworkImages(artwork)),
       ...sourceShellOverrides,
     ],
   );
@@ -103,7 +111,7 @@ Future<void> bootstrap() async {
       child: const IptvPlayerApp(),
     ),
   );
-  _syncAfterLaunch(container);
+  _syncAfterLaunch(container, artwork);
 }
 
 /// Waits for the first frame and a moment after it, so starting up never
@@ -115,10 +123,12 @@ Future<void> bootstrap() async {
 /// A guide import the last session was killed during is recorded the
 /// same way, and the rows it staged go with it: they are the one thing
 /// an interrupted import leaves behind (Phase 4 decision 2).
-void _syncAfterLaunch(ProviderContainer container) {
+void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
       Future<void>.delayed(_launchSyncDelay, () async {
+        // In its own isolate: the picture cache's size cap (docs/06).
+        unawaited(artwork?.sweep());
         await container.read(epgRepositoryProvider).recoverInterrupted();
         await container.read(syncServiceProvider).startUp();
         // Guides after the syncs, never beside them (ADR-011 decision 5).
