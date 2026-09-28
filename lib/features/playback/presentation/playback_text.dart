@@ -1,11 +1,14 @@
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
 /// The failure card's title and message for [problem] (docs/05
-/// microcopy), with what the server answered when it answered.
+/// microcopy), with what the server answered when it answered. [item]
+/// says what failed: a channel unless it is a movie or an episode.
 ({String title, String message}) problemText(
   PlaybackProblem problem, {
   int attempts = 0,
+  Playable? item,
 }) {
   final answer = switch (problem.failure) {
     final failure? => serverAnswer(failure),
@@ -13,9 +16,14 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
   };
   String withAnswer(String message) =>
       answer == null ? message : '$message $answer';
+  final what = switch (item) {
+    PlayableMovie() => 'movie',
+    PlayableEpisode() => 'episode',
+    PlayableChannel() || null => 'channel',
+  };
   return switch (problem.kind) {
     PlaybackProblemKind.network || PlaybackProblemKind.server => (
-      title: "This channel isn't responding",
+      title: "This $what isn't responding",
       message: withAnswer(
         attempts > 0
             ? 'We tried $attempts ${attempts == 1 ? 'time' : 'times'}.'
@@ -36,16 +44,22 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
         'in Settings → Sources.',
       ),
     ),
+    PlaybackProblemKind.offline when what != 'channel' => (
+      title: 'No longer available',
+      message: withAnswer(
+        'This $what is no longer available from your provider.',
+      ),
+    ),
     PlaybackProblemKind.offline => (
       title: 'This channel is off the air',
       message: withAnswer('Your provider has nothing on it right now.'),
     ),
     PlaybackProblemKind.unsupported => (
-      title: "This channel can't be played",
+      title: "This $what can't be played",
       message: "It uses a format this player can't decode.",
     ),
     PlaybackProblemKind.unavailable => (
-      title: "This channel can't start",
+      title: "This $what can't start",
       message: switch (problem.failure) {
         final failure? => failureWithAnswer(failure),
         null => 'The app could not build the stream address.',

@@ -19,3 +19,21 @@ String titleCountLabel(CatalogueKind kind, int count) =>
 /// The grid's heading for what it shows.
 String allTitlesHeading(CatalogueKind kind) =>
     kind == CatalogueKind.series ? 'All series' : 'All movies';
+
+/// The picture's badge from a picture height: the panel's probe of the
+/// file on a details page, the player's own in full screen.
+String? pictureBadge(int? height) => switch (height) {
+  null || <= 0 => null,
+  >= 2000 => '4K',
+  >= 1000 => 'FHD',
+  >= 700 => 'HD',
+  _ => 'SD',
+};
+
+/// The sound's badge: surround only; stereo needs none.
+String? soundBadge(int? channels) => switch (channels) {
+  null => null,
+  >= 8 => '7.1',
+  >= 6 => '5.1',
+  _ => null,
+};

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Volume and seek control. With [bubbleLabel] set it shows a time bubble
-/// above the thumb while dragging, which is how the player seeks
-/// (docs/05).
+/// above the thumb while dragging or hovered, which is how the player
+/// seeks (docs/05), and whenever [showBubble] says so (the player's seek
+/// keys).
 class AppSlider extends StatefulWidget {
   const new({
     required this.value,
@@ -11,6 +12,7 @@ class AppSlider extends StatefulWidget {
     this.onChangeEnd,
     this.bubbleLabel,
     this.bufferedValue,
+    this.showBubble = false,
     this.semanticLabel,
     this.enabled = true,
     this.focusNode,
@@ -27,6 +29,9 @@ class AppSlider extends StatefulWidget {
 
   /// How much of the stream the relay has ready, 0..1.
   final double? bufferedValue;
+
+  /// Shows the bubble without a drag or a hover.
+  final bool showBubble;
   final String? semanticLabel;
   final bool enabled;
   final FocusNode? focusNode;
@@ -43,7 +48,9 @@ class _AppSliderState extends State<AppSlider> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final showBubble = widget.bubbleLabel != null && (_dragging || _hovered);
+    final showBubble =
+        widget.bubbleLabel != null &&
+        (_dragging || _hovered || widget.showBubble);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),

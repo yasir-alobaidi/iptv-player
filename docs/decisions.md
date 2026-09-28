@@ -671,3 +671,51 @@ Out of this phase: Download and Cast buttons (Phases 8 and 7; left off the detai
 - **Play is wired to `VodLauncher`** (`lib/features/vod/domain/vod_launcher.dart`), which step 6 implements with the player; until then its provider does nothing, so **Play and Resume start nothing in the step 5 commit**. The widget tests check what each action asks the launcher for.
 - `AppButtonSize.xl` (52 px) for the details pages' actions; the series page uses it too rather than the canvas's 50.
 - **Found (tests only):** a widget test that writes to the database from `runAsync` while a page watches a drift stream deadlocks: the write waits on the page's stream, which only moves when the test pumps. The tests write before the page opens, or from the test's own zone.
+
+### VOD in the full-screen player (step 6)
+- **The engine:** `PlayerEngine.seek`, `PlayRequest.start` and the `PlayerDuration` / `PlayerPaused` events. media_kit's `Media(start:)` sets mpv's `start` in its load hook, so a resume is one open that begins there: 532 ms to the first frame 30 s into the fake panel's MP4. Pause and seek go straight to mpv (`pause`, `seek … absolute`) without waiting for initialization, like the engine's other calls: media_kit's own `play()`, `pause()` and `seek()` wait for the video controller's first texture. media_kit runs mpv with `keep-open`, so a file's end arrives as `eof-reached`, not as idle.
+- **One coordinator (decision 1).** States carry a sealed `Playable` — `PlayableChannel`, `PlayableMovie`, `PlayableEpisode` (docs/01's `PlayableSource`; Phase 8 adds a file). `state.channel` is the live channel or null, so Live TV and the Guide read what they did. The guide scheduler's "busy" now reads the item, so any stream of the source being set up counts, a movie's too. New: `playVod(item, from:)`, `seek`, `setPaused`, `timelines` (`VodTimeline`: the position, the player's length else the provider's, what is buffered ahead, paused) and `PlaybackEnded`. The prober takes a source id.
+- **A file's watchdog:**
+  - The end of the file is finished, unless it came 10 s or more short of the player's length: then it was a drop, and the file reconnects where it was, with the URL built again. The rule uses the player's length only: the provider's is often wrong (the fake panel's is made up), and it would turn every end into a reconnect.
+  - A stall or a failure also reconnects at the last position.
+  - Paused is never a stall, and neither is buffering while paused.
+  - The first frame gets at least 30 s, whatever the buffer preset: a resume on a panel without Range reads its way to the position.
+- **Saving where it was left:** `WatchProgress.save` runs
+  - every 10 s of playing (paused time doesn't count), on pause and after a seek;
+  - on leaving — a stop, or another item starting;
+  - on a failure;
+  - at the end, at the file's length, so it counts as watched.
+  Nothing is saved for a file that never showed a picture. The provider's length stands in for the save's duration while the player hasn't reported one.
+- **The launcher:** `PlayerVodLauncher` starts the file on the coordinator, then pushes `/player` unless the player is already up (a next episode plays in place). `vodLauncherProvider` moved from `details_state.dart` to `lib/features/playback/presentation/vod_launch.dart`.
+- **The player stops a file.** Leaving the player any way at all disposes it: Esc, a destination shortcut, the end. A file still playing then stops and saves. Live TV's route listener still stops only a live channel (`current`), so it can't cut a movie short; the Guide's does the same.
+- **The player's VOD face** (the approved sketch; `vod_osd.dart`):
+  - **Top:** the title and "S2 · E4 · Undertow"; FHD / 4K and 5.1 badges from the picture and the audio track playing (`pictureBadge` / `soundBadge`, moved to `vod_text.dart` and shared with Movie details); the clock.
+  - **Bottom:** the seek bar between the elapsed and remaining time: `AppSlider` with its buffered range and bubble, plus a new `showBubble` for the keys. Under it Play/Pause, −10 and +10, then the live player's controls.
+  - **The OSD stays up** while a file opens ("Preparing…" — the plan's answer to a slow resume), while paused or seeking, and while the card shows.
+  - **Departure:** the seek bar is not a Tab stop (`ExcludeFocus`). ←/→ seek from anywhere in the player, and a focused Material slider would take the arrows itself, in 5 % steps, with no end to run one seek on. The mouse drags it.
+  - **Departure:** −10 and +10 are text buttons; the icon set has no rewind or forward icon.
+- **Keys:**
+  - Space plays and pauses.
+  - ←/→ seek 10 s and Shift+←/→ 60 s: the bar and the bubble move at once, and one seek runs once the keys rest 300 ms (held keys repeat).
+  - Home goes to the start; M, A, S, I and F work as for live.
+  - Esc saves, stops and goes back.
+  - ↑/↓, PageUp/PageDown, Backspace and the digits do nothing.
+- **`VodPlayerController`** (presentation) holds what the player does around a file, apart from the widgets: the pending seek, "Resumed from 24:10 · Home starts over" for 5 s, the next episode, and the card and end card. It is tested under fake time.
+- **The next episode (decision 4):**
+  - It is looked up when an episode starts (`SeriesRepository.episodeAfter`), with its own resume point.
+  - At 20 s left the card counts down from 10, then plays it from that point. A pause holds the count; seeking back out of the last 20 s takes the card away.
+  - Play now has the focus, and a bar under it runs down with the count. **Departure:** a bar, not the button's own fill, which `AppButton` doesn't have.
+  - Esc cancels: the episode plays to its end, and the card comes back as Play next episode / Back to series.
+  - After the last episode, the player goes to the series page. An episode that ends before its card was answered goes straight on.
+  - **Edge:** the card plays the next episode at about 10 s left. For an episode under about 3 minutes, that is short of 95 %, so it isn't marked watched (CI's samples are 2 minutes; real episodes run 20 minutes and more). Not changed: marking it watched on Play now would race the coordinator's own save of the position.
+- **The failure card:** Retry, Next episode (for an episode with one after it) and Details. The words say movie or episode; a 404 is "No longer available" and "This movie is no longer available from your provider." (docs/05).
+- **Found: the full-screen player took Ctrl+2 for a channel number** (live since Phase 3, and now VOD), so the destination shortcuts didn't work from it. Keys with Ctrl, Alt or Meta now pass through to the app's shortcuts.
+- **Found: starting the next episode, or leaving the player, from inside the coordinator's end-of-file event threw** ("Cannot fire new event": the state stream is synchronous). The controller acts on the end in a microtask.
+- **Found (by a widget test):** the card's Play now column stretched in a row that gave it no width (a layout exception); it is sized to the button now (`IntrinsicWidth`).
+- **A drop, on the real player:** the fake panel's `drop_after_bytes`, half-way through the file, cuts the connection. mpv and FFmpeg reconnect at that byte by themselves and the movie carries on, as the soak saw for live. The coordinator's reconnect, back where it was, is the fallback, proved with the fake engine.
+- **CI:** the samples step also makes `vod_h264_aac_10min` and `vod_h264_ac3_10min`, at `VOD_SECONDS=120`.
+- **Tests:**
+  - Unit: the coordinator's file rules (20, on the fake engine under fake time), `VodPlayerController` (14), and the resolver's movie and episode URLs.
+  - Widget: the player's VOD face (14) — Play; Esc saving, with Resume then offered on the page; Resume and Start over; the keys; the end; leaving another way; a 404; the card, its count, cancel and the end card; a failed episode's Next episode; Preparing.
+  - Integration: `player_engine_vod_test.dart`, the real engine on a file (a start 30 s in, the length, pause, seek, the end); and `vod_player_test.dart`, the whole app against the fake panel in 72 s. It runs Play → Shift+→ → Esc → Resume from → "Resumed from" → Start over → a drop → the end, watched; then an episode's card counts into the next, Esc cancels it on that one, the end card shows, and Esc returns to the series page.
+  - The fault suite, the Live TV walk and the Guide's Watch test still pass. **1,782 app tests** under `TZ=UTC`.

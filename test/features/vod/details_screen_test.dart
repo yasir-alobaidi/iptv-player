@@ -7,9 +7,9 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/vod_launcher.dart';
-import 'package:iptv_player/features/vod/presentation/details_state.dart';
 
 import '../../app/app_harness.dart';
 import 'catalogue_screen_test.dart' show focusedLabel;

@@ -117,7 +117,7 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
                           onDoubleTap: () => widget.onFullscreen?.call(fresh),
                           child: PlayerSurface(
                             compact: true,
-                            onNextChannel: widget.onNextChannel,
+                            onNext: widget.onNextChannel,
                           ),
                         ),
                 ),

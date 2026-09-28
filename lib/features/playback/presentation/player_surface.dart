@@ -13,15 +13,18 @@ import 'package:iptv_player/features/playback/presentation/playback_text.dart';
 class PlayerSurface extends ConsumerWidget {
   const new({
     this.compact = false,
-    this.onNextChannel,
+    this.onNext,
+    this.nextLabel = 'Next channel',
     this.badges = true,
     super.key,
   });
 
   final bool compact;
 
-  /// Shown on the failure card when there is a next channel.
-  final VoidCallback? onNextChannel;
+  /// Shown on the failure card when there is something to go on to: the
+  /// next channel, or an episode's next.
+  final VoidCallback? onNext;
+  final String nextLabel;
 
   /// LIVE and the resolution, top left (the preview's; full screen draws
   /// its own OSD).
@@ -78,7 +81,8 @@ class PlayerSurface extends ConsumerWidget {
                   state: state,
                   compact: compact,
                   onRetry: ref.read(playbackCoordinatorProvider).retry,
-                  onNextChannel: onNextChannel,
+                  onNext: onNext,
+                  nextLabel: nextLabel,
                 ),
               ),
             ),
@@ -129,19 +133,21 @@ class _VideoChip extends StatelessWidget {
 }
 
 /// The failure card (approved sketch): what went wrong in our words and
-/// the server's, then Retry, Next channel and Details.
+/// the server's, then Retry, Next channel (or Next episode) and Details.
 class PlaybackFailureCard extends StatefulWidget {
   const new({
     required this.state,
     required this.onRetry,
-    this.onNextChannel,
+    this.onNext,
+    this.nextLabel = 'Next channel',
     this.compact = false,
     super.key,
   });
 
   final PlaybackFailed state;
   final VoidCallback onRetry;
-  final VoidCallback? onNextChannel;
+  final VoidCallback? onNext;
+  final String nextLabel;
   final bool compact;
 
   @override
@@ -156,7 +162,11 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final problem = widget.state.problem;
-    final text = problemText(problem, attempts: widget.state.attempts);
+    final text = problemText(
+      problem,
+      attempts: widget.state.attempts,
+      item: widget.state.item,
+    );
     final detail = [
       if (problem.failure case final failure?) '$failure',
       ?problem.detail,
@@ -219,12 +229,12 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
                   autofocus: !widget.compact,
                   onPressed: widget.onRetry,
                 ),
-                if (widget.onNextChannel != null)
+                if (widget.onNext != null)
                   AppButton(
-                    label: 'Next channel',
+                    label: widget.nextLabel,
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.s,
-                    onPressed: widget.onNextChannel,
+                    onPressed: widget.onNext,
                   ),
                 if (detail.isNotEmpty)
                   AppButton(

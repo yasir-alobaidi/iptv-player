@@ -117,10 +117,15 @@ jobs:
       - name: Media samples for the player tests
         if: runner.os == 'Linux'
         # The fault suite and the engine test play these through the fake
-        # provider; 30 s each is plenty for a loop (ADR-010, step 8).
+        # provider; 30 s each is plenty for a loop (ADR-010, step 8). The
+        # VOD tests play movies and episodes: 120 s holds a resume past a
+        # minute, the next-episode card's 20 s and a drop half-way
+        # (Phase 5 step 6).
         run: |
-          FFMPEG=/usr/bin/ffmpeg LIVE_SECONDS=30 tools/media_samples/generate.sh \
-            h264_1080p50_aac h264_1080p25_ac3 hevc_1080p50_aac
+          FFMPEG=/usr/bin/ffmpeg LIVE_SECONDS=30 VOD_SECONDS=120 \
+            tools/media_samples/generate.sh \
+            h264_1080p50_aac h264_1080p25_ac3 hevc_1080p50_aac \
+            vod_h264_aac_10min vod_h264_ac3_10min
 
       - name: Integration tests under xvfb
         if: runner.os == 'Linux'

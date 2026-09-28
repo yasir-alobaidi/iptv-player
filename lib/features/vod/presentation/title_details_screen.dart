@@ -11,12 +11,14 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/next_up.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:iptv_player/features/vod/presentation/details_state.dart';
+import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
 /// A movie's page (canvas `Movie details`), inside the Movies branch.
 class MovieDetailsScreen extends ConsumerWidget {
@@ -260,8 +262,8 @@ class _MoviePage extends ConsumerWidget {
                           rating: movie.rating,
                           genre: ready?.genre,
                           badges: [
-                            ?_pictureBadge(ready?.videoHeight),
-                            ?_soundBadge(ready?.audioChannels),
+                            ?pictureBadge(ready?.videoHeight),
+                            ?soundBadge(ready?.audioChannels),
                           ],
                           watched: mark?.completed ?? false,
                         ),
@@ -1254,23 +1256,6 @@ class DetailsMetaLine extends StatelessWidget {
     );
   }
 }
-
-/// The picture's badge from the panel's probe of the file.
-String? _pictureBadge(int? height) => switch (height) {
-  null => null,
-  >= 2000 => '4K',
-  >= 1000 => 'FHD',
-  >= 700 => 'HD',
-  _ => 'SD',
-};
-
-/// The sound's badge: surround only; stereo needs none.
-String? _soundBadge(int? channels) => switch (channels) {
-  null => null,
-  >= 8 => '7.1',
-  >= 6 => '5.1',
-  _ => null,
-};
 
 class _Loading extends StatelessWidget {
   const new();

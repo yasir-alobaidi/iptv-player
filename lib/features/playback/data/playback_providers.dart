@@ -14,6 +14,7 @@ import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
+import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'playback_providers.g.dart';
@@ -59,6 +60,7 @@ PlaybackCoordinator playbackCoordinator(Ref ref) {
     prober: HttpStreamProber(sources),
     history: DbPlaybackHistory(database),
     channels: ref.watch(channelRepositoryProvider),
+    progress: ref.watch(watchProgressProvider),
     log: ref.watch(appLogProvider),
     settings: () => ref.read(playbackSettingsControllerProvider),
   );

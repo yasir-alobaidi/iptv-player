@@ -2,7 +2,6 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
-import 'package:iptv_player/features/vod/domain/vod_launcher.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -74,22 +73,3 @@ Stream<Map<String, WatchMark>> seriesMarks(
   String sourceId,
   String seriesKey,
 ) => ref.watch(watchProgressProvider).watchSeries(sourceId, seriesKey);
-
-/// Starts a movie or an episode full screen. The player takes it over in
-/// step 6; until then nothing plays.
-@Riverpod(keepAlive: true)
-VodLauncher vodLauncher(Ref ref) => const _NotYet();
-
-final class _NotYet implements VodLauncher {
-  const new();
-
-  @override
-  Future<void> playMovie(MovieItem movie, {Duration? from}) async {}
-
-  @override
-  Future<void> playEpisode(
-    SeriesItem series,
-    EpisodeItem episode, {
-    Duration? from,
-  }) async {}
-}

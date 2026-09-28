@@ -91,6 +91,15 @@ final class Keys {
     await _frames();
   }
 
+  /// Shift + [key].
+  Future<void> shift(LogicalKeyboardKey key) async {
+    resume();
+    await _down(LogicalKeyboardKey.shiftLeft);
+    await _down(key, up: true);
+    await _up(LogicalKeyboardKey.shiftLeft);
+    await _frames();
+  }
+
   /// Alt + [key].
   Future<void> alt(LogicalKeyboardKey key) async {
     resume();

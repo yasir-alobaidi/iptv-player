@@ -173,8 +173,11 @@ final class FakeWatchProgress implements WatchProgress {
   Future<Result<void>> setWatched(VodRef ref, {required bool watched}) async =>
       const Ok(null);
 
+  /// What [watch] answers, by title.
+  final Map<VodRef, WatchMark> marks = {};
+
   @override
-  Stream<WatchMark?> watch(VodRef ref) => Stream.value(null);
+  Stream<WatchMark?> watch(VodRef ref) => Stream.value(marks[ref]);
 
   @override
   Stream<Map<String, WatchMark>> watchSeries(
@@ -192,7 +195,9 @@ final class FakeWatchProgress implements WatchProgress {
 
 /// A coordinator on fakes, and the states it went through.
 final class Rig {
-  new({Duration stopDelay = Duration.zero})
+  /// [watchProgress] saves where files were left in place of [progress]
+  /// (a real database's, for screens that read it back).
+  new({Duration stopDelay = Duration.zero, WatchProgress? watchProgress})
     : engine = FakePlayerEngine(stopDelay: stopDelay) {
     coordinator = PlaybackCoordinator(
       engine: engine,
@@ -200,7 +205,7 @@ final class Rig {
       prober: prober,
       history: history,
       channels: channels,
-      progress: progress,
+      progress: watchProgress ?? progress,
       log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
     );
     coordinator.states.listen(states.add);

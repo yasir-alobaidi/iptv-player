@@ -177,7 +177,7 @@ final class PlaybackCoordinatorProvider
 }
 
 String _$playbackCoordinatorHash() =>
-    r'6bb66ca7fa6ecbafd9b42101ec843ab9467fd837';
+    r'14d74694094679cfa457f66af4c205e9fd8eccd3';
 
 /// What plays, as it changes.
 
