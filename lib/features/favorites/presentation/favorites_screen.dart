@@ -386,10 +386,9 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
     );
     await channels.setFavorite(channel, on: false);
     notices.show(
-      AppNotice(
+      AppNotice.undoable(
         'Removed ${channel.name} from favorites',
-        actionLabel: 'Undo',
-        onAction: () => unawaited(
+        onUndo: () => unawaited(
           favorites.moveChannel(
             channel,
             groupId: place.groupId,

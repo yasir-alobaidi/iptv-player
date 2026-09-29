@@ -106,10 +106,9 @@ Future<void> hideChannel(
 }) async {
   await channels.setHidden(channel.id, hidden: true);
   notices.show(
-    AppNotice(
+    AppNotice.undoable(
       'Channel hidden',
-      actionLabel: 'Undo',
-      onAction: () => unawaited(() async {
+      onUndo: () => unawaited(() async {
         await channels.setHidden(channel.id, hidden: false);
         onUndo?.call();
       }()),

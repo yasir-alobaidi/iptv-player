@@ -101,8 +101,10 @@ class _MenuRoute extends PopupRoute<void> {
             checked: item.checked,
             onPressed: () {
               Navigator.of(context).pop();
-              // After the pop, so focus is back on the anchor first.
-              scheduleMicrotask(item.onPressed!);
+              // Once the menu has faded out: focus is back on the anchor,
+              // and what the item changes doesn't change under the
+              // closing menu.
+              unawaited(completed.then((_) => item.onPressed!()));
             },
           ),
     ];

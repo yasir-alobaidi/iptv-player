@@ -160,6 +160,30 @@ void main() {
       await _finish(tester);
     });
 
+    testWidgets("the menu key opens the cursor channel's menu; Hide channel "
+        'takes its row out, and Undo brings it back', (tester) async {
+      await pump(tester);
+      await _focusGrid(tester);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(_ringed(), 'Tennis Open · Quarter-finals', reason: 'Arena 2');
+
+      await _key(tester, LogicalKeyboardKey.contextMenu);
+      expect(find.text('Watch'), findsOneWidget);
+      expect(find.text('Add to favorites'), findsOneWidget);
+      expect(find.text('Rename…'), findsOneWidget);
+      await tester.tap(find.text('Hide channel'));
+      await _settle(tester);
+
+      expect(find.text('Arena Sports 2'), findsNothing);
+      expect(find.text('Tennis Open · Quarter-finals'), findsNothing);
+      expect(find.text('Channel hidden'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await _settle(tester);
+      expect(find.text('Arena Sports 2'), findsOneWidget);
+      await _finish(tester);
+    });
+
     testWidgets('→ past the edge moves the view; Home comes back to now', (
       tester,
     ) async {
@@ -692,8 +716,10 @@ Future<void> _finish(WidgetTester tester) async {
   await _settle(tester);
 }
 
+/// Rounds enough for a menu's item (run once the menu has faded out,
+/// 120 ms) and the reads it starts.
 Future<void> _settle(WidgetTester tester) async {
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 8; i++) {
     await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pump(const Duration(milliseconds: 50));
   }

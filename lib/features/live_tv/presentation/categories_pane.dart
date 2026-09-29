@@ -124,10 +124,9 @@ class CategoriesPane extends ConsumerWidget {
               }
               await repository.setHidden(category.id, hidden: true);
               notices.show(
-                AppNotice(
+                AppNotice.undoable(
                   'Category hidden',
-                  actionLabel: 'Undo',
-                  onAction: () => unawaited(
+                  onUndo: () => unawaited(
                     repository.setHidden(category.id, hidden: false),
                   ),
                 ),

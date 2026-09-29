@@ -5,19 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
-import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
-import 'package:iptv_player/app/shell/toast_host.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/app/shortcuts.dart';
-import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// The desktop shell (docs/05): nav rail, top bar, the current
-/// destination, the casting bar and the toast area.
+/// destination and the casting bar. Toasts show over every route
+/// (`AppToasts`).
 ///
 /// It owns no domain state. Everything it shows comes from the providers
 /// in `shell_state.dart`, which later phases fill in.
@@ -49,14 +47,12 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
   final _railPane = FocusPaneController();
   final _topBarPane = FocusPaneController();
   final _contentPane = FocusPaneController();
-  final _toasts = ToastHostController();
 
   @override
   void dispose() {
     _railPane.dispose();
     _topBarPane.dispose();
     _contentPane.dispose();
-    _toasts.dispose();
     super.dispose();
   }
 
@@ -146,34 +142,6 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     final tokens = context.tokens;
     final colors = tokens.colors;
 
-    ref
-      ..listen(nonFatalErrorsProvider, (previous, next) {
-        final failure = next.value;
-        if (failure == null) return;
-        _toasts.show(
-          ShellToast(
-            message: failureWithAnswer(failure),
-            tone: ToastTone.error,
-          ),
-        );
-      })
-      ..listen(backgroundNoticesProvider, (previous, next) {
-        final notice = next.value;
-        if (notice == null) return;
-        _toasts.show(
-          ShellToast(
-            message: notice.message,
-            tone: switch (notice.tone) {
-              NoticeTone.neutral => ToastTone.neutral,
-              NoticeTone.success => ToastTone.success,
-              NoticeTone.error => ToastTone.error,
-            },
-            actionLabel: notice.actionLabel,
-            onAction: notice.onAction,
-          ),
-        );
-      });
-
     final wantsExpanded = ref.watch(railExpandedProvider);
     final source = ref.watch(shellSourceProvider);
     final sourceChoices = ref.watch(shellSourceChoicesProvider);
@@ -248,7 +216,6 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                     ),
                   ],
                 ),
-                ToastHost(controller: _toasts),
               ],
             ),
           ),

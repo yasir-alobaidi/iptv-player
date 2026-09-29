@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -60,8 +61,9 @@ Future<AppUnderTest> pumpApp(
       child: MaterialApp.router(
         theme: buildAppTheme(),
         routerConfig: router,
-        builder: (context, child) =>
-            AppGlobalShortcuts(child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => AppGlobalShortcuts(
+          child: AppToasts(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     ),
   );
@@ -75,6 +77,9 @@ Future<AppUnderTest> pumpApp(
 Future<void> settleApp(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
+  // What ran as an animation ended (a menu's item, once the menu has
+  // faded out) gets its frame.
+  await tester.pump();
 }
 
 /// Finds an icon-only control by the label it gives assistive

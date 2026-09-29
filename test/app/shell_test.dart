@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
@@ -234,6 +234,67 @@ void main() {
       expect(find.text(message), findsOneWidget);
       await tester.pump(AppToast.defaultDuration);
       await settleApp(tester);
+    });
+
+    testWidgets("Ctrl+Z runs the shown toast's Undo, which ends it; with no "
+        'Undo to run, Ctrl+Z goes on its way', (tester) async {
+      final notices = AppNotices();
+      addTearDown(notices.dispose);
+      await pumpApp(
+        tester,
+        overrides: [appNoticesProvider.overrideWithValue(notices)],
+      );
+      var undone = 0;
+      Future<void> ctrlZ() async {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await settleApp(tester);
+      }
+
+      notices.show(
+        AppNotice.undoable('Channel hidden', onUndo: () => undone++),
+      );
+      await settleApp(tester);
+      expect(find.text('Undo'), findsOneWidget);
+      await ctrlZ();
+      expect(undone, 1);
+      expect(find.byType(AppToast), findsNothing, reason: 'the Undo ended it');
+      await ctrlZ();
+      expect(undone, 1, reason: 'nothing shown to undo');
+
+      notices.show(AppNotice('Guide updated', actionLabel: 'Open'));
+      await settleApp(tester);
+      await ctrlZ();
+      expect(find.text('Guide updated'), findsOneWidget, reason: 'no Undo');
+      await tester.pump(AppToast.defaultDuration);
+      await settleApp(tester);
+    });
+
+    testWidgets('a click on Undo runs it once and ends the toast; a click '
+        'beside the toast reaches the screen under it', (tester) async {
+      final notices = AppNotices();
+      addTearDown(notices.dispose);
+      final app = await pumpApp(
+        tester,
+        initialLocation: AppDestination.library.path,
+        overrides: [appNoticesProvider.overrideWithValue(notices)],
+      );
+      var undone = 0;
+      notices.show(
+        AppNotice.undoable('Channel hidden', onUndo: () => undone++),
+      );
+      await settleApp(tester);
+
+      await tester.tap(find.text('Add a source'));
+      await settleApp(tester);
+      expect(app.location, AppDestination.settings.path);
+      expect(find.text('Channel hidden'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await settleApp(tester);
+      expect(undone, 1);
+      expect(find.byType(AppToast), findsNothing);
     });
 
     testWidgets('a toast goes away by itself', (tester) async {

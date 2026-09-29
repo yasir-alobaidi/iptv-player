@@ -16,7 +16,15 @@ final class AppNotice {
     this.tone = NoticeTone.neutral,
     this.actionLabel,
     this.onAction,
-  });
+  }) : isUndo = false;
+
+  /// "Channel hidden · Undo" (docs/05: optimistic updates): Ctrl+Z runs
+  /// [onUndo] too while it shows.
+  new undoable(this.message, {required void Function() onUndo})
+    : tone = NoticeTone.neutral,
+      actionLabel = 'Undo',
+      onAction = onUndo,
+      isUndo = true;
 
   final String message;
   final NoticeTone tone;
@@ -25,6 +33,9 @@ final class AppNotice {
   /// optimistic updates).
   final String? actionLabel;
   final void Function()? onAction;
+
+  /// The action undoes what was just done.
+  final bool isUndo;
 
   @override
   String toString() => 'AppNotice($message)';

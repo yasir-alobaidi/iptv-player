@@ -438,6 +438,47 @@ void main() {
       expect(find.text('Hide channel'), findsOneWidget);
     });
 
+    testWidgets('Hide channel from the menu hides it, says so with Undo, and '
+        'searches again', (tester) async {
+      await open(tester);
+      final row = (await tester.runAsync(
+        () => live.db.channelsDao.byRemoteKey('src-1', '900'),
+      ))!;
+      final zebra = ChannelItem(
+        id: row.id,
+        sourceId: 'src-1',
+        remoteKey: '900',
+        name: 'Zebra TV',
+      );
+      search.answers['zebra'] = SearchResults(
+        text: 'zebra',
+        channels: SearchGroup([
+          ChannelHit(channel: zebra, sourceName: 'Northwind TV'),
+        ]),
+      );
+      await type(tester, 'zebra');
+      expect(search.asked, ['zebra']);
+
+      await key(tester, LogicalKeyboardKey.contextMenu);
+      await settle(tester);
+      await tester.tap(find.text('Hide channel'));
+      // The menu fades out first (120 ms), then the item runs.
+      await settle(tester);
+      await settle(tester);
+
+      Future<bool> hidden() async => (await tester.runAsync(
+        () => live.db.channelsDao.byRemoteKey('src-1', '900'),
+      ))!.isHidden;
+      expect(await hidden(), isTrue);
+      expect(find.text('Channel hidden'), findsOneWidget);
+      expect(search.asked, ['zebra', 'zebra'], reason: 'searched again');
+
+      await tester.tap(find.text('Undo'));
+      await settle(tester);
+      expect(await hidden(), isFalse);
+      expect(search.asked, hasLength(3));
+    });
+
     testWidgets('recent searches: Enter searches again, Delete removes one', (
       tester,
     ) async {

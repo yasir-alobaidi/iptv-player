@@ -13,17 +13,21 @@ class ShellToast {
     this.tone = ToastTone.neutral,
     this.actionLabel,
     this.onAction,
+    this.undo = false,
   });
 
   final String message;
   final ToastTone tone;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// The action undoes what was just done: Ctrl+Z runs it too.
+  final bool undo;
 }
 
 /// Shows toasts bottom-centre, one at a time, three seconds each
-/// (docs/05). The shell feeds it from `ErrorReporter`; later phases push
-/// their own ("Download finished · <title>").
+/// (docs/05). `AppToasts` feeds it from `ErrorReporter` and `AppNotices`
+/// ("Download finished · <title>" in a later phase).
 ///
 /// Repeats are dropped while the same message is on screen, so a failure
 /// that fires in a loop can't bury the UI under a stack of toasts.
@@ -55,6 +59,23 @@ class ToastHostController extends ChangeNotifier {
   }
 
   void dismissCurrent() => _advance();
+
+  /// Runs the shown toast's action, which ends it.
+  void act() {
+    final action = _current?.onAction;
+    if (action == null) return;
+    _advance();
+    action();
+  }
+
+  /// Ctrl+Z: the shown toast's Undo, if it has one. False when not.
+  bool undo() {
+    if (_current case ShellToast(undo: true, onAction: _?)) {
+      act();
+      return true;
+    }
+    return false;
+  }
 
   void _advance() {
     _current = _queue.isEmpty ? null : _queue.removeFirst();
@@ -129,7 +150,9 @@ class _ToastHostState extends State<ToastHost> {
                     message: toast.message,
                     tone: toast.tone,
                     actionLabel: toast.actionLabel,
-                    onAction: toast.onAction,
+                    onAction: toast.onAction == null
+                        ? null
+                        : widget.controller.act,
                   ),
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
@@ -23,8 +24,9 @@ class IptvPlayerApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         routerConfig: ref.watch(routerProvider),
-        builder: (context, child) =>
-            AppGlobalShortcuts(child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => AppGlobalShortcuts(
+          child: AppToasts(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }
