@@ -1,118 +1,125 @@
-# Handoff — 2026-09-28 (Phase 5: steps 1–7 of 8 built)
+# Handoff — 2026-09-29 (Phase 5 built: steps 1–8)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/plans/phase-5-movies-series-home.md (the approved plan) and ADR-012 in
-docs/decisions.md (its step 6 and step 7 sections are new).
+it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-012 in
+docs/decisions.md (its step 8 section is new) and docs/08's Phase 6.
 
 ## Before you start the next session (user)
-1. **Review and push** the three local commits, oldest first:
-   "Phase 5 step 6a: movies and episodes in the engine and the
-   coordinator", "Phase 5 step 6b: movies and episodes in the full-screen
-   player", "Phase 5 step 7: Home". Steps 1–5 and the handoff before them
-   are pushed.
-2. **CI after the push:** its samples step now also makes the two VOD
-   samples (`VOD_SECONDS=120`), and three new integration tests play them
-   (`player_engine_vod`, `vod_player`, `home_continue`). They passed here
-   with and without video, but never yet on the runner.
-3. **Try it:** Movies → a movie → Play (the player's VOD face: Space,
-   ←/→, Shift+←/→, Home, Esc); Esc, and the page offers Resume; Home
-   (Ctrl+1) shows it in Continue watching; a series → an episode near its
-   end → the next-episode card.
-4. Nothing needs your go-ahead until step 8's one play from your panel
-   (a pop-up first, as always).
+1. **Review and push** the two local commits, oldest first: "Phase 5 step
+   8a: the keyboard walk, and Ctrl+N's first control in reading order" and
+   "Phase 5 step 8b: the measurements, and the grid keeps the keyboard"
+   (and this handoff). Steps 1–7 are pushed.
+2. **CI after the push** runs two new integration tests: `vod_walk` (the
+   keyboard walk, about a minute on the 120 s samples) and
+   `poster_grid_scroll` (the `large` catalogue's 30,000 posters, in debug
+   without the top-to-bottom part: 48 s here under xvfb). Linux was green
+   at 3b73a48 (step 7), the VOD samples made and played on the runner;
+   Windows failed 4 of its known tests.
+3. **Try it:** Home → Enter on a poster opens the page with the focus on
+   Play; Movies → scroll the grid far with the mouse wheel, then press ↓:
+   the keyboard carries on from a poster on screen; End jumps to the last
+   poster and focuses it.
+4. **Your panel's own movie and episode** (the one item of the phase exit
+   left): `integration_test/real_provider_vod_test.dart` is written and
+   waits for your go-ahead — a pop-up first, since it uses your one
+   connection. Say so at the start of the session, or answer the pop-up.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-5-movies-series-home.md and ADR-012 in docs/decisions.md first.
-Phase 5 steps 6 and 7 are reviewed and pushed; CI is <green | red: …>.
-Go on with step 8 (the phase exit), committing as you go.
+ADR-012 in docs/decisions.md and docs/08-phases-and-prompts.md (Phase 6) first.
+Phase 5 step 8 is reviewed and pushed; CI is <green | red: …>.
+<Optional: the provider is free — run the real-provider VOD test first.>
+Then write the Phase 6 plan (Search and polish) for my approval.
 ```
 
 ## Where things stand
-- **Phases 1–4 are built;** Phase 5's plan was approved 2026-09-27, and
-  **steps 1–7 of 8 are built** (1–5 pushed, 6a, 6b and 7 local).
-- **What works now:** the Movies and Series grids and the details pages;
-  **Play, Resume, Start over and Continue play** in the full-screen player
-  with its VOD face (seek bar, keys, "Resumed from", "Preparing…"); where a
-  file was left is saved and read back (Resume on the page, Continue
-  watching on Home, watched at 95 %); the next-episode card; **Home** with
-  every row and the first-run hero.
-- **Checks, all green at 384f255:** analyze, format, `build_runner` leaves
-  no diff; **1,812 app tests** (7 skipped) under `TZ=UTC`; under xvfb:
-  `vod_player`, `player_engine_vod`, `home_continue`, `playback_faults`,
-  `live_tv_keyboard`, `guide_watch`, `player_engine`, `sources_keyboard`
-  and `app_launch`. The fake provider is unchanged since step 1 (141).
-- **CI:** Linux green on the last push (e577e97, steps 1–5). Windows fails
-  the same 7 named tests (progress.md Known issues) — not worked on yet.
+- **Phases 1–5 are built.** Phase 5 (Movies, Series, Home) closed with
+  step 8 on 2026-09-29; ADR-012 is Accepted. Only the play from your panel
+  is left of its exit (above).
+- **Checks, all green at 2186d31:** analyze, format, `build_runner`
+  leaves no diff; **1,818 app tests** (8 skipped) under `TZ=UTC`; the
+  fake provider's 141; under xvfb: `vod_walk`, `vod_player`,
+  `home_continue`, `live_tv_keyboard`, `guide_keyboard`,
+  `sources_keyboard`, `guide_watch`, `app_launch`, `guide_scroll` and
+  `poster_grid_scroll`.
+- **Measured (profile mode, real display):** cold start to Home with the
+  `large` catalogue cached **575 ms** median (budget 2.0 s); the poster
+  grid with no frame over 16 ms for flings, the wheel, ↓, PageDown, End and
+  Home, 13–17 of ~11,900 frames over when flung top to bottom (Known
+  issues); decoded pictures at the 150 MB cap after that, the picture
+  folder under its 500 MB.
+- **CI:** Linux green at 3b73a48. Windows fails 4–10 named tests from run
+  to run (progress.md Known issues) — not worked on yet.
 
-## Done this session (2026-09-28)
-- **Step 6a — the engine and the coordinator:** `PlayerEngine.seek`,
-  `PlayRequest.start` (one open that starts part-way: 532 ms to the first
-  frame 30 s in), `PlayerDuration` / `PlayerPaused`; `DbStreamResolver`
-  movie and episode URLs; the coordinator's sealed `Playable` and VOD rules
-  (the end = finished unless 10 s short; reconnects where it was; paused is
-  never a stall; saves every 10 s, on pause, after a seek, on leaving, on a
-  failure, at the end).
-- **Step 6b — the player:** `PlayerVodLauncher`, the VOD OSD
-  (`vod_osd.dart`), `VodPlayerController`, the next-episode card and end
-  card, the failure card's movie/episode words; CI's VOD samples.
-- **Step 7 — Home:** `HomeRepository`, the rows, `ChannelTile`, the hero,
-  the keyboard, See all.
-- **Bugs found and fixed on the way** (all in ADR-012):
-  - the full-screen player took Ctrl+2 (any Ctrl+digit) for a channel
-    number — since Phase 3;
-  - acting on a file's end from inside the coordinator's own state event
-    threw (its stream is synchronous);
-  - the next-episode card's button column had no width;
-  - Home's focus after Ctrl+1 was lost: Riverpod 3 pauses a hidden
-    screen's providers, so it came back with stale data for a frame.
+## Done this session (2026-09-29)
+- **Step 8a — the walk** (`integration_test/vod_walk_test.dart`, keys
+  only): Home → Ctrl+4 → the movie's name typed in the filter → its poster
+  → Play → past a minute → Ctrl+1 (Continue watching, focus on its card) →
+  Ctrl+5 → the series through the filter → its episodes → S1 · E2 → to its
+  last seconds → the countdown → S1 · E3 → Esc → Ctrl+1 (the series first)
+  → Enter plays S1 · E3 → Esc. 45 s here.
+- **Step 8b — the measurements:** `test/app/cold_start_benchmark_test.dart`
+  (launches the profile build; Home logs `[startup] Home is on screen, N ms
+  after main()` through `LaunchMark`), and
+  `integration_test/poster_grid_scroll_test.dart`.
+- **Docs:** ADR-012 step 8 and Accepted; docs/03's VOD "As built"; docs/05
+  "As built" for Home and the VOD player, and where Ctrl+N's focus lands;
+  docs/06's two new measurements and their table rows; progress.
+- **Bugs found and fixed** (all in ADR-012 step 8):
+  - **Ctrl+1 landed on "See all Recently added movies"** once Continue
+    watching had appeared above rows built earlier:
+    `FocusPaneController.focusFirst()` took the first node *attached*. Now
+    the first in reading order (route scopes and unlaid-out nodes left
+    out).
+  - **That made a jump to a details page land on its "‹ Movies" chip**
+    (Enter on a Home poster), which then blocked Play's autofocus. The chip
+    takes no focus while the page loads, and after a jump the shell leaves
+    the focus where the new screen put it (it waits a microtask for the
+    focus manager's update).
+  - **The mouse scrolling the focused poster away took the keyboard out of
+    the grid** (its card is disposed, and its `Focus` lets go). The grid
+    holds the focus (`_holder`), gives it to the card in the same column on
+    screen once the view rests, and PageDown/Home/End count from the view.
+  - **End on a large catalogue focused nothing** (the last page isn't read
+    yet): the card takes the focus once built (`_pendingFocus`).
+  - **The picture folder overshot its 500 MB cap by up to 50 MB:** it now
+    also sweeps once its known size passes the cap (`sweepArtwork` returns
+    what is left).
 
 ## What's next
-**Step 8 — the phase exit** (plan "Step 8"):
-1. **An end-to-end keyboard walk** against the fake panel, as an
-   integration test: Home → Movies → a movie → Play → Esc → Home's
-   Continue watching → Series → an episode → the countdown → the next
-   episode. `vod_player_test.dart` and `home_continue_test.dart` already
-   cover most of it with a mix of keys and direct calls; the walk should be
-   keys only. The fake panel's first series (`200000`) S1 · E2 is the MP4
-   sample and S1 · E3 the AC-3 one (both generated in CI).
-2. **Measurements** in tests tagged `benchmark`:
-   - cold start to an interactive Home with cached data (≤ 2.0 s);
-   - scrolling the poster grid over the `large` profile's 30,000 movies
-     with artwork (16 ms frames), in profile mode on the real display;
-   - the image cache's memory after scrolling the grid end to end
-     (≤ 150 MB decoded).
-3. **Docs:** ADR-012 Accepted; docs/05 "As built" for Home, Movies, Series
-   and the VOD player; docs/03's VOD section (what step 6 built); docs/06;
-   progress; this file.
-4. **With the user's go-ahead** (a pop-up first — one connection): one
-   movie and one episode from their panel: containers, codecs, whether it
-   honours Range, and whether a seek's new request is let in on one
-   connection (the open question below).
+1. **Your panel's movie and episode** when you say the connection is free:
+   set `"play": true` in `~/.config/iptv-player-dev/real_provider.json`
+   (then back), and run `flutter test
+   integration_test/real_provider_vod_test.dart -d linux`. The report is
+   `build/real_provider_run/vod_report.md` (masked). It answers the open
+   question below (a seek's new request on one connection), and whether
+   your panel honours Range; record both in ADR-012.
+2. **Phase 6 — Search and polish** (docs/08): write the plan for approval
+   first — the Ctrl+K overlay over FTS (the programmes index is already
+   built), the Favorites screen with reorder and groups, display-name
+   cleanup with quality badges, hide/unhide everywhere.
+3. **Alongside:** the Windows failures (progress.md Known issues), one
+   commit each, confirmed by CI after a push.
 
-**Loose ends from steps 6–7, small:**
-- The card plays the next episode at about 10 s left; on an episode under
-  about 3 minutes that is short of 95 %, so it isn't marked watched
-  (ADR-012 step 6 "Edge"). Only matters for very short files.
-- Other screens could lose focus the way Home did when they come back into
-  view with stale data (Riverpod 3's pausing). Live TV, the Guide and the
-  grids pass their walks; watch for it.
-- The Home rows' vertical spacing is a few pixels looser than the canvas's
-  32 (the caption allowance); golden-visible, harmless.
-
-**Alongside:** the Windows failures (progress.md Known issues), one commit
-each, confirmed by CI after a push.
+**Loose ends, small:**
+- Live TV's channel list probably loses the keyboard when the mouse scrolls
+  the focused row away, as the grid did (not checked; the grid's fix would
+  apply).
+- The grid's fastest top-to-bottom fling: 13–17 frames over 16 ms of
+  ~11,900 (Known issues).
+- From steps 6–7: the next episode starts at about 10 s left, so an episode
+  under about 3 minutes isn't marked watched; Home's rows are a few pixels
+  looser than the canvas's 32.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
 - **CI green on both systems.** Linux is green; Windows fails 6–10 named
   tests from run to run (progress.md Known issues).
-- **Phase 5 — Movies, Series, Home** (in progress: steps 1–7 of 8 built).
-  Left: the phase exit (step 8).
+- **Phase 5 — Movies, Series, Home:** built (2026-09-29). Left: the play
+  from your panel (a pop-up first).
 - **Phase 6 — Search and polish:** the Ctrl+K overlay over FTS (the
   programmes index is already built), the Favorites screen with reorder
   and groups, display-name cleanup with quality badges, hide/unhide
@@ -206,6 +213,42 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
+New this session (Phase 5 step 8):
+- **Where the focus goes after a destination jump** (`DesktopShell.
+  _followTheJump`): after the frame, then a microtask (the focus manager's
+  own update, queued while the screen was built, runs first). If the
+  focus is already on a control of the content (the screen's autofocus),
+  it stays; otherwise `FocusPaneController.focusFirst()`: the first
+  control in reading order (`_readingOrder`, shared with `_leave`),
+  never a `FocusScopeNode`, never a node not laid out (`_rectOf`). A
+  screen that wants a particular first control uses `autofocus` — and
+  should not offer other controls before it is ready (the details
+  frame's chip is `ExcludeFocus` while loading).
+- **The focus tree's order is attach order**, not the order drawn. Never
+  take `traversalDescendants.first` as "the first control".
+- **`TitleGrid` and the mouse:** a card notices it goes with the focus in
+  `deactivate` (a `Focus` widget unfocuses its node before the owner's
+  `dispose`); `_onFocusedCardGone` then, after the frame, gives the focus
+  to a card on screen, or to `_holder` while the view still moves
+  (`ScrollEndNotification` finishes it). `_moving` marks a key's own move
+  in flight; `_pendingFocus` a card not built yet.
+- **`LaunchMark`** (`lib/core/logging/launch_mark.dart`,
+  `launchMarkProvider`): `bootstrap()` starts its stopwatch first thing;
+  Home calls `homeShown()` after its first frame with rows. Tests get
+  `LaunchMark.none()`.
+- **Integration test support:** `support/panel_app.dart` (`PanelApp`: the
+  real player, a throwaway database, the fake panel synced), `support/
+  frames.dart` (`measureFrames`, `FrameStats`, `waitReal`), `support/
+  real_provider.dart` (`readPlayLogin`, `LogFileOutput`); `Keys.typeIn`
+  types into a field with no label (a `SearchField`'s).
+- **Launching the real app from a test** (the cold start): redirect
+  `XDG_DATA_HOME` and `XDG_CACHE_HOME`, and point
+  `DBUS_SESSION_BUS_ADDRESS` nowhere, or it reaches the real keyring (and a
+  sync would prune the real app's secrets). A log line's timestamp is on
+  the same clock as the test's, so the log's 500 ms flush doesn't matter.
+- **`pkill -f <pattern>` inside a Bash command kills that command too**
+  when its own text matches (it did, once).
+
 New this session (Phase 5 steps 6–7):
 - **Playback of files:** `Playable` (`lib/features/playback/domain/
   playable.dart`: `PlayableChannel`, `PlayableMovie`, `PlayableEpisode`)
@@ -610,6 +653,13 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 5 step 8 (ADR-012): the first control after a jump in reading
+  order, with the screen's own autofocus winning; the details chip out of
+  focus while loading; the grid keeping the keyboard when the mouse
+  scrolls (hold, then the card on screen in the same column); the picture
+  sweep on the known size; the cold start timed from `Process.start` to
+  Home's log line on the profile build; the poster test's top-to-bottom
+  part in profile mode only (CI time).
 - Phase 5 steps 6–7 (ADR-012): the sealed `Playable` on the one
   coordinator; the player (not Live TV) stopping a file; the end rule by
   the player's length only; 30 s for a file's first frame; saving on
@@ -713,7 +763,7 @@ From earlier sessions (still true):
 ## Open questions for the user
 - Whether a real panel lets a new request for the same VOD file take over
   the open one (the fake panel does; a seek on a one-connection panel
-  needs it) — step 8's play from the user's panel will show it.
+  needs it) — `real_provider_vod_test.dart` will show it.
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
