@@ -117,6 +117,7 @@ Working rhythm, as before: one numbered step at a time. After each: analyze, for
      - An upcoming programme opens the Guide instead.
      - A reminder is worth having only as a system notification: the app often sits behind other windows. That is a new package (Linux libnotify, Windows toast notifications) and its own Windows work.
      - I'd put it in Phase 9, or after v1 — your call.
+     - **Answered 2026-09-29: Phase 9** (ADR-013).
    - **Rejected alternative: an in-app toast at the start time.** It is missed whenever the window is covered, which is when a reminder matters.
 
 6. **Favorite groups, and where they live.**

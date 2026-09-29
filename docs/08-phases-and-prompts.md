@@ -19,7 +19,7 @@
 | 6 | Search, favorites, categories polish | 4–5 days |
 | 7 | Casting | 2–3 weeks |
 | 8 | Downloads and local library, including casting library items | 1.5–2 weeks |
-| 9 | Settings, diagnostics, UX and performance polish | 1 week |
+| 9 | Settings, diagnostics, programme reminders, UX and performance polish | 1–1.5 weeks |
 | 10 | Packaging and release | 1 week |
 | TV-0…TV-5 | Google TV version (docs/07) | 4–6 weeks |
 
@@ -164,16 +164,17 @@ Propose the plan first.
 
 ## Phase 9 — Settings, diagnostics, polish
 ```
-Read CLAUDE.md, docs/05-design-system.md (check the canvas), docs/06-quality.md, docs/progress.md.
+Read CLAUDE.md, docs/05-design-system.md (check the canvas), docs/06-quality.md, docs/decisions.md (ADR-013 decision 5), docs/progress.md.
 
 1. Complete every Settings section in docs/05.
 2. Diagnostics: log viewer; Copy diagnostics (app/OS/GPU info, hwdec results, encoder detection, recent errors — redacted).
-3. UX audit: every screen keyboard-only; loading/empty/error/offline states; focus traps; text scale 115/130 %; reduce motion. Fix everything found.
-4. Performance pass in profile mode against docs/06 budgets; record numbers in docs/progress.md.
-5. 8-hour soak with faults on Linux (and Windows if available); fix leaks.
+3. "Remind me" on upcoming programmes (ADR-013 decision 5): on Search's upcoming rows (the canvas) and the Guide's programme sheet. A reminder is a system notification at the programme's start (Linux and Windows; pick the package, ADR-002 style), and opening it plays the channel. Reminders are stored, survive a restart, move with a guide re-import, and are cancelled if the programme disappears. A reminder that fell due while the app was closed shows at the next launch only while its programme is still on. Manage them in one place.
+4. UX audit: every screen keyboard-only; loading/empty/error/offline states; focus traps; text scale 115/130 %; reduce motion. Fix everything found.
+5. Performance pass in profile mode against docs/06 budgets; record numbers in docs/progress.md.
+6. 8-hour soak with faults on Linux (and Windows if available); fix leaks.
 Propose the plan first.
 ```
-**Exit criteria:** every budget in docs/06 met in profile mode and recorded in docs/progress.md · 8-hour soak with faults on Linux: no crash, memory growth ≤ 50 MB · every screen passes the keyboard-only audit at 100/115/130 % text scale and with reduce motion · Copy diagnostics contains no credentials (checked with a real source configured).
+**Exit criteria:** every budget in docs/06 met in profile mode and recorded in docs/progress.md · 8-hour soak with faults on Linux: no crash, memory growth ≤ 50 MB · every screen passes the keyboard-only audit at 100/115/130 % text scale and with reduce motion · Copy diagnostics contains no credentials (checked with a real source configured) · a reminder set from Search or the Guide shows a system notification at the programme's start on Linux (and on Windows if a real PC is available), survives a restart, and opens the channel.
 
 ## Phase 10 — Packaging & release
 ```
