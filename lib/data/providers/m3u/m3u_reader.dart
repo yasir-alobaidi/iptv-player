@@ -100,19 +100,28 @@ final class M3uBackgroundRead {
     Err(:final failure) => Err(failure),
   };
 
-  /// Stops reading; [result] completes with a `CancelledFailure`.
+  /// Stops reading by killing the isolate; [result] completes with a
+  /// `CancelledFailure`.
   void cancel() => _job.cancel();
 }
 
 /// Reads [input] in a new isolate, sending entries back in batches of
 /// [batchSize] so the UI isolate only ever receives, never parses.
+///
+/// With [stopAfter], reading stops after that many entries and the result
+/// is the summary of those. Prefer it to [M3uBackgroundRead.cancel] for a
+/// preview: the reader closes the file itself, where a killed isolate's
+/// file stays open until it is collected (Windows then refuses to delete
+/// or move it).
 M3uBackgroundRead readM3uInBackground(
   M3uInput input, {
   int batchSize = 5000,
   Duration idleTimeout = const Duration(seconds: 30),
+  int? stopAfter,
 }) => M3uBackgroundRead._(
   startBackgroundJob<List<M3uEntry>, Result<M3uSummary>>(
-    (report) => _readInBatches(input, report, batchSize, idleTimeout),
+    (report) =>
+        _readInBatches(input, report, batchSize, idleTimeout, stopAfter),
     debugName: 'm3u-read',
   ),
 );
@@ -124,14 +133,17 @@ Future<Result<M3uSummary>> _readInBatches(
   void Function(List<M3uEntry>) report,
   int batchSize,
   Duration idleTimeout,
+  int? stopAfter,
 ) async {
   var batch = <M3uEntry>[];
+  var read = 0;
   final result = await readM3u(input, (entry) {
     batch.add(entry);
     if (batch.length >= batchSize) {
       report(batch);
       batch = <M3uEntry>[];
     }
+    if (stopAfter != null && ++read >= stopAfter) throw const StopReading();
   }, idleTimeout: idleTimeout);
   if (batch.isNotEmpty) report(batch);
   return result;

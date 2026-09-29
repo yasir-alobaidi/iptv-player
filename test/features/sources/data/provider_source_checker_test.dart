@@ -135,7 +135,26 @@ http://tv.test/series/3.mkv
 
       expect(check.playlist?.complete, isFalse);
       expect(check.playlist?.entries, 50);
+      expect(check.playlist?.live, 50);
     });
+
+    test('the file is closed once the check answers', () async {
+      final lines = StringBuffer('#EXTM3U\n');
+      for (var i = 0; i < 5000; i++) {
+        lines
+          ..writeln('#EXTINF:-1,Channel $i')
+          ..writeln('http://tv.test/live/$i.ts');
+      }
+      final path = file('open.m3u', '$lines');
+
+      await checker.check(
+        SourceDraft(type: SourceType.m3uFile, name: 'x', url: path),
+      );
+
+      // What Windows sees as "being used by another process".
+      final target = File(path).resolveSymbolicLinksSync();
+      expect(_openFiles(), isNot(contains(target)));
+    }, skip: Platform.isLinux ? false : 'reads /proc');
 
     test('a file that is not a playlist is a ParseFailure', () async {
       final path = file('page.m3u', '<html><body>Not found</body></html>');
@@ -192,4 +211,18 @@ http://tv.test/series/3.mkv
       expect(result.failureOrNull, isA<AuthFailure>());
     });
   });
+}
+
+/// What this process has open (Linux). A descriptor can close while the
+/// list is read — the listing's own does.
+List<String> _openFiles() => [
+  for (final fd in Directory('/proc/self/fd').listSync()) ?_target(fd.path),
+];
+
+String? _target(String fd) {
+  try {
+    return Link(fd).targetSync();
+  } on FileSystemException {
+    return null;
+  }
 }

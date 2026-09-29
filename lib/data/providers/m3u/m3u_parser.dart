@@ -25,7 +25,9 @@ import 'package:iptv_player/data/providers/provider_text.dart';
 /// When [onEntry] returns a future, reading pauses until it completes, so
 /// a caller writing entries to the database in batches holds one batch,
 /// not the whole playlist. An error from that future ends the parse with
-/// the same error.
+/// the same error — except [StopReading], thrown or returned, which ends
+/// it early and cleanly: [bytes] is cancelled (a file is closed) before
+/// the summary of what was read comes back.
 ///
 /// [secrets] are replaced by placeholders in every stream URL
 /// (`templateUrl`). Throws [FormatException] only when the body is plainly
@@ -43,8 +45,18 @@ Future<M3uSummary> parseM3u(
   final done = Completer<void>();
   late final StreamSubscription<String> subscription;
   void fail(Object error, StackTrace stackTrace) {
-    unawaited(subscription.cancel());
-    if (!done.isCompleted) done.completeError(error, stackTrace);
+    final cancelled = subscription.cancel();
+    if (done.isCompleted) return;
+    if (error is StopReading) {
+      unawaited(
+        cancelled.whenComplete(() {
+          if (!done.isCompleted) done.complete();
+        }),
+      );
+      return;
+    }
+    unawaited(cancelled);
+    done.completeError(error, stackTrace);
   }
 
   subscription = lines.listen(
@@ -68,6 +80,12 @@ Future<M3uSummary> parseM3u(
   );
   await done.future;
   return state.finish();
+}
+
+/// Thrown (or returned as a failed future) by an `onEntry` that has read
+/// enough: [parseM3u] stops there without an error.
+final class StopReading implements Exception {
+  const new();
 }
 
 /// Longer lines are junk (a binary file, a runaway attribute), not
@@ -184,6 +202,16 @@ final class _ParseState {
     final kind = classify(line);
     final numbering = kind == M3uKind.episode ? parseEpisodeName(name) : null;
     final attributes = info?.attributes ?? const {};
+    // Counted first: an entry whose onEntry says StopReading was read.
+    _entries++;
+    switch (kind) {
+      case M3uKind.live:
+        _live++;
+      case M3uKind.movie:
+        _movies++;
+      case M3uKind.episode:
+        _episodes++;
+    }
     final pending = onEntry(
       M3uEntry(
         identity: identity,
@@ -208,15 +236,6 @@ final class _ParseState {
         episode: numbering?.episode,
       ),
     );
-    _entries++;
-    switch (kind) {
-      case M3uKind.live:
-        _live++;
-      case M3uKind.movie:
-        _movies++;
-      case M3uKind.episode:
-        _episodes++;
-    }
     _reset();
     return pending is Future<void> ? pending : null;
   }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:iptv_player/core/result.dart';
-import 'package:iptv_player/data/providers/m3u/m3u_models.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_reader.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_client.dart';
 import 'package:iptv_player/data/sync/xtream_sync.dart';
@@ -98,9 +97,11 @@ final class ProviderSourceChecker implements SourceChecker {
     };
   }
 
-  /// Reads until the first batch of entries or the end, whichever comes
-  /// first. A playlist whose start holds no entry at all is read on, in
-  /// the background isolate, until one turns up or it ends.
+  /// Reads the first [previewEntries] entries, or to the end if there are
+  /// fewer. A playlist whose start holds no entry at all is read on, in
+  /// the background isolate, until one turns up or it ends. The reader
+  /// stops by itself and closes the file: a killed isolate's file stays
+  /// open until it is collected, and Windows won't delete or move it.
   Future<Result<SourceCheck>> _playlist(
     M3uInput input, {
     required String where,
@@ -110,77 +111,36 @@ final class ProviderSourceChecker implements SourceChecker {
       input,
       batchSize: previewEntries,
       idleTimeout: const Duration(seconds: 15),
+      stopAfter: previewEntries,
     );
-    final first = Completer<List<M3uEntry>>();
-    final batches = read.batches.listen((batch) {
-      // A short batch is the playlist's last: its result follows, whole.
-      if (batch.length >= previewEntries && !first.isCompleted) {
-        first.complete(batch);
-      }
-    });
+    // The kill is the last resort.
     final timer = Timer(timeout, read.cancel);
     try {
-      final outcome = await Future.any<Object>([first.future, read.result]);
+      final outcome = await read.result;
       final elapsed = clock.elapsed;
-      switch (outcome) {
-        case final List<M3uEntry> batch:
-          // A big playlist: its start is enough.
-          read.cancel();
-          return Ok(
-            SourceCheck(
-              where: where,
-              responseTime: elapsed,
-              playlist: _preview(batch),
+      return switch (outcome) {
+        Ok(:final value) => Ok(
+          SourceCheck(
+            where: where,
+            responseTime: elapsed,
+            playlist: PlaylistPreview(
+              // A big playlist: its start is enough.
+              complete: value.entries < previewEntries,
+              entries: value.entries,
+              live: value.live,
+              movies: value.movies,
+              episodes: value.episodes,
             ),
-          );
-        case Ok<M3uSummary>(:final value):
-          return Ok(
-            SourceCheck(
-              where: where,
-              responseTime: elapsed,
-              playlist: PlaylistPreview(
-                complete: true,
-                entries: value.entries,
-                live: value.live,
-                movies: value.movies,
-                episodes: value.episodes,
-              ),
-            ),
-          );
-        case Err<M3uSummary>(failure: CancelledFailure()):
-          return Err(TimeoutFailure('playlist check'));
-        case Err<M3uSummary>(:final failure):
-          return Err(failure);
-        default:
-          return Err(UnexpectedFailure('playlist check: $outcome'));
-      }
+          ),
+        ),
+        Err(failure: CancelledFailure()) => Err(
+          TimeoutFailure('playlist check'),
+        ),
+        Err(:final failure) => Err(failure),
+      };
     } finally {
       timer.cancel();
-      await batches.cancel();
     }
-  }
-
-  static PlaylistPreview _preview(List<M3uEntry> batch) {
-    var live = 0;
-    var movies = 0;
-    var episodes = 0;
-    for (final entry in batch) {
-      switch (entry.kind) {
-        case M3uKind.live:
-          live++;
-        case M3uKind.movie:
-          movies++;
-        case M3uKind.episode:
-          episodes++;
-      }
-    }
-    return PlaylistPreview(
-      complete: false,
-      entries: batch.length,
-      live: live,
-      movies: movies,
-      episodes: episodes,
-    );
   }
 }
 

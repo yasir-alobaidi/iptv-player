@@ -197,6 +197,32 @@ void main() {
       await expectLater(parsing, throwsA(isA<StateError>()));
       expect(received, ['C0', 'C1']);
     });
+
+    test('StopReading, thrown or returned, ends it cleanly: the entry it came '
+        'with counts, and the input is cancelled first', () async {
+      for (final stop in <FutureOr<void> Function()>[
+        () => throw const StopReading(),
+        () => Future<void>.error(const StopReading()),
+      ]) {
+        final received = <String>[];
+        var cancelled = false;
+        final input = StreamController<List<int>>(
+          onCancel: () async {
+            await pumpEventQueue();
+            cancelled = true;
+          },
+        )..add(lines(5).codeUnits);
+        final summary = await parseM3u(input.stream, (entry) {
+          received.add(entry.name);
+          return entry.name == 'C2' ? stop() : null;
+        });
+
+        expect(cancelled, isTrue);
+        expect(received, ['C0', 'C1', 'C2']);
+        expect(summary.entries, 3);
+        expect(summary.live, 3);
+      }
+    });
   });
 
   group('not a playlist', () {
