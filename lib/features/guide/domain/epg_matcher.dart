@@ -159,7 +159,7 @@ String guideIdKey(String id) {
 ({String key, String? country}) _normalize(String name) {
   if (name.isEmpty) return (key: '', country: null);
   var text = name.contains('&') ? decodeNameEntities(name) : name;
-  text = foldName(text.toLowerCase());
+  text = withoutTrailingCountries(foldName(text.toLowerCase()));
   final (:start, :country, tags: _) = leadingNameTags(text);
   if (start > 0) text = text.substring(start);
   if (text.contains('&')) text = text.replaceAll('&', ' and ');

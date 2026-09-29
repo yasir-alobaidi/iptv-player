@@ -14,3 +14,9 @@ tags:
       `flutter test --tags benchmark --run-skipped` and record the numbers
       in docs/progress.md.
     skip: "a benchmark: run with --tags benchmark --run-skipped"
+  real_provider:
+    description: >-
+      Talks to the user's own panel (the login file outside the repository,
+      docs/06). Skipped by default, and never run without the user's
+      go-ahead: run with `flutter test --tags real_provider --run-skipped`.
+    skip: "talks to a real panel: run with --tags real_provider --run-skipped"

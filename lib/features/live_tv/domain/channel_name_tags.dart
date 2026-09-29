@@ -440,3 +440,220 @@ const technicalWords = <String>{
 
 /// Every quality tag, as the words the matcher splits a name into.
 final Set<String> qualityWords = {...resolutionWords.keys, ...technicalWords};
+
+// ------------------------------------------------------ trailing countries
+
+/// [text] without the countries written after a name behind a bar, as
+/// some panels write every name: `BEIN SPORTS FR 1 4K | France |`, `STV |
+/// UK |`, `Sky Sports | UK | FHD` (the quality and technical tags after
+/// one stay where they are). Only [trailingCountries]; a country with no
+/// word before its bar stays. Any case.
+String withoutTrailingCountries(String text) {
+  var out = text;
+  var end = out.length;
+  while (true) {
+    end = _backOverTrail(out, end);
+    if (end == 0) return out;
+    final bar = _countryBarBefore(out, end);
+    if (bar != null) {
+      out = out.substring(0, bar) + out.substring(end);
+      end = bar;
+      continue;
+    }
+    var start = end;
+    while (start > 0 && isWordAt(out, start - 1)) {
+      start--;
+    }
+    if (start == end ||
+        !qualityWords.contains(
+          out.substring(start, end).toLowerCase().replaceAll('.', ''),
+        )) {
+      return out;
+    }
+    end = start;
+  }
+}
+
+/// Back over what may stand between a name's last words and its tags: a
+/// space, a separator, a dash, a bracket.
+int _backOverTrail(String text, int end) {
+  var i = end;
+  while (i > 0) {
+    final unit = text.codeUnitAt(i - 1);
+    if (!(isSpace(unit) ||
+        isTagSeparator(unit) ||
+        isDash(unit) ||
+        unit == 0x28 ||
+        unit == 0x29 ||
+        unit == 0x5b ||
+        unit == 0x5d ||
+        unit == 0x7b ||
+        unit == 0x7d)) {
+      break;
+    }
+    i--;
+  }
+  return i;
+}
+
+/// Where the bar before a country ending at [end] is (`… | France`), when
+/// one is there and a word stands before it; null otherwise.
+///
+/// Before the bar, a lone tag-shaped word (`PS| Palestine`) is the
+/// country's tag and the country the channel's name — unless the country
+/// is closed by a bar of its own (`STV | UK |`, `TVI | Portugal |`).
+int? _countryBarBefore(String text, int end) {
+  final lower = text.substring(0, end).toLowerCase();
+  for (final country in trailingCountries) {
+    if (!lower.endsWith(country)) continue;
+    final start = end - country.length;
+    if (start > 0 && isWordAt(text, start - 1)) continue;
+    final bar = _backOverSpacesFrom(text, start) - 1;
+    if (bar < 0 || text.codeUnitAt(bar) != 0x7c) continue;
+    final before = text.substring(0, bar);
+    if (!_hasWordFrom(before, 0)) continue;
+    final closed =
+        _skipSpaces(text, end) < text.length &&
+        text.codeUnitAt(_skipSpaces(text, end)) == 0x7c;
+    if (!closed && _loneTagWord.hasMatch(before)) continue;
+    return bar;
+  }
+  return null;
+}
+
+final _loneTagWord = RegExp(r'^\s*[A-Za-z]{2,3}\s*$');
+
+int _backOverSpacesFrom(String text, int end) {
+  var i = end;
+  while (i > 0 && isSpace(text.codeUnitAt(i - 1))) {
+    i--;
+  }
+  return i;
+}
+
+/// Countries as panels write them after a name, lower case: in English,
+/// in their own language (with the matcher's folding: `espana` beside
+/// `españa`), and the spellings seen on a real panel (`Turky`, `Srbija`,
+/// `BiH`). The category says the country already. Not the UK's nations
+/// (`BBC One | Wales` and `BBC One | Scotland` are two channels), regions,
+/// languages, or `Georgia` (a US state too).
+const trailingCountries = <String>{
+  'afghanistan',
+  'albania',
+  'algeria',
+  'argentina',
+  'armenia',
+  'australia',
+  'austria',
+  'azerbaijan',
+  'bahrain',
+  'belarus',
+  'belgie',
+  'belgique',
+  'belgium',
+  'bih',
+  'bosnia',
+  'brasil',
+  'brazil',
+  'bulgaria',
+  'canada',
+  'chile',
+  'china',
+  'colombia',
+  'croatia',
+  'cyprus',
+  'czech',
+  'czechia',
+  'danmark',
+  'denmark',
+  'deutschland',
+  'egypt',
+  'espana',
+  'españa',
+  'estonia',
+  'ethiopia',
+  'finland',
+  'france',
+  'germany',
+  'ghana',
+  'greece',
+  'hellas',
+  'holland',
+  'hrvatska',
+  'hungary',
+  'iceland',
+  'india',
+  'indonesia',
+  'iran',
+  'iraq',
+  'ireland',
+  'israel',
+  'italia',
+  'italy',
+  'japan',
+  'jordan',
+  'kazakhstan',
+  'kenya',
+  'korea',
+  'kosovo',
+  'kurdistan',
+  'kuwait',
+  'latvia',
+  'lebanon',
+  'libya',
+  'lithuania',
+  'macedonia',
+  'magyarorszag',
+  'malaysia',
+  'malta',
+  'mexico',
+  'méxico',
+  'montenegro',
+  'morocco',
+  'nederland',
+  'netherlands',
+  'nigeria',
+  'norge',
+  'norway',
+  'oman',
+  'pakistan',
+  'palestine',
+  'peru',
+  'philippines',
+  'poland',
+  'polska',
+  'portugal',
+  'qatar',
+  'romania',
+  'russia',
+  'saudi',
+  'saudi arabia',
+  'serbia',
+  'slovakia',
+  'slovenia',
+  'somalia',
+  'south africa',
+  'spain',
+  'srbija',
+  'sudan',
+  'suomi',
+  'sverige',
+  'sweden',
+  'switzerland',
+  'syria',
+  'thailand',
+  'tunisia',
+  'turkey',
+  'turkiye',
+  'türkiye',
+  'turky',
+  'uae',
+  'uk',
+  'ukraine',
+  'united kingdom',
+  'united states',
+  'usa',
+  'venezuela',
+  'vietnam',
+  'yemen',
+};

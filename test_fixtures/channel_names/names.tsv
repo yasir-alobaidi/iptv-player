@@ -137,3 +137,22 @@ HD FHD	HD FHD	-
 Backup HD	Backup HD	-
 [FHD]	[FHD]	-
 ||	||	-
+
+# Phase 6 step 8, a real panel: a country after the name behind a bar
+BEIN SPORTS FR 1 4K | France |	BEIN SPORTS FR 1	4K
+BEIN SPORTS FR 1 SD | France |	BEIN SPORTS FR 1	SD
+STV | UK |	STV	-
+TRT 1 | Turky |	TRT 1	-
+TVP SPORT HD | Poland |	TVP SPORT	HD
+M6 HEVC | France |	M6 HEVC	-
+Kan 11 | Israel	Kan 11	-
+TVI | Portugal |	TVI	-
+# ... but a lone tag before a bare country: the country is the name
+PS| Palestine	Palestine	-
+Sky Sports Main Event | UK | FHD	Sky Sports Main Event	FHD
+# ... and what stays: the feed's own words, the UK's nations, a second name
+Arena Sport 1 | P2P |	Arena Sport 1 | P2P	-
+Eurosport 1 | Multi Quality |	Eurosport 1 | Multi Quality	-
+BBC One | Wales	BBC One | Wales	-
+X | Shahid Sports 1	X | Shahid Sports 1	-
+NBC 10 HD [EL DORADO]	NBC 10 HD [EL DORADO]	-

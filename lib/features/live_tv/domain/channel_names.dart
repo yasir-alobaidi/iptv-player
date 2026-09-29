@@ -42,7 +42,12 @@ enum ChannelQuality {
 ///     start when a separator or brackets mark them; the highest wins;
 ///  5. technical tags among them kept, moved after the name: a codec, a
 ///     frame rate, `Backup`, `VIP` — they tell two feeds of one channel
-///     apart, and nothing else would once the badge is gone.
+///     apart, and nothing else would once the badge is gone;
+///  6. a country after the name behind a bar dropped (`BEIN SPORTS FR 1
+///     4K | France |` → `BEIN SPORTS FR 1`, 4K; `STV | UK |` → `STV`), as
+///     some panels write every name (`withoutTrailingCountries`, which the
+///     matcher shares) — what else stands there (`| P2P |`, `| Multi
+///     Quality |`) is the feed's.
 ///
 /// A timeshift (`+1`), numbers and the provider's capitals are kept, and
 /// only whole words at the edges ever go: `HD Kids` keeps its `HD`. A
@@ -53,6 +58,9 @@ enum ChannelQuality {
   var text = raw.contains('&') ? decodeNameEntities(raw) : raw;
   text = _tidySpaces(text);
   if (text.isEmpty) return (name: raw, quality: null);
+  // Step 6 first, or the leading tags would take `STV` of `STV | UK |`
+  // for one.
+  text = withoutTrailingCountries(text);
 
   ChannelQuality? quality;
   final kept = <String>[];
