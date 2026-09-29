@@ -130,14 +130,20 @@ final class VodPlayerController extends ChangeNotifier {
   void togglePause() =>
       unawaited(_coordinator.setPaused(paused: !_coordinator.timeline.paused));
 
-  /// Play now, or the end card's Play next episode.
+  /// Play now, or the end card's Play next episode. The card shows only in
+  /// the credits, so the episode left counts as watched, however short it
+  /// is (a 2-minute episode is left at 92 %, under [completeAt]).
   void playNext() {
     final item = _item;
     final next = _next;
     if (item is! PlayableEpisode || next == null) return;
     _stopCountdown();
     unawaited(
-      _coordinator.playVod(PlayableEpisode(item.series, next), from: _nextFrom),
+      _coordinator.playVod(
+        PlayableEpisode(item.series, next),
+        from: _nextFrom,
+        finishedLeaving: true,
+      ),
     );
   }
 

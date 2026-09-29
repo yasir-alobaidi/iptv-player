@@ -186,19 +186,37 @@ final class PlaybackCoordinator {
 
   /// Plays a movie or an episode from [from] (a resume), or from its
   /// start, replacing whatever plays now.
-  Future<void> playVod(Playable item, {Duration? from}) async {
+  ///
+  /// [finishedLeaving]: the file playing now was watched to its credits
+  /// (the next episode's card), so it is saved at its end, as watched,
+  /// wherever the credits began.
+  Future<void> playVod(
+    Playable item, {
+    Duration? from,
+    bool finishedLeaving = false,
+  }) async {
     assert(!item.live, 'playLive plays channels');
-    await _play(item, from != null && from > Duration.zero ? from : null);
+    await _play(
+      item,
+      from != null && from > Duration.zero ? from : null,
+      finishedLeaving: finishedLeaving,
+    );
   }
 
-  Future<void> _play(Playable item, Duration? from) async {
+  Future<void> _play(
+    Playable item,
+    Duration? from, {
+    bool finishedLeaving = false,
+  }) async {
     final leaving = _leaving();
     final token = ++_token;
     _attempts = 0;
     _recorded = false;
     _cancelTimers();
     _startFile(from);
-    if (leaving != null) unawaited(_save(leaving));
+    if (leaving != null) {
+      unawaited(finishedLeaving ? _saveWatched(leaving) : _save(leaving));
+    }
     _set(PlaybackOpening(item));
     _publish();
     await _open(item, token);
@@ -573,6 +591,19 @@ final class PlaybackCoordinator {
     );
     if (saved?.failureOrNull case final failure?) {
       _log.warning(_tag, 'Could not save where it was left: $failure');
+    }
+  }
+
+  /// [at]'s file saved as watched: at its end when its length is known.
+  Future<void> _saveWatched((VodRef, Duration, Duration?) at) async {
+    final (ref, _, duration) = at;
+    if (duration != null && duration > Duration.zero) {
+      await _save((ref, duration, duration));
+      return;
+    }
+    final saved = await _progress?.setWatched(ref, watched: true);
+    if (saved?.failureOrNull case final failure?) {
+      _log.warning(_tag, 'Could not save it as watched: $failure');
     }
   }
 

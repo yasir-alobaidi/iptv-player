@@ -136,15 +136,23 @@ jobs:
           IPTV_PLAYER_VIDEO: '0'
         # One file per run: on Linux desktop the second app of a
         # multi-file run never starts ("Unable to start the app on the
-        # device"), whichever file it is. Every file runs, and each that
-        # fails is named in an annotation, which the public API shows
-        # without the log's admin rights.
+        # device"), whichever file it is. Every file runs, and each test
+        # that fails is an annotation with its error, which the public API
+        # shows without the log's admin rights.
         run: |
           failed=0
           for test in integration_test/*_test.dart; do
-            if ! xvfb-run -a flutter test "$test" -d linux; then
-              echo "::error title=Integration test failed::$test"
+            rm -f integration-results.json
+            if ! xvfb-run -a flutter test "$test" -d linux \
+                --file-reporter json:integration-results.json; then
               failed=1
+              named=''
+              if [ -s integration-results.json ]; then
+                named=$(dart run tools/ci/failed_tests.dart \
+                  integration-results.json | grep '::error' || true)
+              fi
+              # The app may fail before any test starts: name the file.
+              echo "${named:-::error title=Integration test failed::$test}"
             fi
           done
           exit $failed

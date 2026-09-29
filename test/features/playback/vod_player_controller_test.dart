@@ -242,6 +242,40 @@ void main() {
       });
     });
 
+    test('the count leaves the episode saved as watched, at its end', () {
+      fakeAsync((async) {
+        start(async, PlayableEpisode(series, e1));
+        async.flushMicrotasks();
+        final end = length.inSeconds;
+        rig.coordinator.seek(length - const Duration(seconds: 20));
+        async.flushMicrotasks();
+        play(async, from: end - 20, seconds: 10);
+
+        expect(rig.state.item, PlayableEpisode(series, e2));
+        final left = rig.progress.saves.lastWhere((s) => s.ref == e1.ref);
+        expect(left.position, length);
+        expect(isComplete(left.position, left.duration), isTrue);
+      });
+    });
+
+    test('Play now in the credits saves the episode as watched too', () {
+      fakeAsync((async) {
+        start(async, PlayableEpisode(series, e1));
+        async.flushMicrotasks();
+        rig.coordinator.seek(length - const Duration(seconds: 20));
+        async.flushMicrotasks();
+        rig.progress.saves.clear();
+
+        vod.playNext();
+        async.flushMicrotasks();
+        expect(rig.progress.saves.single, (
+          ref: e1.ref,
+          position: length,
+          duration: length,
+        ));
+      });
+    });
+
     test(
       'a pause holds the count; seeking back out of the credits stops it',
       () {
