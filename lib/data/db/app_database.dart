@@ -18,6 +18,7 @@ import 'package:iptv_player/data/db/epg_tables.dart';
 import 'package:iptv_player/data/db/tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart' show Database;
 
 part 'app_database.g.dart';
 
@@ -198,5 +199,21 @@ Future<DatabaseConnection> openAppDatabase(Directory directory) async {
   await directory.create(recursive: true);
   return NativeDatabase.createBackgroundConnection(
     File(p.join(directory.path, appDatabaseFileName)),
+    setup: configureAppDatabase,
   );
+}
+
+/// How the app's database file is kept (ADR-013, alongside):
+/// - **write-ahead logging** with `synchronous = NORMAL`: a commit waits
+///   for no disk sync (the rollback journal waited for several each —
+///   slow on Windows, where the CI's sync and import tests ran out of
+///   time). A crash of the app loses nothing committed; a power cut may
+///   lose the last commits, never the file's consistency;
+/// - the log cut back to 64 MB after a checkpoint, as a guide's swap
+///   writes hundreds of MB in one transaction.
+void configureAppDatabase(Database database) {
+  database
+    ..execute('PRAGMA journal_mode = WAL')
+    ..execute('PRAGMA synchronous = NORMAL')
+    ..execute('PRAGMA journal_size_limit = ${64 * 1024 * 1024}');
 }

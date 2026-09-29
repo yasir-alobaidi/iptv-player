@@ -36,6 +36,16 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test('the file is kept with write-ahead logging, synced normally', () async {
+    Future<Object?> pragma(String name) async =>
+        (await db.customSelect('PRAGMA $name').getSingle()).data.values.single;
+
+    expect(await pragma('journal_mode'), 'wal');
+    expect(await pragma('synchronous'), 1); // NORMAL
+    expect(await pragma('journal_size_limit'), 64 * 1024 * 1024);
+    expect(await pragma('foreign_keys'), 1);
+  });
+
   test('other isolates connect straight to the database isolate', () async {
     final first = await db.serializableConnection();
     final second = await db.serializableConnection();

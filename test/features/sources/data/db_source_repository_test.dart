@@ -450,7 +450,10 @@ void main() {
     final directory = await Directory.systemTemp.createTemp('sources_test');
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/iptv_player.sqlite');
-    final disk = _Harness(AppDatabase(NativeDatabase(file)));
+    // Kept as the app keeps it: the write-ahead log is scanned too.
+    final disk = _Harness(
+      AppDatabase(NativeDatabase(file, setup: configureAppDatabase)),
+    );
 
     final xtream = await disk.add(_xtream.copyWith(epgUrl: _epgUrl));
     final playlist = await disk.add(
@@ -524,9 +527,16 @@ void main() {
     );
 
     await disk.log.close();
+    final secrets = [_password, '$_password-2', _playlistToken];
+    // Before the close checkpoints the log into the file and removes it.
+    final wal = File('${file.path}-wal');
+    expect(wal.existsSync(), isTrue);
+    final logged = String.fromCharCodes(wal.readAsBytesSync());
+    for (final secret in secrets) {
+      expect(logged, isNot(contains(secret)), reason: wal.path);
+    }
     await disk.database.close();
 
-    final secrets = [_password, '$_password-2', _playlistToken];
     for (final entry in directory.listSync().whereType<File>()) {
       final text = String.fromCharCodes(entry.readAsBytesSync());
       for (final secret in secrets) {
