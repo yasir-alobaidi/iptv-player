@@ -225,6 +225,67 @@ void main() {
     expect(shownNames(tester).take(2), ['UK | Sports', 'UK | News']);
   });
 
+  testWidgets('the list is one Tab stop: ↓ inside it, Tab out of it', (
+    tester,
+  ) async {
+    fakes.sources.seed();
+    await pump(tester);
+
+    // Select none is the last control above the list.
+    Focus.of(tester.element(find.text('Select none'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(focusIsOn(tester, find.text('UK | Sports')), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(focusIsOn(tester, find.text('UK | News')), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    for (final name in ['UK | News', 'UK | Entertainment', 'US | News']) {
+      expect(focusIsOn(tester, find.text(name)), isFalse, reason: name);
+    }
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<AppIconButton>(),
+      isNull,
+      reason: "a row's Rename is not a stop",
+    );
+
+    expect(focusIsOn(tester, find.text('Sources').first), isTrue);
+  });
+
+  testWidgets("the menu key: a row's Rename…, Move up and Move down", (
+    tester,
+  ) async {
+    fakes.sources.seed();
+    await pump(tester);
+
+    Focus.of(tester.element(find.text('UK | News'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settleApp(tester);
+    await tester.tap(find.text('Move up'));
+    await settleApp(tester);
+    expect(fakes.categories.writes, ['reorder 2,1,3,4,5,6,7,8,9,10']);
+    expect(focusIsOn(tester, find.text('UK | News')), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settleApp(tester);
+    await tester.tap(find.text('Move down'));
+    await settleApp(tester);
+    expect(fakes.categories.writes.last, 'reorder 1,2,3,4,5,6,7,8,9,10');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settleApp(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settleApp(tester);
+    expect(find.text('Rename category'), findsOneWidget, reason: 'first item');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settleApp(tester);
+  });
+
   testWidgets('reordering a filtered list moves past the shown neighbour', (
     tester,
   ) async {

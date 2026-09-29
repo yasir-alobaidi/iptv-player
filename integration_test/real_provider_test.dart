@@ -291,7 +291,10 @@ Future<void> _walk(
   );
   if (before.length >= 2) {
     final target = before[1];
-    await k.tabTo(rowOf(target));
+    // The list is one Tab stop: its first row, then ↓.
+    await k.tabTo(rowOf(before[0]));
+    await k.press(LogicalKeyboardKey.arrowDown);
+    expect(k.focusIsOn(rowOf(target)), isTrue);
     await k.press(LogicalKeyboardKey.space);
     await k.waitUntil(
       () async => (await app.hiddenNames(source.id)).contains(target),
@@ -302,8 +305,9 @@ Future<void> _walk(
       () async => (await app.liveNames(source.id)).first == target,
       'the move to be saved',
     );
-    await k.press(LogicalKeyboardKey.tab);
-    expect(k.focusedLabel(), 'Rename $target');
+    // Rename… from the row's menu: its Rename button is the mouse's.
+    await k.press(LogicalKeyboardKey.contextMenu);
+    await k.waitFor(find.text('Rename…'));
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('Rename category'));
     await k.replaceText('My favourites', into: 'Name');

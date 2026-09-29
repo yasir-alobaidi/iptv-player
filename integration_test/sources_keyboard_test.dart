@@ -195,7 +195,10 @@ void main() {
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('Show hidden'));
     final before = await app.liveNames(source.id);
-    await k.tabTo(rowOf(before[1]));
+    // The list is one Tab stop: its first row, then ↓.
+    await k.tabTo(rowOf(before[0]));
+    await k.press(LogicalKeyboardKey.arrowDown);
+    expect(k.focusIsOn(rowOf(before[1])), isTrue);
     await k.press(LogicalKeyboardKey.space);
     await k.waitUntil(
       () async => (await app.hiddenNames(source.id)).contains(before[1]),
@@ -206,8 +209,9 @@ void main() {
       () async => (await app.liveNames(source.id)).first == before[1],
       'the move to be saved',
     );
-    await k.press(LogicalKeyboardKey.tab);
-    expect(k.focusedLabel(), 'Rename ${before[1]}');
+    // Rename… from the row's menu: its Rename button is the mouse's.
+    await k.press(LogicalKeyboardKey.contextMenu);
+    await k.waitFor(find.text('Rename…'));
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('Rename category'));
     await k.replaceText('My favourites', into: 'Name');
@@ -248,8 +252,12 @@ void main() {
     await k.press(LogicalKeyboardKey.arrowDown);
     await k.press(LogicalKeyboardKey.enter);
     final second = (await app.sources()).last;
-    expect(app.container.read(currentSourceProvider)?.id, second.id);
-    expect(byLabel('Source: 127.0.0.1'), findsOneWidget);
+    // A menu runs its item once it has faded out.
+    await k.waitUntil(
+      () => app.container.read(currentSourceProvider)?.id == second.id,
+      'the second source browsed',
+    );
+    await k.waitFor(byLabel('Source: 127.0.0.1'));
 
     // ── Remove both. Enter on the confirmation keeps; Tab, Enter removes.
     for (final name in ['Fake panel', '127.0.0.1']) {

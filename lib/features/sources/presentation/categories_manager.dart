@@ -615,29 +615,36 @@ class _Manager extends StatelessWidget {
                       ? null
                       : 'Turn on Show hidden to see them.',
                 )
-              : ReorderableListView.builder(
-                  buildDefaultDragHandles: false,
-                  itemCount: shown.length,
-                  onReorderItem: (from, to) =>
-                      onMove(list.categories, shown, from, to),
-                  proxyDecorator: (child, index, animation) =>
-                      Material(type: MaterialType.transparency, child: child),
-                  itemBuilder: (context, index) {
-                    final category = shown[index];
-                    return Padding(
-                      key: ValueKey(category.id),
-                      padding: EdgeInsets.only(bottom: tokens.spacing.s4),
-                      child: _CategoryRow(
-                        category: category,
-                        index: index,
-                        unit: _noun(kind, category.itemCount),
-                        onToggle: () => onToggle(category),
-                        onRename: () => onRename(category),
-                        onMove: (by) =>
-                            onMove(list.categories, shown, index, index + by),
-                      ),
-                    );
-                  },
+              // One Tab stop, ↑/↓ inside (docs/05): a provider can send
+              // hundreds of categories, and the controls above were a long
+              // Shift+Tab away.
+              : FocusPane(
+                  debugLabel: 'categories',
+                  tabStop: true,
+                  child: ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    itemCount: shown.length,
+                    onReorderItem: (from, to) =>
+                        onMove(list.categories, shown, from, to),
+                    proxyDecorator: (child, index, animation) =>
+                        Material(type: MaterialType.transparency, child: child),
+                    itemBuilder: (context, index) {
+                      final category = shown[index];
+                      return Padding(
+                        key: ValueKey(category.id),
+                        padding: EdgeInsets.only(bottom: tokens.spacing.s4),
+                        child: _CategoryRow(
+                          category: category,
+                          index: index,
+                          unit: _noun(kind, category.itemCount),
+                          onToggle: () => onToggle(category),
+                          onRename: () => onRename(category),
+                          onMove: (by) =>
+                              onMove(list.categories, shown, index, index + by),
+                        ),
+                      );
+                    },
+                  ),
                 ),
         ),
       ],
@@ -646,7 +653,9 @@ class _Manager extends StatelessWidget {
 }
 
 /// One category (sketch): drag handle, the switch with its name, the
-/// count, and Rename. Alt+↑ / Alt+↓ move it.
+/// count, and Rename. Enter or Space flips it; Alt+↑ / Alt+↓ move it; the
+/// menu key has Rename…, Move up and Move down. Rename is the mouse's:
+/// the list is one Tab stop.
 class _CategoryRow extends StatelessWidget {
   const new({
     required this.category,
@@ -703,68 +712,96 @@ class _CategoryRow extends StatelessWidget {
             Expanded(
               child: Semantics(
                 toggled: on,
-                child: FocusableSurface(
-                  onPressed: onToggle,
-                  borderRadius: tokens.radii.smAll,
-                  hoverBackground: colors.surface3,
-                  semanticLabel:
-                      '${category.name}, '
-                      '${formatCount(category.itemCount)} $unit',
-                  builder: (context, states) => Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: tokens.spacing.s8,
-                    ),
-                    child: SizedBox(
-                      height: 40,
-                      child: Row(
-                        children: [
-                          AppCheckbox(
-                            state: on ? CheckState.on : CheckState.off,
-                            emphasized: states.highlighted,
+                child: Builder(
+                  builder: (anchor) => FocusableSurface(
+                    onPressed: onToggle,
+                    onMenu: () => unawaited(
+                      showAppMenu(
+                        anchor,
+                        items: [
+                          AppMenuItem(
+                            label: 'Rename…',
+                            icon: AppIcons.edit,
+                            onPressed: onRename,
                           ),
-                          SizedBox(width: tokens.spacing.s12),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    category.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: tokens.text.label
-                                        .withWeight(states.focused ? 700 : 600)
-                                        .copyWith(
-                                          color: on || states.highlighted
-                                              ? colors.textPrimary
-                                              : colors.textSecondary,
-                                        ),
-                                  ),
-                                ),
-                                if (category.providerName
-                                    case final original?) ...[
-                                  SizedBox(width: tokens.spacing.s8),
-                                  Flexible(
-                                    child: Text(
-                                      'was $original',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: tokens.text.labelSmall.copyWith(
-                                        color: colors.textTertiary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                          AppMenuItem(
+                            label: 'Move up',
+                            icon: AppIcons.arrowUp,
+                            shortcut: 'Alt ↑',
+                            onPressed: () => onMove(-1),
                           ),
-                          SizedBox(width: tokens.spacing.s12),
-                          Text(
-                            '${formatCount(category.itemCount)} $unit',
-                            style: tokens.text.labelSmall
-                                .withWeight(500)
-                                .copyWith(color: colors.textTertiary),
+                          AppMenuItem(
+                            label: 'Move down',
+                            icon: AppIcons.arrowDown,
+                            shortcut: 'Alt ↓',
+                            onPressed: () => onMove(1),
                           ),
                         ],
+                      ),
+                    ),
+                    borderRadius: tokens.radii.smAll,
+                    hoverBackground: colors.surface3,
+                    semanticLabel:
+                        '${category.name}, '
+                        '${formatCount(category.itemCount)} $unit',
+                    builder: (context, states) => Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: tokens.spacing.s8,
+                      ),
+                      child: SizedBox(
+                        height: 40,
+                        child: Row(
+                          children: [
+                            AppCheckbox(
+                              state: on ? CheckState.on : CheckState.off,
+                              emphasized: states.highlighted,
+                            ),
+                            SizedBox(width: tokens.spacing.s12),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      category.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: tokens.text.label
+                                          .withWeight(
+                                            states.focused ? 700 : 600,
+                                          )
+                                          .copyWith(
+                                            color: on || states.highlighted
+                                                ? colors.textPrimary
+                                                : colors.textSecondary,
+                                          ),
+                                    ),
+                                  ),
+                                  if (category.providerName
+                                      case final original?) ...[
+                                    SizedBox(width: tokens.spacing.s8),
+                                    Flexible(
+                                      child: Text(
+                                        'was $original',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: tokens.text.labelSmall.copyWith(
+                                          color: colors.textTertiary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: tokens.spacing.s12),
+                            Text(
+                              '${formatCount(category.itemCount)} $unit',
+                              style: tokens.text.labelSmall
+                                  .withWeight(500)
+                                  .copyWith(color: colors.textTertiary),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -772,12 +809,14 @@ class _CategoryRow extends StatelessWidget {
               ),
             ),
             SizedBox(width: tokens.spacing.s4),
-            AppIconButton(
-              icon: AppIcons.edit,
-              tooltip: 'Rename ${category.name}',
-              size: 36,
-              iconSize: 16,
-              onPressed: onRename,
+            ExcludeFocus(
+              child: AppIconButton(
+                icon: AppIcons.edit,
+                tooltip: 'Rename ${category.name}',
+                size: 36,
+                iconSize: 16,
+                onPressed: onRename,
+              ),
             ),
             SizedBox(width: tokens.spacing.s4),
           ],
