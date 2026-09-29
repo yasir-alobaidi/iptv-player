@@ -1,86 +1,73 @@
-# Handoff — 2026-09-29 (Phase 6 done; Phase 7, casting, next)
+# Handoff — 2026-09-29 (Phase 7 plan written, waiting for approval)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, and the Phase 7
-part of docs/08-phases-and-prompts.md with docs/04-casting.md.
+it. Read this file whole, then CLAUDE.md, docs/progress.md,
+docs/plans/phase-7-casting.md, the Phase 7 part of
+docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review and push** the local commits, oldest first: "Fix CI's VOD walk:
-   an episode left through the next-episode card is watched" through
-   "Phase 6 step 8b: your panel's names reviewed, and the phase exit", and
-   this handoff.
-2. **CI after the push:** Linux should be green (its one failure,
-   `vod_walk_test.dart`, is fixed). On Windows, four of its failures were
-   worked on without a Windows machine: the path test, the two "file in
-   use" deletions, and the timeouts of many-commit tests (the database now
-   keeps a write-ahead log). The run says which are gone.
-3. **Your channel names change a little at the next sync:** 52 of your
-   12,608 (`BEIN SPORTS FR 1 4K | France |` → BEIN SPORTS FR 1 with a 4K
-   badge; `STV | UK |` → STV).
-4. **Try it:** hide a channel from Search's menu — the toast now shows over
-   the overlay, and **Ctrl+Z** undoes any "… · Undo" toast; Settings →
-   Categories: the list is one Tab stop, the Menu key renames and moves;
-   Live TV: Tab now goes categories → Manage → filter → sort → list.
-5. **Decided:** "Remind me" on upcoming programmes goes into **Phase 9**
-   (ADR-013 decision 5; docs/08's Phase 9 step 3). **No movie-name
-   cleanup for v1** (your choice, ADR-013 step 8).
+1. **Read the Phase 7 plan** (`docs/plans/phase-7-casting.md`): eight
+   decisions, each with a recommendation first, and five sketches. Say
+   which recommendations you accept or what to change.
+2. **Push** this session's three local commits: "Remind me goes into
+   Phase 9…", "No movie-name cleanup for v1…" and "Phase 7 plan:
+   casting, for approval".
+3. **CI:** the Phase 6 push (abd0c1a) ran **green on Windows for the first
+   time since Phase 4**. Linux's unit tests were green; its integration
+   walks were still running at the end of this session — check the run.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/08-phases-and-prompts.md (Phase 7) and docs/04-casting.md first.
-Phase 6 is pushed; CI is <green | red: …>. Write the Phase 7 (casting) plan for my approval.
+docs/plans/phase-7-casting.md, docs/08-phases-and-prompts.md (Phase 7) and docs/04-casting.md first.
+The Phase 7 plan is <approved as written | approved with these changes: …>. Start step 1.
 ```
 
 ## Where things stand
-- **Phase 6 is done: ADR-013 Accepted** at the phase exit. Every exit
-  criterion is proved (search by keyboard on the `large` catalogue;
-  favorites' order and groups through a restart and a re-sync; the name
-  corpus; hidden channels and categories gone from Live TV, the Guide,
-  Search and Home, back from Settings).
-- **Checks, all green at the last commit:** analyze, format,
-  `build_runner` leaves no diff; **2,101 app tests** (11 skipped) under
-  `TZ=UTC`; the fake provider's 141; **all 17 integration walks** under
-  xvfb (every file but the real-provider ones, the soak, the zap benchmark
-  and the two profile-mode scroll measurements).
-- **Measured:** typing into search on the `large` catalogue, 0 of 488
-  frames over 16 ms; search per query median 6.5 ms, worst 29.7 ms; the
-  `large` sync 5.8 s (write-ahead log).
+- **Phase 6 is done: ADR-013 Accepted** at the phase exit.
+- **Phase 7 (casting): the plan is written, not yet approved.** No code
+  yet. ADR-014 starts when the plan is approved.
+- **Checks, all green at the last code commit (Phase 6's exit):** analyze,
+  format, `build_runner` leaves no diff; **2,101 app tests** (11 skipped)
+  under `TZ=UTC`; the fake provider's 141; all 17 integration walks under
+  xvfb. This session changed docs only.
+- **CI (abd0c1a):** Windows green, every test; Linux unit tests green,
+  integration walks pending at the time of writing.
 
-## Done this session (2026-09-29, the second)
-- **CI's Linux failure** was `vod_walk_test.dart`, never green on CI: with
-  CI's 120 s samples an episode left through the next-episode card was
-  saved at 92 %, under "watched". A real bug for short episodes: moving on
-  through the card now saves it as watched. CI annotates each failing
-  integration test with its error.
-- **Windows, four fixes** (one commit each): the path test; the playlist
-  check and a stopped sync close the file before the isolate is killed;
-  the write-ahead log.
-- **Step 7, the rest:** its tests; the Categories manager's list one Tab
-  stop; the hiding walk. Found and fixed: toasts now show over every route
-  and **Ctrl+Z** runs a shown Undo; menu items run once the menu has faded
-  (a semantics assertion in the Guide); Tab from Live TV's filter never
-  reached the list; Home's Recently watched kept a hidden category's
-  channel; Home's rows missed changes made elsewhere (drift shared every
-  `SELECT 1` change stream).
-- **Step 8, the exit:** the favorites walk; the typing-frames measurement;
-  your panel's names (with your go-ahead: one catalogue-only sync, no
-  stream) — the trailing-country fix; docs/05, 02 and 06; ADR-013
-  Accepted.
+## Done this session (2026-09-29, the third)
+- **"Remind me" goes into Phase 9** (your answer to ADR-013 decision 5):
+  docs/08's Phase 9 has it as step 3 and an exit criterion — a system
+  notification at the programme's start, from Search's upcoming rows and
+  the Guide's programme sheet.
+- **No movie-name cleanup for v1** (your choice).
+- **The Phase 7 plan** (`docs/plans/phase-7-casting.md`). What it proposes
+  beyond docs/04, in short:
+  1. movies and episodes cast in this phase too (direct file, or the relay
+     with a seek that restarts it);
+  2. while casting, everything played goes to the TV;
+  3. FFmpeg reads the provider through a loopback proxy in the relay (no
+     credentials on command lines, URLs rebuilt per reconnect, the
+     connection visible to the app, orphans die with the app);
+  4. the plan's facts from the laptop's player or a remembered probe
+     before ffprobe;
+  5. the relay in its own isolate;
+  6. bonsoir and multicast_dns side by side;
+  7. the desktop portal's Inhibit (the `dbus` package) to keep the laptop
+     awake;
+  8. a fake receiver that fetches and checks what it is told to play, so
+     most of the matrix runs without the TV.
 
 ## What's next
-1. **Phase 7 — Casting: write the plan first**, for approval, as every
-   phase has (docs/plans/phase-7-….md; decisions with a recommendation
-   first; ADR-014 as steps land). docs/08's Phase 7 and docs/04 are the
-   spec; ADR-004 and ADR-006 hold the spike's findings (HEVC as one
-   continuous fragmented MP4, 4K needing the TV's Input Signal Plus, a
-   re-LOAD after FINISHED, multicast_dns as the proven discovery
-   fallback), ADR-010 that the relay must own its sockets. **Ask before
-   every cast** to the Living Room TV (memory), one announced, watched
-   cast at a time.
-2. **Alongside:** whatever Windows failures the next CI run still names.
+1. **Phase 7 step 1 once the plan is approved:** discovery (bonsoir and
+   multicast_dns, merged), known devices (schema v8, `cast_devices`),
+   FFmpeg copied into the Linux build. On the TV: listening only.
+   **Ask before every cast** to the Living Room TV (memory), one
+   announced, watched cast at a time; the plan names the three times the
+   TV is used (steps 2, 6 and 8).
+2. **Alongside:** whatever the Linux integration walks of run 36612277646
+   name, if any.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -93,8 +80,8 @@ Phase 6 is pushed; CI is <green | red: …>. Write the Phase 7 (casting) plan fo
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems.** Linux: should be green now. Windows: see
-  what the next run names.
+- **CI green on both systems.** Windows: green on abd0c1a. Linux: unit
+  tests green there; confirm its integration walks.
 - **Phase 7 — Casting**, the largest and riskiest phase: our own Cast v2
   client, the ffprobe-based planner, the FFmpeg relay with its supervisor,
   the UI, and the casting matrix on the user's TV.
