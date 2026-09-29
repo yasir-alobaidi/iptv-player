@@ -10,12 +10,15 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
+import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
+import 'package:iptv_player/features/sources/presentation/hidden_channels.dart';
 
 /// Settings → Categories (the approved sketch: the Pick-categories layout
 /// with per-row controls). Per source and kind: show or hide each
@@ -32,6 +35,21 @@ class _CategoriesManagerState extends ConsumerState<CategoriesManager> {
   CatalogueKind _kind = CatalogueKind.live;
   var _filter = '';
   var _showHidden = true;
+
+  /// The Hidden channels tab, instead of a kind's categories.
+  var _hiddenTab = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Asked for before Settings was built (Live TV's Manage, search).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(hiddenChannelsRequestProvider.notifier).take()) {
+        setState(() => _hiddenTab = true);
+      }
+    });
+  }
 
   /// Switches flipped and names changed but not yet back from the
   /// database, so each shows at once (docs/05: optimistic updates).
@@ -199,6 +217,23 @@ class _CategoriesManagerState extends ConsumerState<CategoriesManager> {
       );
     }
 
+    ref.listen(hiddenChannelsRequestProvider, (_, asked) {
+      if (asked && ref.read(hiddenChannelsRequestProvider.notifier).take()) {
+        setState(() => _hiddenTab = true);
+      }
+    });
+    final hiddenChannels =
+        ref
+            .watch(
+              channelCountProvider(
+                ChannelQuery(
+                  sourceId: source.id,
+                  filter: const HiddenChannels(),
+                ),
+              ),
+            )
+            .value ??
+        0;
     final lists = {
       for (final kind in CatalogueKind.values)
         kind: ref.watch(categoryListProvider(source.id, kind)),
@@ -221,7 +256,12 @@ class _CategoriesManagerState extends ConsumerState<CategoriesManager> {
     };
 
     final Widget body;
-    if (error != null) {
+    if (_hiddenTab) {
+      body = HiddenChannelsView(
+        key: ValueKey('hidden-${source.id}'),
+        sourceId: source.id,
+      );
+    } else if (error != null) {
       body = ErrorState(
         title: "Couldn't load the categories",
         message: failureMessage(
@@ -292,18 +332,24 @@ class _CategoriesManagerState extends ConsumerState<CategoriesManager> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (kinds.isNotEmpty && list != null && error == null) ...[
+          if ((kinds.isNotEmpty && list != null && error == null) ||
+              _hiddenTab) ...[
             _Toolbar(
               kinds: kinds,
               kind: kind,
+              hiddenChannels: hiddenChannels,
+              hiddenTab: _hiddenTab,
+              onHiddenTab: () => setState(() => _hiddenTab = true),
               counts: {
                 for (final k in kinds)
                   k: lists[k]!.value?.categories.length ?? 0,
               },
               showHidden: _showHidden,
-              customOrder: list.customOrder || _order.containsKey(kind),
+              customOrder:
+                  (list?.customOrder ?? false) || _order.containsKey(kind),
               onKind: (k) => setState(() {
                 _kind = k;
+                _hiddenTab = false;
                 _filter = '';
               }),
               onFilter: (text) => setState(() => _filter = text),
@@ -323,7 +369,7 @@ class _CategoriesManagerState extends ConsumerState<CategoriesManager> {
           Expanded(child: body),
         ],
       ),
-      footer: kinds.isEmpty || list == null
+      footer: kinds.isEmpty || list == null || _hiddenTab
           ? null
           : _Footer(kind: kind, list: list),
     );
@@ -369,6 +415,9 @@ class _Toolbar extends StatelessWidget {
   const new({
     required this.kinds,
     required this.kind,
+    required this.hiddenChannels,
+    required this.hiddenTab,
+    required this.onHiddenTab,
     required this.counts,
     required this.showHidden,
     required this.customOrder,
@@ -380,6 +429,12 @@ class _Toolbar extends StatelessWidget {
 
   final List<CatalogueKind> kinds;
   final CatalogueKind kind;
+
+  /// How many channels the user hid: the Hidden channels tab shows once
+  /// there is one (sketch B).
+  final int hiddenChannels;
+  final bool hiddenTab;
+  final VoidCallback onHiddenTab;
   final Map<CatalogueKind, int> counts;
   final bool showHidden;
   final bool customOrder;
@@ -396,8 +451,9 @@ class _Toolbar extends StatelessWidget {
       runSpacing: spacing.s8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (kinds.length > 1)
-          SegmentedControl<CatalogueKind>(
+        if (kinds.length > 1 || hiddenChannels > 0 || hiddenTab)
+          // Null is the Hidden channels tab.
+          SegmentedControl<CatalogueKind?>(
             options: [
               for (final k in kinds)
                 SegmentOption(
@@ -405,30 +461,38 @@ class _Toolbar extends StatelessWidget {
                   label: _kindLabel(k),
                   count: formatCount(counts[k] ?? 0),
                 ),
+              if (hiddenChannels > 0 || hiddenTab)
+                SegmentOption(
+                  value: null,
+                  label: 'Hidden channels',
+                  count: formatCount(hiddenChannels),
+                ),
             ],
-            value: kind,
-            onChanged: onKind,
+            value: hiddenTab ? null : kind,
+            onChanged: (k) => k == null ? onHiddenTab() : onKind(k),
           ),
-        SearchField(
-          key: ValueKey('manager-filter-$kind'),
-          hint: 'Filter categories',
-          shortcut: null,
-          width: 260,
-          onChanged: onFilter,
-        ),
-        AppChip(
-          label: 'Show hidden',
-          icon: AppIcons.eye,
-          selected: showHidden,
-          onPressed: onShowHidden,
-        ),
-        if (customOrder)
-          AppButton(
-            label: "Provider's order",
-            variant: AppButtonVariant.ghost,
-            size: AppButtonSize.s,
-            onPressed: onResetOrder,
+        if (!hiddenTab) ...[
+          SearchField(
+            key: ValueKey('manager-filter-$kind'),
+            hint: 'Filter categories',
+            shortcut: null,
+            width: 260,
+            onChanged: onFilter,
           ),
+          AppChip(
+            label: 'Show hidden',
+            icon: AppIcons.eye,
+            selected: showHidden,
+            onPressed: onShowHidden,
+          ),
+          if (customOrder)
+            AppButton(
+              label: "Provider's order",
+              variant: AppButtonVariant.ghost,
+              size: AppButtonSize.s,
+              onPressed: onResetOrder,
+            ),
+        ],
       ],
     );
   }
@@ -721,6 +785,22 @@ class _CategoryRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Asks for a category's name, as the manager and Live TV's categories
+/// pane rename one. Null when cancelled; a result with no name restores
+/// the provider's.
+Future<({String? name})?> askCategoryName(
+  BuildContext anchor,
+  CategoryChoice category,
+) async {
+  final result = await showAppDialog<_RenameResult>(
+    anchor,
+    builder: (context) => _RenameDialog(category: category),
+  );
+  if (result == null) return null;
+  final name = result.name?.trim();
+  return (name: name == null || name.isEmpty ? null : name);
 }
 
 final class _RenameResult {

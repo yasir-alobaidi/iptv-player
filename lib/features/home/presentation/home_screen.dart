@@ -16,6 +16,7 @@ import 'package:iptv_player/features/home/presentation/home_rows.dart';
 import 'package:iptv_player/features/home/presentation/home_state.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
@@ -133,18 +134,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
 
   Future<void> _channelMenu(BuildContext anchor, ChannelItem channel) =>
-      showAppMenu(
+      showChannelMenu(
         anchor,
-        items: [
-          AppMenuItem(
-            label: channel.isFavorite
-                ? 'Remove from favorites'
-                : 'Add to favorites',
-            icon: channel.isFavorite ? AppIcons.starFilled : AppIcons.star,
-            shortcut: 'F',
-            onPressed: () => unawaited(_toggleChannel(channel)),
-          ),
-        ],
+        ref,
+        channel,
+        onFavorite: () => unawaited(_toggleChannel(channel)),
       );
 
   Future<void> _titleMenu(BuildContext anchor, Object title) {

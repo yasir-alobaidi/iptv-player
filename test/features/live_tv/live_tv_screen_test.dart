@@ -1,8 +1,10 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/data/db/app_database.dart' show ChannelsCompanion;
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/favorites/data/db_favorites_repository.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
@@ -312,6 +314,49 @@ void main() {
     ))!.valueOrNull!;
     expect(channel.isFavorite, isTrue);
     expect(channel.favoriteGroupId, isNotNull);
+    await _finish(tester);
+  });
+
+  testWidgets('scrolling the focused row away with the mouse leaves the '
+      'keyboard on a row on screen', (tester) async {
+    final live = LiveTvFakes();
+    addTearDown(() => tester.runAsync(live.db.close));
+    await tester.runAsync(() async {
+      await live.seed();
+      await live.db.channelsDao.upsertAll([
+        for (var i = 0; i < 200; i++)
+          ChannelsCompanion.insert(
+            sourceId: 'src-1',
+            remoteKey: 'x$i',
+            name: 'Extra ${i + 1}',
+            number: Value(1000 + i),
+          ),
+      ]);
+    });
+    await pumpApp(
+      tester,
+      initialLocation: AppDestination.liveTv.path,
+      overrides: live.overrides,
+    );
+    _live = live;
+    await _settle(tester);
+    await tester.tap(find.text('Arena Sports 1').first);
+    await _settle(tester);
+    expect(focusedLabel(), 'Arena Sports 1');
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -4000));
+    await tester.pumpAndSettle();
+    await _settle(tester);
+
+    final focused = focusedLabel();
+    expect(focused, isNotNull, reason: 'the keyboard is still in the list');
+    expect(focused, startsWith('Extra'));
+    final row = find.widgetWithText(ChannelRow, focused!);
+    expect(tester.getTopLeft(row).dy, greaterThan(0), reason: 'on screen');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await _settle(tester);
+    expect(focusedLabel(), isNot(focused), reason: '↓ goes on from there');
     await _finish(tester);
   });
 

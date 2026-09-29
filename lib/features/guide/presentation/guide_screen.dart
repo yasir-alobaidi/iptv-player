@@ -454,6 +454,7 @@ class _CategoryFilter extends ConsumerWidget {
       AllChannels() => 'All channels',
       FavoriteChannels() || FavoriteGroupChannels() => 'Favorites',
       UncategorizedChannels() => 'Uncategorized',
+      HiddenChannels() => 'Hidden channels',
       CategoryChannels(:final categoryId) =>
         categories.where((c) => c.id == categoryId).firstOrNull?.name ??
             'Channels',

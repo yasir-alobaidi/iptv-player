@@ -22,6 +22,7 @@ import 'package:iptv_player/features/guide/presentation/guide_programme_sheet.da
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
 
 /// What the Guide's toolbar asks of the grid, and the day the grid shows
 /// (the selected day pill).
@@ -121,6 +122,11 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     with SingleTickerProviderStateMixin {
   final _focus = FocusNode(debugLabel: 'guide grid');
   final _vertical = ScrollController();
+
+  /// The cursor's row's channel column: where its menu opens.
+  final GlobalKey _cursorChannel = GlobalKey(
+    debugLabel: 'guide cursor channel',
+  );
 
   /// Pixels from the timeline's origin to the view's left edge; always
   /// inside the timeline.
@@ -499,15 +505,34 @@ class _GuideGridState extends ConsumerState<GuideGrid>
               LogicalKeyboardKey.space
           when !repeat:
         _activate();
+      case LogicalKeyboardKey.contextMenu when !repeat:
+        _menu();
       case LogicalKeyboardKey.home ||
           LogicalKeyboardKey.enter ||
           LogicalKeyboardKey.numpadEnter ||
+          LogicalKeyboardKey.contextMenu ||
           LogicalKeyboardKey.space:
         break;
       default:
         return KeyEventResult.ignored;
     }
     return KeyEventResult.handled;
+  }
+
+  /// The menu key: the one channel menu (Phase 6 step 7) for the
+  /// cursor's channel, by its column.
+  void _menu() {
+    final channel = _channelAt(_row);
+    final anchor = _cursorChannel.currentContext;
+    if (channel == null || anchor == null) return;
+    unawaited(
+      showChannelMenu(
+        anchor,
+        ref,
+        channel,
+        onWatch: () => widget.onWatch(channel),
+      ),
+    );
   }
 
   /// ←/→. False at the timeline's left edge, so ← goes on to the rail.
@@ -819,6 +844,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
                 cells: (from, to) =>
                     channel == null ? null : _cells(channel.id, from, to),
                 cursor: hasFocus && index == _row ? _anchor : null,
+                channelKey: index == _row ? _cursorChannel : null,
                 onTap: channel == null
                     ? null
                     : (cell) => _tap(index, channel, cell),
@@ -1007,9 +1033,11 @@ class _GuideRowView extends StatelessWidget {
     required this.cells,
     required this.cursor,
     required this.onTap,
+    this.channelKey,
   });
 
   final ChannelItem? channel;
+  final GlobalKey? channelKey;
   final GuideWindowCache cache;
   final _BuildBudget budget;
   final GuideTimeline timeline;
@@ -1028,7 +1056,7 @@ class _GuideRowView extends StatelessWidget {
     final channel = this.channel;
     if (channel == null) return const _SkeletonRow();
     return _RowFrame(
-      channel: _ChannelCell(channel: channel),
+      channel: _ChannelCell(key: channelKey, channel: channel),
       strip: _Strip(
         channelId: channel.id,
         cache: cache,
@@ -1509,7 +1537,7 @@ class _StripState extends State<_Strip> {
 }
 
 class _ChannelCell extends StatelessWidget {
-  const new({required this.channel});
+  const new({required this.channel, super.key});
 
   final ChannelItem channel;
 

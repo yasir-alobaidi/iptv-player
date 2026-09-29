@@ -141,20 +141,17 @@ final class SearchActions {
     }
   }
 
-  Future<void> hide(ChannelItem channel) => _container
-      .read(channelRepositoryProvider)
-      .setHidden(channel.id, hidden: true);
-
   /// The empty state's "Show in Settings": where hidden channels and
   /// categories come back.
   void showHidden() {
     _close();
     final source = _container.read(currentSourceProvider);
-    openSettings(
+    if (source == null) return;
+    openHiddenChannels(
       _router,
       _container.read(settingsLocationProvider.notifier),
-      SettingsSection.categories,
-      categoriesSourceId: source?.id,
+      _container.read(hiddenChannelsRequestProvider.notifier),
+      sourceId: source.id,
     );
   }
 

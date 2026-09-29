@@ -10,10 +10,9 @@ import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
-import 'package:iptv_player/features/favorites/presentation/group_name_dialog.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
-import 'package:iptv_player/features/live_tv/presentation/channel_rename_dialog.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
@@ -85,6 +84,18 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   /// ("Show all in Live TV"), kept in step with the view.
   final _filterText = TextEditingController();
 
+  /// Holds the keyboard's focus while the row that had it is scrolled
+  /// away by the mouse, until the view rests and a row on screen takes
+  /// it (the poster grid's fix, ADR-012 step 8). Never a Tab stop.
+  final _holder = FocusNode(
+    debugLabel: 'channel list holder',
+    skipTraversal: true,
+  );
+
+  /// The rows built, by index, so the focus can go to one on screen.
+  final _rowNodes = <int, FocusNode>{};
+  double _rowExtent = 1;
+
   @override
   void initState() {
     super.initState();
@@ -111,7 +122,62 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     _guideTimer?.cancel();
     _scroll.dispose();
     _filterText.dispose();
+    _holder.dispose();
     super.dispose();
+  }
+
+  void _register(int index, FocusNode? node, FocusNode owner) {
+    if (node != null) {
+      _rowNodes[index] = node;
+    } else if (identical(_rowNodes[index], owner)) {
+      _rowNodes.remove(index);
+    }
+  }
+
+  /// The row that had the keyboard's focus went with the view: hold it,
+  /// or give it to a row on screen once the view rests.
+  void _onFocusedRowGone() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (FocusManager.instance.primaryFocus is! FocusScopeNode &&
+          FocusManager.instance.primaryFocus != null &&
+          FocusManager.instance.primaryFocus != _holder) {
+        // Something else took it meanwhile (a jump, a new list).
+        return;
+      }
+      if (_scroll.position.isScrollingNotifier.value) {
+        _holder.requestFocus();
+      } else {
+        _focusOnScreen();
+      }
+    });
+  }
+
+  /// The first row wholly on screen takes the focus.
+  void _focusOnScreen() {
+    if (!_scroll.hasClients) return;
+    final first = (_scroll.offset / _rowExtent).ceil();
+    final built = _rowNodes.keys.where((i) => i >= first).toList()..sort();
+    if (built.isEmpty) return;
+    _rowNodes[built.first]?.requestFocus();
+  }
+
+  KeyEventResult _onHolderKey(FocusNode node, KeyEvent event) {
+    // Keys from the rows pass by on their way up: only the holder's own.
+    if (event is KeyUpEvent || !node.hasPrimaryFocus) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.pageUp ||
+        key == LogicalKeyboardKey.pageDown ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space) {
+      _focusOnScreen();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _onFocusRequest() => setState(() => _wantFocus = true);
@@ -358,7 +424,22 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
       return _empty(context, query);
     }
     final rowHeight = tokens.density.rowHeight + 4;
+    _rowExtent = rowHeight;
     _focusFirstWhenReady();
+    return Focus(
+      focusNode: _holder,
+      onKeyEvent: _onHolderKey,
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (_) {
+          if (_holder.hasPrimaryFocus) _focusOnScreen();
+          return false;
+        },
+        child: _rows(view, total, rowHeight),
+      ),
+    );
+  }
+
+  Widget _rows(LiveTvView view, int total, double rowHeight) {
     return ListView.builder(
       controller: _scroll,
       itemCount: total,
@@ -374,6 +455,9 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: _Row(
+            index: index,
+            register: _register,
+            onFocusGone: _onFocusedRowGone,
             channel: channel,
             selected: view.selected?.id == channel.id,
             onSelect: () =>
@@ -449,6 +533,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     FavoriteChannels() => 'Favorites',
     FavoriteGroupChannels(:final groupId) => _groupName(groupId),
     UncategorizedChannels() => 'Uncategorized',
+    HiddenChannels() => 'Hidden channels',
     CategoryChannels(:final categoryId) => _categoryName(categoryId),
   };
 
@@ -494,100 +579,32 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   }
 
   Future<void> _menu(BuildContext anchor, ChannelItem channel) {
-    final repository = ref.read(channelRepositoryProvider);
-    return showAppMenu(
+    final showing = ref.read(liveTvControllerProvider)?.query.showHidden;
+    final notifier = ref.read(liveTvControllerProvider.notifier);
+    return showChannelMenu(
       anchor,
-      items: [
+      ref,
+      channel,
+      onWatch: () => widget.onPlay?.call(channel),
+      onFavorite: () => unawaited(_toggleFavorite(channel)),
+      after: [
         AppMenuItem(
-          label: 'Watch',
-          icon: AppIcons.play,
-          onPressed: () => widget.onPlay?.call(channel),
-        ),
-        AppMenuItem(
-          label: channel.isFavorite
-              ? 'Remove from favorites'
-              : 'Add to favorites',
-          icon: channel.isFavorite ? AppIcons.starFilled : AppIcons.star,
-          shortcut: 'F',
-          onPressed: () => unawaited(_toggleFavorite(channel)),
-        ),
-        AppMenuItem(
-          label: 'Add to group…',
-          icon: AppIcons.plus,
-          onPressed: () => unawaited(_groupMenu(anchor, channel)),
-        ),
-        AppMenuItem(
-          label: 'Rename…',
-          icon: AppIcons.edit,
-          onPressed: () => unawaited(_rename(anchor, channel)),
-        ),
-        const AppMenuItem.separator(),
-        AppMenuItem(
-          label: channel.isHidden ? 'Show channel' : 'Hide channel',
+          label: showing ?? false
+              ? "Don't show hidden channels"
+              : 'Show hidden channels',
           icon: AppIcons.eye,
-          onPressed: () => unawaited(
-            repository.setHidden(channel.id, hidden: !channel.isHidden),
-          ),
+          onPressed: () => notifier.setShowHidden(show: !(showing ?? false)),
         ),
       ],
     );
   }
-
-  /// "Add to group…": the source's groups (its own ticked), No group for
-  /// a favorite in one, and New group…. A channel not yet a favorite
-  /// becomes one; it goes at the end of the group.
-  Future<void> _groupMenu(BuildContext anchor, ChannelItem channel) async {
-    final favorites = ref.read(favoritesRepositoryProvider);
-    final groups = await ref.read(
-      favoriteGroupsProvider(channel.sourceId).future,
-    );
-    if (!anchor.mounted) return;
-    Future<void> into(int? groupId) =>
-        favorites.moveChannel(channel, groupId: groupId, index: 1 << 30);
-    await showAppMenu(
-      anchor,
-      items: [
-        for (final group in groups)
-          AppMenuItem(
-            label: group.name,
-            checked: channel.favoriteGroupId == group.id,
-            onPressed: () => unawaited(into(group.id)),
-          ),
-        if (channel.favoriteGroupId != null)
-          AppMenuItem(
-            label: 'No group',
-            onPressed: () => unawaited(into(null)),
-          ),
-        if (groups.isNotEmpty) const AppMenuItem.separator(),
-        AppMenuItem(
-          label: 'New group…',
-          icon: AppIcons.plus,
-          onPressed: () => unawaited(_newGroup(anchor, channel)),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _newGroup(BuildContext anchor, ChannelItem channel) async {
-    final favorites = ref.read(favoritesRepositoryProvider);
-    final name = await showGroupNameDialog(
-      anchor,
-      title: 'New group',
-      action: 'Create',
-    );
-    if (name == null) return;
-    final created = await favorites.createGroup(channel.sourceId, name);
-    if (created.valueOrNull case final groupId?) {
-      await favorites.moveChannel(channel, groupId: groupId, index: 1 << 30);
-    }
-  }
-
-  Future<void> _rename(BuildContext anchor, ChannelItem channel) =>
-      renameChannel(anchor, ref.read(channelRepositoryProvider), channel);
 }
 
 class _Row extends ConsumerStatefulWidget {
   const new({
+    required this.index,
+    required this.register,
+    required this.onFocusGone,
     required this.channel,
     required this.selected,
     required this.onSelect,
@@ -597,6 +614,13 @@ class _Row extends ConsumerStatefulWidget {
     required this.onMenu,
   });
 
+  final int index;
+
+  /// Tells the list which node is the row at [index] (null: gone).
+  final void Function(int index, FocusNode? node, FocusNode owner) register;
+
+  /// The row is going away with the keyboard's focus in it.
+  final VoidCallback onFocusGone;
   final ChannelItem channel;
   final bool selected;
   final VoidCallback onSelect;
@@ -617,7 +641,31 @@ class _RowState extends ConsumerState<_Row> {
   bool _pointer = false;
 
   @override
+  void initState() {
+    super.initState();
+    widget.register(widget.index, _focus, _focus);
+  }
+
+  @override
+  void didUpdateWidget(_Row oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      oldWidget.register(oldWidget.index, null, _focus);
+      widget.register(widget.index, _focus, _focus);
+    }
+  }
+
+  @override
+  void deactivate() {
+    // A Focus lets go of its node before its owner is disposed: this is
+    // the last moment the row can tell it had the focus.
+    if (_focus.hasFocus) widget.onFocusGone();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    widget.register(widget.index, null, _focus);
     _focus.dispose();
     super.dispose();
   }
@@ -643,6 +691,7 @@ class _RowState extends ConsumerState<_Row> {
           builder: (context) => ChannelRow(
             name: channel.name,
             quality: channel.quality?.label,
+            hidden: channel.isHidden,
             number: channel.number,
             image: artworkFor(context, channel.logoUrl, width: 40),
             nowTitle: programme?.title,

@@ -23,6 +23,7 @@ class ChannelRow extends StatelessWidget {
     this.quality,
     this.badges = const [],
     this.isFavorite = false,
+    this.hidden = false,
     this.selected = false,
     this.onPressed,
     this.onMenu,
@@ -65,6 +66,10 @@ class ChannelRow extends StatelessWidget {
   final List<Widget> badges;
   final bool isFavorite;
 
+  /// A channel the user hid, listed because they asked to see the hidden
+  /// ones: dimmed, and marked Hidden.
+  final bool hidden;
+
   /// The row the preview pane is showing.
   final bool selected;
   final VoidCallback? onPressed;
@@ -94,120 +99,130 @@ class ChannelRow extends StatelessWidget {
       hoverBackground: colors.surface3,
       borderRadius: tokens.radii.controlAll,
       semanticLabel: name,
-      builder: (context, states) => SizedBox(
-        height: height,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
-          child: Row(
-            children: [
-              if (leading case final leading?) ...[
-                leading,
-                SizedBox(width: tokens.spacing.s8),
-              ],
-              if (number != null) ...[
-                SizedBox(
-                  width: 32,
-                  child: Text(
-                    '$number',
-                    style: tokens.text.caption
-                        .withWeight(700)
-                        .copyWith(
-                          color: selected
-                              ? colors.accentBase
-                              : colors.textTertiary,
-                        ),
-                  ),
-                ),
-                SizedBox(width: tokens.spacing.s4),
-              ],
-              ChannelLogo(name: name, image: image),
-              SizedBox(width: tokens.spacing.s12 + 2),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.text.bodyStrong.copyWith(
-                              color: colors.textPrimary,
-                            ),
+      builder: (context, states) => Opacity(
+        opacity: hidden && !states.highlighted ? 0.55 : 1,
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
+            child: Row(
+              children: [
+                if (leading case final leading?) ...[
+                  leading,
+                  SizedBox(width: tokens.spacing.s8),
+                ],
+                if (number != null) ...[
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '$number',
+                      style: tokens.text.caption
+                          .withWeight(700)
+                          .copyWith(
+                            color: selected
+                                ? colors.accentBase
+                                : colors.textTertiary,
                           ),
-                        ),
-                        if (quality case final quality?) ...[
-                          SizedBox(width: tokens.spacing.s8),
-                          ChannelBadge(
-                            quality,
-                            raised: selected || states.highlighted,
-                          ),
-                        ],
-                        for (final badge in badges) ...[
-                          SizedBox(width: tokens.spacing.s8 - 2),
-                          badge,
-                        ],
-                      ],
                     ),
-                    if (guideKnown || nowTitle != null || upNext != null) ...[
-                      SizedBox(height: tokens.spacing.s4 - 2),
+                  ),
+                  SizedBox(width: tokens.spacing.s4),
+                ],
+                ChannelLogo(name: name, image: image),
+                SizedBox(width: tokens.spacing.s12 + 2),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(
-                              nowTitle ?? _noProgramme,
+                              name,
                               overflow: TextOverflow.ellipsis,
-                              style: tokens.text.caption.copyWith(
-                                color: nowTitle == null
-                                    ? colors.textTertiary
-                                    : colors.textSecondary,
+                              style: tokens.text.bodyStrong.copyWith(
+                                color: colors.textPrimary,
                               ),
                             ),
                           ),
-                          // The canvas puts the programme's progress on
-                          // this line, after the title: a 72 px bar with
-                          // a 10 px gap. It rode the row's bottom edge
-                          // until the step 7 golden showed it striking
-                          // through the title in both densities.
-                          if (progress != null) ...[
-                            SizedBox(width: tokens.spacing.s8 + 2),
-                            SizedBox(
-                              width: 72,
-                              child: ProgressBar(value: progress),
+                          if (hidden) ...[
+                            SizedBox(width: tokens.spacing.s8),
+                            ChannelBadge(
+                              'Hidden',
+                              raised: selected || states.highlighted,
                             ),
+                          ],
+                          if (quality case final quality?) ...[
+                            SizedBox(width: tokens.spacing.s8),
+                            ChannelBadge(
+                              quality,
+                              raised: selected || states.highlighted,
+                            ),
+                          ],
+                          for (final badge in badges) ...[
+                            SizedBox(width: tokens.spacing.s8 - 2),
+                            badge,
                           ],
                         ],
                       ),
+                      if (guideKnown || nowTitle != null || upNext != null) ...[
+                        SizedBox(height: tokens.spacing.s4 - 2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                nowTitle ?? _noProgramme,
+                                overflow: TextOverflow.ellipsis,
+                                style: tokens.text.caption.copyWith(
+                                  color: nowTitle == null
+                                      ? colors.textTertiary
+                                      : colors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            // The canvas puts the programme's progress on
+                            // this line, after the title: a 72 px bar with
+                            // a 10 px gap. It rode the row's bottom edge
+                            // until the step 7 golden showed it striking
+                            // through the title in both densities.
+                            if (progress != null) ...[
+                              SizedBox(width: tokens.spacing.s8 + 2),
+                              SizedBox(
+                                width: 72,
+                                child: ProgressBar(value: progress),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              if (timeLeft != null)
-                SizedBox(
-                  width: 96,
-                  child: Text(
-                    timeLeft!,
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: tokens.text.small.copyWith(
-                      color: selected || states.highlighted
-                          ? colors.textSecondary
-                          : colors.textTertiary,
-                    ),
                   ),
                 ),
-              if (onToggleFavorite != null) ...[
-                SizedBox(width: tokens.spacing.s8),
-                _FavoriteStar(
-                  isFavorite: isFavorite,
-                  onPressed: onToggleFavorite!,
-                  visible: states.highlighted || isFavorite,
-                ),
+                if (timeLeft != null)
+                  SizedBox(
+                    width: 96,
+                    child: Text(
+                      timeLeft!,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.small.copyWith(
+                        color: selected || states.highlighted
+                            ? colors.textSecondary
+                            : colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                if (onToggleFavorite != null) ...[
+                  SizedBox(width: tokens.spacing.s8),
+                  _FavoriteStar(
+                    isFavorite: isFavorite,
+                    onPressed: onToggleFavorite!,
+                    visible: states.highlighted || isFavorite,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -13,6 +13,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/domain/search_words.dart';
 import 'package:iptv_player/features/search/presentation/search_actions.dart';
@@ -231,42 +232,48 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   Future<void> _showMenu(BuildContext anchor, Object hit) {
     final actions = _actions();
-    final channel = switch (hit) {
-      ChannelHit(:final channel) || ProgrammeHit(:final channel) => channel,
-      _ => null,
-    };
+    void searchAgain() {
+      if (mounted) unawaited(_session.retry());
+    }
+
+    switch (hit) {
+      case ChannelHit(:final channel) || ProgrammeHit(:final channel):
+        // The one channel menu (step 7), and search's own way to Live TV.
+        return showChannelMenu(
+          anchor,
+          ref,
+          channel,
+          onWatch: () => unawaited(() async {
+            await _session.rememberText();
+            await actions.watch(channel);
+          }()),
+          onChanged: searchAgain,
+          after: [
+            const AppMenuItem.separator(),
+            AppMenuItem(
+              label: 'Show in Live TV',
+              icon: AppIcons.liveTv,
+              onPressed: () => actions.showInLiveTv(channel),
+            ),
+          ],
+        );
+    }
     final favorite = switch (hit) {
       MovieHit(:final movie) => movie.isFavorite,
       SeriesHit(:final series) => series.isFavorite,
-      _ => channel!.isFavorite,
+      _ => false,
     };
-    Future<void> thenSearchAgain(Future<void> action) async {
-      await action;
-      if (mounted) await _session.retry();
-    }
-
     return showAppMenu(
       anchor,
       items: [
         AppMenuItem(
           label: favorite ? 'Remove from favorites' : 'Add to favorites',
           icon: favorite ? AppIcons.starFilled : AppIcons.star,
-          onPressed: () =>
-              unawaited(thenSearchAgain(actions.toggleFavorite(hit))),
+          onPressed: () => unawaited(() async {
+            await actions.toggleFavorite(hit);
+            searchAgain();
+          }()),
         ),
-        if (channel != null) ...[
-          AppMenuItem(
-            label: 'Show in Live TV',
-            icon: AppIcons.liveTv,
-            onPressed: () => actions.showInLiveTv(channel),
-          ),
-          const AppMenuItem.separator(),
-          AppMenuItem(
-            label: 'Hide channel',
-            icon: AppIcons.eye,
-            onPressed: () => unawaited(thenSearchAgain(actions.hide(channel))),
-          ),
-        ],
       ],
     );
   }

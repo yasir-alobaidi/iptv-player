@@ -172,7 +172,9 @@ final class DbChannelRepository implements ChannelRepository {
   static (String, List<Variable<Object>>) _where(ChannelQuery query) {
     final clauses = <String>['c.source_id = ?'];
     final variables = <Variable<Object>>[Variable.withString(query.sourceId)];
-    if (!query.showHidden) clauses.add('c.is_hidden = 0');
+    if (!query.showHidden && query.filter is! HiddenChannels) {
+      clauses.add('c.is_hidden = 0');
+    }
     switch (query.filter) {
       case AllChannels():
         clauses.add('(k.id IS NULL OR k.is_hidden = 0)');
@@ -186,6 +188,8 @@ final class DbChannelRepository implements ChannelRepository {
         variables.add(Variable.withInt(categoryId));
       case UncategorizedChannels():
         clauses.add('k.id IS NULL');
+      case HiddenChannels():
+        clauses.add('c.is_hidden = 1');
     }
     final text = query.text.trim();
     if (text.isNotEmpty) {

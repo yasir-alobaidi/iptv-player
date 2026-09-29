@@ -69,3 +69,70 @@ abstract class _$SettingsLocation extends $Notifier<SettingsPlace> {
     return element.handleCreate(ref, build);
   }
 }
+
+/// Settings → Categories opens on its Hidden channels tab, once: asked
+/// by Live TV's "Manage" when only channels are hidden, and by search's
+/// "Show in Settings" (Phase 6 decision 8).
+
+@ProviderFor(HiddenChannelsRequest)
+final hiddenChannelsRequestProvider = HiddenChannelsRequestProvider._();
+
+/// Settings → Categories opens on its Hidden channels tab, once: asked
+/// by Live TV's "Manage" when only channels are hidden, and by search's
+/// "Show in Settings" (Phase 6 decision 8).
+final class HiddenChannelsRequestProvider
+    extends $NotifierProvider<HiddenChannelsRequest, bool> {
+  /// Settings → Categories opens on its Hidden channels tab, once: asked
+  /// by Live TV's "Manage" when only channels are hidden, and by search's
+  /// "Show in Settings" (Phase 6 decision 8).
+  HiddenChannelsRequestProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'hiddenChannelsRequestProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$hiddenChannelsRequestHash();
+
+  @$internal
+  @override
+  HiddenChannelsRequest create() => HiddenChannelsRequest();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$hiddenChannelsRequestHash() =>
+    r'0272eddb8e7a4dbf4f9539a2c20dca93e4a1d361';
+
+/// Settings → Categories opens on its Hidden channels tab, once: asked
+/// by Live TV's "Manage" when only channels are hidden, and by search's
+/// "Show in Settings" (Phase 6 decision 8).
+
+abstract class _$HiddenChannelsRequest extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

@@ -66,6 +66,37 @@ class SettingsLocation extends _$SettingsLocation {
   );
 }
 
+/// Settings → Categories opens on its Hidden channels tab, once: asked
+/// by Live TV's "Manage" when only channels are hidden, and by search's
+/// "Show in Settings" (Phase 6 decision 8).
+@Riverpod(keepAlive: true)
+class HiddenChannelsRequest extends _$HiddenChannelsRequest {
+  @override
+  bool build() => false;
+
+  void ask() => state = true;
+
+  /// Whether it was asked for, once.
+  bool take() {
+    final asked = state;
+    if (asked) state = false;
+    return asked;
+  }
+}
+
+/// Opens Settings → Categories for [sourceId] on its Hidden channels
+/// tab. Reads nothing from a `ref`: the caller passes the notifiers.
+void openHiddenChannels(
+  GoRouter router,
+  SettingsLocation location,
+  HiddenChannelsRequest request, {
+  required String sourceId,
+}) {
+  location.showCategories(sourceId);
+  request.ask();
+  router.go(AppDestination.settings.path);
+}
+
 /// Opens Settings at [section] from anywhere: the top bar's "Manage
 /// sources…", the expiry banner, a source's "Categories".
 void openSettings(

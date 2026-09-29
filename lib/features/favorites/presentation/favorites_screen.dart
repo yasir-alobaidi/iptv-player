@@ -20,7 +20,7 @@ import 'package:iptv_player/features/favorites/presentation/group_name_dialog.da
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
-import 'package:iptv_player/features/live_tv/presentation/channel_rename_dialog.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
@@ -440,94 +440,13 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
     BuildContext anchor,
     ChannelItem channel,
     List<FavoriteEntry> entries,
-    List<FavoriteGroup> groups,
-  ) {
-    final channels = ref.read(channelRepositoryProvider);
-    final notices = ref.read(appNoticesProvider);
-    return showAppMenu(
-      anchor,
-      items: [
-        AppMenuItem(
-          label: 'Watch',
-          icon: AppIcons.play,
-          onPressed: () => unawaited(_watch(channel)),
-        ),
-        AppMenuItem(
-          label: 'Move to group…',
-          icon: AppIcons.dragHandle,
-          onPressed: () => unawaited(_groupMenu(anchor, channel, groups)),
-        ),
-        AppMenuItem(
-          label: 'Rename…',
-          icon: AppIcons.edit,
-          onPressed: () => unawaited(renameChannel(anchor, channels, channel)),
-        ),
-        AppMenuItem(
-          label: 'Hide channel',
-          icon: AppIcons.eye,
-          onPressed: () => unawaited(() async {
-            await channels.setHidden(channel.id, hidden: true);
-            notices.show(
-              AppNotice(
-                'Channel hidden',
-                actionLabel: 'Undo',
-                onAction: () =>
-                    unawaited(channels.setHidden(channel.id, hidden: false)),
-              ),
-            );
-          }()),
-        ),
-        const AppMenuItem.separator(),
-        AppMenuItem(
-          label: 'Remove from favorites',
-          icon: AppIcons.starFilled,
-          shortcut: 'F',
-          onPressed: () => unawaited(_remove(channel, entries)),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _groupMenu(
-    BuildContext anchor,
-    ChannelItem channel,
-    List<FavoriteGroup> groups,
-  ) {
-    Future<void> into(int? groupId) =>
-        _move(channel, (groupId: groupId, index: 1 << 30));
-    return showAppMenu(
-      anchor,
-      items: [
-        for (final group in groups)
-          AppMenuItem(
-            label: group.name,
-            checked: channel.favoriteGroupId == group.id,
-            onPressed: () => unawaited(into(group.id)),
-          ),
-        AppMenuItem(
-          label: 'No group',
-          checked: channel.favoriteGroupId == null,
-          onPressed: () => unawaited(into(null)),
-        ),
-        const AppMenuItem.separator(),
-        AppMenuItem(
-          label: 'New group…',
-          icon: AppIcons.plus,
-          onPressed: () => unawaited(() async {
-            final favorites = ref.read(favoritesRepositoryProvider);
-            final name = await showGroupNameDialog(
-              anchor,
-              title: 'New group',
-              action: 'Create',
-            );
-            if (name == null) return;
-            final created = await favorites.createGroup(widget.sourceId, name);
-            if (created.valueOrNull case final id?) await into(id);
-          }()),
-        ),
-      ],
-    );
-  }
+  ) => showChannelMenu(
+    anchor,
+    ref,
+    channel,
+    onWatch: () => unawaited(_watch(channel)),
+    onFavorite: () => unawaited(_remove(channel, entries)),
+  );
 
   Future<void> _headerMenu(BuildContext anchor, FavoriteGroup group) {
     final favorites = ref.read(favoritesRepositoryProvider);
@@ -841,7 +760,7 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
       onMenu: () {
         final anchor = _nodeFor('c${channel.remoteKey}').context;
         if (anchor != null) {
-          unawaited(_channelMenu(anchor, channel, entries, groups));
+          unawaited(_channelMenu(anchor, channel, entries));
         }
       },
     );

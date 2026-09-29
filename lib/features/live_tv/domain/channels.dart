@@ -157,6 +157,19 @@ final class FavoriteGroupChannels extends ChannelFilter {
   int get hashCode => Object.hash(5, groupId);
 }
 
+/// The channels the user hid, whatever their category: Settings →
+/// Categories → Hidden channels, where they come back (decision 8).
+@immutable
+final class HiddenChannels extends ChannelFilter {
+  const new();
+
+  @override
+  bool operator ==(Object other) => other is HiddenChannels;
+
+  @override
+  int get hashCode => 6;
+}
+
 /// Channels with no category, or one the provider no longer lists.
 @immutable
 final class UncategorizedChannels extends ChannelFilter {
