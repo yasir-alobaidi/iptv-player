@@ -46,7 +46,7 @@ List<Widget> mediaSections(BuildContext context) {
                     number: 201,
                     nowTitle: 'Premier League: Arsenal v Chelsea',
                     progress: 0.42,
-                    badges: const [AppBadge('FHD', tone: AppBadgeTone.outline)],
+                    quality: 'FHD',
                     onPressed: () {},
                     onMenu: () {},
                     onToggleFavorite: () {},
@@ -77,6 +77,7 @@ List<Widget> mediaSections(BuildContext context) {
                 child: ChannelRow(
                   name: 'Vista Movies',
                   number: 203,
+                  quality: 'HD',
                   nowTitle: 'Copper Hollow',
                   progress: 0.8,
                   selected: true,

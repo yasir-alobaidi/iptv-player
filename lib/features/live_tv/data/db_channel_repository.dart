@@ -175,13 +175,15 @@ final class DbChannelRepository implements ChannelRepository {
 
   static ChannelItem _item(QueryRow row) {
     final display = row.read<String?>('display_name');
-    final name = row.read<String>('name');
+    final provider = row.read<String>('name');
+    final name = display ?? row.read<String?>('clean_name') ?? provider;
     return ChannelItem(
       id: row.read<int>('id'),
       sourceId: row.read<String>('source_id'),
       remoteKey: row.read<String>('remote_key'),
-      name: display ?? row.read<String?>('clean_name') ?? name,
-      providerName: display == null ? null : name,
+      name: name,
+      providerName: name == provider ? null : provider,
+      isRenamed: display != null,
       quality: ChannelQuality.fromStored(row.read<String?>('quality')),
       number: row.read<int?>('number'),
       logoUrl: row.read<String?>('logo_url'),

@@ -385,6 +385,7 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
                     padding: const EdgeInsets.only(bottom: 4),
                     child: ChannelRow(
                       name: channel.name,
+                      quality: channel.quality?.label,
                       number: channel.number,
                       image: artworkFor(context, channel.logoUrl, width: 40),
                       guideKnown: false,

@@ -55,6 +55,52 @@ void main() {
       expect(find.byType(ProgressBar), findsOneWidget);
     });
 
+    testWidgets('draws the quality badge after the name, raised on the '
+        'selected row', (tester) async {
+      await pumpDesign(
+        tester,
+        Column(
+          children: [
+            SizedBox(
+              width: 420,
+              child: ChannelRow(
+                name: 'Arena Sports 1',
+                quality: 'FHD',
+                onPressed: () {},
+              ),
+            ),
+            SizedBox(
+              width: 420,
+              child: ChannelRow(
+                name: 'Arena Sports 2',
+                quality: 'HD',
+                selected: true,
+                onPressed: () {},
+              ),
+            ),
+            SizedBox(
+              width: 420,
+              child: ChannelRow(name: 'Zebra TV', onPressed: () {}),
+            ),
+          ],
+        ),
+      );
+
+      final fhd = tester.widget<ChannelBadge>(
+        find.widgetWithText(ChannelBadge, 'FHD'),
+      );
+      final hd = tester.widget<ChannelBadge>(
+        find.widgetWithText(ChannelBadge, 'HD'),
+      );
+      expect(fhd.raised, isFalse);
+      expect(hd.raised, isTrue);
+      expect(find.byType(ChannelBadge), findsNWidgets(2));
+      expect(
+        tester.getTopLeft(find.text('FHD')).dx,
+        greaterThan(tester.getTopRight(find.text('Arena Sports 1')).dx),
+      );
+    });
+
     testWidgets('says so when there is no guide information', (tester) async {
       await pumpDesign(
         tester,

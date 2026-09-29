@@ -11,6 +11,7 @@ final class ChannelItem {
     required this.remoteKey,
     required this.name,
     this.providerName,
+    this.isRenamed = false,
     this.quality,
     this.number,
     this.logoUrl,
@@ -32,8 +33,12 @@ final class ChannelItem {
   /// as it is (a catalogue not cleaned yet).
   final String name;
 
-  /// The provider's own name when the user renamed the channel.
+  /// The provider's own name, as it wrote it, when [name] shows something
+  /// else: the user renamed the channel, or cleanup took its tags off.
   final String? providerName;
+
+  /// [name] is the user's rename.
+  final bool isRenamed;
 
   /// The badge the provider's name gave, shown after [name].
   final ChannelQuality? quality;
@@ -55,6 +60,7 @@ final class ChannelItem {
       other.remoteKey == remoteKey &&
       other.name == name &&
       other.providerName == providerName &&
+      other.isRenamed == isRenamed &&
       other.quality == quality &&
       other.number == number &&
       other.logoUrl == logoUrl &&
@@ -71,6 +77,7 @@ final class ChannelItem {
     remoteKey,
     name,
     providerName,
+    isRenamed,
     quality,
     number,
     logoUrl,

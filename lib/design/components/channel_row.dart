@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
+import 'package:iptv_player/design/components/channel_badge.dart';
 import 'package:iptv_player/design/components/channel_logo.dart';
 import 'package:iptv_player/design/components/progress_bar.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
-/// One channel in the Live TV list: number, logo, name, what's on now, a
-/// thin progress bar for the current programme, and a favorite star.
+/// One channel in the Live TV list: number, logo, name with its quality
+/// badge, what's on now, a thin progress bar for the current programme,
+/// and a favorite star.
 class ChannelRow extends StatelessWidget {
   const new({
     required this.name,
@@ -16,6 +18,7 @@ class ChannelRow extends StatelessWidget {
     this.upNext,
     this.guideKnown = true,
     this.progress,
+    this.quality,
     this.badges = const [],
     this.isFavorite = false,
     this.selected = false,
@@ -46,6 +49,10 @@ class ChannelRow extends StatelessWidget {
 
   /// How far through the current programme, 0..1.
   final double? progress;
+
+  /// The picture's quality ("FHD"), drawn after the name as a
+  /// [ChannelBadge]; null for none.
+  final String? quality;
   final List<Widget> badges;
   final bool isFavorite;
 
@@ -118,6 +125,13 @@ class ChannelRow extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (quality case final quality?) ...[
+                          SizedBox(width: tokens.spacing.s8),
+                          ChannelBadge(
+                            quality,
+                            raised: selected || states.highlighted,
+                          ),
+                        ],
                         for (final badge in badges) ...[
                           SizedBox(width: tokens.spacing.s8 - 2),
                           badge,

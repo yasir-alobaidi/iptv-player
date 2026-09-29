@@ -172,6 +172,7 @@ void main() {
     final renamed = (await repo.byRemoteKey('src', 'a')).valueOrNull!;
     expect(renamed.name, 'My sports');
     expect(renamed.providerName, 'Arena Sports 2');
+    expect(renamed.isRenamed, isTrue);
   });
 
   group('cleaned names (v7)', () {
@@ -204,13 +205,15 @@ void main() {
       final u = (await repo.byRemoteKey('other', 'u')).valueOrNull!;
       expect(u.name, 'Harbor City Local');
       expect(u.quality, ChannelQuality.hd);
-      expect(u.providerName, isNull);
+      expect(u.providerName, 'UK: Harbor City Local HD');
+      expect(u.isRenamed, isFalse);
       final v = (await repo.byRemoteKey('other', 'v')).valueOrNull!;
       expect(v.name, 'Bay Weather');
       expect(v.quality, ChannelQuality.fhd);
       final w = (await repo.byRemoteKey('other', 'w')).valueOrNull!;
       expect(w.name, 'Coastline News');
       expect(w.quality, isNull);
+      expect(w.providerName, isNull, reason: 'nothing to clean');
       final n = (await repo.byRemoteKey('other', 'n')).valueOrNull!;
       expect(n.name, 'US: Northwind Drama');
 
@@ -218,6 +221,7 @@ void main() {
       final renamed = (await repo.byRemoteKey('other', 'u')).valueOrNull!;
       expect(renamed.name, 'My local');
       expect(renamed.providerName, 'UK: Harbor City Local HD');
+      expect(renamed.isRenamed, isTrue);
       expect(renamed.quality, ChannelQuality.hd);
     });
 

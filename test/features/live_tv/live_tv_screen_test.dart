@@ -136,6 +136,91 @@ void main() {
     await _finish(tester);
   });
 
+  testWidgets('rows show the cleaned name with its badge, never the '
+      "provider's tags", (tester) async {
+    await pump(tester);
+
+    ChannelRow row(String name) =>
+        tester.widget<ChannelRow>(find.widgetWithText(ChannelRow, name));
+    expect(row('Arena Sports 1').quality, 'FHD');
+    expect(row('Arena Sports 2').quality, 'HD');
+    expect(row('Velocity Motors').quality, 'FHD');
+    expect(row('Zebra TV').quality, isNull);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ChannelRow, 'Arena Sports 1'),
+        matching: find.widgetWithText(ChannelBadge, 'FHD'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('UK'), findsNothing);
+    await _finish(tester);
+  });
+
+  testWidgets("Rename… shows the provider's name, keeps the cleaned one "
+      "unless changed, and Use provider's name goes back to it", (
+    tester,
+  ) async {
+    final live = await pump(tester);
+    Future<void> openRename() async {
+      await tester.tap(find.text('Arena Sports 1').first);
+      await _settle(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+      await _settle(tester);
+      await tester.tap(find.text('Rename…'));
+      await _settle(tester);
+    }
+
+    Future<String?> stored() async => (await tester.runAsync(
+      () => live.db.channelsDao.byRemoteKey('src-1', '201'),
+    ))!.displayName;
+
+    await openRename();
+    expect(find.text('Rename channel'), findsOneWidget);
+    expect(find.widgetWithText(AppTextField, 'Arena Sports 1'), findsOneWidget);
+    expect(
+      find.text("Provider's name: UK: Arena Sports 1 FHD"),
+      findsOneWidget,
+    );
+    expect(find.text("Use provider's name"), findsNothing);
+    // Saving the name as it is pins nothing.
+    await tester.tap(find.text('Save'));
+    await _settle(tester);
+    expect(await stored(), isNull);
+
+    await openRename();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AppDialog),
+        matching: find.byType(EditableText),
+      ),
+      'Arena Main',
+    );
+    await tester.tap(find.text('Save'));
+    await _settle(tester);
+    expect(await stored(), 'Arena Main');
+    expect(find.text('Arena Main'), findsWidgets);
+    expect(
+      tester
+          .widget<ChannelRow>(find.widgetWithText(ChannelRow, 'Arena Main'))
+          .quality,
+      'FHD',
+      reason: "the badge is the provider's, whatever the name",
+    );
+
+    await tester.tap(find.text('Arena Main').first);
+    await _settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await _settle(tester);
+    await tester.tap(find.text('Rename…'));
+    await _settle(tester);
+    await tester.tap(find.text("Use provider's name"));
+    await _settle(tester);
+    expect(await stored(), isNull);
+    expect(find.text('Arena Sports 1'), findsWidgets);
+    await _finish(tester);
+  });
+
   testWidgets('an empty category offers to show hidden channels', (
     tester,
   ) async {

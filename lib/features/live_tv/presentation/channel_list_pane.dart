@@ -562,6 +562,7 @@ class _RowState extends ConsumerState<_Row> {
         child: Builder(
           builder: (context) => ChannelRow(
             name: channel.name,
+            quality: channel.quality?.label,
             number: channel.number,
             image: artworkFor(context, channel.logoUrl, width: 40),
             nowTitle: programme?.title,
@@ -623,26 +624,36 @@ class _RenameDialogState extends State<_RenameDialog> {
     super.dispose();
   }
 
-  void _save() => Navigator.of(context).pop(_RenameResult(_controller.text));
+  /// The name typed, unless it is the name already shown and not the
+  /// user's: saving that would pin today's cleaned name as a rename, and
+  /// the provider's later changes would stop showing.
+  void _save() {
+    final channel = widget.channel;
+    final typed = _controller.text.trim();
+    final unchanged = !channel.isRenamed && typed == channel.name;
+    Navigator.of(context).pop(unchanged ? null : _RenameResult(typed));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final original = widget.channel.providerName;
+    final channel = widget.channel;
+    final original = channel.providerName;
     return AppDialog(
       title: 'Rename channel',
       focusButtons: false,
-      subtitle: original == null
-          ? 'Only this app sees the new name.'
-          : 'Your provider calls it "$original".',
+      subtitle: 'Only this app sees the new name.',
       primaryLabel: 'Save',
       onPrimary: _save,
-      secondaryLabel: original == null ? 'Cancel' : "Use provider's name",
+      // Back to the provider's name as the app shows it: cleaned, with
+      // its badge.
+      secondaryLabel: channel.isRenamed ? "Use provider's name" : 'Cancel',
       onSecondary: () =>
           Navigator.of(context)
-              .pop(original == null ? null : const _RenameResult(null)),
+              .pop(channel.isRenamed ? const _RenameResult(null) : null),
       child: AppTextField(
         controller: _controller,
         label: 'Name',
+        helperText: original == null ? null : "Provider's name: $original",
         autofocus: true,
         onSubmitted: (_) => _save(),
       ),

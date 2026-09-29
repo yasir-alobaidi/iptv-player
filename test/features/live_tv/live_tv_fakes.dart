@@ -9,6 +9,7 @@ import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -76,19 +77,23 @@ final class LiveTvFakes {
         );
     sports = await category('1', 'Sports');
     news = await category('2', 'News', hidden: true);
+    // Named as a panel names them, and cleaned as sync cleans them: the
+    // screens show the canvas's names and badges.
     ChannelsCompanion row(String key, String name, int number, int? cat) =>
-        ChannelsCompanion.insert(
-          sourceId: 'src-1',
-          remoteKey: key,
-          name: name,
-          number: Value(number),
-          categoryId: Value(cat),
-          position: Value(number),
+        withCleanName(
+          ChannelsCompanion.insert(
+            sourceId: 'src-1',
+            remoteKey: key,
+            name: name,
+            number: Value(number),
+            categoryId: Value(cat),
+            position: Value(number),
+          ),
         );
     await db.channelsDao.upsertAll([
-      row('201', 'Arena Sports 1', 201, sports),
-      row('202', 'Arena Sports 2', 202, sports),
-      row('203', 'Velocity Motors', 203, sports),
+      row('201', 'UK: Arena Sports 1 FHD', 201, sports),
+      row('202', '|UK| Arena Sports 2 HD', 202, sports),
+      row('203', 'Velocity Motors ᶠᴴᴰ', 203, sports),
       row('301', 'World News', 301, news),
       row('302', 'City News', 302, news),
       row('900', 'Zebra TV', 900, null),
