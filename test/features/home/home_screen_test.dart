@@ -169,6 +169,35 @@ void main() {
       );
     });
 
+    testWidgets('Ctrl+1 lands on the first card of a Continue watching row '
+        'that appeared above the others', (tester) async {
+      // Home first had the hero and the rows under it; the rows' controls
+      // were in the focus tree before Continue watching was built above
+      // them.
+      final (home, app) = await open(tester);
+      expect(find.text('Start watching'), findsOneWidget);
+      unawaited(home.seedHistory());
+      await settle(tester);
+      expect(find.text('Continue watching'), findsOneWidget);
+      // Left from a card further down: Ctrl+1 means the first control.
+      _node(tester, 'Velocity Motors').requestFocus();
+      await tester.pump();
+
+      app.router.go(AppDestination.movies.path);
+      await settle(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await settle(tester);
+
+      expect(app.location, AppDestination.home.path);
+      expect(
+        _focused(),
+        'The Quiet Harbor',
+        reason: '${FocusManager.instance.primaryFocus}',
+      );
+    });
+
     testWidgets('Enter on a Continue card resumes it where it was left', (
       tester,
     ) async {
@@ -198,6 +227,8 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await settle(tester);
       expect(app.location, '/movies/src-1/502');
+      // The page's own first focus, not its top-left "‹ Movies" chip.
+      expect(_focused(), 'Play');
     });
 
     testWidgets('Enter on a channel plays it full screen; back on Home it '

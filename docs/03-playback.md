@@ -42,7 +42,7 @@ Setting: Auto (default) / On / Off. libmpv 0.34.1's `deinterlace` is only yes/no
 - Single owner of what's playing where (local player, cast relay) and of each source's connections
 - Enforces connection policy: with `max_connections = 1`, stop the current stream on that source and wait for it to close before opening another
 - Downloads (docs/09) hold connections too, but playback and casting come first: when no connection is free, pause a download on that source and resume it afterwards
-- Records history: live = last watched time; VOD = position every 10 s and on stop
+- Records history: live = last watched time; VOD = position every 10 s of playing, on pause, seek, stop and failure, and at the end (Phase 5)
 
 ## Watchdog (stability core)
 As built (ADR-010 step 4): in `PlaybackCoordinator`. A failure is classified by one GET of the stream's URL after mpv lets go (status and the first bytes; on an Xtream refusal the account is read too), then closed at once. A full account (`connectionLimit`) is tried 3 times, not 6. A first frame resets the count. The fault suite (`integration_test/playback_faults_test.dart`) proves each class against the fake provider.
@@ -76,6 +76,15 @@ States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 - Mark complete at ≥ 95 %
 - Series: "Next episode" card with a cancelable 10 s countdown
 - Seek: ←/→ 10 s, Shift+←/→ 60 s, time bubble on the seek bar
+
+### As built (Phase 5 step 6; ADR-012)
+- **One coordinator for live and files.** Its states carry a sealed `Playable` (`PlayableChannel`, `PlayableMovie`, `PlayableEpisode`); `playVod(item, from:)` opens a file, and a resume is one open that starts there (`PlayRequest.start`, mpv's `start`), not an open and a seek. `seek`, `setPaused` and `timelines` (position, length, buffered ahead, paused) serve the player; a file's end is `PlaybackEnded`.
+- **A file's watchdog:** the end is finished unless it came 10 s or more short of the player's own length, which is a drop: the file reconnects where it was, with its URL built again. A stall or a failure reconnects at the last position. Paused is never a stall. The first frame gets at least 30 s, so a resume on a panel that ignores Range can read its way to the position.
+- **Progress** (`WatchProgress`): saved every 10 s of playing, on pause, after a seek, on leaving (a stop, another item), on a failure and at the end; nothing for a file that never showed a picture. Watched at 95 %. Continue watching lists what is between a minute and 95 %, and a series' next episode after a watched one.
+- **The player stops a file** whenever it closes (Esc, a destination shortcut, the end); Live TV and the Guide stop only a channel.
+- **Keys:** Space, ←/→ 10 s and Shift+←/→ 60 s (one seek once the keys rest 300 ms), Home to the start, M/A/S/I/F as for live; the seek bar isn't a Tab stop. "Resumed from 24:10 · Home starts over" for 5 s; "Preparing…" while a file opens.
+- **The next episode:** the card counts from 10 at 20 s left and plays it where it was left; a pause holds the count; Esc cancels, and the end card offers Play next episode / Back to series. After the last episode, the series page.
+- **Measured on the fake panel:** 532 ms to the first frame 30 s into the MP4 sample; mpv and FFmpeg ride through a connection dropped mid-file by themselves. The user's own panel: ADR-012 step 8.
 
 ## Local files and downloads
 - Library items (docs/09) play as `PlayableSource` kind `file` with the VOD rules above and no provider connection

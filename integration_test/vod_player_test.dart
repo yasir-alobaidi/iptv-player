@@ -23,24 +23,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:iptv_player/app/app.dart';
 import 'package:iptv_player/app/router.dart';
-import 'package:iptv_player/core/core_providers.dart';
-import 'package:iptv_player/core/logging/app_log.dart';
-import 'package:iptv_player/core/logging/error_reporter.dart';
-import 'package:iptv_player/core/logging/secret_registry.dart';
-import 'package:iptv_player/core/player/player_providers.dart';
-import 'package:iptv_player/core/secure/credential_store.dart';
-import 'package:iptv_player/data/db/app_database.dart';
-import 'package:iptv_player/data/db/db_providers.dart';
-import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
-import 'package:iptv_player/features/sources/data/source_providers.dart';
-import 'package:iptv_player/features/sources/domain/source.dart';
-import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
@@ -49,6 +37,7 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 
 import 'support/fake_panel.dart';
 import 'support/keyboard.dart';
+import 'support/panel_app.dart';
 
 /// The fake panel's first series: S1 · E2 is the MP4 sample, S1 · E3 the
 /// AC-3 one (the panel picks by series, season and episode).
@@ -79,7 +68,7 @@ void main() {
       ))!;
       addTearDown(() => tester.runAsync(panel.stop));
       final app = (await tester.runAsync(
-        () => _App.open(panel, video: video),
+        () => PanelApp.open(panel, video: video),
       ))!;
       addTearDown(() => tester.runAsync(app.close));
 
@@ -284,66 +273,4 @@ void main() {
     skip: !_samples,
     timeout: const Timeout(Duration(minutes: 6)),
   );
-}
-
-/// The app as `bootstrap()` builds it, with the real player, a throwaway
-/// database and keyring, and the fake panel added and synced as a source.
-final class _App {
-  new _(this.container, this._directory, this.db, this.sourceId);
-
-  static Future<_App> open(FakePanel panel, {required bool video}) async {
-    final directory = await Directory.systemTemp.createTemp('iptv_vod');
-    final db = AppDatabase(await openAppDatabase(directory));
-    final secrets = SecretRegistry();
-    final log = AppLog(output: SilentOutput(), secrets: secrets);
-    final engine = await MediaKitPlayerEngine.create(
-      log: log,
-      secrets: secrets,
-      video: video,
-    );
-    final container = ProviderContainer(
-      overrides: [
-        appLogProvider.overrideWithValue(log),
-        secretRegistryProvider.overrideWithValue(secrets),
-        errorReporterProvider.overrideWithValue(ErrorReporter(log)),
-        appDatabaseProvider.overrideWithValue(db),
-        credentialStoreProvider.overrideWithValue(InMemoryCredentialStore()),
-        startLocationProvider.overrideWithValue('/'),
-        playerEngineProvider.overrideWithValue(engine),
-        ...sourceShellOverrides,
-      ],
-    );
-    final added = await container
-        .read(sourceRepositoryProvider)
-        .add(
-          SourceDraft(
-            type: SourceType.xtream,
-            name: 'Fake panel',
-            url: panel.url,
-            username: 'test',
-            password: 'test',
-          ),
-        );
-    final id = added.valueOrNull!.id;
-    final synced = await container.read(syncServiceProvider).sync(id);
-    if (!synced.isOk) throw StateError('sync failed: ${synced.failureOrNull}');
-    return _App._(container, directory, db, id);
-  }
-
-  final ProviderContainer container;
-  final Directory _directory;
-  final AppDatabase db;
-  final String sourceId;
-
-  String get location => container.read(routerProvider).state.uri.path;
-
-  Future<void> close() async {
-    final coordinator = container.read(playbackCoordinatorProvider);
-    await coordinator.stop();
-    final engine = coordinator.engine;
-    container.dispose();
-    await engine.dispose();
-    await db.close();
-    await _directory.delete(recursive: true);
-  }
 }

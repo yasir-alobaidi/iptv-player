@@ -127,6 +127,22 @@ final class Keys {
   Future<void> replaceText(String text, {required String into}) =>
       _focused(into).then((field) => _enter(field, text));
 
+  /// Types [text] after what is in [editable] (an [EditableText] with no
+  /// label of its own, such as a [SearchField]'s), once the keyboard focus
+  /// is in it.
+  Future<void> typeIn(Finder editable, String text) async {
+    await waitUntil(
+      () {
+        resume();
+        return focusIsOn(editable);
+      },
+      'focus in $editable (${focusPath()})',
+      seconds: 5,
+    );
+    final field = tester.widget<EditableText>(editable);
+    await _enter(field, field.controller.text + text);
+  }
+
   Future<EditableText> _focused(String label) async {
     await waitUntil(
       () {

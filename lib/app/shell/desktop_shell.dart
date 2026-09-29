@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,10 +125,19 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
         }
         return;
       }
-      // The first control of the screen that opened, not the pane's
-      // remembered item: the controller is shared by every branch, so
-      // what it remembers may belong to the destination just left.
-      _contentPane.focusFirst();
+      // A screen that asked for its own focus (autofocus: the details
+      // pages' Play) keeps it. Autofocus lands in the focus manager's
+      // next update, a microtask queued while the screen was built, so
+      // this looks after it.
+      scheduleMicrotask(() {
+        if (!mounted) return;
+        final focused = FocusManager.instance.primaryFocus;
+        if (_contentPane.hasFocus && focused is! FocusScopeNode) return;
+        // The first control of the screen that opened, not the pane's
+        // remembered item: the controller is shared by every branch, so
+        // what it remembers may belong to the destination just left.
+        _contentPane.focusFirst();
+      });
     });
   }
 

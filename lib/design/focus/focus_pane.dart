@@ -32,15 +32,23 @@ class FocusPaneController extends ChangeNotifier {
     return true;
   }
 
-  /// Focuses the pane's first item. Returns false when the pane has
-  /// nothing to focus, so the caller can leave focus where it is.
+  /// Focuses the pane's first item in reading order, as Tab would reach
+  /// it. Returns false when the pane has nothing to focus, so the caller
+  /// can leave focus where it is.
+  ///
+  /// Not [items]' first: the focus tree keeps nodes in the order they
+  /// were attached, so a row that appeared above the others (Home's
+  /// Continue watching) would come after them.
   bool focusFirst() {
-    for (final node in items) {
-      if (!node.canRequestFocus) continue;
-      node.requestFocus();
-      return true;
-    }
-    return false;
+    final placed = [
+      for (final node in items)
+        // A route's scope is in the list too, as big as its screen.
+        if (node is! FocusScopeNode && node.canRequestFocus)
+          if (_rectOf(node) case final rect?) (node, rect),
+    ]..sort((a, b) => _readingOrder(a.$2, b.$2));
+    final first = placed.firstOrNull?.$1;
+    first?.requestFocus();
+    return first != null;
   }
 
   /// Focuses the remembered item, or the first one. Left/Right between
@@ -152,28 +160,18 @@ class _FocusPaneState extends State<FocusPane> {
     final pane = _marker.rect;
     final outside = [
       for (final node in scope.traversalDescendants)
-        if (node.canRequestFocus &&
-            node.context != null &&
-            !node.ancestors.contains(_marker))
-          node,
-    ]..sort(_readingOrder);
+        if (node.canRequestFocus && !node.ancestors.contains(_marker))
+          if (_rectOf(node) case final rect?) (node, rect),
+    ]..sort((a, b) => _readingOrder(a.$2, b.$2));
     if (outside.isEmpty) return false;
     (forward
-            ? outside.where((n) => n.rect.top >= pane.bottom - 1).firstOrNull ??
+            ? outside.where((n) => n.$2.top >= pane.bottom - 1).firstOrNull ??
                   outside.first
-            : outside.where((n) => n.rect.bottom <= pane.top + 1).lastOrNull ??
+            : outside.where((n) => n.$2.bottom <= pane.top + 1).lastOrNull ??
                   outside.last)
+        .$1
         .requestFocus();
     return true;
-  }
-
-  /// Top to bottom, then left to right among controls on one line.
-  static int _readingOrder(FocusNode a, FocusNode b) {
-    final dy = a.rect.center.dy - b.rect.center.dy;
-    if (dy.abs() > a.rect.height / 2 && dy.abs() > b.rect.height / 2) {
-      return dy.sign.toInt();
-    }
-    return a.rect.left.compareTo(b.rect.left);
   }
 
   @override
@@ -201,4 +199,21 @@ class _FocusPaneState extends State<FocusPane> {
       child: pane,
     );
   }
+}
+
+/// Where [node] is on screen; null before it is laid out.
+Rect? _rectOf(FocusNode node) {
+  final box = node.context?.findRenderObject();
+  if (box == null || !box.attached) return null;
+  if (box is RenderBox && !box.hasSize) return null;
+  return node.rect;
+}
+
+/// Top to bottom, then left to right among controls on one line.
+int _readingOrder(Rect a, Rect b) {
+  final dy = a.center.dy - b.center.dy;
+  if (dy.abs() > a.height / 2 && dy.abs() > b.height / 2) {
+    return dy.sign.toInt();
+  }
+  return a.left.compareTo(b.left);
 }

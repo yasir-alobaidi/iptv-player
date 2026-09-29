@@ -32,6 +32,7 @@ class MovieDetailsScreen extends ConsumerWidget {
     final found = ref.watch(movieItemProvider(sourceId, remoteKey));
     return _DetailsFrame(
       back: 'Movies',
+      loading: found is! AsyncData && found is! AsyncError,
       child: switch (found) {
         AsyncData(value: Ok(value: final movie?)) => _MoviePage(movie: movie),
         AsyncData(value: Ok(value: null)) => const _Gone(
@@ -61,6 +62,7 @@ class SeriesDetailsScreen extends ConsumerWidget {
     final found = ref.watch(seriesItemProvider(sourceId, remoteKey));
     return _DetailsFrame(
       back: 'Series',
+      loading: found is! AsyncData && found is! AsyncError,
       child: switch (found) {
         AsyncData(value: Ok(value: final series?)) => _SeriesPage(
           series: series,
@@ -84,10 +86,16 @@ class SeriesDetailsScreen extends ConsumerWidget {
 /// What every details page has: the page's own focus group, Esc back to
 /// the grid, and the canvas's "‹ Movies" chip over the artwork.
 class _DetailsFrame extends StatelessWidget {
-  const new({required this.back, required this.child});
+  const new({required this.back, required this.child, this.loading = false});
 
   final String back;
   final Widget child;
+
+  /// While the title is read, the chip takes no focus: a jump here
+  /// (Enter on a Home poster) would put the focus on it, the page's only
+  /// control, and the page's own first focus (Play's autofocus) arriving
+  /// with the title would then be ignored.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +115,10 @@ class _DetailsFrame extends StatelessWidget {
             Positioned(
               top: tokens.spacing.s24,
               left: tokens.spacing.s40,
-              child: _BackChip(label: back, onPressed: leave),
+              child: ExcludeFocus(
+                excluding: loading,
+                child: _BackChip(label: back, onPressed: leave),
+              ),
             ),
           ],
         ),
