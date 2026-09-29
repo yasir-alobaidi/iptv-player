@@ -379,7 +379,10 @@ void main() {
         (r'C:\guides\guide.xml', const XmltvFileInput(r'C:\guides\guide.xml')),
         (
           'file:///home/me/guide.xml',
-          const XmltvFileInput('/home/me/guide.xml'),
+          // A file URL becomes this system's path.
+          XmltvFileInput(
+            Platform.isWindows ? r'\home\me\guide.xml' : '/home/me/guide.xml',
+          ),
         ),
         ('guide.xml.gz', const XmltvFileInput('guide.xml.gz')),
       ]) {
