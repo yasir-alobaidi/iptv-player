@@ -1,165 +1,136 @@
-# Handoff — 2026-09-29 (Phase 5 built: steps 1–8)
+# Handoff — 2026-09-29 (Phase 6: steps 1–6 built, step 7 half built)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-012 in
-docs/decisions.md (its step 8 section is new) and docs/08's Phase 6.
+it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-013 in
+docs/decisions.md, and docs/plans/phase-6-search-and-polish.md.
 
 ## Before you start the next session (user)
-1. **Review and push** the local commits, oldest first: "Phase 5 step
-   8a: the keyboard walk, and Ctrl+N's first control in reading order",
-   "Phase 5 step 8b: the measurements, and the grid keeps the keyboard",
-   the handoff, and "Phase 5 step 8c: your panel's movie and episode".
-   Steps 1–7 are pushed.
-2. **CI after the push** runs two new integration tests: `vod_walk` (the
-   keyboard walk, about a minute on the 120 s samples) and
-   `poster_grid_scroll` (the `large` catalogue's 30,000 posters, in debug
-   without the top-to-bottom part: 48 s here under xvfb). Linux was green
-   at 3b73a48 (step 7), the VOD samples made and played on the runner;
-   Windows failed 4 of its known tests.
-3. **Try it:** Home → Enter on a poster opens the page with the focus on
-   Play; Movies → scroll the grid far with the mouse wheel, then press ↓:
-   the keyboard carries on from a poster on screen; End jumps to the last
-   poster and focuses it.
-4. **Your panel's movie and episode ran** (you said yes): MKV, H.264
-   720p with AAC stereo, Range honoured, the first picture in 0.9 and
-   1.4 s, seeks to the middle and back played on with no reconnect. **But
-   the panel said 1 of 1 connections in use before, during and after**,
-   with nothing of ours running afterwards: check your other device
-   wasn't cut off (ADR-012 step 8).
+1. **Review and push** the local commits, oldest first: "Phase 6 step 1:
+   channel names cleaned and stored, schema v7", steps 2–6, "CI: run
+   every integration test and name each one that fails", "Phase 6 step
+   7a: …" and this handoff. The plan commit (eff4053) is pushed.
+2. **CI after the push:** the plan push's run failed one Linux integration
+   test that the public annotations don't name. With the CI change, every
+   integration file runs and each failure is an annotation, so the next
+   run says which. Windows fails its 4 known tests.
+3. **Schema v7 upgrades your database** the first time the new build runs;
+   channel names are then cleaned in the background (about a second per
+   50,000) and your next guide import stores programmes in the order
+   search needs.
+4. **Try it:** Ctrl+K or `/` and type — ↑/↓, Tab between groups, Enter
+   plays a channel or opens a title, the Menu key has the channel menu;
+   Favorites (Ctrl+6): New group, Alt+↑/↓ to move, F to remove (Undo);
+   Live TV: a group under Favorites, Show hidden channels in a channel's
+   menu, the categories pane's menu and Alt+↑/↓; Settings → Categories →
+   Hidden channels.
+5. **Decide when you can:** "Remind me" on upcoming programmes — Phase 9,
+   or after v1 (decision 5)?
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-ADR-012 in docs/decisions.md and docs/08-phases-and-prompts.md (Phase 6) first.
-Phase 5 step 8 is reviewed and pushed; CI is <green | red: …>.
-Then write the Phase 6 plan (Search and polish) for my approval.
+ADR-013 in docs/decisions.md and docs/plans/phase-6-search-and-polish.md first.
+Phase 6 steps 1–7a are reviewed and pushed; CI is <green | red: …>.
+Finish step 7 (its tests and walk), then step 8, the phase exit.
 ```
 
 ## Where things stand
-- **Phases 1–5 are built.** Phase 5 (Movies, Series, Home) closed with
-  step 8 on 2026-09-29, the play from your panel included; ADR-012 is
-  Accepted.
-- **Checks, all green at 2186d31:** analyze, format, `build_runner`
-  leaves no diff; **1,818 app tests** (8 skipped) under `TZ=UTC`; the
-  fake provider's 141; under xvfb: `vod_walk`, `vod_player`,
-  `home_continue`, `live_tv_keyboard`, `guide_keyboard`,
-  `sources_keyboard`, `guide_watch`, `app_launch`, `guide_scroll` and
-  `poster_grid_scroll`.
-- **Measured (profile mode, real display):** cold start to Home with the
-  `large` catalogue cached **575 ms** median (budget 2.0 s); the poster
-  grid with no frame over 16 ms for flings, the wheel, ↓, PageDown, End and
-  Home, 13–17 of ~11,900 frames over when flung top to bottom (Known
-  issues); decoded pictures at the 150 MB cap after that, the picture
-  folder under its 500 MB.
-- **CI:** Linux green at 3b73a48. Windows fails 4–10 named tests from run
-  to run (progress.md Known issues) — not worked on yet.
+- **Phase 6 steps 1–6 are built and committed; step 7 is half built**
+  (part a committed, all green). ADR-013 has each step as built.
+- **Checks, all green at the step 7a commit:** analyze, format,
+  `build_runner` leaves no diff; **2,057 app tests** (10 skipped) under
+  `TZ=UTC`; under xvfb: `search_keyboard` (new, the `large` catalogue),
+  `live_tv_keyboard`, `guide_keyboard`, `guide_settings_keyboard`,
+  `guide_watch`, `vod_walk`, `app_launch`.
+- **Measured:** search on the `large` catalogue with a 611,328-programme
+  guide: median 6.6 ms, p95 24 ms, worst 31 ms (proposed budget 50 ms);
+  the channel-name fill 1.2 s for 50,000.
 
 ## Done this session (2026-09-29)
-- **Step 8a — the walk** (`integration_test/vod_walk_test.dart`, keys
-  only): Home → Ctrl+4 → the movie's name typed in the filter → its poster
-  → Play → past a minute → Ctrl+1 (Continue watching, focus on its card) →
-  Ctrl+5 → the series through the filter → its episodes → S1 · E2 → to its
-  last seconds → the countdown → S1 · E3 → Esc → Ctrl+1 (the series first)
-  → Enter plays S1 · E3 → Esc. 45 s here.
-- **Step 8b — the measurements:** `test/app/cold_start_benchmark_test.dart`
-  (launches the profile build; Home logs `[startup] Home is on screen, N ms
-  after main()` through `LaunchMark`), and
-  `integration_test/poster_grid_scroll_test.dart`.
-- **Step 8c — your panel** (with your go-ahead; the switch set back to
-  `false` after): a movie and an episode, both MKV, H.264 720p, AAC
-  stereo; Range honoured; the first picture in 0.9 and 1.4 s; seeks to the
-  middle and back played on with no reconnect on the one connection. The
-  test's seek check was wrong (it read a position that moves at once) and
-  now waits for playback past the point.
-- **Docs:** ADR-012 step 8 and Accepted; docs/03's VOD "As built"; docs/05
-  "As built" for Home and the VOD player, and where Ctrl+N's focus lands;
-  docs/06's two new measurements and their table rows; progress.
-- **Bugs found and fixed** (all in ADR-012 step 8):
-  - **Ctrl+1 landed on "See all Recently added movies"** once Continue
-    watching had appeared above rows built earlier:
-    `FocusPaneController.focusFirst()` took the first node *attached*. Now
-    the first in reading order (route scopes and unlaid-out nodes left
-    out).
-  - **That made a jump to a details page land on its "‹ Movies" chip**
-    (Enter on a Home poster), which then blocked Play's autofocus. The chip
-    takes no focus while the page loads, and after a jump the shell leaves
-    the focus where the new screen put it (it waits a microtask for the
-    focus manager's update).
-  - **The mouse scrolling the focused poster away took the keyboard out of
-    the grid** (its card is disposed, and its `Focus` lets go). The grid
-    holds the focus (`_holder`), gives it to the card in the same column on
-    screen once the view rests, and PageDown/Home/End count from the view.
-  - **End on a large catalogue focused nothing** (the last page isn't read
-    yet): the card takes the focus once built (`_pendingFocus`).
-  - **The picture folder overshot its 500 MB cap by up to 50 MB:** it now
-    also sweeps once its known size passes the cap (`sweepArtwork` returns
-    what is left).
+- **The plan approved** ("continue the work"); your panel's "1 of 1
+  connections" was another of your devices (noted in ADR-012).
+- **Step 1:** `cleanChannelName` with a 111-name corpus and a fuzz; the
+  matcher's tag tables shared; schema v7 (`clean_name`, `quality`,
+  `favorite_groups`, `favorites.group_id`, the search index on the name
+  shown); sync writes both columns; the guarded fill for older catalogues.
+  **Departure:** codec, frame-rate and Backup/VIP tags stay in the name —
+  only resolution tags become the badge — so two feeds of one channel
+  don't read the same.
+- **Step 2:** `ChannelBadge` after the name on Live TV's and the player
+  panel's rows; Rename shows the provider's name and returns to the
+  cleaned one.
+- **Step 3:** the search repository. Found by the benchmark: short words
+  took 0.7–5.2 s on the programme index. Fixed by storing the guide in
+  start order and reading matches in that order from the first programme
+  on now (31 ms worst).
+- **Step 4:** the overlay, every state, the keyboard in the field, the
+  hand-offs (Guide on a programme, Show all into filters), goldens, the
+  integration walk.
+- **Step 5:** favorites' order and groups; Live TV's groups under
+  Favorites; Home in your order; exit criterion 2 proved against the fake
+  panel.
+- **Step 6:** the Favorites screen (canvas), its model, drag and keyboard
+  moves, Undo, goldens.
+- **Step 7a:** one channel menu (Live TV, Guide, Home, Favorites, Search),
+  hide with Undo, the categories pane's menu and moves, Show hidden
+  channels, the Hidden channels tab, Live TV's list keeping the keyboard
+  under the wheel.
+- **CI:** every integration file runs, each failure named.
 
 ## What's next
-1. **Optional, with your go-ahead:** rerun
-   `integration_test/real_provider_vod_test.dart` (set `"play": true` in
-   `~/.config/iptv-player-dev/real_provider.json`, then back) to time a
-   seek on your panel: the first run's check read the coordinator's
-   position, which moves at once, so it proved the seek wasn't refused but
-   not how long it took. Look at the account's connection count first.
-2. **Phase 6 — Search and polish** (docs/08): write the plan for approval
-   first — the Ctrl+K overlay over FTS (the programmes index is already
-   built), the Favorites screen with reorder and groups, display-name
-   cleanup with quality badges, hide/unhide everywhere.
-3. **Alongside:** the Windows failures (progress.md Known issues), one
-   commit each, confirmed by CI after a push.
+1. **Step 7, the rest:** widget tests for the Hidden channels tab (list,
+   filter, Show and the focus moving on, Show all, the tab appearing),
+   the categories pane's menu (Hide with Undo, Rename, Move) and Alt+↑/↓,
+   the Guide's menu key, Search's channel menu; the **exit-criterion-4
+   walk** (an integration test: hide a channel and a hidden category's
+   non-favorite → gone from Live TV, the Guide, Search and Home → Settings
+   → Hidden channels → Show → back); the Categories manager's list as one
+   Tab stop (Known issues). Record in ADR-013 step 7.
+2. **Step 8 — the exit** (plan): the keyboard walk against the fake panel;
+   frames while typing into search in profile mode on the real display;
+   with your go-ahead (a pop-up first: catalogue calls only, no stream)
+   one sync of your panel into a throwaway database to review the cleanup
+   on its 12,610 channel names and look at its movie names; docs/05 "As
+   built" (Search, Favorites, names), docs/02's schema v7, docs/06's
+   search budget (50 ms); ADR-013 Accepted; progress; handoff.
+3. **Alongside:** the Linux integration test CI names; the Windows
+   failures, one commit each.
 
 **Loose ends, small:**
-- Live TV's channel list probably loses the keyboard when the mouse scrolls
-  the focused row away, as the grid did (not checked; the grid's fix would
-  apply).
-- The grid's fastest top-to-bottom fling: 13–17 frames over 16 ms of
-  ~11,900 (Known issues).
-- From steps 6–7: the next episode starts at about 10 s left, so an episode
-  under about 3 minutes isn't marked watched; Home's rows are a few pixels
-  looser than the canvas's 32.
+- Favorites' drag draws Flutter's gap, not the canvas's accent line.
+- A guide imported before this build keeps channel order until its next
+  import, so programme search hits may not be the soonest for up to a day.
+- `GuideGridController.showProgramme` is lost if the Guide's view is
+  rebuilt for another source before the grid has rows.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems.** Linux is green; Windows fails 6–10 named
-  tests from run to run (progress.md Known issues).
-- **Phase 5 — Movies, Series, Home:** built (2026-09-29).
-- **Phase 6 — Search and polish:** the Ctrl+K overlay over FTS (the
-  programmes index is already built), the Favorites screen with reorder
-  and groups, display-name cleanup with quality badges, hide/unhide
-  everywhere.
-- **Phase 7 — Casting**, the largest and riskiest phase:
-  - our own Cast v2 client, the ffprobe-based planner, and the FFmpeg relay
-    with its supervisor;
-  - the UI, and the casting matrix on the user's TV.
-  - Ask before every cast (memory). The relay must own its sockets, a
-    lesson from the soak (ADR-010).
-- **Phase 8 — Downloads and the local library:**
-  - resumable downloads (`.part` + verify + rename; they yield to
-    playback), and the library scanner;
-  - offline playback, library casting, and the SIGKILL-safety tests.
-- **Phase 9 — Settings, diagnostics, polish:**
-  - every Settings section, the log viewer and Copy diagnostics
-    (redacted);
-  - the keyboard audit at 100/115/130 % text scale and with reduce motion;
-  - every docs/06 budget in profile mode, and **the 8-hour soak with
-    faults** (memory growth ≤ 50 MB).
-- **Phase 10 — Packaging:**
-  - a Windows installer bundling libmpv and FFmpeg (MSIX vs Inno Setup:
-    recommend, then build);
-  - a Linux AppImage tested on clean Ubuntu 22.04 and 24.04 VMs;
-  - semantic versioning, CHANGELOG.md, docs/release.md, a final regression,
-    and the tag v1.0.0.
-- **Only the user can unblock:**
-  - **The Windows PC:** playback and hardware decoding have never run on
-    real Windows. ADR-007's GO covers Linux only.
-  - **The app's name and icon** (the placeholder is "IPTV Player").
-  - The window_manager #585 check (one manual window close with the log
-    open).
-  - Access to their TV for the casting matrices.
-  - Permission for each real-provider stream.
+- **CI green on both systems.** Linux: one integration test to identify
+  (see above); Windows fails 4 named tests (progress.md Known issues).
+- **Phase 6 — Search and polish:** steps 7 (rest) and 8 left.
+- **Phase 7 — Casting**, the largest and riskiest phase: our own Cast v2
+  client, the ffprobe-based planner, the FFmpeg relay with its supervisor,
+  the UI, and the casting matrix on the user's TV. Ask before every cast
+  (memory). The relay must own its sockets (ADR-010).
+- **Phase 8 — Downloads and the local library:** resumable downloads
+  (`.part` + verify + rename; they yield to playback), the library
+  scanner, offline playback, library casting, the SIGKILL-safety tests.
+- **Phase 9 — Settings, diagnostics, polish:** every Settings section, the
+  log viewer and Copy diagnostics (redacted); the keyboard audit at
+  100/115/130 % text scale and with reduce motion; every docs/06 budget in
+  profile mode, and **the 8-hour soak with faults** (memory growth ≤ 50
+  MB).
+- **Phase 10 — Packaging:** a Windows installer bundling libmpv and FFmpeg
+  (MSIX vs Inno Setup: recommend, then build); a Linux AppImage tested on
+  clean Ubuntu 22.04 and 24.04 VMs; semantic versioning, CHANGELOG.md,
+  docs/release.md, a final regression, and the tag v1.0.0.
+- **Only the user can unblock:** the Windows PC (playback and hardware
+  decoding have never run on real Windows; ADR-007's GO covers Linux
+  only); the app's name and icon; the window_manager #585 check; access
+  to their TV for the casting matrices; permission for each real-provider
+  stream.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -215,10 +186,24 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   test integration_test tools`, `TZ=UTC flutter test`, the fake provider's
   `dart test` (in `tools/fake_provider`), and the integration tests that
   touch what changed, each under `xvfb-run -a … -d linux`, one file per
-  run. Then add to ADR-012, update docs/progress.md, rewrite this file,
+  run. Then add to ADR-013, update docs/progress.md, rewrite this file,
   and commit.
 
 ## Codebase notes by area
+New this session (Phase 6 steps 1–7a):
+- **Channel names** (`lib/features/live_tv/domain/channel_names.dart`: `cleanChannelName`, `ChannelQuality` stored by name; `channel_name_tags.dart`: the tag tables and scanners the guide's matcher shares — keep them in one place). `ChannelItem.name` is rename ?? `clean_name` ?? provider name (`channelShownName`, `channelColumns`, `channelFromRow` in `db_channel_repository.dart` — reuse them in any query that lists channels); `providerName` is the raw name whenever it differs; `isRenamed`; `quality`; `favoriteGroupId`.
+- **Every channel row sync writes goes through `withCleanName`** (`lib/data/sync/channel_rows.dart`); `clean_name`/`quality` are in the channels DAO's `DoUpdate` list. Tests that insert channels and expect search or the cleaned name must use it too. `ChannelNameFill` (+ `runChannelNameWork`) fills rows with no cleaned name after launch, guarded, before the launch syncs.
+- **`channels_fts` indexes `(clean_name, display_name)`**, not the provider's name (v7).
+- **The guide swap inserts programmes by start time** (`EpgDao.swapIn`): search relies on programme row ids following the schedule. Don't insert `epg_programs` another way without keeping that order (tests insert sorted: `putGuide()` in the search repository test).
+- **Search** (`lib/features/search/`): `DbSearchRepository` (one query per group; programmes per source from `_firstLive`, cached 5 min — a stale value is still a valid lower bound), `searchWords` (the only way text reaches FTS), `SearchSession` (the overlay's state, 150 ms), `search_text.dart` (every phrase, `highlightRanges`), `SearchActions` (what opening does; uses the container and router, since the overlay closes first), `search_overlay.dart`. Benchmark: `search_benchmark_test.dart` (`SEARCH_BENCH_DIR=<dir>` keeps its 500 MB database to study queries with Python's sqlite3).
+- **Cross-screen requests:** `GuideProgrammeRequest` (the Guide opens on a programme with its sheet: `GuideGridController.showProgramme`, applied once the grid has rows; the sheet opens a frame after the grid moves), `LiveTvController.showSearch` / `CatalogueController.showSearch` (filter fields follow their query now), `HiddenChannelsRequest` / `openHiddenChannels`.
+- **Favorites** (`lib/features/favorites/`): `FavoritesDao` (order: `sort_order` per group; a move renumbers the target list; groups' own order), `FavoritesRepository`, `favoriteGroupsProvider`; `FavoriteChannels`' and `FavoriteGroupChannels`' "number" sort is the user's order. The screen's list is one flat list (`favorite_layout.dart`: `favoriteEntries`, `keyboardMove`, `dropPlace` — the drop index is `onReorderItem`'s, already adjusted). `showGroupNameDialog`.
+- **One channel menu:** `showChannelMenu` / `hideChannel` / `showGroupMenu` (`lib/features/live_tv/presentation/channel_menu.dart`); `renameChannel` (`channel_rename_dialog.dart`); `askCategoryName` (in `categories_manager.dart`). `AppNotice` carries an action (Undo).
+- **Hidden channels:** `HiddenChannels` filter (drops the `is_hidden = 0` clause); `HiddenChannelsView` in Settings → Categories, a tab in the manager's `SegmentedControl<CatalogueKind?>` (null is that tab).
+- **Design:** `ChannelBadge`; `ChannelRow` gained `quality`, `hidden`, `leading`, `timeLeft`; `AppSearchTokens` and `text.searchQuery`/`searchHeading`; `PosterArtwork(showTitle:)`; `CatalogueGrid` (the grid body the Movies/Series screens and Favorites share).
+- **Live TV's list keeps the keyboard under the wheel:** a row that goes with the focus calls `onFocusGone` from `deactivate`; `_holder` (never a Tab stop) holds it while the view moves; it answers only its own keys (`node.hasPrimaryFocus`), or it swallows the rows' arrows.
+- **Traps met this session:** the file tool turned `\u` escapes into literal invisible characters again (grep before committing); `pkill -f` inside a command killed the command; `late final … = ref.read(…)` was first read in `dispose`; a provider's `build` that sets its own state synchronously (defer with a microtask); binding more SQL variables than a statement uses fails (`_Query.variables` takes exactly ?1–?4); an inner CTE's ORDER BY can't use the outer alias.
+
 New this session (Phase 5 step 8):
 - **Where the focus goes after a destination jump** (`DesktopShell.
   _followTheJump`): after the frame, then a microtask (the focus manager's
@@ -655,10 +640,11 @@ From earlier sessions (still true):
 - Commit messages carry no trailers. Commit locally; the user pushes.
 - At the end: analyze, format check, `TZ=UTC flutter test`, the fake
     provider's `dart test`, each integration test under `xvfb-run -a … -d
-    linux` (one file per run), add to ADR-012, update `docs/progress.md`,
+    linux` (one file per run), add to ADR-013, update `docs/progress.md`,
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 6 (ADR-013): cleaned names stored (`clean_name`, `quality`), technical tags kept in the name, only resolution tags as the badge; the search index on the name shown; search's ranking (source, favorites, prefix, rank) and the programme query by row-id order from the first programme on now (measured: 0.7–5.2 s → 31 ms worst); one-letter words only narrow programmes; no "Show all" for programmes; favorites' order per group with renumbering moves; groups under Favorites in Live TV; "Order" on favorites' sort; the flat header/row list for the Favorites screen; one channel menu everywhere; "Hidden" as a tag.
 - Phase 5 step 8 (ADR-012): the first control after a jump in reading
   order, with the screen's own autofocus winning; the details chip out of
   focus while loading; the grid keeping the keyboard when the mouse
@@ -767,9 +753,8 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
-- Your panel read 1 of 1 connections in use before, during and after the
-  VOD test (ADR-012 step 8). Was another device connected, and was it cut
-  off?
+- Remind me on upcoming programmes: Phase 9, or after v1? (Phase 6
+  decision 5; the plan suggested Phase 9.)
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
