@@ -625,7 +625,8 @@ final class DbEpgRepository implements EpgRepository {
 
   static const _matchColumns =
       'c.id AS id, c.source_id AS source_id, c.remote_key AS remote_key, '
-      'c.name AS name, c.display_name AS display_name, c.number AS number, '
+      'c.name AS name, c.display_name AS display_name, '
+      'c.clean_name AS clean_name, c.number AS number, '
       'c.logo_url AS logo_url, c.epg_key AS epg_key, '
       'm.xmltv_id AS xmltv_id, m.rule AS rule, g.xmltv_id AS guide_id, '
       'g.display_name AS guide_name';
@@ -669,7 +670,7 @@ final class DbEpgRepository implements EpgRepository {
       // Too many digits for an int is no channel's number.
       final number = _digits.hasMatch(text) ? int.tryParse(text) : null;
       clauses.add(
-        r"(COALESCE(c.display_name, c.name) LIKE ? ESCAPE '\' "
+        r"(COALESCE(c.display_name, c.clean_name, c.name) LIKE ? ESCAPE '\' "
         r"OR c.name LIKE ? ESCAPE '\'"
         '${number == null ? '' : ' OR c.number = ?'})',
       );
@@ -690,7 +691,10 @@ final class DbEpgRepository implements EpgRepository {
       channelId: row.read<int>('id'),
       sourceId: row.read<String>('source_id'),
       remoteKey: row.read<String>('remote_key'),
-      name: row.read<String?>('display_name') ?? name,
+      name:
+          row.read<String?>('display_name') ??
+          row.read<String?>('clean_name') ??
+          name,
       providerName: name,
       number: row.read<int?>('number'),
       logoUrl: row.read<String?>('logo_url'),

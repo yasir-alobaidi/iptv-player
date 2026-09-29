@@ -7,6 +7,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_client.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 import 'package:iptv_player/data/sync/sync_work.dart';
 import 'package:iptv_player/features/sources/domain/provider_account.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
@@ -104,18 +105,22 @@ final class XtreamSync {
       CatalogueKind.live,
       channels.valueOrNull!,
       categoryLists[CatalogueKind.live]!,
-      toRow: (channel, position) => ChannelsCompanion.insert(
-        sourceId: _sourceId,
-        remoteKey: channel.streamId,
-        name: channel.name,
-        categoryId: Value(categoryIds[CatalogueKind.live]![channel.categoryId]),
-        number: Value(channel.number),
-        logoUrl: Value(channel.iconUrl),
-        epgKey: Value(channel.epgChannelId),
-        archiveDays: Value(channel.archiveDays),
-        addedAt: Value(channel.addedAt),
-        position: Value(position),
-        seenRun: Value(_runId),
+      toRow: (channel, position) => withCleanName(
+        ChannelsCompanion.insert(
+          sourceId: _sourceId,
+          remoteKey: channel.streamId,
+          name: channel.name,
+          categoryId: Value(
+            categoryIds[CatalogueKind.live]![channel.categoryId],
+          ),
+          number: Value(channel.number),
+          logoUrl: Value(channel.iconUrl),
+          epgKey: Value(channel.epgChannelId),
+          archiveDays: Value(channel.archiveDays),
+          addedAt: Value(channel.addedAt),
+          position: Value(position),
+          seenRun: Value(_runId),
+        ),
       ),
       write: _db.channelsDao.upsertAll,
       count: (progress, done) => progress.copyWith(channels: done),

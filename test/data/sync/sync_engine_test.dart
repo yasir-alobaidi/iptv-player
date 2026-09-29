@@ -17,6 +17,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
 import 'package:iptv_player/data/sync/sync_engine.dart';
+import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
@@ -168,6 +169,28 @@ Future<R> _first<T extends Table, R>(
 }
 
 /// FTS5's own consistency check; throws on a stale index.
+/// Every channel carries the name the screens show and its badge, as
+/// `cleanChannelName` makes them from the provider's name. Returns how
+/// many the cleanup changed, and how many got a badge.
+Future<({int changed, int badged})> _checkCleanNames(
+  AppDatabase db,
+  String sourceId,
+) async {
+  final rows = await (db.select(
+    db.channels,
+  )..where((t) => t.sourceId.equals(sourceId))).get();
+  var changed = 0;
+  var badged = 0;
+  for (final row in rows) {
+    final cleaned = cleanChannelName(row.name);
+    expect(row.cleanName, cleaned.name, reason: row.name);
+    expect(row.quality, cleaned.quality?.name, reason: row.name);
+    if (row.cleanName != row.name) changed++;
+    if (row.quality != null) badged++;
+  }
+  return (changed: changed, badged: badged);
+}
+
 Future<void> _checkSearchIndexes(AppDatabase db) async {
   for (final table in ['channels_fts', 'movies_fts', 'series_fts']) {
     await db.customStatement(
@@ -203,6 +226,20 @@ http://tv.test/series/200.mp4
 http://tv.test/series/201.mp4
 #EXTINF:-1,Lonely episode
 http://tv.test/series/300.mp4
+''';
+
+const _taggedPlaylist = '''
+#EXTM3U
+#EXTINF:-1 group-title="UK",UK: BBC One ᴴᴰ
+http://tv.test/live/1.ts
+#EXTINF:-1 group-title="UK",|UK| Sky Sports Main Event FHD
+http://tv.test/live/2.ts
+#EXTINF:-1 group-title="US",US: A&amp;E
+http://tv.test/live/3.ts
+#EXTINF:-1 group-title="AR",AR | MBC 1 HEVC
+http://tv.test/live/4.ts
+#EXTINF:-1 group-title="UK",|UK| HD
+http://tv.test/live/5.ts
 ''';
 
 void main() {
@@ -276,6 +313,7 @@ void main() {
       expect(live.map((p) => p.stageTotal), contains(240));
       expect(live.map((p) => p.channels), containsAll([50, 100, 240]));
       await _checkSearchIndexes(env.db);
+      await _checkCleanNames(env.db, id);
     });
 
     test('the quirky profile syncs whole, and dangling categories become '
@@ -295,6 +333,7 @@ void main() {
         greaterThan(0),
       );
       await _checkSearchIndexes(env.db);
+      await _checkCleanNames(env.db, id);
     });
 
     test('a re-sync keeps everything the user set, and removes only what '
@@ -578,6 +617,41 @@ void main() {
       final kept = (await db.channelsDao.byRemoteKey(id, itv.remoteKey))!;
       expect(kept.id, itv.id);
       expect(kept.isHidden, isTrue);
+      await _checkSearchIndexes(db);
+    });
+
+    test('channels are stored with the name shown and its badge, and a '
+        "re-sync keeps the user's rename", () async {
+      final env = await _Env.open();
+      final path = env.playlist('tags.m3u', _taggedPlaylist);
+      final id = await env.add(_file(path));
+      await env.engine.sync(id);
+      final db = env.db;
+
+      Future<Map<String, (String?, String?, String?)>> byName() async => {
+        for (final row in await db.select(db.channels).get())
+          row.name: (row.cleanName, row.quality, row.displayName),
+      };
+      expect(await byName(), {
+        'UK: BBC One ᴴᴰ': ('BBC One', 'hd', null),
+        '|UK| Sky Sports Main Event FHD': (
+          'Sky Sports Main Event',
+          'fhd',
+          null,
+        ),
+        'US: A&E': ('A&E', null, null),
+        'AR | MBC 1 HEVC': ('MBC 1 HEVC', null, null),
+        '|UK| HD': ('|UK| HD', null, null),
+      });
+      final bbc = await (db.select(
+        db.channels,
+      )..where((t) => t.cleanName.equals('BBC One'))).getSingle();
+      await db.channelsDao.rename(bbc.id, 'Beeb');
+
+      await env.engine.sync(id);
+
+      expect((await byName())['UK: BBC One ᴴᴰ'], ('BBC One', 'hd', 'Beeb'));
+      await _checkCleanNames(db, id);
       await _checkSearchIndexes(db);
     });
 

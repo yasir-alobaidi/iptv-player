@@ -118,10 +118,11 @@ Future<void> bootstrap() async {
 }
 
 /// Waits for the first frame and a moment after it, so starting up never
-/// competes with a sync, then records runs the last session left
+/// competes with a sync, then gives channels synced before schema v7
+/// their cleaned names (once), records runs the last session left
 /// unfinished and refreshes sources older than their `refresh_hours`
-/// (docs/02), then imports the guides that are due. The sync and the
-/// import each run in a background isolate.
+/// (docs/02), then imports the guides that are due. The fill, the sync
+/// and the import each run in a background isolate.
 ///
 /// A guide import the last session was killed during is recorded the
 /// same way, and the rows it staged go with it: they are the one thing
@@ -133,6 +134,8 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
         // In its own isolate: the picture cache's size cap (docs/06).
         unawaited(artwork?.sweep());
         await container.read(epgRepositoryProvider).recoverInterrupted();
+        // Before the syncs, which write names of their own (ADR-013).
+        await container.read(channelNameFillProvider).run();
         await container.read(syncServiceProvider).startUp();
         // Guides after the syncs, never beside them (ADR-011 decision 5).
         await container.read(guideSchedulerProvider).startUp();

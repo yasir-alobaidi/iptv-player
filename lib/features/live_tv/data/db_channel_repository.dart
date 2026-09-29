@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
+import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 
 /// [ChannelRepository] over the `channels` table, its categories and the
@@ -14,9 +15,14 @@ final class DbChannelRepository implements ChannelRepository {
   final DateTime Function() _clock;
 
   static const _select =
-      'c.id, c.source_id, c.remote_key, c.name, c.display_name, c.number, '
-      'c.logo_url, c.category_id, c.epg_key, c.archive_days, c.is_hidden, '
+      'c.id, c.source_id, c.remote_key, c.name, c.display_name, '
+      'c.clean_name, c.quality, c.number, c.logo_url, c.category_id, '
+      'c.epg_key, c.archive_days, c.is_hidden, '
       'f.id IS NOT NULL AS is_favorite';
+
+  /// The name a channel is shown by, and so sorted and filtered by
+  /// ([ChannelItem.name]'s order).
+  static const _shownName = 'COALESCE(c.display_name, c.clean_name, c.name)';
 
   @override
   Stream<int> watchCount(ChannelQuery query) {
@@ -151,7 +157,7 @@ final class DbChannelRepository implements ChannelRepository {
     }
     final text = query.text.trim();
     if (text.isNotEmpty) {
-      clauses.add(r"COALESCE(c.display_name, c.name) LIKE ? ESCAPE '\'");
+      clauses.add("$_shownName LIKE ? ESCAPE '\\'");
       final escaped = text
           .replaceAll(r'\', r'\\')
           .replaceAll('%', r'\%')
@@ -164,8 +170,7 @@ final class DbChannelRepository implements ChannelRepository {
   static String _order(ChannelSort sort) => switch (sort) {
     ChannelSort.number =>
       'ORDER BY c.number IS NULL, c.number, c.position, c.id',
-    ChannelSort.name =>
-      'ORDER BY COALESCE(c.display_name, c.name) COLLATE NOCASE, c.id',
+    ChannelSort.name => 'ORDER BY $_shownName COLLATE NOCASE, c.id',
   };
 
   static ChannelItem _item(QueryRow row) {
@@ -175,8 +180,9 @@ final class DbChannelRepository implements ChannelRepository {
       id: row.read<int>('id'),
       sourceId: row.read<String>('source_id'),
       remoteKey: row.read<String>('remote_key'),
-      name: display ?? name,
+      name: display ?? row.read<String?>('clean_name') ?? name,
       providerName: display == null ? null : name,
+      quality: ChannelQuality.fromStored(row.read<String?>('quality')),
       number: row.read<int?>('number'),
       logoUrl: row.read<String?>('logo_url'),
       categoryId: row.read<int?>('category_id'),

@@ -21,6 +21,8 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
           categoryId: excluded.categoryId,
           number: excluded.number,
           name: excluded.name,
+          cleanName: excluded.cleanName,
+          quality: excluded.quality,
           logoUrl: excluded.logoUrl,
           epgKey: excluded.epgKey,
           archiveDays: excluded.archiveDays,

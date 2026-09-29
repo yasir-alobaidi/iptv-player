@@ -102,6 +102,16 @@ class Channels extends Table with _ProviderItem {
   /// The user's rename. Sync never writes it.
   TextColumn get displayName => text().nullable()();
 
+  /// [name] as the screens show it (`cleanChannelName`): sync writes it
+  /// with [name], so it is the provider's, not the user's. Null only
+  /// between the upgrade to v7 and the fill that follows it
+  /// (`ChannelNameFill`); a screen then shows [name].
+  TextColumn get cleanName => text().nullable()();
+
+  /// The badge [name]'s tags gave (`ChannelQuality.name`), written with
+  /// [cleanName]. Null for none.
+  TextColumn get quality => text().nullable()();
+
   TextColumn get logoUrl => text().nullable()();
 
   /// Xtream `epg_channel_id` or M3U `tvg-id`.

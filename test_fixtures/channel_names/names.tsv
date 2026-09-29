@@ -1,0 +1,139 @@
+# Channel name cleanup corpus (docs/05 "Channel name cleanup", ADR-013).
+# One case per line: provider name <TAB> name shown <TAB> badge (SD, HD,
+# FHD, 4K, or - for none). Real-shaped names, as panels write them. Lines
+# starting with # are comments. Invisible characters are written as the
+# test's escapes instead (see channel_names_test.dart).
+
+# docs/05: leading country and language tags
+UK: BBC One	BBC One	-
+US | CNN	CNN	-
+[EN] Discovery Channel	Discovery Channel	-
+|AR| MBC 1	MBC 1	-
+UK:BBC Four	BBC Four	-
+UK| BBC Four	BBC Four	-
+UK – BBC Four	BBC Four	-
+UK┃BBC Four	BBC Four	-
+UK ▎ BBC Three	BBC Three	-
+UK • Sky Atlantic	Sky Atlantic	-
+(UK) BBC Four	BBC Four	-
+{EN} BBC World News	BBC World News	-
+|UK| |EN| BBC Four	BBC Four	-
+🇬🇧 UK: BBC Four	BBC Four	-
+USA | ESPN	ESPN	-
+EX-YU: RTS 1	RTS 1	-
+EXYU: Nova S	Nova S	-
+EX YU: Arena Sport 1	Arena Sport 1	-
+[EX-YU] Pink	Pink	-
+AR - Al Jazeera	Al Jazeera	-
+AR- MBC Drama	MBC Drama	-
+uk: bbc one	bbc one	-
+
+# A first word with no separator is the name's own
+UK BBC Four	UK BBC Four	-
+TV 5 Monde	TV 5 Monde	-
+ABC News	ABC News	-
+BT Sport 1	BT Sport 1	-
+Al-Jazeera	Al-Jazeera	-
+RTL-2	RTL-2	-
+FR: TV 5 Monde	TV 5 Monde	-
+
+# docs/05: trailing quality tags become the badge
+UK: BBC One HD	BBC One	HD
+UK | BBC Two FHD	BBC Two	FHD
+UK: Sky Sports Premier League UHD	Sky Sports Premier League	4K
+UK: Sky Sports Premier League 4K	Sky Sports Premier League	4K
+BBC One SD	BBC One	SD
+Dave HD	Dave	HD
+bbc one hd	bbc one	HD
+
+# Superscript and bracketed tags
+UK: Sky Sports F1 ᴴᴰ	Sky Sports F1	HD
+UK: Sky Cinema Premiere ᶠᴴᴰ	Sky Cinema Premiere	FHD
+Sky Nature ᵁᴴᴰ	Sky Nature	4K
+BT Sport Ultimate ⁴ᴷ	BT Sport Ultimate	4K
+BBC Oneᴴᴰ	BBC One	HD
+ESPN [FHD]	ESPN	FHD
+Channel 4 (HD)	Channel 4	HD
+Sky Arts {SD}	Sky Arts	SD
+[FHD] UK: BBC One	BBC One	FHD
+(4K) Sky Sports Main Event	Sky Sports Main Event	4K
+4K | Sky Sports Main Event	Sky Sports Main Event	4K
+HD: Dave	Dave	HD
+
+# Resolutions written as lines, and the highest of several
+US: NBC Sports Bay Area 1080p	NBC Sports Bay Area	FHD
+Eurosport 2 720p	Eurosport 2	HD
+MTV 576i	MTV	SD
+Sky Nature 2160p	Sky Nature	4K
+Sky Cinema Action Full HD	Sky Cinema Action	FHD
+Sky Cinema Action FullHD	Sky Cinema Action	FHD
+Sky Nature UHD 4K	Sky Nature	4K
+BBC One HD 1080p	BBC One	FHD
+
+# Technical tags stay (they tell two feeds of one channel apart)
+AR | MBC 1 HEVC	MBC 1 HEVC	-
+Eurosport 1 H.265	Eurosport 1 H.265	-
+Eurosport 1 H 265	Eurosport 1 H 265	-
+UK: Sky Sports F1 FHD HEVC	Sky Sports F1 HEVC	FHD
+Eurosport 1 1080p 50fps	Eurosport 1 50fps	FHD
+Eurosport 1 50 fps HD	Eurosport 1 50 fps	HD
+USA | ESPN 2 (Backup)	ESPN 2 (Backup)	-
+History (Backup)	History (Backup)	-
+UK: BBC One Backup HD	BBC One Backup	HD
+ESPN [FHD HEVC]	ESPN [HEVC]	FHD
+Discovery Channel VIP	Discovery Channel VIP	-
+Sky Sports Racing RAW	Sky Sports Racing RAW	-
+Sky Sports Golf MULTI	Sky Sports Golf MULTI	-
+Sky News HDR	Sky News HDR	-
+[HEVC] BBC One HD	BBC One HEVC	HD
+
+# Kept: a timeshift, numbers, capitals, punctuation that is the name's
+UK: Film4 +1	Film4 +1	-
+UK: E4 +1 HD	E4 +1	HD
+Sky Cinema Premiere +1 HD	Sky Cinema Premiere +1	HD
+UK: ITV 2 +1	ITV 2 +1	-
+Sky Sports 2 HD	Sky Sports 2	HD
+FR: Canal+ Sport	Canal+ Sport	-
+FR: Canal+	Canal+	-
+US: Nick Jr.	Nick Jr.	-
+E! Entertainment HD	E! Entertainment	HD
+US: Cartoon Network (East)	Cartoon Network (East)	-
+BBC One (UK)	BBC One (UK)	-
+DE: ProSieben MAXX	ProSieben MAXX	-
+
+# Only whole words at the edges
+HD Kids	HD Kids	-
+Arena 4K	Arena	4K
+Sky Sports HD Main Event	Sky Sports HD Main Event	-
+BBC One HD2	BBC One HD2	-
+SDTV	SDTV	-
+Sky Sports Main Event FHDx	Sky Sports Main Event FHDx	-
+
+# docs/05: whitespace collapsed
+UK:   BBC    One   HD	BBC One	HD
+  Sky News  	Sky News	-
+
+# docs/05: entities decoded, double-escaped ones too
+US: A&amp;E HD	A&E	HD
+Sky Sports News &amp; Weather	Sky Sports News & Weather	-
+Children&#39;s Channel	Children's Channel	-
+AT&amp;amp;T SportsNet	AT&T SportsNet	-
+Nick&#x2019;s	Nick’s	-
+
+# Other scripts
+AR: قناة الجزيرة	قناة الجزيرة	-
+AR | الجزيرة HD	الجزيرة	HD
+RU: Первый канал HD	Первый канал	HD
+GR: ΕΡΤ1 FHD	ΕΡΤ1	FHD
+Télé-Québec	Télé-Québec	-
+DE: WDR Köln HD	WDR Köln	HD
+TR: TRT Türk	TRT Türk	-
+
+# Nothing left but tags: the provider's name, with no badge
+|UK| HD	|UK| HD	-
+4K	4K	-
+UK: HD	UK: HD	-
+HD FHD	HD FHD	-
+Backup HD	Backup HD	-
+[FHD]	[FHD]	-
+||	||	-

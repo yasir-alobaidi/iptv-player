@@ -6,6 +6,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
 import 'package:iptv_player/data/db/tables.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 
 final _now = DateTime.utc(2026, 9, 18, 9);
 
@@ -42,12 +43,15 @@ ChannelsCompanion _channel(
   String? name,
   int? categoryId,
   int? run,
-}) => ChannelsCompanion.insert(
-  sourceId: source,
-  remoteKey: remoteKey,
-  name: name ?? 'Channel $remoteKey',
-  categoryId: Value(categoryId),
-  seenRun: Value(run),
+}) => withCleanName(
+  // As sync writes it: with the name shown and its badge.
+  ChannelsCompanion.insert(
+    sourceId: source,
+    remoteKey: remoteKey,
+    name: name ?? 'Channel $remoteKey',
+    categoryId: Value(categoryId),
+    seenRun: Value(run),
+  ),
 );
 
 /// FTS5's own check that an external-content index matches its table.
@@ -263,6 +267,18 @@ void main() {
       expect(after.seenRun, 3);
       expect(after.displayName, 'BBC 1');
       expect(after.isHidden, isTrue);
+      // The cleaned name and the badge are the provider's: rewritten.
+      expect(after.cleanName, 'BBC One');
+      expect(after.quality, 'hd');
+    });
+
+    test('a re-sync that drops a tag drops its badge', () async {
+      await db.channelsDao.upsertAll([_channel('101', name: 'UK: ITV FHD')]);
+      await db.channelsDao.upsertAll([_channel('101', name: 'UK: ITV')]);
+
+      final row = (await db.channelsDao.byRemoteKey('s1', '101'))!;
+      expect(row.cleanName, 'ITV');
+      expect(row.quality, isNull);
     });
 
     test('the same remote key in two sources is two channels', () async {
@@ -306,14 +322,17 @@ void main() {
   group('search index', () {
     test('follows inserts, renames, re-syncs and deletes', () async {
       await db.channelsDao.upsertAll([
-        _channel('1', name: 'Sky Sports Main Event'),
-        _channel('2', name: 'BBC One'),
+        _channel('1', name: 'UK: Sky Sports Main Event FHD'),
+        _channel('2', name: 'UK: BBC One'),
       ]);
       final sky = (await db.channelsDao.byRemoteKey('s1', '1'))!.id;
       final bbc = (await db.channelsDao.byRemoteKey('s1', '2'))!.id;
       expect(await _search(db, 'channels_fts', 'spo*'), [sky]);
+      // The name shown is indexed, not the provider's tags (v7).
+      expect(await _search(db, 'channels_fts', 'uk'), isEmpty);
+      expect(await _search(db, 'channels_fts', 'fhd'), isEmpty);
 
-      // A user rename is searchable, and so is the provider's name.
+      // A user rename is searchable, and so is the cleaned name.
       await db.channelsDao.rename(bbc, 'Beeb');
       expect(await _search(db, 'channels_fts', 'beeb'), [bbc]);
       expect(await _search(db, 'channels_fts', 'bbc'), [bbc]);

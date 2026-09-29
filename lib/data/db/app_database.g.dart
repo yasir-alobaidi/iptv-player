@@ -1802,6 +1802,28 @@ class $ChannelsTable extends Channels
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cleanNameMeta = const VerificationMeta(
+    'cleanName',
+  );
+  @override
+  late final GeneratedColumn<String> cleanName = GeneratedColumn<String>(
+    'clean_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _qualityMeta = const VerificationMeta(
+    'quality',
+  );
+  @override
+  late final GeneratedColumn<String> quality = GeneratedColumn<String>(
+    'quality',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _logoUrlMeta = const VerificationMeta(
     'logoUrl',
   );
@@ -1893,6 +1915,8 @@ class $ChannelsTable extends Channels
     number,
     name,
     displayName,
+    cleanName,
+    quality,
     logoUrl,
     epgKey,
     archiveDays,
@@ -1971,6 +1995,18 @@ class $ChannelsTable extends Channels
           data['display_name']!,
           _displayNameMeta,
         ),
+      );
+    }
+    if (data.containsKey('clean_name')) {
+      context.handle(
+        _cleanNameMeta,
+        cleanName.isAcceptableOrUnknown(data['clean_name']!, _cleanNameMeta),
+      );
+    }
+    if (data.containsKey('quality')) {
+      context.handle(
+        _qualityMeta,
+        quality.isAcceptableOrUnknown(data['quality']!, _qualityMeta),
       );
     }
     if (data.containsKey('logo_url')) {
@@ -2067,6 +2103,14 @@ class $ChannelsTable extends Channels
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
       ),
+      cleanName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}clean_name'],
+      ),
+      quality: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quality'],
+      ),
       logoUrl: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}logo_url'],
@@ -2123,6 +2167,16 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
 
   /// The user's rename. Sync never writes it.
   final String? displayName;
+
+  /// [name] as the screens show it (`cleanChannelName`): sync writes it
+  /// with [name], so it is the provider's, not the user's. Null only
+  /// between the upgrade to v7 and the fill that follows it
+  /// (`ChannelNameFill`); a screen then shows [name].
+  final String? cleanName;
+
+  /// The badge [name]'s tags gave (`ChannelQuality.name`), written with
+  /// [cleanName]. Null for none.
+  final String? quality;
   final String? logoUrl;
 
   /// Xtream `epg_channel_id` or M3U `tvg-id`.
@@ -2150,6 +2204,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     this.number,
     required this.name,
     this.displayName,
+    this.cleanName,
+    this.quality,
     this.logoUrl,
     this.epgKey,
     required this.archiveDays,
@@ -2177,6 +2233,12 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || displayName != null) {
       map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || cleanName != null) {
+      map['clean_name'] = Variable<String>(cleanName);
+    }
+    if (!nullToAbsent || quality != null) {
+      map['quality'] = Variable<String>(quality);
     }
     if (!nullToAbsent || logoUrl != null) {
       map['logo_url'] = Variable<String>(logoUrl);
@@ -2217,6 +2279,12 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       displayName: displayName == null && nullToAbsent
           ? const Value.absent()
           : Value(displayName),
+      cleanName: cleanName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cleanName),
+      quality: quality == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quality),
       logoUrl: logoUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(logoUrl),
@@ -2252,6 +2320,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       number: serializer.fromJson<int?>(json['number']),
       name: serializer.fromJson<String>(json['name']),
       displayName: serializer.fromJson<String?>(json['displayName']),
+      cleanName: serializer.fromJson<String?>(json['cleanName']),
+      quality: serializer.fromJson<String?>(json['quality']),
       logoUrl: serializer.fromJson<String?>(json['logoUrl']),
       epgKey: serializer.fromJson<String?>(json['epgKey']),
       archiveDays: serializer.fromJson<int>(json['archiveDays']),
@@ -2274,6 +2344,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       'number': serializer.toJson<int?>(number),
       'name': serializer.toJson<String>(name),
       'displayName': serializer.toJson<String?>(displayName),
+      'cleanName': serializer.toJson<String?>(cleanName),
+      'quality': serializer.toJson<String?>(quality),
       'logoUrl': serializer.toJson<String?>(logoUrl),
       'epgKey': serializer.toJson<String?>(epgKey),
       'archiveDays': serializer.toJson<int>(archiveDays),
@@ -2294,6 +2366,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     Value<int?> number = const Value.absent(),
     String? name,
     Value<String?> displayName = const Value.absent(),
+    Value<String?> cleanName = const Value.absent(),
+    Value<String?> quality = const Value.absent(),
     Value<String?> logoUrl = const Value.absent(),
     Value<String?> epgKey = const Value.absent(),
     int? archiveDays,
@@ -2311,6 +2385,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     number: number.present ? number.value : this.number,
     name: name ?? this.name,
     displayName: displayName.present ? displayName.value : this.displayName,
+    cleanName: cleanName.present ? cleanName.value : this.cleanName,
+    quality: quality.present ? quality.value : this.quality,
     logoUrl: logoUrl.present ? logoUrl.value : this.logoUrl,
     epgKey: epgKey.present ? epgKey.value : this.epgKey,
     archiveDays: archiveDays ?? this.archiveDays,
@@ -2334,6 +2410,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
+      cleanName: data.cleanName.present ? data.cleanName.value : this.cleanName,
+      quality: data.quality.present ? data.quality.value : this.quality,
       logoUrl: data.logoUrl.present ? data.logoUrl.value : this.logoUrl,
       epgKey: data.epgKey.present ? data.epgKey.value : this.epgKey,
       archiveDays: data.archiveDays.present
@@ -2360,6 +2438,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           ..write('number: $number, ')
           ..write('name: $name, ')
           ..write('displayName: $displayName, ')
+          ..write('cleanName: $cleanName, ')
+          ..write('quality: $quality, ')
           ..write('logoUrl: $logoUrl, ')
           ..write('epgKey: $epgKey, ')
           ..write('archiveDays: $archiveDays, ')
@@ -2382,6 +2462,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     number,
     name,
     displayName,
+    cleanName,
+    quality,
     logoUrl,
     epgKey,
     archiveDays,
@@ -2403,6 +2485,8 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           other.number == this.number &&
           other.name == this.name &&
           other.displayName == this.displayName &&
+          other.cleanName == this.cleanName &&
+          other.quality == this.quality &&
           other.logoUrl == this.logoUrl &&
           other.epgKey == this.epgKey &&
           other.archiveDays == this.archiveDays &&
@@ -2422,6 +2506,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
   final Value<int?> number;
   final Value<String> name;
   final Value<String?> displayName;
+  final Value<String?> cleanName;
+  final Value<String?> quality;
   final Value<String?> logoUrl;
   final Value<String?> epgKey;
   final Value<int> archiveDays;
@@ -2439,6 +2525,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     this.number = const Value.absent(),
     this.name = const Value.absent(),
     this.displayName = const Value.absent(),
+    this.cleanName = const Value.absent(),
+    this.quality = const Value.absent(),
     this.logoUrl = const Value.absent(),
     this.epgKey = const Value.absent(),
     this.archiveDays = const Value.absent(),
@@ -2457,6 +2545,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     this.number = const Value.absent(),
     required String name,
     this.displayName = const Value.absent(),
+    this.cleanName = const Value.absent(),
+    this.quality = const Value.absent(),
     this.logoUrl = const Value.absent(),
     this.epgKey = const Value.absent(),
     this.archiveDays = const Value.absent(),
@@ -2477,6 +2567,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Expression<int>? number,
     Expression<String>? name,
     Expression<String>? displayName,
+    Expression<String>? cleanName,
+    Expression<String>? quality,
     Expression<String>? logoUrl,
     Expression<String>? epgKey,
     Expression<int>? archiveDays,
@@ -2495,6 +2587,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       if (number != null) 'number': number,
       if (name != null) 'name': name,
       if (displayName != null) 'display_name': displayName,
+      if (cleanName != null) 'clean_name': cleanName,
+      if (quality != null) 'quality': quality,
       if (logoUrl != null) 'logo_url': logoUrl,
       if (epgKey != null) 'epg_key': epgKey,
       if (archiveDays != null) 'archive_days': archiveDays,
@@ -2515,6 +2609,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Value<int?>? number,
     Value<String>? name,
     Value<String?>? displayName,
+    Value<String?>? cleanName,
+    Value<String?>? quality,
     Value<String?>? logoUrl,
     Value<String?>? epgKey,
     Value<int>? archiveDays,
@@ -2533,6 +2629,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       number: number ?? this.number,
       name: name ?? this.name,
       displayName: displayName ?? this.displayName,
+      cleanName: cleanName ?? this.cleanName,
+      quality: quality ?? this.quality,
       logoUrl: logoUrl ?? this.logoUrl,
       epgKey: epgKey ?? this.epgKey,
       archiveDays: archiveDays ?? this.archiveDays,
@@ -2573,6 +2671,12 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
     }
+    if (cleanName.present) {
+      map['clean_name'] = Variable<String>(cleanName.value);
+    }
+    if (quality.present) {
+      map['quality'] = Variable<String>(quality.value);
+    }
     if (logoUrl.present) {
       map['logo_url'] = Variable<String>(logoUrl.value);
     }
@@ -2609,6 +2713,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
           ..write('number: $number, ')
           ..write('name: $name, ')
           ..write('displayName: $displayName, ')
+          ..write('cleanName: $cleanName, ')
+          ..write('quality: $quality, ')
           ..write('logoUrl: $logoUrl, ')
           ..write('epgKey: $epgKey, ')
           ..write('archiveDays: $archiveDays, ')
@@ -2629,9 +2735,11 @@ class ChannelsFts extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   ChannelsFts(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-    'name',
+  static const VerificationMeta _cleanNameMeta = const VerificationMeta(
+    'cleanName',
+  );
+  late final GeneratedColumn<String> cleanName = GeneratedColumn<String>(
+    'clean_name',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -2650,7 +2758,7 @@ class ChannelsFts extends Table
     $customConstraints: '',
   );
   @override
-  List<GeneratedColumn> get $columns => [name, displayName];
+  List<GeneratedColumn> get $columns => [cleanName, displayName];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2663,13 +2771,13 @@ class ChannelsFts extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('name')) {
+    if (data.containsKey('clean_name')) {
       context.handle(
-        _nameMeta,
-        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+        _cleanNameMeta,
+        cleanName.isAcceptableOrUnknown(data['clean_name']!, _cleanNameMeta),
       );
     } else if (isInserting) {
-      context.missing(_nameMeta);
+      context.missing(_cleanNameMeta);
     }
     if (data.containsKey('display_name')) {
       context.handle(
@@ -2691,9 +2799,9 @@ class ChannelsFts extends Table
   ChannelsFt map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return ChannelsFt(
-      name: attachedDatabase.typeMapping.read(
+      cleanName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}name'],
+        data['${effectivePrefix}clean_name'],
       )!,
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2711,24 +2819,24 @@ class ChannelsFts extends Table
   bool get dontWriteConstraints => true;
   @override
   String get moduleAndArgs =>
-      'fts5(name, display_name, content=\'channels\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')';
+      'fts5(clean_name, display_name, content=\'channels\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')';
 }
 
 class ChannelsFt extends DataClass implements Insertable<ChannelsFt> {
-  final String name;
+  final String cleanName;
   final String displayName;
-  const ChannelsFt({required this.name, required this.displayName});
+  const ChannelsFt({required this.cleanName, required this.displayName});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['name'] = Variable<String>(name);
+    map['clean_name'] = Variable<String>(cleanName);
     map['display_name'] = Variable<String>(displayName);
     return map;
   }
 
   ChannelsFtsCompanion toCompanion(bool nullToAbsent) {
     return ChannelsFtsCompanion(
-      name: Value(name),
+      cleanName: Value(cleanName),
       displayName: Value(displayName),
     );
   }
@@ -2739,7 +2847,7 @@ class ChannelsFt extends DataClass implements Insertable<ChannelsFt> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ChannelsFt(
-      name: serializer.fromJson<String>(json['name']),
+      cleanName: serializer.fromJson<String>(json['clean_name']),
       displayName: serializer.fromJson<String>(json['display_name']),
     );
   }
@@ -2747,18 +2855,18 @@ class ChannelsFt extends DataClass implements Insertable<ChannelsFt> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'name': serializer.toJson<String>(name),
+      'clean_name': serializer.toJson<String>(cleanName),
       'display_name': serializer.toJson<String>(displayName),
     };
   }
 
-  ChannelsFt copyWith({String? name, String? displayName}) => ChannelsFt(
-    name: name ?? this.name,
+  ChannelsFt copyWith({String? cleanName, String? displayName}) => ChannelsFt(
+    cleanName: cleanName ?? this.cleanName,
     displayName: displayName ?? this.displayName,
   );
   ChannelsFt copyWithCompanion(ChannelsFtsCompanion data) {
     return ChannelsFt(
-      name: data.name.present ? data.name.value : this.name,
+      cleanName: data.cleanName.present ? data.cleanName.value : this.cleanName,
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
@@ -2768,56 +2876,56 @@ class ChannelsFt extends DataClass implements Insertable<ChannelsFt> {
   @override
   String toString() {
     return (StringBuffer('ChannelsFt(')
-          ..write('name: $name, ')
+          ..write('cleanName: $cleanName, ')
           ..write('displayName: $displayName')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(name, displayName);
+  int get hashCode => Object.hash(cleanName, displayName);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ChannelsFt &&
-          other.name == this.name &&
+          other.cleanName == this.cleanName &&
           other.displayName == this.displayName);
 }
 
 class ChannelsFtsCompanion extends UpdateCompanion<ChannelsFt> {
-  final Value<String> name;
+  final Value<String> cleanName;
   final Value<String> displayName;
   final Value<int> rowid;
   const ChannelsFtsCompanion({
-    this.name = const Value.absent(),
+    this.cleanName = const Value.absent(),
     this.displayName = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ChannelsFtsCompanion.insert({
-    required String name,
+    required String cleanName,
     required String displayName,
     this.rowid = const Value.absent(),
-  }) : name = Value(name),
+  }) : cleanName = Value(cleanName),
        displayName = Value(displayName);
   static Insertable<ChannelsFt> custom({
-    Expression<String>? name,
+    Expression<String>? cleanName,
     Expression<String>? displayName,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (name != null) 'name': name,
+      if (cleanName != null) 'clean_name': cleanName,
       if (displayName != null) 'display_name': displayName,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
   ChannelsFtsCompanion copyWith({
-    Value<String>? name,
+    Value<String>? cleanName,
     Value<String>? displayName,
     Value<int>? rowid,
   }) {
     return ChannelsFtsCompanion(
-      name: name ?? this.name,
+      cleanName: cleanName ?? this.cleanName,
       displayName: displayName ?? this.displayName,
       rowid: rowid ?? this.rowid,
     );
@@ -2826,8 +2934,8 @@ class ChannelsFtsCompanion extends UpdateCompanion<ChannelsFt> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
+    if (cleanName.present) {
+      map['clean_name'] = Variable<String>(cleanName.value);
     }
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
@@ -2841,7 +2949,7 @@ class ChannelsFtsCompanion extends UpdateCompanion<ChannelsFt> {
   @override
   String toString() {
     return (StringBuffer('ChannelsFtsCompanion(')
-          ..write('name: $name, ')
+          ..write('cleanName: $cleanName, ')
           ..write('displayName: $displayName, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -10507,6 +10615,359 @@ class EpisodesCompanion extends UpdateCompanion<EpisodeRow> {
   }
 }
 
+class $FavoriteGroupsTable extends FavoriteGroups
+    with TableInfo<$FavoriteGroupsTable, FavoriteGroupRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FavoriteGroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _collapsedMeta = const VerificationMeta(
+    'collapsed',
+  );
+  @override
+  late final GeneratedColumn<bool> collapsed = GeneratedColumn<bool>(
+    'collapsed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("collapsed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceId,
+    name,
+    sortOrder,
+    collapsed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'favorite_groups';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FavoriteGroupRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('collapsed')) {
+      context.handle(
+        _collapsedMeta,
+        collapsed.isAcceptableOrUnknown(data['collapsed']!, _collapsedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FavoriteGroupRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FavoriteGroupRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      collapsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}collapsed'],
+      )!,
+    );
+  }
+
+  @override
+  $FavoriteGroupsTable createAlias(String alias) {
+    return $FavoriteGroupsTable(attachedDatabase, alias);
+  }
+}
+
+class FavoriteGroupRow extends DataClass
+    implements Insertable<FavoriteGroupRow> {
+  final int id;
+  final String sourceId;
+  final String name;
+  final int sortOrder;
+  final bool collapsed;
+  const FavoriteGroupRow({
+    required this.id,
+    required this.sourceId,
+    required this.name,
+    required this.sortOrder,
+    required this.collapsed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    map['name'] = Variable<String>(name);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['collapsed'] = Variable<bool>(collapsed);
+    return map;
+  }
+
+  FavoriteGroupsCompanion toCompanion(bool nullToAbsent) {
+    return FavoriteGroupsCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      collapsed: Value(collapsed),
+    );
+  }
+
+  factory FavoriteGroupRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FavoriteGroupRow(
+      id: serializer.fromJson<int>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      name: serializer.fromJson<String>(json['name']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      collapsed: serializer.fromJson<bool>(json['collapsed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'name': serializer.toJson<String>(name),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'collapsed': serializer.toJson<bool>(collapsed),
+    };
+  }
+
+  FavoriteGroupRow copyWith({
+    int? id,
+    String? sourceId,
+    String? name,
+    int? sortOrder,
+    bool? collapsed,
+  }) => FavoriteGroupRow(
+    id: id ?? this.id,
+    sourceId: sourceId ?? this.sourceId,
+    name: name ?? this.name,
+    sortOrder: sortOrder ?? this.sortOrder,
+    collapsed: collapsed ?? this.collapsed,
+  );
+  FavoriteGroupRow copyWithCompanion(FavoriteGroupsCompanion data) {
+    return FavoriteGroupRow(
+      id: data.id.present ? data.id.value : this.id,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      name: data.name.present ? data.name.value : this.name,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      collapsed: data.collapsed.present ? data.collapsed.value : this.collapsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteGroupRow(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('collapsed: $collapsed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, sourceId, name, sortOrder, collapsed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FavoriteGroupRow &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.name == this.name &&
+          other.sortOrder == this.sortOrder &&
+          other.collapsed == this.collapsed);
+}
+
+class FavoriteGroupsCompanion extends UpdateCompanion<FavoriteGroupRow> {
+  final Value<int> id;
+  final Value<String> sourceId;
+  final Value<String> name;
+  final Value<int> sortOrder;
+  final Value<bool> collapsed;
+  const FavoriteGroupsCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.collapsed = const Value.absent(),
+  });
+  FavoriteGroupsCompanion.insert({
+    this.id = const Value.absent(),
+    required String sourceId,
+    required String name,
+    this.sortOrder = const Value.absent(),
+    this.collapsed = const Value.absent(),
+  }) : sourceId = Value(sourceId),
+       name = Value(name);
+  static Insertable<FavoriteGroupRow> custom({
+    Expression<int>? id,
+    Expression<String>? sourceId,
+    Expression<String>? name,
+    Expression<int>? sortOrder,
+    Expression<bool>? collapsed,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (name != null) 'name': name,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (collapsed != null) 'collapsed': collapsed,
+    });
+  }
+
+  FavoriteGroupsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sourceId,
+    Value<String>? name,
+    Value<int>? sortOrder,
+    Value<bool>? collapsed,
+  }) {
+    return FavoriteGroupsCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      collapsed: collapsed ?? this.collapsed,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (collapsed.present) {
+      map['collapsed'] = Variable<bool>(collapsed.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteGroupsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('collapsed: $collapsed')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FavoritesTable extends Favorites
     with TableInfo<$FavoritesTable, FavoriteRow> {
   @override
@@ -10560,16 +11021,19 @@ class $FavoritesTable extends Favorites
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _groupNameMeta = const VerificationMeta(
-    'groupName',
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
   );
   @override
-  late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
-    'group_name',
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+    'group_id',
     aliasedName,
     true,
-    type: DriftSqlType.string,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES favorite_groups (id) ON DELETE SET NULL',
+    ),
   );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
@@ -10599,7 +11063,7 @@ class $FavoritesTable extends Favorites
     itemType,
     sourceId,
     remoteKey,
-    groupName,
+    groupId,
     sortOrder,
     addedAt,
   ];
@@ -10632,10 +11096,10 @@ class $FavoritesTable extends Favorites
     } else if (isInserting) {
       context.missing(_remoteKeyMeta);
     }
-    if (data.containsKey('group_name')) {
+    if (data.containsKey('group_id')) {
       context.handle(
-        _groupNameMeta,
-        groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta),
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
       );
     }
     if (data.containsKey('sort_order')) {
@@ -10683,9 +11147,9 @@ class $FavoritesTable extends Favorites
         DriftSqlType.string,
         data['${effectivePrefix}remote_key'],
       )!,
-      groupName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}group_name'],
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_id'],
       ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -10715,8 +11179,12 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
   final String? sourceId;
   final String remoteKey;
 
-  /// A user-made group; null is the default list.
-  final String? groupName;
+  /// The user's group of favorite channels it is in (v7); null is none.
+  /// Deleting the group leaves it a favorite, in no group.
+  final int? groupId;
+
+  /// Its place in the user's order; null sorts after every placed one,
+  /// by [addedAt].
   final int? sortOrder;
   final DateTime addedAt;
   const FavoriteRow({
@@ -10724,7 +11192,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
     required this.itemType,
     this.sourceId,
     required this.remoteKey,
-    this.groupName,
+    this.groupId,
     this.sortOrder,
     required this.addedAt,
   });
@@ -10741,8 +11209,8 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
       map['source_id'] = Variable<String>(sourceId);
     }
     map['remote_key'] = Variable<String>(remoteKey);
-    if (!nullToAbsent || groupName != null) {
-      map['group_name'] = Variable<String>(groupName);
+    if (!nullToAbsent || groupId != null) {
+      map['group_id'] = Variable<int>(groupId);
     }
     if (!nullToAbsent || sortOrder != null) {
       map['sort_order'] = Variable<int>(sortOrder);
@@ -10759,9 +11227,9 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
           ? const Value.absent()
           : Value(sourceId),
       remoteKey: Value(remoteKey),
-      groupName: groupName == null && nullToAbsent
+      groupId: groupId == null && nullToAbsent
           ? const Value.absent()
-          : Value(groupName),
+          : Value(groupId),
       sortOrder: sortOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(sortOrder),
@@ -10781,7 +11249,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
       ),
       sourceId: serializer.fromJson<String?>(json['sourceId']),
       remoteKey: serializer.fromJson<String>(json['remoteKey']),
-      groupName: serializer.fromJson<String?>(json['groupName']),
+      groupId: serializer.fromJson<int?>(json['groupId']),
       sortOrder: serializer.fromJson<int?>(json['sortOrder']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
     );
@@ -10796,7 +11264,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
       ),
       'sourceId': serializer.toJson<String?>(sourceId),
       'remoteKey': serializer.toJson<String>(remoteKey),
-      'groupName': serializer.toJson<String?>(groupName),
+      'groupId': serializer.toJson<int?>(groupId),
       'sortOrder': serializer.toJson<int?>(sortOrder),
       'addedAt': serializer.toJson<DateTime>(addedAt),
     };
@@ -10807,7 +11275,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
     UserItemType? itemType,
     Value<String?> sourceId = const Value.absent(),
     String? remoteKey,
-    Value<String?> groupName = const Value.absent(),
+    Value<int?> groupId = const Value.absent(),
     Value<int?> sortOrder = const Value.absent(),
     DateTime? addedAt,
   }) => FavoriteRow(
@@ -10815,7 +11283,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
     itemType: itemType ?? this.itemType,
     sourceId: sourceId.present ? sourceId.value : this.sourceId,
     remoteKey: remoteKey ?? this.remoteKey,
-    groupName: groupName.present ? groupName.value : this.groupName,
+    groupId: groupId.present ? groupId.value : this.groupId,
     sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
     addedAt: addedAt ?? this.addedAt,
   );
@@ -10825,7 +11293,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
       itemType: data.itemType.present ? data.itemType.value : this.itemType,
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
       remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
-      groupName: data.groupName.present ? data.groupName.value : this.groupName,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
     );
@@ -10838,7 +11306,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
           ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
           ..write('remoteKey: $remoteKey, ')
-          ..write('groupName: $groupName, ')
+          ..write('groupId: $groupId, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('addedAt: $addedAt')
           ..write(')'))
@@ -10851,7 +11319,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
     itemType,
     sourceId,
     remoteKey,
-    groupName,
+    groupId,
     sortOrder,
     addedAt,
   );
@@ -10863,7 +11331,7 @@ class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
           other.itemType == this.itemType &&
           other.sourceId == this.sourceId &&
           other.remoteKey == this.remoteKey &&
-          other.groupName == this.groupName &&
+          other.groupId == this.groupId &&
           other.sortOrder == this.sortOrder &&
           other.addedAt == this.addedAt);
 }
@@ -10873,7 +11341,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
   final Value<UserItemType> itemType;
   final Value<String?> sourceId;
   final Value<String> remoteKey;
-  final Value<String?> groupName;
+  final Value<int?> groupId;
   final Value<int?> sortOrder;
   final Value<DateTime> addedAt;
   const FavoritesCompanion({
@@ -10881,7 +11349,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
     this.itemType = const Value.absent(),
     this.sourceId = const Value.absent(),
     this.remoteKey = const Value.absent(),
-    this.groupName = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.addedAt = const Value.absent(),
   });
@@ -10890,7 +11358,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
     required UserItemType itemType,
     this.sourceId = const Value.absent(),
     required String remoteKey,
-    this.groupName = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.sortOrder = const Value.absent(),
     required DateTime addedAt,
   }) : itemType = Value(itemType),
@@ -10901,7 +11369,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
     Expression<String>? itemType,
     Expression<String>? sourceId,
     Expression<String>? remoteKey,
-    Expression<String>? groupName,
+    Expression<int>? groupId,
     Expression<int>? sortOrder,
     Expression<DateTime>? addedAt,
   }) {
@@ -10910,7 +11378,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
       if (itemType != null) 'item_type': itemType,
       if (sourceId != null) 'source_id': sourceId,
       if (remoteKey != null) 'remote_key': remoteKey,
-      if (groupName != null) 'group_name': groupName,
+      if (groupId != null) 'group_id': groupId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (addedAt != null) 'added_at': addedAt,
     });
@@ -10921,7 +11389,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
     Value<UserItemType>? itemType,
     Value<String?>? sourceId,
     Value<String>? remoteKey,
-    Value<String?>? groupName,
+    Value<int?>? groupId,
     Value<int?>? sortOrder,
     Value<DateTime>? addedAt,
   }) {
@@ -10930,7 +11398,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
       itemType: itemType ?? this.itemType,
       sourceId: sourceId ?? this.sourceId,
       remoteKey: remoteKey ?? this.remoteKey,
-      groupName: groupName ?? this.groupName,
+      groupId: groupId ?? this.groupId,
       sortOrder: sortOrder ?? this.sortOrder,
       addedAt: addedAt ?? this.addedAt,
     );
@@ -10953,8 +11421,8 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
     if (remoteKey.present) {
       map['remote_key'] = Variable<String>(remoteKey.value);
     }
-    if (groupName.present) {
-      map['group_name'] = Variable<String>(groupName.value);
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -10972,7 +11440,7 @@ class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
           ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
           ..write('remoteKey: $remoteKey, ')
-          ..write('groupName: $groupName, ')
+          ..write('groupId: $groupId, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('addedAt: $addedAt')
           ..write(')'))
@@ -11611,15 +12079,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ChannelsTable channels = $ChannelsTable(this);
   late final ChannelsFts channelsFts = ChannelsFts(this);
   late final Trigger channelsFtsInsert = Trigger(
-    'CREATE TRIGGER channels_fts_insert AFTER INSERT ON channels BEGIN INSERT INTO channels_fts ("rowid", name, display_name) VALUES (new.id, new.name, new.display_name);END',
+    'CREATE TRIGGER channels_fts_insert AFTER INSERT ON channels BEGIN INSERT INTO channels_fts ("rowid", clean_name, display_name) VALUES (new.id, new.clean_name, new.display_name);END',
     'channels_fts_insert',
   );
   late final Trigger channelsFtsDelete = Trigger(
-    'CREATE TRIGGER channels_fts_delete AFTER DELETE ON channels BEGIN INSERT INTO channels_fts (channels_fts, "rowid", name, display_name) VALUES (\'delete\', old.id, old.name, old.display_name);END',
+    'CREATE TRIGGER channels_fts_delete AFTER DELETE ON channels BEGIN INSERT INTO channels_fts (channels_fts, "rowid", clean_name, display_name) VALUES (\'delete\', old.id, old.clean_name, old.display_name);END',
     'channels_fts_delete',
   );
   late final Trigger channelsFtsUpdate = Trigger(
-    'CREATE TRIGGER channels_fts_update AFTER UPDATE OF name, display_name ON channels WHEN old.name IS NOT new.name OR old.display_name IS NOT new.display_name BEGIN INSERT INTO channels_fts (channels_fts, "rowid", name, display_name) VALUES (\'delete\', old.id, old.name, old.display_name);INSERT INTO channels_fts ("rowid", name, display_name) VALUES (new.id, new.name, new.display_name);END',
+    'CREATE TRIGGER channels_fts_update AFTER UPDATE OF clean_name, display_name ON channels WHEN old.clean_name IS NOT new.clean_name OR old.display_name IS NOT new.display_name BEGIN INSERT INTO channels_fts (channels_fts, "rowid", clean_name, display_name) VALUES (\'delete\', old.id, old.clean_name, old.display_name);INSERT INTO channels_fts ("rowid", clean_name, display_name) VALUES (new.id, new.clean_name, new.display_name);END',
     'channels_fts_update',
   );
   late final $MoviesTable movies = $MoviesTable(this);
@@ -11716,6 +12184,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'series_category',
     'CREATE INDEX series_category ON series (category_id)',
   );
+  late final $FavoriteGroupsTable favoriteGroups = $FavoriteGroupsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $WatchHistoryTable watchHistory = $WatchHistoryTable(this);
   late final Index watchHistoryRecent = Index(
@@ -11781,6 +12250,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     moviesName,
     moviesRating,
     seriesCategory,
+    favoriteGroups,
     favorites,
     watchHistory,
     watchHistoryRecent,
@@ -12002,7 +12472,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         'sources',
         limitUpdateKind: UpdateKind.delete,
       ),
+      result: [TableUpdate('favorite_groups', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
       result: [TableUpdate('favorites', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'favorite_groups',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('favorites', kind: UpdateKind.update)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -12241,6 +12725,24 @@ final class $$SourcesTableReferences
     ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_syncRunsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoriteGroupsTable, List<FavoriteGroupRow>>
+  _favoriteGroupsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favoriteGroups,
+    aliasName: 'sources__id__favorite_groups__source_id',
+  );
+
+  $$FavoriteGroupsTableProcessedTableManager get favoriteGroupsRefs {
+    final manager = $$FavoriteGroupsTableTableManager(
+      $_db,
+      $_db.favoriteGroups,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoriteGroupsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -12625,6 +13127,31 @@ class $$SourcesTableFilterComposer
           }) => $$SyncRunsTableFilterComposer(
             $db: $db,
             $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> favoriteGroupsRefs(
+    Expression<bool> Function($$FavoriteGroupsTableFilterComposer f) f,
+  ) {
+    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13113,6 +13640,31 @@ class $$SourcesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> favoriteGroupsRefs<T extends Object>(
+    Expression<T> Function($$FavoriteGroupsTableAnnotationComposer a) f,
+  ) {
+    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> favoritesRefs<T extends Object>(
     Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
   ) {
@@ -13188,6 +13740,7 @@ class $$SourcesTableTableManager
             bool epgMappingsRefs,
             bool epgMatchesRefs,
             bool syncRunsRefs,
+            bool favoriteGroupsRefs,
             bool favoritesRefs,
             bool watchHistoryRefs,
           })
@@ -13307,6 +13860,7 @@ class $$SourcesTableTableManager
                 epgMappingsRefs = false,
                 epgMatchesRefs = false,
                 syncRunsRefs = false,
+                favoriteGroupsRefs = false,
                 favoritesRefs = false,
                 watchHistoryRefs = false,
               }) {
@@ -13323,6 +13877,7 @@ class $$SourcesTableTableManager
                     if (epgMappingsRefs) db.epgMappings,
                     if (epgMatchesRefs) db.epgMatches,
                     if (syncRunsRefs) db.syncRuns,
+                    if (favoriteGroupsRefs) db.favoriteGroups,
                     if (favoritesRefs) db.favorites,
                     if (watchHistoryRefs) db.watchHistory,
                   ],
@@ -13539,6 +14094,27 @@ class $$SourcesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (favoriteGroupsRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          FavoriteGroupRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._favoriteGroupsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).favoriteGroupsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (favoritesRefs)
                         await $_getPrefetchedData<
                           SourceRow,
@@ -13612,6 +14188,7 @@ typedef $$SourcesTableProcessedTableManager =
         bool epgMappingsRefs,
         bool epgMatchesRefs,
         bool syncRunsRefs,
+        bool favoriteGroupsRefs,
         bool favoritesRefs,
         bool watchHistoryRefs,
       })
@@ -14321,6 +14898,8 @@ typedef $$ChannelsTableCreateCompanionBuilder = ChannelsCompanion Function({
   Value<int?> number,
   required String name,
   Value<String?> displayName,
+  Value<String?> cleanName,
+  Value<String?> quality,
   Value<String?> logoUrl,
   Value<String?> epgKey,
   Value<int> archiveDays,
@@ -14339,6 +14918,8 @@ typedef $$ChannelsTableUpdateCompanionBuilder = ChannelsCompanion Function({
   Value<int?> number,
   Value<String> name,
   Value<String?> displayName,
+  Value<String?> cleanName,
+  Value<String?> quality,
   Value<String?> logoUrl,
   Value<String?> epgKey,
   Value<int> archiveDays,
@@ -14446,6 +15027,16 @@ class $$ChannelsTableFilterComposer
 
   ColumnFilters<String> get displayName => $composableBuilder(
     column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cleanName => $composableBuilder(
+    column: $table.cleanName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quality => $composableBuilder(
+    column: $table.quality,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14600,6 +15191,16 @@ class $$ChannelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cleanName => $composableBuilder(
+    column: $table.cleanName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quality => $composableBuilder(
+    column: $table.quality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get logoUrl => $composableBuilder(
     column: $table.logoUrl,
     builder: (column) => ColumnOrderings(column),
@@ -14713,6 +15314,12 @@ class $$ChannelsTableAnnotationComposer
     column: $table.displayName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get cleanName =>
+      $composableBuilder(column: $table.cleanName, builder: (column) => column);
+
+  GeneratedColumn<String> get quality =>
+      $composableBuilder(column: $table.quality, builder: (column) => column);
 
   GeneratedColumn<String> get logoUrl =>
       $composableBuilder(column: $table.logoUrl, builder: (column) => column);
@@ -14852,6 +15459,8 @@ class $$ChannelsTableTableManager
                 Value<int?> number = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
+                Value<String?> cleanName = const Value.absent(),
+                Value<String?> quality = const Value.absent(),
                 Value<String?> logoUrl = const Value.absent(),
                 Value<String?> epgKey = const Value.absent(),
                 Value<int> archiveDays = const Value.absent(),
@@ -14869,6 +15478,8 @@ class $$ChannelsTableTableManager
                 number: number,
                 name: name,
                 displayName: displayName,
+                cleanName: cleanName,
+                quality: quality,
                 logoUrl: logoUrl,
                 epgKey: epgKey,
                 archiveDays: archiveDays,
@@ -14888,6 +15499,8 @@ class $$ChannelsTableTableManager
                 Value<int?> number = const Value.absent(),
                 required String name,
                 Value<String?> displayName = const Value.absent(),
+                Value<String?> cleanName = const Value.absent(),
+                Value<String?> quality = const Value.absent(),
                 Value<String?> logoUrl = const Value.absent(),
                 Value<String?> epgKey = const Value.absent(),
                 Value<int> archiveDays = const Value.absent(),
@@ -14905,6 +15518,8 @@ class $$ChannelsTableTableManager
                 number: number,
                 name: name,
                 displayName: displayName,
+                cleanName: cleanName,
+                quality: quality,
                 logoUrl: logoUrl,
                 epgKey: epgKey,
                 archiveDays: archiveDays,
@@ -15017,12 +15632,12 @@ typedef $$ChannelsTableProcessedTableManager =
       })
     >;
 typedef $ChannelsFtsCreateCompanionBuilder = ChannelsFtsCompanion Function({
-  required String name,
+  required String cleanName,
   required String displayName,
   Value<int> rowid,
 });
 typedef $ChannelsFtsUpdateCompanionBuilder = ChannelsFtsCompanion Function({
-  Value<String> name,
+  Value<String> cleanName,
   Value<String> displayName,
   Value<int> rowid,
 });
@@ -15035,8 +15650,8 @@ class $ChannelsFtsFilterComposer extends Composer<_$AppDatabase, ChannelsFts> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
+  ColumnFilters<String> get cleanName => $composableBuilder(
+    column: $table.cleanName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15055,8 +15670,8 @@ class $ChannelsFtsOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
+  ColumnOrderings<String> get cleanName => $composableBuilder(
+    column: $table.cleanName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15075,8 +15690,8 @@ class $ChannelsFtsAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
+  GeneratedColumn<String> get cleanName =>
+      $composableBuilder(column: $table.cleanName, builder: (column) => column);
 
   GeneratedColumn<String> get displayName => $composableBuilder(
     column: $table.displayName,
@@ -15112,21 +15727,21 @@ class $ChannelsFtsTableManager
               $ChannelsFtsAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<String> name = const Value.absent(),
+                Value<String> cleanName = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ChannelsFtsCompanion(
-                name: name,
+                cleanName: cleanName,
                 displayName: displayName,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                required String name,
+                required String cleanName,
                 required String displayName,
                 Value<int> rowid = const Value.absent(),
               }) => ChannelsFtsCompanion.insert(
-                name: name,
+                cleanName: cleanName,
                 displayName: displayName,
                 rowid: rowid,
               ),
@@ -21058,12 +21673,416 @@ typedef $$EpisodesTableProcessedTableManager =
       EpisodeRow,
       PrefetchHooks Function({bool seriesId})
     >;
+typedef $$FavoriteGroupsTableCreateCompanionBuilder =
+    FavoriteGroupsCompanion Function({
+      Value<int> id,
+      required String sourceId,
+      required String name,
+      Value<int> sortOrder,
+      Value<bool> collapsed,
+    });
+typedef $$FavoriteGroupsTableUpdateCompanionBuilder =
+    FavoriteGroupsCompanion Function({
+      Value<int> id,
+      Value<String> sourceId,
+      Value<String> name,
+      Value<int> sortOrder,
+      Value<bool> collapsed,
+    });
+
+final class $$FavoriteGroupsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $FavoriteGroupsTable, FavoriteGroupRow> {
+  $$FavoriteGroupsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('favorite_groups__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<String>('source_id')!;
+
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
+  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favorites,
+    aliasName: 'favorite_groups__id__favorites__group_id',
+  );
+
+  $$FavoritesTableProcessedTableManager get favoritesRefs {
+    final manager = $$FavoritesTableTableManager(
+      $_db,
+      $_db.favorites,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$FavoriteGroupsTableFilterComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> favoritesRefs(
+    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
+  ) {
+    final $$FavoritesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableFilterComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FavoriteGroupsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoriteGroupsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get collapsed =>
+      $composableBuilder(column: $table.collapsed, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> favoritesRefs<T extends Object>(
+    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
+  ) {
+    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FavoriteGroupsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FavoriteGroupsTable,
+          FavoriteGroupRow,
+          $$FavoriteGroupsTableFilterComposer,
+          $$FavoriteGroupsTableOrderingComposer,
+          $$FavoriteGroupsTableAnnotationComposer,
+          $$FavoriteGroupsTableCreateCompanionBuilder,
+          $$FavoriteGroupsTableUpdateCompanionBuilder,
+          (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
+          FavoriteGroupRow,
+          PrefetchHooks Function({bool sourceId, bool favoritesRefs})
+        > {
+  $$FavoriteGroupsTableTableManager(
+    _$AppDatabase db,
+    $FavoriteGroupsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FavoriteGroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FavoriteGroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FavoriteGroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> collapsed = const Value.absent(),
+              }) => FavoriteGroupsCompanion(
+                id: id,
+                sourceId: sourceId,
+                name: name,
+                sortOrder: sortOrder,
+                collapsed: collapsed,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sourceId,
+                required String name,
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> collapsed = const Value.absent(),
+              }) => FavoriteGroupsCompanion.insert(
+                id: id,
+                sourceId: sourceId,
+                name: name,
+                sortOrder: sortOrder,
+                collapsed: collapsed,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FavoriteGroupsTable, FavoriteGroupRow>(table),
+                  $$FavoriteGroupsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false, favoritesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (favoritesRefs) db.favorites],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$FavoriteGroupsTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$FavoriteGroupsTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (favoritesRefs)
+                    await $_getPrefetchedData<
+                      FavoriteGroupRow,
+                      $FavoriteGroupsTable,
+                      FavoriteRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$FavoriteGroupsTableReferences
+                          ._favoritesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$FavoriteGroupsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).favoritesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.groupId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FavoriteGroupsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FavoriteGroupsTable,
+      FavoriteGroupRow,
+      $$FavoriteGroupsTableFilterComposer,
+      $$FavoriteGroupsTableOrderingComposer,
+      $$FavoriteGroupsTableAnnotationComposer,
+      $$FavoriteGroupsTableCreateCompanionBuilder,
+      $$FavoriteGroupsTableUpdateCompanionBuilder,
+      (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
+      FavoriteGroupRow,
+      PrefetchHooks Function({bool sourceId, bool favoritesRefs})
+    >;
 typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
   Value<int> id,
   required UserItemType itemType,
   Value<String?> sourceId,
   required String remoteKey,
-  Value<String?> groupName,
+  Value<int?> groupId,
   Value<int?> sortOrder,
   required DateTime addedAt,
 });
@@ -21072,7 +22091,7 @@ typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
   Value<UserItemType> itemType,
   Value<String?> sourceId,
   Value<String> remoteKey,
-  Value<String?> groupName,
+  Value<int?> groupId,
   Value<int?> sortOrder,
   Value<DateTime> addedAt,
 });
@@ -21092,6 +22111,23 @@ final class $$FavoritesTableReferences
       $_db.sources,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FavoriteGroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.favoriteGroups.createAlias('favorites__group_id__favorite_groups__id');
+
+  $$FavoriteGroupsTableProcessedTableManager? get groupId {
+    final $_column = $_itemColumn<int>('group_id');
+    if ($_column == null) return null;
+    final manager = $$FavoriteGroupsTableTableManager(
+      $_db,
+      $_db.favoriteGroups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -21121,11 +22157,6 @@ class $$FavoritesTableFilterComposer
 
   ColumnFilters<String> get remoteKey => $composableBuilder(
     column: $table.remoteKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get groupName => $composableBuilder(
-    column: $table.groupName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -21161,6 +22192,29 @@ class $$FavoritesTableFilterComposer
     );
     return composer;
   }
+
+  $$FavoriteGroupsTableFilterComposer get groupId {
+    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$FavoritesTableOrderingComposer
@@ -21184,11 +22238,6 @@ class $$FavoritesTableOrderingComposer
 
   ColumnOrderings<String> get remoteKey => $composableBuilder(
     column: $table.remoteKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get groupName => $composableBuilder(
-    column: $table.groupName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -21224,6 +22273,29 @@ class $$FavoritesTableOrderingComposer
     );
     return composer;
   }
+
+  $$FavoriteGroupsTableOrderingComposer get groupId {
+    final $$FavoriteGroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$FavoritesTableAnnotationComposer
@@ -21243,9 +22315,6 @@ class $$FavoritesTableAnnotationComposer
 
   GeneratedColumn<String> get remoteKey =>
       $composableBuilder(column: $table.remoteKey, builder: (column) => column);
-
-  GeneratedColumn<String> get groupName =>
-      $composableBuilder(column: $table.groupName, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -21275,6 +22344,29 @@ class $$FavoritesTableAnnotationComposer
     );
     return composer;
   }
+
+  $$FavoriteGroupsTableAnnotationComposer get groupId {
+    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$FavoritesTableTableManager
@@ -21290,7 +22382,7 @@ class $$FavoritesTableTableManager
           $$FavoritesTableUpdateCompanionBuilder,
           (FavoriteRow, $$FavoritesTableReferences),
           FavoriteRow,
-          PrefetchHooks Function({bool sourceId})
+          PrefetchHooks Function({bool sourceId, bool groupId})
         > {
   $$FavoritesTableTableManager(_$AppDatabase db, $FavoritesTable table)
     : super(
@@ -21309,7 +22401,7 @@ class $$FavoritesTableTableManager
                 Value<UserItemType> itemType = const Value.absent(),
                 Value<String?> sourceId = const Value.absent(),
                 Value<String> remoteKey = const Value.absent(),
-                Value<String?> groupName = const Value.absent(),
+                Value<int?> groupId = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
               }) => FavoritesCompanion(
@@ -21317,7 +22409,7 @@ class $$FavoritesTableTableManager
                 itemType: itemType,
                 sourceId: sourceId,
                 remoteKey: remoteKey,
-                groupName: groupName,
+                groupId: groupId,
                 sortOrder: sortOrder,
                 addedAt: addedAt,
               ),
@@ -21327,7 +22419,7 @@ class $$FavoritesTableTableManager
                 required UserItemType itemType,
                 Value<String?> sourceId = const Value.absent(),
                 required String remoteKey,
-                Value<String?> groupName = const Value.absent(),
+                Value<int?> groupId = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
                 required DateTime addedAt,
               }) => FavoritesCompanion.insert(
@@ -21335,7 +22427,7 @@ class $$FavoritesTableTableManager
                 itemType: itemType,
                 sourceId: sourceId,
                 remoteKey: remoteKey,
-                groupName: groupName,
+                groupId: groupId,
                 sortOrder: sortOrder,
                 addedAt: addedAt,
               ),
@@ -21347,7 +22439,7 @@ class $$FavoritesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({sourceId = false}) {
+          prefetchHooksCallback: ({sourceId = false, groupId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -21378,6 +22470,17 @@ class $$FavoritesTableTableManager
                             .id,
                       ) as T;
                     }
+                    if (groupId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.groupId,
+                        referencedTable: $$FavoritesTableReferences
+                            ._groupIdTable(db),
+                        referencedColumn: $$FavoritesTableReferences
+                            ._groupIdTable(db)
+                            .id,
+                      ) as T;
+                    }
 
                     return state;
                   },
@@ -21402,7 +22505,7 @@ typedef $$FavoritesTableProcessedTableManager =
       $$FavoritesTableUpdateCompanionBuilder,
       (FavoriteRow, $$FavoritesTableReferences),
       FavoriteRow,
-      PrefetchHooks Function({bool sourceId})
+      PrefetchHooks Function({bool sourceId, bool groupId})
     >;
 typedef $$WatchHistoryTableCreateCompanionBuilder =
     WatchHistoryCompanion Function({
@@ -21857,6 +22960,8 @@ class $AppDatabaseManager {
       $$MovieDetailsTableTableManager(_db, _db.movieDetails);
   $$EpisodesTableTableManager get episodes =>
       $$EpisodesTableTableManager(_db, _db.episodes);
+  $$FavoriteGroupsTableTableManager get favoriteGroups =>
+      $$FavoriteGroupsTableTableManager(_db, _db.favoriteGroups);
   $$FavoritesTableTableManager get favorites =>
       $$FavoritesTableTableManager(_db, _db.favorites);
   $$WatchHistoryTableTableManager get watchHistory =>

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 
 /// One live channel as the Live TV screen and the player show it.
 @immutable
@@ -10,6 +11,7 @@ final class ChannelItem {
     required this.remoteKey,
     required this.name,
     this.providerName,
+    this.quality,
     this.number,
     this.logoUrl,
     this.categoryId,
@@ -25,11 +27,16 @@ final class ChannelItem {
   final String sourceId;
   final String remoteKey;
 
-  /// The user's rename, or the provider's name.
+  /// What the screens show: the user's rename, else the provider's name
+  /// cleaned of its tags (`cleanChannelName`), else the provider's name
+  /// as it is (a catalogue not cleaned yet).
   final String name;
 
   /// The provider's own name when the user renamed the channel.
   final String? providerName;
+
+  /// The badge the provider's name gave, shown after [name].
+  final ChannelQuality? quality;
   final int? number;
   final String? logoUrl;
   final int? categoryId;
@@ -48,6 +55,7 @@ final class ChannelItem {
       other.remoteKey == remoteKey &&
       other.name == name &&
       other.providerName == providerName &&
+      other.quality == quality &&
       other.number == number &&
       other.logoUrl == logoUrl &&
       other.categoryId == categoryId &&
@@ -63,6 +71,7 @@ final class ChannelItem {
     remoteKey,
     name,
     providerName,
+    quality,
     number,
     logoUrl,
     categoryId,

@@ -154,6 +154,59 @@ final class SyncServiceProvider
 
 String _$syncServiceHash() => r'd4916cccd0448836bb77a70fd94cd66083be21bb';
 
+/// Fills the cleaned channel names a catalogue synced before schema v7
+/// lacks, after launch (ADR-013 step 1). Stops its run when the app
+/// closes.
+
+@ProviderFor(channelNameFill)
+final channelNameFillProvider = ChannelNameFillProvider._();
+
+/// Fills the cleaned channel names a catalogue synced before schema v7
+/// lacks, after launch (ADR-013 step 1). Stops its run when the app
+/// closes.
+
+final class ChannelNameFillProvider
+    extends
+        $FunctionalProvider<ChannelNameFill, ChannelNameFill, ChannelNameFill>
+    with $Provider<ChannelNameFill> {
+  /// Fills the cleaned channel names a catalogue synced before schema v7
+  /// lacks, after launch (ADR-013 step 1). Stops its run when the app
+  /// closes.
+  ChannelNameFillProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'channelNameFillProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$channelNameFillHash();
+
+  @$internal
+  @override
+  $ProviderElement<ChannelNameFill> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ChannelNameFill create(Ref ref) {
+    return channelNameFill(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ChannelNameFill value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ChannelNameFill>(value),
+    );
+  }
+}
+
+String _$channelNameFillHash() => r'bf44a70ccc507b2698da13c8da0f67e2785f2611';
+
 /// A source's sync as it happens: idle, running with progress, or how the
 /// last run this session ended.
 

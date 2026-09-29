@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/sync/channel_name_fill.dart';
 import 'package:iptv_player/data/sync/sync_engine.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/db_category_repository.dart';
@@ -49,6 +50,19 @@ SyncService syncService(Ref ref) {
   );
   ref.onDispose(engine.dispose);
   return engine;
+}
+
+/// Fills the cleaned channel names a catalogue synced before schema v7
+/// lacks, after launch (ADR-013 step 1). Stops its run when the app
+/// closes.
+@Riverpod(keepAlive: true)
+ChannelNameFill channelNameFill(Ref ref) {
+  final fill = ChannelNameFill(
+    database: ref.watch(appDatabaseProvider),
+    log: ref.watch(appLogProvider),
+  );
+  ref.onDispose(fill.dispose);
+  return fill;
 }
 
 /// A source's sync as it happens: idle, running with progress, or how the

@@ -35,6 +35,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     MovieDetails,
     Series,
     Episodes,
+    FavoriteGroups,
     Favorites,
     WatchHistory,
     EpgImports,
@@ -66,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -157,6 +158,26 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.createIndex(schema.moviesAdded);
     await m.createIndex(schema.moviesName);
     await m.createIndex(schema.moviesRating);
+  },
+  from6To7: (m, schema) async {
+    // Phase 6: cleaned channel names, and favorite groups. The names are
+    // filled after the upgrade, off this isolate (`ChannelNameFill`).
+    await m.addColumn(schema.channels, schema.channels.cleanName);
+    await m.addColumn(schema.channels, schema.channels.quality);
+    await m.createTable(schema.favoriteGroups);
+    // `group_name` goes (nothing ever wrote it) and `group_id` comes, with
+    // its foreign key: SQLite adds neither in place, so the table is
+    // copied.
+    await m.alterTable(
+      TableMigration(schema.favorites, newColumns: [schema.favorites.groupId]),
+    );
+    // The index now holds the shown name. Rebuilt from the table, which
+    // has no cleaned name yet: each row joins it as the fill reaches it.
+    await m.drop(schema.channelsFts);
+    await m.create(schema.channelsFts);
+    await m.database.customStatement(
+      "INSERT INTO channels_fts(channels_fts) VALUES ('rebuild')",
+    );
   },
 );
 

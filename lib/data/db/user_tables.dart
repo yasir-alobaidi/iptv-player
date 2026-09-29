@@ -20,9 +20,16 @@ class Favorites extends Table {
 
   TextColumn get remoteKey => text()();
 
-  /// A user-made group; null is the default list.
-  TextColumn get groupName => text().nullable()();
+  /// The user's group of favorite channels it is in (v7); null is none.
+  /// Deleting the group leaves it a favorite, in no group.
+  IntColumn get groupId => integer().nullable().references(
+    FavoriteGroups,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
 
+  /// Its place in the user's order; null sorts after every placed one,
+  /// by [addedAt].
   IntColumn get sortOrder => integer().nullable()();
 
   DateTimeColumn get addedAt => dateTime()();
@@ -31,6 +38,24 @@ class Favorites extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
     {itemType, sourceId, remoteKey},
   ];
+}
+
+/// The user's groups of favorite channels, per source (v7; Phase 6
+/// decision 6). A table rather than a name on each favorite: a new group
+/// has no channel in it yet, and the groups have an order and a collapsed
+/// state of their own.
+@DataClassName('FavoriteGroupRow')
+class FavoriteGroups extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get sourceId =>
+      text().references(Sources, #id, onDelete: KeyAction.cascade)();
+
+  TextColumn get name => text()();
+
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  BoolColumn get collapsed => boolean().withDefault(const Constant(false))();
 }
 
 /// What was watched and where it stopped (schema v4). Live channels keep

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
+import 'package:iptv_player/data/db/user_tables.dart';
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
@@ -14,6 +15,7 @@ import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
+import 'generated/schema_v7.dart' as v7;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -126,7 +128,9 @@ void main() {
               ChannelsCompanion.insert(
                 sourceId: 'src-1',
                 remoteKey: '101',
-                name: 'Sky Sports Main Event',
+                name: 'UK: Sky Sports Main Event',
+                // Sync writes it; the index holds the name shown (v7).
+                cleanName: const Value('Sky Sports Main Event'),
                 categoryId: Value(categoryId),
               ),
             );
@@ -464,6 +468,166 @@ void main() {
           expect(history.dismissed, 0);
         },
       );
+    });
+  });
+
+  group('v6 → v7', () {
+    const created = '2026-09-29T08:00:00.000Z';
+    const source = v6.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const renamed = v6.ChannelsData(
+      id: 1,
+      sourceId: 'src-1',
+      remoteKey: '101',
+      position: 0,
+      name: 'UK: Harbor City Local HD',
+      displayName: 'My Local',
+      archiveDays: 0,
+      isHidden: 0,
+    );
+    const hidden = v6.ChannelsData(
+      id: 2,
+      sourceId: 'src-1',
+      remoteKey: '102',
+      position: 1,
+      name: 'UK: Arena Sports 1 FHD',
+      archiveDays: 0,
+      isHidden: 1,
+    );
+    const favorite = v6.FavoritesData(
+      id: 1,
+      itemType: 'live',
+      sourceId: 'src-1',
+      remoteKey: '102',
+      addedAt: created,
+    );
+
+    test('keeps channels and favorites; names wait for the fill, and no '
+        'favorite is in a group', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 6,
+        newVersion: 7,
+        createOld: v6.DatabaseAtV6.new,
+        createNew: v7.DatabaseAtV7.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.channels, renamed)
+            ..insert(oldDb.channels, hidden)
+            ..insert(oldDb.favorites, favorite);
+        },
+        validateItems: (newDb) async {
+          final channels = await (newDb.select(
+            newDb.channels,
+          )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+          expect(
+            [for (final c in channels) c.name],
+            ['UK: Harbor City Local HD', 'UK: Arena Sports 1 FHD'],
+          );
+          expect(channels.first.displayName, 'My Local');
+          expect(channels.last.isHidden, 1);
+          expect([for (final c in channels) c.cleanName], [null, null]);
+          expect([for (final c in channels) c.quality], [null, null]);
+
+          final favorites = await newDb.select(newDb.favorites).get();
+          expect(favorites.single.remoteKey, '102');
+          expect(favorites.single.addedAt, created);
+          expect(favorites.single.groupId, isNull);
+          expect(await newDb.select(newDb.favoriteGroups).get(), isEmpty);
+        },
+      );
+    });
+
+    test('the index holds renames at once, and cleaned names as they are '
+        'filled', () async {
+      final schema = await verifier.schemaAt(6);
+      final old = v6.DatabaseAtV6(schema.newConnection());
+      await old.into(old.sources).insert(source);
+      await old.into(old.channels).insert(renamed);
+      await old.into(old.channels).insert(hidden);
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+
+      Future<List<int>> find(String query) async => [
+        for (final row
+            in await database
+                .customSelect(
+                  'SELECT rowid FROM channels_fts WHERE channels_fts MATCH ? '
+                  'ORDER BY rowid',
+                  variables: [Variable.withString(query)],
+                )
+                .get())
+          row.read<int>('rowid'),
+      ];
+
+      // The rebuild in the step: the rename, and no provider name.
+      expect(await find('"my"*'), [1]);
+      expect(await find('"uk"*'), isEmpty);
+      expect(await find('"arena"*'), isEmpty);
+
+      // What the fill writes, through the triggers recreated after the
+      // upgrade.
+      await (database.update(
+        database.channels,
+      )..where((t) => t.id.equals(2))).write(
+        const ChannelsCompanion(
+          cleanName: Value('Arena Sports 1'),
+          quality: Value('fhd'),
+        ),
+      );
+      expect(await find('"arena"*'), [2]);
+      expect(await find('"fhd"*'), isEmpty);
+      await database.customStatement(
+        'INSERT INTO channels_fts(channels_fts, rank) '
+        "VALUES ('integrity-check', 1)",
+      );
+
+      // A group's channels stay favorites when it goes.
+      final group = await database
+          .into(database.favoriteGroups)
+          .insert(
+            FavoriteGroupsCompanion.insert(sourceId: 'src-1', name: 'Sports'),
+          );
+      await database
+          .into(database.favorites)
+          .insert(
+            FavoritesCompanion.insert(
+              itemType: UserItemType.live,
+              sourceId: const Value('src-1'),
+              remoteKey: '102',
+              groupId: Value(group),
+              addedAt: DateTime.utc(2026, 9, 29),
+            ),
+          );
+      await (database.delete(
+        database.favoriteGroups,
+      )..where((t) => t.id.equals(group))).go();
+      final kept = await database.select(database.favorites).get();
+      expect(kept.single.groupId, isNull);
+
+      // And removing the source removes its groups.
+      await database
+          .into(database.favoriteGroups)
+          .insert(
+            FavoriteGroupsCompanion.insert(sourceId: 'src-1', name: 'News'),
+          );
+      await (database.delete(
+        database.sources,
+      )..where((t) => t.id.equals('src-1'))).go();
+      expect(await database.select(database.favoriteGroups).get(), isEmpty);
     });
   });
 }

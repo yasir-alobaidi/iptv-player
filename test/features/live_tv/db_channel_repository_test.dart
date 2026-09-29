@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
+import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
@@ -170,6 +172,77 @@ void main() {
     final renamed = (await repo.byRemoteKey('src', 'a')).valueOrNull!;
     expect(renamed.name, 'My sports');
     expect(renamed.providerName, 'Arena Sports 2');
+  });
+
+  group('cleaned names (v7)', () {
+    setUp(() async {
+      // As sync writes them: the provider's name, and beside it the name
+      // shown and its badge. 'n' is a row the fill hasn't reached yet.
+      await db.channelsDao.upsertAll([
+        for (final (key, name) in [
+          ('u', 'UK: Harbor City Local HD'),
+          ('v', '|EN| Bay Weather ᶠᴴᴰ'),
+          ('w', 'Coastline News'),
+        ])
+          withCleanName(
+            ChannelsCompanion.insert(
+              sourceId: 'other',
+              remoteKey: key,
+              name: name,
+            ),
+          ),
+        ChannelsCompanion.insert(
+          sourceId: 'other',
+          remoteKey: 'n',
+          name: 'US: Northwind Drama',
+        ),
+      ]);
+    });
+
+    test('the name shown is the rename, else the cleaned name, else the '
+        "provider's", () async {
+      final u = (await repo.byRemoteKey('other', 'u')).valueOrNull!;
+      expect(u.name, 'Harbor City Local');
+      expect(u.quality, ChannelQuality.hd);
+      expect(u.providerName, isNull);
+      final v = (await repo.byRemoteKey('other', 'v')).valueOrNull!;
+      expect(v.name, 'Bay Weather');
+      expect(v.quality, ChannelQuality.fhd);
+      final w = (await repo.byRemoteKey('other', 'w')).valueOrNull!;
+      expect(w.name, 'Coastline News');
+      expect(w.quality, isNull);
+      final n = (await repo.byRemoteKey('other', 'n')).valueOrNull!;
+      expect(n.name, 'US: Northwind Drama');
+
+      await repo.rename(u.id, 'My local');
+      final renamed = (await repo.byRemoteKey('other', 'u')).valueOrNull!;
+      expect(renamed.name, 'My local');
+      expect(renamed.providerName, 'UK: Harbor City Local HD');
+      expect(renamed.quality, ChannelQuality.hd);
+    });
+
+    test('sort by name ignores the tags', () async {
+      expect(
+        await keys(
+          const ChannelQuery(sourceId: 'other', sort: ChannelSort.name),
+        ),
+        ['v', 'w', 'u', 'x', 'n'],
+      );
+    });
+
+    test('the text filter reads the name shown', () async {
+      expect(await keys(const ChannelQuery(sourceId: 'other', text: 'bay')), [
+        'v',
+      ]);
+      expect(
+        await keys(const ChannelQuery(sourceId: 'other', text: 'uk:')),
+        isEmpty,
+      );
+      expect(
+        await keys(const ChannelQuery(sourceId: 'other', text: 'hd')),
+        isEmpty,
+      );
+    });
   });
 
   test('indexOf, byNumber', () async {

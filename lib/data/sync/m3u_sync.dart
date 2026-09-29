@@ -8,6 +8,7 @@ import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_identity.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_models.dart';
 import 'package:iptv_player/data/providers/m3u/m3u_reader.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 import 'package:iptv_player/data/sync/sync_work.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 
@@ -126,19 +127,21 @@ final class M3uSync {
       switch (item.kind) {
         case CatalogueKind.live:
           channels.add(
-            ChannelsCompanion.insert(
-              sourceId: _sourceId,
-              remoteKey: entry.identity,
-              name: entry.name,
-              categoryId: Value(categoryId),
-              number: Value(entry.channelNumber),
-              logoUrl: Value(entry.logoUrl),
-              epgKey: Value(entry.tvgId),
-              archiveDays: Value(entry.catchupDays ?? 0),
-              streamUrl: Value(entry.streamUrl),
-              extrasJson: Value(_extras(entry)),
-              position: Value(entry.position),
-              seenRun: Value(_runId),
+            withCleanName(
+              ChannelsCompanion.insert(
+                sourceId: _sourceId,
+                remoteKey: entry.identity,
+                name: entry.name,
+                categoryId: Value(categoryId),
+                number: Value(entry.channelNumber),
+                logoUrl: Value(entry.logoUrl),
+                epgKey: Value(entry.tvgId),
+                archiveDays: Value(entry.catchupDays ?? 0),
+                streamUrl: Value(entry.streamUrl),
+                extrasJson: Value(_extras(entry)),
+                position: Value(entry.position),
+                seenRun: Value(_runId),
+              ),
             ),
           );
         case CatalogueKind.movie:

@@ -13,29 +13,34 @@
 import 'catalogue_tables.dart';
 import 'epg_tables.dart';
 
+-- Channels are found by the name the screens show: the user's rename or
+-- the cleaned name (v7), never the provider's raw one, whose country and
+-- quality tags would match every `UK:` channel for "uk".
 CREATE VIRTUAL TABLE channels_fts USING fts5(
-  name, display_name,
+  clean_name, display_name,
   content='channels', content_rowid='id',
   tokenize='unicode61 remove_diacritics 2', prefix='2 3'
 );
 
 CREATE TRIGGER channels_fts_insert AFTER INSERT ON channels BEGIN
-  INSERT INTO channels_fts(rowid, name, display_name)
-    VALUES (new.id, new.name, new.display_name);
+  INSERT INTO channels_fts(rowid, clean_name, display_name)
+    VALUES (new.id, new.clean_name, new.display_name);
 END;
 
 CREATE TRIGGER channels_fts_delete AFTER DELETE ON channels BEGIN
-  INSERT INTO channels_fts(channels_fts, rowid, name, display_name)
-    VALUES ('delete', old.id, old.name, old.display_name);
+  INSERT INTO channels_fts(channels_fts, rowid, clean_name, display_name)
+    VALUES ('delete', old.id, old.clean_name, old.display_name);
 END;
 
-CREATE TRIGGER channels_fts_update AFTER UPDATE OF name, display_name ON channels
-  WHEN old.name IS NOT new.name OR old.display_name IS NOT new.display_name
+CREATE TRIGGER channels_fts_update
+  AFTER UPDATE OF clean_name, display_name ON channels
+  WHEN old.clean_name IS NOT new.clean_name
+    OR old.display_name IS NOT new.display_name
 BEGIN
-  INSERT INTO channels_fts(channels_fts, rowid, name, display_name)
-    VALUES ('delete', old.id, old.name, old.display_name);
-  INSERT INTO channels_fts(rowid, name, display_name)
-    VALUES (new.id, new.name, new.display_name);
+  INSERT INTO channels_fts(channels_fts, rowid, clean_name, display_name)
+    VALUES ('delete', old.id, old.clean_name, old.display_name);
+  INSERT INTO channels_fts(rowid, clean_name, display_name)
+    VALUES (new.id, new.clean_name, new.display_name);
 END;
 
 CREATE VIRTUAL TABLE movies_fts USING fts5(
