@@ -1,13 +1,16 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_picker.dart';
+import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_sheet.dart';
+import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 
 import '../../../app/app_harness.dart';
@@ -204,6 +207,70 @@ void main() {
   });
 
   group('the detail sheet', () {
+    testWidgets('a programme search asked for: every channel, the cursor '
+        'on it, its sheet open', (tester) async {
+      final fixture = GuideFixture();
+      _fixture = fixture;
+      addTearDown(() => tester.runAsync(fixture.db.close));
+      await tester.runAsync(fixture.seed);
+      final app = await pumpApp(tester, overrides: fixture.overrides);
+      await _settle(tester);
+      final (channel, programme) = (await tester.runAsync(() async {
+        final channels = DbChannelRepository(fixture.db);
+        final blueWater = (await channels.byRemoteKey(
+          'src-1',
+          '208',
+        )).valueOrNull!;
+        final row = await (fixture.db.select(
+          fixture.db.epgPrograms,
+        )..where((t) => t.title.equals('Harbor to Harbor'))).getSingle();
+        return (
+          blueWater,
+          EpgProgramme(
+            id: row.id,
+            channelId: row.epgChannelId,
+            start: DateTime.fromMillisecondsSinceEpoch(
+              row.startUtc,
+              isUtc: true,
+            ),
+            end: DateTime.fromMillisecondsSinceEpoch(row.endUtc, isUtc: true),
+            title: row.title,
+          ),
+        );
+      }))!;
+
+      // As search does: the request, then the Guide.
+      ProviderScope.containerOf(tester.element(find.byType(Navigator).first))
+          .read(guideProgrammeRequestProvider.notifier)
+          .show(channel, programme);
+      app.router.go(AppDestination.guide.path);
+      await _settle(tester);
+      await _settle(tester);
+
+      final sheet = find.byType(GuideProgrammeSheet);
+      expect(sheet, findsOneWidget);
+      expect(
+        find.descendant(of: sheet, matching: find.text('Harbor to Harbor')),
+        findsOneWidget,
+      );
+      expect(find.text('Blue Water · 208'), findsOneWidget);
+
+      await _key(tester, LogicalKeyboardKey.escape);
+      expect(find.byType(GuideProgrammeSheet), findsNothing);
+      expect(_gridHasFocus(tester), isTrue);
+      // The cursor stands on it: Enter opens the same sheet again.
+      await _key(tester, LogicalKeyboardKey.enter);
+      expect(
+        find.descendant(
+          of: find.byType(GuideProgrammeSheet),
+          matching: find.text('Harbor to Harbor'),
+        ),
+        findsOneWidget,
+      );
+      await _key(tester, LogicalKeyboardKey.escape);
+      await _finish(tester);
+    });
+
     testWidgets('Enter opens it on Watch channel; Esc closes it', (
       tester,
     ) async {

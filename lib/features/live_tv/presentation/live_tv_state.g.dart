@@ -41,7 +41,7 @@ final class LiveTvControllerProvider
   }
 }
 
-String _$liveTvControllerHash() => r'49037e25809ab43e2f794d58b7b857c2198634d8';
+String _$liveTvControllerHash() => r'eb16f3caabb5743cb25a7eb507df0d5d6a888096';
 
 abstract class _$LiveTvController extends $Notifier<LiveTvView?> {
   LiveTvView? build();

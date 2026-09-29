@@ -269,6 +269,13 @@ class AppTypography {
   TextStyle get overline =>
       _font(AppFonts.sans, 12, 16, 800, letterSpacing: 0.6);
 
+  /// 19/26 — the text typed into search (canvas `Search`).
+  TextStyle get searchQuery => _font(AppFonts.sans, 19, 26, 600);
+
+  /// 11/14 — search's group headings ("CHANNELS", canvas `Search`).
+  TextStyle get searchHeading =>
+      _font(AppFonts.sans, 11, 14, 800, letterSpacing: 0.6);
+
   /// 11/14 — badges (uppercase, +0.4 tracking).
   TextStyle get micro => _font(AppFonts.sans, 11, 14, 600, letterSpacing: 0.4);
 
@@ -373,6 +380,36 @@ class AppDetailsTokens {
   Size get episodeStill => const Size(176, 99);
 }
 
+/// The search overlay's measures (canvas `Search`); sizes only it uses.
+@immutable
+class AppSearchTokens {
+  const new();
+
+  /// The panel: 760 wide, 72 from the top of the window.
+  double get panelWidth => 760;
+  double get panelTop => 72;
+
+  /// Kept clear under the panel when it grows to the window's height.
+  double get panelBottom => 24;
+
+  /// The query bar and its magnifier.
+  double get queryBarHeight => 64;
+  double get queryIconSize => 22;
+
+  /// A result: 52 tall, its picture centred in a 56 slot — a logo 36
+  /// square, a poster 30 × 44.
+  double get rowHeight => 52;
+  double get pictureSlot => 56;
+  double get logoSize => 36;
+  Size get posterSize => const Size(30, 44);
+
+  /// The footer of keys and recent searches.
+  double get footerHeight => 44;
+
+  /// How dark the screen under the panel goes (canvas: black at 62 %).
+  double get scrimOpacity => 0.62;
+}
+
 /// The Guide grid's measures (canvas `Guide`, docs/05 §5). Its colors
 /// are [AppColors] tokens; these are the sizes only the grid uses.
 @immutable
@@ -465,6 +502,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.elevation = const AppElevation(),
     this.guide = const AppGuideTokens(),
     this.details = const AppDetailsTokens(),
+    this.search = const AppSearchTokens(),
   });
 
   /// Defaults: blue accent, comfortable rows, full motion.
@@ -488,6 +526,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppElevation elevation;
   final AppGuideTokens guide;
   final AppDetailsTokens details;
+  final AppSearchTokens search;
 
   @override
   AppTokens copyWith({
@@ -501,6 +540,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppElevation? elevation,
     AppGuideTokens? guide,
     AppDetailsTokens? details,
+    AppSearchTokens? search,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -512,6 +552,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     elevation: elevation ?? this.elevation,
     guide: guide ?? this.guide,
     details: details ?? this.details,
+    search: search ?? this.search,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

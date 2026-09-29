@@ -47,6 +47,13 @@ class CatalogueController extends _$CatalogueController {
     state = query.copyWith(text: text);
   }
 
+  /// Every title whose name holds [text]: search's "Show all in Movies".
+  void showSearch(String text) {
+    final query = state;
+    if (query == null) return;
+    state = query.copyWith(filter: const AllTitles(), text: text);
+  }
+
   void setSort(TitleSort sort) {
     final query = state;
     if (query == null) return;

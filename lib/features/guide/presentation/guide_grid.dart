@@ -38,6 +38,16 @@ class GuideGridController extends ChangeNotifier {
   /// A day pill: [day] at the hours the view shows today.
   void showDay(DateTime day) => _grid?._showDay(day);
 
+  /// A programme search opened (Phase 6 decision 4): the cursor on it —
+  /// its channel's row, its start or now — and its detail sheet open.
+  /// Waits for the grid, and its rows, when they aren't there yet.
+  void showProgramme(ChannelItem channel, EpgProgramme programme) {
+    _pending = (channel: channel, programme: programme);
+    _grid?._showPending();
+  }
+
+  ({ChannelItem channel, EpgProgramme programme})? _pending;
+
   void _setDay(DateTime day) {
     if (day == _day) return;
     _day = day;
@@ -294,6 +304,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   void _request() {
     // After the frame: the pills are another widget.
     if (_placed) widget.controller._setDay(startOfDay(_viewStart));
+    _showPending();
     final total = _total;
     if (total == null || total == 0 || _viewHeight <= 0) return;
     final rowHeight = context.tokens.guide.rowHeight;
@@ -354,6 +365,57 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     _anchor = _now;
     _setX(_xFor(_now));
     setState(() {});
+  }
+
+  /// [GuideGridController.showProgramme], once the grid is laid out and
+  /// knows its rows.
+  void _showPending() {
+    final pending = widget.controller._pending;
+    if (pending == null || !mounted || !_placed || (_total ?? 0) == 0) return;
+    widget.controller._pending = null;
+    unawaited(_showProgramme(pending.channel, pending.programme));
+  }
+
+  Future<void> _showProgramme(
+    ChannelItem channel,
+    EpgProgramme programme,
+  ) async {
+    final found = await ref
+        .read(channelRepositoryProvider)
+        .indexOf(widget.query, channel.id);
+    if (!mounted) return;
+    _now = ref.read(appClockProvider)();
+    final at = programme.start.isAfter(_now) ? programme.start : _now;
+    if (found.valueOrNull case final row?) {
+      _row = row;
+      _anchor = at;
+      _setX(_xFor(at), animate: false);
+      if (_vertical.hasClients) {
+        final rowHeight = context.tokens.guide.rowHeight;
+        final position = _vertical.position;
+        // The row a little way down the screen, not at its edge.
+        _vertical.jumpTo(
+          (row * rowHeight - _viewHeight / 3).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+      }
+      setState(() {});
+    }
+    _focus.requestFocus();
+    // The sheet once the grid has been laid out where it now is: a route
+    // pushed in the frame that moved the grid leaves the semantics tree
+    // half built (a debug assertion in the widget tests).
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await showGuideProgrammeSheet(
+      context,
+      channel: channel,
+      programme: programme,
+      now: _now,
+      onWatch: () => widget.onWatch(channel),
+    );
   }
 
   void _showDay(DateTime day) {

@@ -13,6 +13,7 @@ import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/guide_timeline.dart';
 import 'package:iptv_player/features/guide/presentation/guide_grid.dart';
+import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/guide/presentation/guide_view_state.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -93,11 +94,29 @@ class _GuideViewState extends ConsumerState<_GuideView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // A request made before this view existed (search, then a jump here).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _takeProgramme();
+    });
+  }
+
+  @override
   void dispose() {
     _router?.routerDelegate.removeListener(_onLocation);
     _wake?.cancel();
     _grid.dispose();
     super.dispose();
+  }
+
+  /// A programme search asked for: every channel listed (it may be in
+  /// another category than the one shown), then the grid on it.
+  void _takeProgramme() {
+    final request = ref.read(guideProgrammeRequestProvider.notifier).take();
+    if (request == null) return;
+    ref.read(guideChannelsProvider.notifier).showFilter(const AllChannels());
+    _grid.showProgramme(request.channel, request.programme);
   }
 
   /// Back on the Guide from the player: the Guide shows no picture, so
@@ -138,6 +157,9 @@ class _GuideViewState extends ConsumerState<_GuideView> {
     final query = ref.watch(guideChannelsProvider);
     final now = ref.watch(appClockProvider)();
     final progress = ref.watch(guideImportProgressProvider(sourceId)).value;
+    ref.listen(guideProgrammeRequestProvider, (_, request) {
+      if (request != null) _takeProgramme();
+    });
 
     final value = coverage.value;
     _wakeFor(now, value?.lastEnd);

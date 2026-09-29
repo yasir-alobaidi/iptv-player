@@ -38,9 +38,18 @@ class CatalogueScreen extends ConsumerStatefulWidget {
 class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
   final _grid = FocusPaneController();
   final _chips = FocusPaneController();
+
+  /// The filter field's text: what is typed, or what search asked for
+  /// ("Show all in Movies"), kept in step with the query.
   final _filter = TextEditingController();
 
   CatalogueKind get kind => widget.kind;
+
+  @override
+  void initState() {
+    super.initState();
+    _filter.text = ref.read(catalogueControllerProvider(kind))?.text ?? '';
+  }
 
   @override
   void dispose() {
@@ -96,6 +105,10 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
       );
     }
     final query = ref.watch(catalogueControllerProvider(kind));
+    ref.listen(catalogueControllerProvider(kind), (_, next) {
+      final text = next?.text ?? '';
+      if (_filter.text != text) _filter.text = text;
+    });
     if (query == null) return const SizedBox.shrink();
     final count = ref.watch(titleCountProvider(kind, query));
     return FocusPane(

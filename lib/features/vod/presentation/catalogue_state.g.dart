@@ -181,7 +181,7 @@ final class CatalogueControllerProvider
 }
 
 String _$catalogueControllerHash() =>
-    r'20790a4bc8c5bfd55335091af3cdf94c4aa0df38';
+    r'93396ac76f94a8c181c82b40f7a86c7ce69b5cac';
 
 /// What a Movies or Series grid shows: the browsed source's titles, one
 /// category or all, a filter and the sort. Starts over when the source

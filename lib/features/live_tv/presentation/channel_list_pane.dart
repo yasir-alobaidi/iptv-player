@@ -78,9 +78,14 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   AppFailure? _error;
   bool _wantFocus = false;
 
+  /// The filter field's text: what is typed, or what search asked for
+  /// ("Show all in Live TV"), kept in step with the view.
+  final _filterText = TextEditingController();
+
   @override
   void initState() {
     super.initState();
+    _filterText.text = ref.read(liveTvControllerProvider)?.query.text ?? '';
     widget.focusRequests?.addListener(_onFocusRequest);
     _guideTimer = Timer.periodic(
       ChannelListPane.guideRefresh,
@@ -102,6 +107,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     widget.focusRequests?.removeListener(_onFocusRequest);
     _guideTimer?.cancel();
     _scroll.dispose();
+    _filterText.dispose();
     super.dispose();
   }
 
@@ -194,6 +200,10 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     if (onScreen && !_onScreen) _warmed.clear();
     _onScreen = onScreen;
     final view = ref.watch(liveTvControllerProvider);
+    ref.listen(liveTvControllerProvider, (_, next) {
+      final text = next?.query.text ?? '';
+      if (_filterText.text != text) _filterText.text = text;
+    });
     if (view == null) return const SizedBox.shrink();
     final query = view.query;
     if (query != _query) _reset(query);
@@ -257,6 +267,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
                 );
                 SearchField filter({double? width}) => SearchField(
                   key: ValueKey('live-filter-${query.filter.hashCode}'),
+                  controller: _filterText,
                   hint: 'Filter $title',
                   shortcut: null,
                   width: width,

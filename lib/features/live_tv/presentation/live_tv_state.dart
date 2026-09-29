@@ -55,6 +55,21 @@ class LiveTvController extends _$LiveTvController {
     state = view.copyWith(query: view.query.copyWith(text: text));
   }
 
+  /// Every channel whose name holds [text]: search's "Show all in Live
+  /// TV" and "Show in Live TV".
+  void showSearch(String text) {
+    final view = state;
+    if (view == null) return;
+    state = LiveTvView(
+      query: view.query.copyWith(
+        filter: const AllChannels(),
+        text: text,
+        showHidden: false,
+      ),
+      selected: view.selected,
+    );
+  }
+
   void setSort(ChannelSort sort) {
     final view = state;
     if (view == null) return;

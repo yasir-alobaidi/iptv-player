@@ -161,25 +161,39 @@ class PosterCard extends StatelessWidget {
 /// A poster's picture over its stand-in, for places that draw a poster
 /// without a card around it (a details page).
 class PosterArtwork extends StatelessWidget {
-  const new({required this.title, this.image, super.key});
+  const new({
+    required this.title,
+    this.image,
+    this.showTitle = true,
+    super.key,
+  });
 
   final String title;
   final ImageProvider? image;
 
+  /// False for a thumbnail too small to set the title in (search's
+  /// 30 × 44): the stand-in is its gradient alone.
+  final bool showTitle;
+
   @override
   Widget build(BuildContext context) => ArtworkImage(
     image: image,
-    fallback: _ArtworkFallback(title: title),
+    fallback: _ArtworkFallback(title: title, showTitle: showTitle),
   );
 }
 
 /// Artwork stand-in: a gradient derived from the title, with the title
 /// set across it, so a grid without images still reads as a grid.
 class _ArtworkFallback extends StatelessWidget {
-  const new({required this.title, this.landscape = false});
+  const new({
+    required this.title,
+    this.landscape = false,
+    this.showTitle = true,
+  });
 
   final String title;
   final bool landscape;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -198,23 +212,27 @@ class _ArtworkFallback extends StatelessWidget {
           colors: [base, Color.lerp(base, tokens.colors.bg, 0.8)!],
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(tokens.spacing.s12 + 2),
-        child: Align(
-          alignment: landscape ? Alignment.bottomLeft : Alignment.bottomCenter,
-          child: Text(
-            title.toUpperCase(),
-            maxLines: 2,
-            textAlign: landscape ? TextAlign.left : TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.text.titleSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.92),
-              letterSpacing: 1,
-              height: 1.1,
+      child: !showTitle
+          ? null
+          : Padding(
+              padding: EdgeInsets.all(tokens.spacing.s12 + 2),
+              child: Align(
+                alignment: landscape
+                    ? Alignment.bottomLeft
+                    : Alignment.bottomCenter,
+                child: Text(
+                  title.toUpperCase(),
+                  maxLines: 2,
+                  textAlign: landscape ? TextAlign.left : TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.titleSmall.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    letterSpacing: 1,
+                    height: 1.1,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
