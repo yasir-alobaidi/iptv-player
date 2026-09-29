@@ -118,7 +118,7 @@ _Update at the end of every session._
 ## Next
 1. **You:** review and push; the CI run then says whether the Windows fixes (file closing, the write-ahead log) cleared its failures
 2. **Phase 7 — Casting:** write the plan (the Cast v2 client, the ffprobe planner, the FFmpeg relay and its supervisor, the UI, the casting matrix on your TV) for your approval. Ask before every cast (memory)
-3. ~~"Remind me": Phase 9 or after v1~~ — **Phase 9** (you, 2026-09-29; now docs/08's Phase 9 step 3 and an exit criterion). Still yours to say: a movie-name cleanup is not recommended for v1 (ADR-013 step 8); say if you want one
+3. ~~"Remind me": Phase 9 or after v1~~ — **Phase 9** (you, 2026-09-29; now docs/08's Phase 9 step 3 and an exit criterion). ~~A movie-name cleanup~~ — **none for v1** (you, 2026-09-29; ADR-013 step 8)
 4. The 8-hour soak before a release; the Windows playback run when your Windows PC is available
 
 ## ADR-008, ADR-009, ADR-010, ADR-011

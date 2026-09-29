@@ -22,9 +22,8 @@ part of docs/08-phases-and-prompts.md with docs/04-casting.md.
    Categories: the list is one Tab stop, the Menu key renames and moves;
    Live TV: Tab now goes categories → Manage → filter → sort → list.
 5. **Decided:** "Remind me" on upcoming programmes goes into **Phase 9**
-   (ADR-013 decision 5; docs/08's Phase 9 step 3). **Still yours to say:**
-   whether you want a cleanup of movie names (not recommended for v1:
-   ADR-013 step 8).
+   (ADR-013 decision 5; docs/08's Phase 9 step 3). **No movie-name
+   cleanup for v1** (your choice, ADR-013 step 8).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -758,8 +757,7 @@ From earlier sessions (still true):
 ## Open questions for the user
 - ~~Remind me on upcoming programmes: Phase 9, or after v1?~~ Phase 9
   (answered 2026-09-29; ADR-013).
-- A movie-name cleanup: not recommended for v1 (ADR-013 step 8); the
-  `Title - HD` pairs could get the channels' badge later if wanted.
+- ~~A movie-name cleanup?~~ None for v1 (answered 2026-09-29).
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
