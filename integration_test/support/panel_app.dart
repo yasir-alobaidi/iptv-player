@@ -24,31 +24,20 @@ import 'fake_panel.dart';
 import 'keyboard.dart';
 
 final class PanelApp {
-  new _(this.container, this._directory, this.db, this.sourceId);
+  new _(
+    this.container,
+    this._directory,
+    this.db,
+    this.sourceId,
+    this._keyring,
+    this._video,
+  );
 
   /// Opens on Home. [video] false plays with no picture (CI has no GPU).
   static Future<PanelApp> open(FakePanel panel, {required bool video}) async {
     final directory = await Directory.systemTemp.createTemp('iptv_vod');
-    final db = AppDatabase(await openAppDatabase(directory));
-    final secrets = SecretRegistry();
-    final log = AppLog(output: SilentOutput(), secrets: secrets);
-    final engine = await MediaKitPlayerEngine.create(
-      log: log,
-      secrets: secrets,
-      video: video,
-    );
-    final container = ProviderContainer(
-      overrides: [
-        appLogProvider.overrideWithValue(log),
-        secretRegistryProvider.overrideWithValue(secrets),
-        errorReporterProvider.overrideWithValue(ErrorReporter(log)),
-        appDatabaseProvider.overrideWithValue(db),
-        credentialStoreProvider.overrideWithValue(InMemoryCredentialStore()),
-        startLocationProvider.overrideWithValue('/'),
-        playerEngineProvider.overrideWithValue(engine),
-        ...sourceShellOverrides,
-      ],
-    );
+    final keyring = InMemoryCredentialStore();
+    final (container, db) = await _start(directory, keyring, video: video);
     final added = await container
         .read(sourceRepositoryProvider)
         .add(
@@ -63,23 +52,65 @@ final class PanelApp {
     final id = added.valueOrNull!.id;
     final synced = await container.read(syncServiceProvider).sync(id);
     if (!synced.isOk) throw StateError('sync failed: ${synced.failureOrNull}');
-    return PanelApp._(container, directory, db, id);
+    return PanelApp._(container, directory, db, id, keyring, video);
+  }
+
+  static Future<(ProviderContainer, AppDatabase)> _start(
+    Directory directory,
+    InMemoryCredentialStore keyring, {
+    required bool video,
+  }) async {
+    final db = AppDatabase(await openAppDatabase(directory));
+    final secrets = SecretRegistry();
+    final log = AppLog(output: SilentOutput(), secrets: secrets);
+    final engine = await MediaKitPlayerEngine.create(
+      log: log,
+      secrets: secrets,
+      video: video,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        appLogProvider.overrideWithValue(log),
+        secretRegistryProvider.overrideWithValue(secrets),
+        errorReporterProvider.overrideWithValue(ErrorReporter(log)),
+        appDatabaseProvider.overrideWithValue(db),
+        credentialStoreProvider.overrideWithValue(keyring),
+        startLocationProvider.overrideWithValue('/'),
+        playerEngineProvider.overrideWithValue(engine),
+        ...sourceShellOverrides,
+      ],
+    );
+    return (container, db);
   }
 
   final ProviderContainer container;
   final Directory _directory;
   final AppDatabase db;
   final String sourceId;
+  final InMemoryCredentialStore _keyring;
+  final bool _video;
 
   String get location => container.read(routerProvider).state.uri.path;
 
+  /// The app closed and started again on the same database and keyring,
+  /// as a restart does. This one is closed; use the one returned.
+  Future<PanelApp> restart() async {
+    await _stop();
+    final (container, db) = await _start(_directory, _keyring, video: _video);
+    return PanelApp._(container, _directory, db, sourceId, _keyring, _video);
+  }
+
   Future<void> close() async {
+    await _stop();
+    await _directory.delete(recursive: true);
+  }
+
+  Future<void> _stop() async {
     final coordinator = container.read(playbackCoordinatorProvider);
     await coordinator.stop();
     final engine = coordinator.engine;
     container.dispose();
     await engine.dispose();
     await db.close();
-    await _directory.delete(recursive: true);
   }
 }

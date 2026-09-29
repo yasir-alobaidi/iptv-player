@@ -57,6 +57,8 @@ Measured by tests tagged `benchmark`, which are skipped unless run with `flutter
 | Sync 50k channels + 30k movies (fake provider) | ≤ 60 s; no UI frame > 32 ms |
 | XMLTV 300 MB import | ≤ 4 min; UI unaffected; peak RAM +300 MB max |
 | Zap p50 / p95 (fake provider) | ≤ 1.5 s / ≤ 3 s |
+| Search, per query, 50k channels + 30k movies + 3k series + a 600k-programme guide | ≤ 50 ms on the database isolate (Phase 6, ADR-013; `test/features/search/search_benchmark_test.dart`, 55 texts of 1–20 characters, file database) |
+| Frames while typing into search on that catalogue | no frame > 16 ms (profile mode, the real display: `integration_test/search_typing_test.dart`) |
 | Idle memory after sync with guide | ≤ 450 MB |
 | H.264 1080p50 playback CPU (hwdec) | ≤ 15 % total CPU |
 | 8 h soak memory growth | ≤ 50 MB (median of the last five minutes over the median of minutes 21–25: the player settles for ~40 min, and a reconnect spikes RSS for a sample or two — ADR-010 "The soak run") |
@@ -66,7 +68,9 @@ Measured by tests tagged `benchmark`, which are skipped unless run with `flutter
 | Memory growth during a 4 GB download | ≤ 30 MB |
 
 ## CI (GitHub Actions)
-Matrix ubuntu-22.04 + windows-latest (`.github/workflows/ci.yml`): `flutter pub get` **and `dart pub get --directory=tools/fake_provider`, without which the root `flutter analyze` cannot resolve that package's imports** → build_runner (fail on diff; `core.autocrlf false` is set before checkout so Windows does not fail on line endings) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb, one file per run, after generating the three media samples the player tests need with Ubuntu's ffmpeg, and with `IPTV_PLAYER_VIDEO=0` (no GPU: mpv plays with no picture). Upload release builds as CI artifacts.
+Matrix ubuntu-22.04 + windows-latest (`.github/workflows/ci.yml`): `flutter pub get` **and `dart pub get --directory=tools/fake_provider`, without which the root `flutter analyze` cannot resolve that package's imports** → build_runner (fail on diff; `core.autocrlf false` is set before checkout so Windows does not fail on line endings) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb, one file per run, after generating the media samples the player tests need with Ubuntu's ffmpeg (live samples 30 s, VOD samples 120 s — shorter than this laptop's 600 s, which once hid a bug: ADR-013), and with `IPTV_PLAYER_VIDEO=0` (no GPU: mpv plays with no picture). Upload release builds as CI artifacts.
+
+**Failures are named on the public run page** (the job log needs rights on the repository): each failed test, unit or integration, becomes an annotation with its error — the `flutter test --file-reporter json:<file>` report read by `tools/ci/failed_tests.dart`, which takes a widget test's printed exception where the error event only points to it. Read them with `curl https://api.github.com/repos/<owner>/iptv-player/check-runs/<job id>/annotations`.
 
 ## Definition of done (every feature)
 1. Spec behavior implemented, including loading/empty/error/offline states
