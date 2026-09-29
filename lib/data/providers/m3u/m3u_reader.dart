@@ -33,7 +33,8 @@ final class M3uUrlInput extends M3uInput {
 /// [onEntry]. A future from [onEntry] pauses reading until it completes
 /// (`parseM3u`); an error it ends with fails the read like any other.
 /// The sync engine calls this inside its own isolate; the UI uses
-/// [readM3uInBackground].
+/// [readM3uInBackground]. [stop] completing ends the read early and
+/// cleanly, the file closed (`parseM3u`).
 ///
 /// The credentials in a playlist URL's query become placeholders in every
 /// stream URL (`playlistSecrets`, `templateUrl`). Never throws: a missing
@@ -44,6 +45,7 @@ Future<Result<M3uSummary>> readM3u(
   M3uInput input,
   FutureOr<void> Function(M3uEntry entry) onEntry, {
   Duration idleTimeout = const Duration(seconds: 30),
+  Future<void>? stop,
 }) async {
   HttpClient? client;
   try {
@@ -75,7 +77,7 @@ Future<Result<M3uSummary>> readM3u(
         bytes = response.idleTimeout(idleTimeout);
         secrets = playlistSecrets(url);
     }
-    return Ok(await parseM3u(bytes, onEntry, secrets: secrets));
+    return Ok(await parseM3u(bytes, onEntry, secrets: secrets, stop: stop));
   } on FormatException catch (error) {
     return Err(ParseFailure(error.message));
   } on Object catch (error) {

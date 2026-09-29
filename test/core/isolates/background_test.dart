@@ -106,6 +106,34 @@ void main() {
 
       expect(answers, 1);
     });
+
+    test('it answers once what closes before a stop has closed', () async {
+      var answers = 0;
+      final closed = Completer<void>();
+      final calls = <String>[];
+      final cancellation = JobCancellation(() => answers++)
+        ..beforeStop(() async {
+          calls.add('file');
+          await closed.future;
+        })
+        ..beforeStop(() async => throw StateError('a close that fails'));
+      cancellation.beforeStop(() async => calls.add('no longer applies'))();
+
+      cancellation
+        ..enter()
+        ..request();
+      await pumpEventQueue();
+      expect(calls, isEmpty, reason: 'marked work is still running');
+
+      cancellation.leave();
+      await pumpEventQueue();
+      expect(calls, ['file']);
+      expect(answers, 0, reason: 'the file is still closing');
+
+      closed.complete();
+      await pumpEventQueue();
+      expect(answers, 1, reason: 'a failing close still ends in the answer');
+    });
   });
 
   group('startGuardedJob', () {

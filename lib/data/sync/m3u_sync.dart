@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:iptv_player/core/isolates/background.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
@@ -33,6 +34,7 @@ final class M3uSync {
     required this._runId,
     required this._report,
     this._batchSize = 5000,
+    this._cancellation,
   });
 
   final AppDatabase _db;
@@ -41,6 +43,9 @@ final class M3uSync {
   final int _runId;
   final void Function(SyncProgress progress) _report;
   final int _batchSize;
+
+  /// Asked to stop, the job closes the playlist before it can be killed.
+  final JobCancellation? _cancellation;
 
   var _progress = const SyncProgress(stage: SyncStage.playlist);
   final _pending = <M3uEntry>[];
@@ -62,7 +67,19 @@ final class M3uSync {
 
   Future<Result<SyncWorkResult>> run() async {
     _report(_progress);
-    final read = await readM3u(_input, _onEntry);
+    final stop = Completer<void>();
+    late final Future<Result<M3uSummary>> reading;
+    final closing = _cancellation?.beforeStop(() async {
+      if (!stop.isCompleted) stop.complete();
+      await reading;
+    });
+    final Result<M3uSummary> read;
+    try {
+      reading = readM3u(_input, _onEntry, stop: stop.future);
+      read = await reading;
+    } finally {
+      closing?.call();
+    }
     if (_writeFailure case final failure?) return Err(failure);
     final M3uSummary summary;
     switch (read) {

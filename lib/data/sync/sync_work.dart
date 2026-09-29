@@ -143,6 +143,7 @@ Future<Result<SyncWorkResult>> runSyncWork(
           runId: work.runId,
           report: report,
           batchSize: work.batchSize,
+          cancellation: cancellation,
         ).run();
     }
   } on Object catch (error) {

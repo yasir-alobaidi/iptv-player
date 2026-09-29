@@ -85,8 +85,20 @@ final class JobCancellation {
   var _requested = false;
   var _depth = 0;
   var _answered = false;
+  final _beforeStop = <Future<void> Function()>[];
 
   bool get isRequested => _requested;
+
+  /// [close] runs once the job is asked to stop and nothing marked is
+  /// running, and the job answers that it can be killed only after it
+  /// completes. For files the job holds open: a killed isolate's stay
+  /// open until they are collected, and Windows won't delete or move
+  /// them meanwhile. Call the function returned once [close] no longer
+  /// applies.
+  void Function() beforeStop(Future<void> Function() close) {
+    _beforeStop.add(close);
+    return () => _beforeStop.remove(close);
+  }
 
   /// Starts work that must not be cut in half. Throws a
   /// [CancelledFailure] once the job has been asked to stop, so nothing
@@ -111,7 +123,18 @@ final class JobCancellation {
   void _answerIfIdle() {
     if (!_requested || _depth > 0 || _answered) return;
     _answered = true;
-    _onKillable?.call();
+    final closing = [for (final close in _beforeStop.toList()) close()];
+    if (closing.isEmpty) {
+      _onKillable?.call();
+      return;
+    }
+    // A close that fails or hangs still ends in the kill: the job's grace
+    // is the last resort.
+    unawaited(
+      Future.wait(closing)
+          .then<void>((_) {}, onError: (Object _) {})
+          .whenComplete(() => _onKillable?.call()),
+    );
   }
 }
 

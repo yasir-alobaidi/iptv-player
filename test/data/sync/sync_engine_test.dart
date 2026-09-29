@@ -703,7 +703,8 @@ void main() {
         ..writeln('#EXTINF:-1 group-title="G${i % 40}",Channel $i')
         ..writeln('http://tv.test/live/$i.ts');
     }
-    final id = await env.add(_file(env.playlist('big.m3u', '$lines')));
+    final path = env.playlist('big.m3u', '$lines');
+    final id = await env.add(_file(path));
     final writing = Completer<void>();
     final watching = env.engine.watch(id).listen((status) {
       if (status case SyncRunning(:final progress)
@@ -740,7 +741,8 @@ void main() {
         ..writeln('#EXTINF:-1 group-title="G${i % 40}",Channel $i')
         ..writeln('http://tv.test/live/$i.ts');
     }
-    final id = await env.add(_file(env.playlist('big.m3u', '$lines')));
+    final path = env.playlist('big.m3u', '$lines');
+    final id = await env.add(_file(path));
     final writing = Completer<void>();
     final statuses = <SyncStatus>[];
     final watching = env.engine.watch(id).listen((status) {
@@ -767,6 +769,9 @@ void main() {
     expect(env.engine.statusOf(id), isA<SyncIdle>());
     expect(statuses.last, isA<SyncIdle>());
     expect((await env.engine.sync(id)).failureOrNull, isA<NotFoundFailure>());
+    // The sync closed the playlist before it was killed: Windows would
+    // otherwise refuse to delete or move it until the file is collected.
+    if (Platform.isLinux) expect(_openFiles(), isNot(contains(path)));
   });
 
   test('one sync per source: asking again joins the run', () async {
@@ -889,4 +894,18 @@ void main() {
       );
     });
   });
+}
+
+/// What this process has open (Linux), every isolate's files included. A
+/// descriptor can close while the list is read — the listing's own does.
+List<String> _openFiles() => [
+  for (final fd in Directory('/proc/self/fd').listSync()) ?_target(fd.path),
+];
+
+String? _target(String fd) {
+  try {
+    return Link(fd).targetSync();
+  } on FileSystemException {
+    return null;
+  }
 }

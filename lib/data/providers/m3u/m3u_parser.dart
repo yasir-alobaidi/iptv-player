@@ -27,7 +27,8 @@ import 'package:iptv_player/data/providers/provider_text.dart';
 /// not the whole playlist. An error from that future ends the parse with
 /// the same error — except [StopReading], thrown or returned, which ends
 /// it early and cleanly: [bytes] is cancelled (a file is closed) before
-/// the summary of what was read comes back.
+/// the summary of what was read comes back. [stop] completing does the
+/// same from outside (a job asked to stop).
 ///
 /// [secrets] are replaced by placeholders in every stream URL
 /// (`templateUrl`). Throws [FormatException] only when the body is plainly
@@ -37,6 +38,7 @@ Future<M3uSummary> parseM3u(
   Stream<List<int>> bytes,
   FutureOr<void> Function(M3uEntry entry) onEntry, {
   Map<String, String> secrets = const {},
+  Future<void>? stop,
 }) async {
   final state = _ParseState(secrets, onEntry);
   final lines = gunzipIfNeeded(bytes)
@@ -78,6 +80,7 @@ Future<M3uSummary> parseM3u(
     },
     cancelOnError: true,
   );
+  unawaited(stop?.then((_) => fail(const StopReading(), StackTrace.current)));
   await done.future;
   return state.finish();
 }
