@@ -235,18 +235,21 @@ void main() {
             final target = length * fraction;
             final seek = Stopwatch()..start();
             await tester.runAsync(() => coordinator.seek(target));
+            // The coordinator takes the new position at once; the player
+            // playing 2 s past it is the seek done.
+            const past = Duration(seconds: 2);
             final (after, _) = await until(
               (s) =>
                   s is PlaybackPlaying &&
-                  coordinator.timeline.position >= target &&
+                  coordinator.timeline.position >= target + past &&
                   coordinator.timeline.position <
                       target + const Duration(seconds: 20),
               seconds: 40,
             );
             note(
-              '- **Seek to $label:** ${outcome(after)}, at '
-              '${coordinator.timeline.position} after '
-              '${seek.elapsedMilliseconds} ms',
+              '- **Seek to $label:** ${outcome(after)}, 2 s past it '
+              '${seek.elapsedMilliseconds} ms after the seek (at '
+              '${coordinator.timeline.position})',
             );
             await wait(8000);
           }

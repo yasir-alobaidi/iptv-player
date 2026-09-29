@@ -5,10 +5,11 @@ it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-012 in
 docs/decisions.md (its step 8 section is new) and docs/08's Phase 6.
 
 ## Before you start the next session (user)
-1. **Review and push** the two local commits, oldest first: "Phase 5 step
-   8a: the keyboard walk, and Ctrl+N's first control in reading order" and
-   "Phase 5 step 8b: the measurements, and the grid keeps the keyboard"
-   (and this handoff). Steps 1–7 are pushed.
+1. **Review and push** the local commits, oldest first: "Phase 5 step
+   8a: the keyboard walk, and Ctrl+N's first control in reading order",
+   "Phase 5 step 8b: the measurements, and the grid keeps the keyboard",
+   the handoff, and "Phase 5 step 8c: your panel's movie and episode".
+   Steps 1–7 are pushed.
 2. **CI after the push** runs two new integration tests: `vod_walk` (the
    keyboard walk, about a minute on the 120 s samples) and
    `poster_grid_scroll` (the `large` catalogue's 30,000 posters, in debug
@@ -19,10 +20,12 @@ docs/decisions.md (its step 8 section is new) and docs/08's Phase 6.
    Play; Movies → scroll the grid far with the mouse wheel, then press ↓:
    the keyboard carries on from a poster on screen; End jumps to the last
    poster and focuses it.
-4. **Your panel's own movie and episode** (the one item of the phase exit
-   left): `integration_test/real_provider_vod_test.dart` is written and
-   waits for your go-ahead — a pop-up first, since it uses your one
-   connection. Say so at the start of the session, or answer the pop-up.
+4. **Your panel's movie and episode ran** (you said yes): MKV, H.264
+   720p with AAC stereo, Range honoured, the first picture in 0.9 and
+   1.4 s, seeks to the middle and back played on with no reconnect. **But
+   the panel said 1 of 1 connections in use before, during and after**,
+   with nothing of ours running afterwards: check your other device
+   wasn't cut off (ADR-012 step 8).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -31,14 +34,13 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-012 in docs/decisions.md and docs/08-phases-and-prompts.md (Phase 6) first.
 Phase 5 step 8 is reviewed and pushed; CI is <green | red: …>.
-<Optional: the provider is free — run the real-provider VOD test first.>
 Then write the Phase 6 plan (Search and polish) for my approval.
 ```
 
 ## Where things stand
 - **Phases 1–5 are built.** Phase 5 (Movies, Series, Home) closed with
-  step 8 on 2026-09-29; ADR-012 is Accepted. Only the play from your panel
-  is left of its exit (above).
+  step 8 on 2026-09-29, the play from your panel included; ADR-012 is
+  Accepted.
 - **Checks, all green at 2186d31:** analyze, format, `build_runner`
   leaves no diff; **1,818 app tests** (8 skipped) under `TZ=UTC`; the
   fake provider's 141; under xvfb: `vod_walk`, `vod_player`,
@@ -65,6 +67,12 @@ Then write the Phase 6 plan (Search and polish) for my approval.
   (launches the profile build; Home logs `[startup] Home is on screen, N ms
   after main()` through `LaunchMark`), and
   `integration_test/poster_grid_scroll_test.dart`.
+- **Step 8c — your panel** (with your go-ahead; the switch set back to
+  `false` after): a movie and an episode, both MKV, H.264 720p, AAC
+  stereo; Range honoured; the first picture in 0.9 and 1.4 s; seeks to the
+  middle and back played on with no reconnect on the one connection. The
+  test's seek check was wrong (it read a position that moves at once) and
+  now waits for playback past the point.
 - **Docs:** ADR-012 step 8 and Accepted; docs/03's VOD "As built"; docs/05
   "As built" for Home and the VOD player, and where Ctrl+N's focus lands;
   docs/06's two new measurements and their table rows; progress.
@@ -90,13 +98,12 @@ Then write the Phase 6 plan (Search and polish) for my approval.
     what is left).
 
 ## What's next
-1. **Your panel's movie and episode** when you say the connection is free:
-   set `"play": true` in `~/.config/iptv-player-dev/real_provider.json`
-   (then back), and run `flutter test
-   integration_test/real_provider_vod_test.dart -d linux`. The report is
-   `build/real_provider_run/vod_report.md` (masked). It answers the open
-   question below (a seek's new request on one connection), and whether
-   your panel honours Range; record both in ADR-012.
+1. **Optional, with your go-ahead:** rerun
+   `integration_test/real_provider_vod_test.dart` (set `"play": true` in
+   `~/.config/iptv-player-dev/real_provider.json`, then back) to time a
+   seek on your panel: the first run's check read the coordinator's
+   position, which moves at once, so it proved the seek wasn't refused but
+   not how long it took. Look at the account's connection count first.
 2. **Phase 6 — Search and polish** (docs/08): write the plan for approval
    first — the Ctrl+K overlay over FTS (the programmes index is already
    built), the Favorites screen with reorder and groups, display-name
@@ -118,8 +125,7 @@ Then write the Phase 6 plan (Search and polish) for my approval.
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
 - **CI green on both systems.** Linux is green; Windows fails 6–10 named
   tests from run to run (progress.md Known issues).
-- **Phase 5 — Movies, Series, Home:** built (2026-09-29). Left: the play
-  from your panel (a pop-up first).
+- **Phase 5 — Movies, Series, Home:** built (2026-09-29).
 - **Phase 6 — Search and polish:** the Ctrl+K overlay over FTS (the
   programmes index is already built), the Favorites screen with reorder
   and groups, display-name cleanup with quality badges, hide/unhide
@@ -761,9 +767,9 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
-- Whether a real panel lets a new request for the same VOD file take over
-  the open one (the fake panel does; a seek on a one-connection panel
-  needs it) — `real_provider_vod_test.dart` will show it.
+- Your panel read 1 of 1 connections in use before, during and after the
+  VOD test (ADR-012 step 8). Was another device connected, and was it cut
+  off?
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
