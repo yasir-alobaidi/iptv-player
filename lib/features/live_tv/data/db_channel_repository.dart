@@ -5,6 +5,42 @@ import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 
+/// `channels c` as a `ChannelItem` reads it, with its favorite `f` (a
+/// `LEFT JOIN favorites f` on the channel's source and remote key). Shared
+/// by every query that lists channels (Live TV, search).
+const channelColumns =
+    'c.id, c.source_id, c.remote_key, c.name, c.display_name, '
+    'c.clean_name, c.quality, c.number, c.logo_url, c.category_id, '
+    'c.epg_key, c.archive_days, c.is_hidden, '
+    'f.id IS NOT NULL AS is_favorite';
+
+/// The name a channel is shown by, and so sorted and filtered by
+/// ([ChannelItem.name]'s order).
+const channelShownName = 'COALESCE(c.display_name, c.clean_name, c.name)';
+
+/// A row of [channelColumns].
+ChannelItem channelFromRow(QueryRow row) {
+  final display = row.read<String?>('display_name');
+  final provider = row.read<String>('name');
+  final name = display ?? row.read<String?>('clean_name') ?? provider;
+  return ChannelItem(
+    id: row.read<int>('id'),
+    sourceId: row.read<String>('source_id'),
+    remoteKey: row.read<String>('remote_key'),
+    name: name,
+    providerName: name == provider ? null : provider,
+    isRenamed: display != null,
+    quality: ChannelQuality.fromStored(row.read<String?>('quality')),
+    number: row.read<int?>('number'),
+    logoUrl: row.read<String?>('logo_url'),
+    categoryId: row.read<int?>('category_id'),
+    epgKey: row.read<String?>('epg_key'),
+    archiveDays: row.read<int>('archive_days'),
+    isHidden: row.read<bool>('is_hidden'),
+    isFavorite: row.read<bool>('is_favorite'),
+  );
+}
+
 /// [ChannelRepository] over the `channels` table, its categories and the
 /// favorites. Every list query is one SQL statement, so a 50,000-channel
 /// source costs one indexed scan, never a Dart-side filter.
@@ -13,16 +49,6 @@ final class DbChannelRepository implements ChannelRepository {
 
   final AppDatabase _db;
   final DateTime Function() _clock;
-
-  static const _select =
-      'c.id, c.source_id, c.remote_key, c.name, c.display_name, '
-      'c.clean_name, c.quality, c.number, c.logo_url, c.category_id, '
-      'c.epg_key, c.archive_days, c.is_hidden, '
-      'f.id IS NOT NULL AS is_favorite';
-
-  /// The name a channel is shown by, and so sorted and filtered by
-  /// ([ChannelItem.name]'s order).
-  static const _shownName = 'COALESCE(c.display_name, c.clean_name, c.name)';
 
   @override
   Stream<int> watchCount(ChannelQuery query) {
@@ -52,7 +78,7 @@ final class DbChannelRepository implements ChannelRepository {
     final (where, variables) = _where(query);
     final rows = await _db
         .customSelect(
-          'SELECT $_select ${_from()} $where ${_order(query.sort)} '
+          'SELECT $channelColumns ${_from()} $where ${_order(query.sort)} '
           'LIMIT ? OFFSET ?',
           variables: [
             ...variables,
@@ -62,7 +88,7 @@ final class DbChannelRepository implements ChannelRepository {
           readsFrom: _tables,
         )
         .get();
-    return [for (final row in rows) _item(row)];
+    return [for (final row in rows) channelFromRow(row)];
   });
 
   @override
@@ -100,13 +126,13 @@ final class DbChannelRepository implements ChannelRepository {
   ) => Result.guard(() async {
     final row = await _db
         .customSelect(
-          'SELECT $_select ${_from()} WHERE $condition '
+          'SELECT $channelColumns ${_from()} WHERE $condition '
           'ORDER BY c.position, c.id LIMIT 1',
           variables: variables,
           readsFrom: _tables,
         )
         .getSingleOrNull();
-    return row == null ? null : _item(row);
+    return row == null ? null : channelFromRow(row);
   });
 
   @override
@@ -157,7 +183,7 @@ final class DbChannelRepository implements ChannelRepository {
     }
     final text = query.text.trim();
     if (text.isNotEmpty) {
-      clauses.add("$_shownName LIKE ? ESCAPE '\\'");
+      clauses.add("$channelShownName LIKE ? ESCAPE '\\'");
       final escaped = text
           .replaceAll(r'\', r'\\')
           .replaceAll('%', r'\%')
@@ -170,28 +196,6 @@ final class DbChannelRepository implements ChannelRepository {
   static String _order(ChannelSort sort) => switch (sort) {
     ChannelSort.number =>
       'ORDER BY c.number IS NULL, c.number, c.position, c.id',
-    ChannelSort.name => 'ORDER BY $_shownName COLLATE NOCASE, c.id',
+    ChannelSort.name => 'ORDER BY $channelShownName COLLATE NOCASE, c.id',
   };
-
-  static ChannelItem _item(QueryRow row) {
-    final display = row.read<String?>('display_name');
-    final provider = row.read<String>('name');
-    final name = display ?? row.read<String?>('clean_name') ?? provider;
-    return ChannelItem(
-      id: row.read<int>('id'),
-      sourceId: row.read<String>('source_id'),
-      remoteKey: row.read<String>('remote_key'),
-      name: name,
-      providerName: name == provider ? null : provider,
-      isRenamed: display != null,
-      quality: ChannelQuality.fromStored(row.read<String?>('quality')),
-      number: row.read<int?>('number'),
-      logoUrl: row.read<String?>('logo_url'),
-      categoryId: row.read<int?>('category_id'),
-      epgKey: row.read<String?>('epg_key'),
-      archiveDays: row.read<int>('archive_days'),
-      isHidden: row.read<bool>('is_hidden'),
-      isFavorite: row.read<bool>('is_favorite'),
-    );
-  }
 }

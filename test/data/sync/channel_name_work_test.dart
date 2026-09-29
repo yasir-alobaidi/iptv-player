@@ -205,23 +205,18 @@ void main() {
       await env.checkIndex();
     });
 
-    test(
-      'benchmark: 50,000 names',
-      () async {
-        final env = await _Env.open();
-        await env.unnamed(_names(50000));
-        final clock = Stopwatch()..start();
-        final job = startChannelNameJob(await env.work());
-        final result = _unwrapped(await job.result);
-        final elapsed = clock.elapsedMilliseconds;
-        // The benchmark's output is its result, read by whoever runs it.
-        // ignore: avoid_print
-        print('fill: ${result.valueOrNull} names in $elapsed ms');
-        expect(result.valueOrNull, 50000);
-      },
-      tags: 'benchmark',
-      skip: 'a benchmark: run with --tags benchmark --run-skipped',
-    );
+    test('benchmark: 50,000 names', () async {
+      final env = await _Env.open();
+      await env.unnamed(_names(50000));
+      final clock = Stopwatch()..start();
+      final job = startChannelNameJob(await env.work());
+      final result = _unwrapped(await job.result);
+      final elapsed = clock.elapsedMilliseconds;
+      // The benchmark's output is its result, read by whoever runs it.
+      // ignore: avoid_print
+      print('fill: ${result.valueOrNull} names in $elapsed ms');
+      expect(result.valueOrNull, 50000);
+    }, tags: 'benchmark');
   });
 
   group('ChannelNameFill', () {

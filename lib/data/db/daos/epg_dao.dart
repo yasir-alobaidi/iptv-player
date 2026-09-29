@@ -111,6 +111,12 @@ class EpgDao extends DatabaseAccessor<AppDatabase> with _$EpgDaoMixin {
   ///
   /// This runs on the app's side, not in the import isolate: the isolate
   /// is killed on cancel, and this transaction must not be.
+  ///
+  /// **Programmes go in by start time**, so a source's row ids follow its
+  /// schedule (ids only grow: `AUTOINCREMENT`). Search reads its matches
+  /// in row id order from the first programme on now, and stops at the
+  /// few it shows (ADR-013 step 3); the sort costs about 0.7 s for
+  /// 600,000 programmes.
   Future<EpgTotals> swapIn({
     required String sourceId,
     required int importRun,
@@ -133,7 +139,8 @@ class EpgDao extends DatabaseAccessor<AppDatabase> with _$EpgDaoMixin {
       'INSERT INTO epg_programs (source_id, epg_channel_id, start_utc, '
       'end_utc, title, subtitle, description, category) '
       'SELECT ?, epg_channel_id, start_utc, end_utc, title, subtitle, '
-      'description, category FROM epg_programs_staging WHERE import_run = ?',
+      'description, category FROM epg_programs_staging WHERE import_run = ? '
+      'ORDER BY start_utc, epg_channel_id, id',
       [sourceId, importRun],
     );
     final totals = await _totalsFor(sourceId);

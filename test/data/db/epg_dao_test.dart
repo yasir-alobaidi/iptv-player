@@ -128,6 +128,29 @@ void main() {
       expect(row.countsJson, contains('"programmes":6'));
     });
 
+    test('puts the programmes in by start time, so row ids follow the '
+        'schedule', () async {
+      // Staged channel by channel, as a guide file lists them.
+      final run = await import('s1', channels: 3, programmes: 4);
+
+      await dao.swapIn(
+        sourceId: 's1',
+        importRun: run,
+        at: _now,
+        countsJson: _counts,
+      );
+
+      final rows = await (db.select(
+        db.epgPrograms,
+      )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+      final starts = [for (final row in rows) row.startUtc];
+      expect(starts, [...starts]..sort());
+      expect(
+        [for (final row in rows.take(3)) row.epgChannelId],
+        ['s1.chan0', 's1.chan1', 's1.chan2'],
+      );
+    });
+
     test('replaces the last guide, and only for its own source', () async {
       final first = await import('s1');
       await dao.swapIn(
