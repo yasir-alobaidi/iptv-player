@@ -144,7 +144,8 @@ void main() {
       ['201', '202', '203', '900'],
     ]);
 
-    app.router.go(AppDestination.favorites.path);
+    // A screen that shows no channels covers it.
+    app.router.go(AppDestination.library.path);
     await _settle(tester);
     await tester.pump(const Duration(minutes: 1));
     await _settle(tester);

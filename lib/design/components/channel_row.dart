@@ -18,6 +18,8 @@ class ChannelRow extends StatelessWidget {
     this.upNext,
     this.guideKnown = true,
     this.progress,
+    this.timeLeft,
+    this.leading,
     this.quality,
     this.badges = const [],
     this.isFavorite = false,
@@ -49,6 +51,13 @@ class ChannelRow extends StatelessWidget {
 
   /// How far through the current programme, 0..1.
   final double? progress;
+
+  /// "38 min left" of the programme on now, in a column of its own
+  /// before the star (canvas `Favorites`).
+  final String? timeLeft;
+
+  /// Before the number: the drag grip on the Favorites screen.
+  final Widget? leading;
 
   /// The picture's quality ("FHD"), drawn after the name as a
   /// [ChannelBadge]; null for none.
@@ -91,6 +100,10 @@ class ChannelRow extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
           child: Row(
             children: [
+              if (leading case final leading?) ...[
+                leading,
+                SizedBox(width: tokens.spacing.s8),
+              ],
               if (number != null) ...[
                 SizedBox(
                   width: 32,
@@ -171,6 +184,21 @@ class ChannelRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (timeLeft != null)
+                SizedBox(
+                  width: 96,
+                  child: Text(
+                    timeLeft!,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.text.small.copyWith(
+                      color: selected || states.highlighted
+                          ? colors.textSecondary
+                          : colors.textTertiary,
+                    ),
+                  ),
+                ),
               if (onToggleFavorite != null) ...[
                 SizedBox(width: tokens.spacing.s8),
                 _FavoriteStar(

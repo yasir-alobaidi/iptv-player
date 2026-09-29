@@ -8,6 +8,7 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
+import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
 import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
@@ -66,6 +67,7 @@ void main() {
           AppDestination.guide => GuideScreen,
           AppDestination.movies => MoviesScreen,
           AppDestination.series => SeriesScreen,
+          AppDestination.favorites => FavoritesScreen,
           _ => PlaceholderScreen,
         }),
         findsOneWidget,

@@ -13,6 +13,7 @@ import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
 import 'package:iptv_player/features/favorites/presentation/group_name_dialog.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/live_tv/presentation/channel_rename_dialog.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
@@ -581,14 +582,8 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     }
   }
 
-  Future<void> _rename(BuildContext anchor, ChannelItem channel) async {
-    final result = await showAppDialog<_RenameResult>(
-      anchor,
-      builder: (context) => _RenameDialog(channel: channel),
-    );
-    if (result == null) return;
-    await ref.read(channelRepositoryProvider).rename(channel.id, result.name);
-  }
+  Future<void> _rename(BuildContext anchor, ChannelItem channel) =>
+      renameChannel(anchor, ref.read(channelRepositoryProvider), channel);
 }
 
 class _Row extends ConsumerStatefulWidget {
@@ -675,72 +670,6 @@ class _RowState extends ConsumerState<_Row> {
             onMenu: () => widget.onMenu(context),
           ),
         ),
-      ),
-    );
-  }
-}
-
-final class _RenameResult {
-  const new(this.name);
-
-  /// Null or blank: the provider's name.
-  final String? name;
-}
-
-class _RenameDialog extends StatefulWidget {
-  const new({required this.channel});
-
-  final ChannelItem channel;
-
-  @override
-  State<_RenameDialog> createState() => _RenameDialogState();
-}
-
-class _RenameDialogState extends State<_RenameDialog> {
-  late final _controller = TextEditingController(text: widget.channel.name)
-    ..selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: widget.channel.name.length,
-    );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// The name typed, unless it is the name already shown and not the
-  /// user's: saving that would pin today's cleaned name as a rename, and
-  /// the provider's later changes would stop showing.
-  void _save() {
-    final channel = widget.channel;
-    final typed = _controller.text.trim();
-    final unchanged = !channel.isRenamed && typed == channel.name;
-    Navigator.of(context).pop(unchanged ? null : _RenameResult(typed));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final channel = widget.channel;
-    final original = channel.providerName;
-    return AppDialog(
-      title: 'Rename channel',
-      focusButtons: false,
-      subtitle: 'Only this app sees the new name.',
-      primaryLabel: 'Save',
-      onPrimary: _save,
-      // Back to the provider's name as the app shows it: cleaned, with
-      // its badge.
-      secondaryLabel: channel.isRenamed ? "Use provider's name" : 'Cancel',
-      onSecondary: () =>
-          Navigator.of(context)
-              .pop(channel.isRenamed ? const _RenameResult(null) : null),
-      child: AppTextField(
-        controller: _controller,
-        label: 'Name',
-        helperText: original == null ? null : "Provider's name: $original",
-        autofocus: true,
-        onSubmitted: (_) => _save(),
       ),
     );
   }

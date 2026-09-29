@@ -5,20 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
-import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
-import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
-import 'package:iptv_player/features/vod/domain/titles.dart';
+import 'package:iptv_player/features/vod/presentation/catalogue_grid.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
-import 'package:iptv_player/features/vod/presentation/title_cards.dart';
-import 'package:iptv_player/features/vod/presentation/title_grid.dart';
-import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
 /// Movies or Series (canvas `Movies`; docs/05: Series uses the same grid):
@@ -62,28 +57,6 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
   void _clearFilter() {
     _filter.clear();
     ref.read(catalogueControllerProvider(kind).notifier).setText('');
-  }
-
-  void _open(Object item) {
-    final path = switch (item) {
-      final MovieItem movie => movieDetailsPath(movie),
-      final SeriesItem series => seriesDetailsPath(series),
-      _ => null,
-    };
-    if (path != null) unawaited(context.push(path));
-  }
-
-  Future<void> _toggleFavorite(Object item) async {
-    switch (item) {
-      case final MovieItem movie:
-        await ref
-            .read(movieRepositoryProvider)
-            .setFavorite(movie, on: !movie.isFavorite);
-      case final SeriesItem series:
-        await ref
-            .read(seriesRepositoryProvider)
-            .setFavorite(series, on: !series.isFavorite);
-    }
   }
 
   @override
@@ -143,72 +116,18 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
               ),
             ),
             SizedBox(height: tokens.spacing.s12),
-            Expanded(child: _body(context, query, count)),
+            Expanded(
+              child: CatalogueGrid(
+                kind: kind,
+                query: query,
+                count: count,
+                controller: _grid,
+                empty: () => _empty(query),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _body(
-    BuildContext context,
-    TitleQuery query,
-    AsyncValue<TitleCount> count,
-  ) {
-    if (count.hasError) {
-      return ErrorState(
-        compact: true,
-        title: "Couldn't load your ${titlesWord(kind)}",
-        message: 'The list could not be read.',
-        details: '${count.error}',
-        onRetry: () => ref.invalidate(titleCountProvider(kind, query)),
-      );
-    }
-    final counted = count.value;
-    if (counted == null) return const _SkeletonGrid();
-    final total = counted.count;
-    if (total == 0) return _empty(query);
-    final movies = ref.read(movieRepositoryProvider);
-    final series = ref.read(seriesRepositoryProvider);
-    final now = ref.watch(appClockProvider)();
-    return TitleGrid<Object>(
-      key: ValueKey(kind),
-      total: total,
-      controller: _grid,
-      query: query,
-      revision: counted.revision,
-      identity: (item) => switch (item) {
-        final MovieItem movie => ('movie', movie.sourceId, movie.remoteKey),
-        final SeriesItem series => (
-          'series',
-          series.sourceId,
-          series.remoteKey,
-        ),
-        _ => item,
-      },
-      load: (offset, limit) async => kind == CatalogueKind.series
-          ? await series.range(query, offset, limit)
-          : await movies.range(query, offset, limit),
-      onFavorite: (item) => unawaited(_toggleFavorite(item)),
-      card: (context, item, focus, width) => switch (item) {
-        final MovieItem movie => MovieCard(
-          movie: movie,
-          focus: focus,
-          width: width,
-          now: now,
-          onOpen: () => _open(movie),
-          onMenu: (anchor) => unawaited(_menu(anchor, movie)),
-        ),
-        final SeriesItem show => SeriesCard(
-          series: show,
-          focus: focus,
-          width: width,
-          now: now,
-          onOpen: () => _open(show),
-          onMenu: (anchor) => unawaited(_menu(anchor, show)),
-        ),
-        _ => const SizedBox.shrink(),
-      },
     );
   }
 
@@ -257,30 +176,6 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
         onAction: () => notifier.showFilter(const AllTitles()),
       ),
     };
-  }
-
-  Future<void> _menu(BuildContext anchor, Object item) {
-    final favorite = switch (item) {
-      final MovieItem movie => movie.isFavorite,
-      final SeriesItem series => series.isFavorite,
-      _ => false,
-    };
-    return showAppMenu(
-      anchor,
-      items: [
-        AppMenuItem(
-          label: 'Open',
-          icon: AppIcons.info,
-          onPressed: () => _open(item),
-        ),
-        AppMenuItem(
-          label: favorite ? 'Remove from favorites' : 'Add to favorites',
-          icon: favorite ? AppIcons.starFilled : AppIcons.star,
-          shortcut: 'F',
-          onPressed: () => unawaited(_toggleFavorite(item)),
-        ),
-      ],
-    );
   }
 }
 
@@ -470,37 +365,3 @@ class _CategoryChips extends ConsumerWidget {
 }
 
 /// The canvas's skeleton cards, while the count is read.
-class _SkeletonGrid extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns =
-            ((constraints.maxWidth + TitleGrid.columnGap) /
-                    (TitleGrid.minCardWidth + TitleGrid.columnGap))
-                .floor()
-                .clamp(1, 12);
-        final width =
-            (constraints.maxWidth -
-                tokens.spacing.s8 * 2 -
-                TitleGrid.columnGap * (columns - 1)) /
-            columns;
-        return Padding(
-          padding: EdgeInsets.all(tokens.spacing.s8),
-          child: Wrap(
-            spacing: TitleGrid.columnGap,
-            runSpacing: TitleGrid.rowGap,
-            clipBehavior: Clip.hardEdge,
-            children: [
-              for (var i = 0; i < columns * 2; i++)
-                SkeletonPoster(width: width),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}

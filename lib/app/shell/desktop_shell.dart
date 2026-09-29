@@ -168,6 +168,8 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
               NoticeTone.success => ToastTone.success,
               NoticeTone.error => ToastTone.error,
             },
+            actionLabel: notice.actionLabel,
+            onAction: notice.onAction,
           ),
         );
       });

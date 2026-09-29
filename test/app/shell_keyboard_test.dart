@@ -387,10 +387,10 @@ void main() {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, 'Source: No source');
-    await _pressCtrl(tester, LogicalKeyboardKey.digit6);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit7);
 
-    expect(app.location, AppDestination.favorites.path);
-    // Ctrl+6 means "take me to Favorites", so focus is already there — no
+    expect(app.location, AppDestination.library.path);
+    // Ctrl+7 means "take me to the library", so focus is already there — no
     // Tab walk back into the content, and no ring left behind.
     expect(_focusedLabel(tester), _screenActionLabel);
 

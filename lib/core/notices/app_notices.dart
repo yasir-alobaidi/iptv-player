@@ -11,10 +11,20 @@ enum NoticeTone { neutral, success, error }
 /// updated") is two notices, and a listener that compares values would
 /// drop the second.
 final class AppNotice {
-  new(this.message, {this.tone = NoticeTone.neutral});
+  new(
+    this.message, {
+    this.tone = NoticeTone.neutral,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String message;
   final NoticeTone tone;
+
+  /// One action on the toast: "Undo" after a remove or a hide (docs/05:
+  /// optimistic updates).
+  final String? actionLabel;
+  final void Function()? onAction;
 
   @override
   String toString() => 'AppNotice($message)';

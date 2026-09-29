@@ -260,10 +260,13 @@ void main() {
     ) async {
       final app = await pumpApp(
         tester,
-        initialLocation: AppDestination.favorites.path,
+        initialLocation: AppDestination.library.path,
       );
 
-      expect(find.textContaining('Favorites comes in Phase 6'), findsOneWidget);
+      expect(
+        find.textContaining('The library comes in Phase 8'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Add a source'));
       await settleApp(tester);
