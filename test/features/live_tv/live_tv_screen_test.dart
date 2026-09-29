@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/favorites/data/db_favorites_repository.dart';
+import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
+import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
@@ -218,6 +221,97 @@ void main() {
     await _settle(tester);
     expect(await stored(), isNull);
     expect(find.text('Arena Sports 1'), findsWidgets);
+    await _finish(tester);
+  });
+
+  testWidgets('favorite groups show under Favorites, each a list of its '
+      'own in your order', (tester) async {
+    final live = LiveTvFakes();
+    addTearDown(() => tester.runAsync(live.db.close));
+    await tester.runAsync(() async {
+      await live.seed();
+      final channels = DbChannelRepository(live.db);
+      final favorites = DbFavoritesRepository(live.db);
+      Future<ChannelItem> channel(String key) async =>
+          (await channels.byRemoteKey('src-1', key)).valueOrNull!;
+      for (final key in ['201', '202', '203']) {
+        await channels.setFavorite(await channel(key), on: true);
+      }
+      final motors = (await favorites.createGroup(
+        'src-1',
+        'Motors',
+      )).valueOrNull!;
+      await favorites.moveChannel(
+        await channel('203'),
+        groupId: motors,
+        index: 0,
+      );
+      await favorites.moveChannel(
+        await channel('201'),
+        groupId: null,
+        index: 5,
+      );
+    });
+    await pumpApp(
+      tester,
+      initialLocation: AppDestination.liveTv.path,
+      overrides: live.overrides,
+    );
+    _live = live;
+    await _settle(tester);
+
+    final favorites = tester.getTopLeft(find.text('Favorites').first).dy;
+    final motors = tester.getTopLeft(find.text('Motors')).dy;
+    final all = tester.getTopLeft(find.text('All channels').first).dy;
+    expect(favorites < motors && motors < all, isTrue);
+
+    await tester.tap(find.text('Favorites').first);
+    await _settle(tester);
+    List<String> rows() => [
+      for (final row in tester.widgetList<ChannelRow>(find.byType(ChannelRow)))
+        row.name,
+    ];
+    // The group first, then the favorites in no group, in their order.
+    expect(rows(), ['Velocity Motors', 'Arena Sports 2', 'Arena Sports 1']);
+    expect(find.text('Order'), findsOneWidget, reason: 'the sort says whose');
+
+    await tester.tap(find.text('Motors'));
+    await _settle(tester);
+    expect(rows(), ['Velocity Motors']);
+    expect(find.text('1 channel'), findsOneWidget);
+    await _finish(tester);
+  });
+
+  testWidgets('Add to group…: New group… makes one with the channel in it', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.tap(find.text('Arena Sports 1').first);
+    await _settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await _settle(tester);
+    await tester.tap(find.text('Add to group…'));
+    await _settle(tester);
+    await tester.tap(find.text('New group…'));
+    await _settle(tester);
+
+    expect(find.text('New group'), findsOneWidget);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AppDialog),
+        matching: find.byType(EditableText),
+      ),
+      'Sports',
+    );
+    await tester.tap(find.text('Create'));
+    await _settle(tester);
+
+    expect(find.text('Sports'), findsWidgets);
+    final channel = (await tester.runAsync(
+      () => DbChannelRepository(_live!.db).byRemoteKey('src-1', '201'),
+    ))!.valueOrNull!;
+    expect(channel.isFavorite, isTrue);
+    expect(channel.favoriteGroupId, isNotNull);
     await _finish(tester);
   });
 

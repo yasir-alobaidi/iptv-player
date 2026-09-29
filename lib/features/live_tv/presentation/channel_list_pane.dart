@@ -9,6 +9,8 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
+import 'package:iptv_player/features/favorites/presentation/group_name_dialog.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
@@ -258,9 +260,13 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
                   ],
                 );
                 final sort = SegmentedControl<ChannelSort>(
-                  options: const [
-                    SegmentOption(value: ChannelSort.number, label: 'No.'),
-                    SegmentOption(value: ChannelSort.name, label: 'A–Z'),
+                  options: [
+                    SegmentOption(
+                      value: ChannelSort.number,
+                      // The favorites' first order is the user's own.
+                      label: isFavoritesFilter(query.filter) ? 'Order' : 'No.',
+                    ),
+                    const SegmentOption(value: ChannelSort.name, label: 'A–Z'),
                   ],
                   value: query.sort,
                   onChanged: notifier.setSort,
@@ -416,6 +422,12 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
         title: 'No favorites yet',
         message: 'Press F on a channel, or use its menu, to add it here.',
       ),
+      FavoriteGroupChannels() => const EmptyState(
+        compact: true,
+        icon: AppIcons.star,
+        title: 'No channels in this group yet',
+        message: "Use a channel's menu, Add to group, to put it here.",
+      ),
       _ when !query.showHidden => EmptyState(
         compact: true,
         icon: AppIcons.liveTv,
@@ -434,9 +446,17 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
   String _title(ChannelFilter filter) => switch (filter) {
     AllChannels() => 'All channels',
     FavoriteChannels() => 'Favorites',
+    FavoriteGroupChannels(:final groupId) => _groupName(groupId),
     UncategorizedChannels() => 'Uncategorized',
     CategoryChannels(:final categoryId) => _categoryName(categoryId),
   };
+
+  String _groupName(int id) {
+    final sourceId = ref.read(liveTvControllerProvider)?.query.sourceId;
+    if (sourceId == null) return 'Favorites';
+    final groups = ref.watch(favoriteGroupsProvider(sourceId)).value;
+    return groups?.where((g) => g.id == id).firstOrNull?.name ?? 'Favorites';
+  }
 
   String _categoryName(int id) {
     final sourceId = ref.read(liveTvControllerProvider)?.query.sourceId;
@@ -491,6 +511,11 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
           onPressed: () => unawaited(_toggleFavorite(channel)),
         ),
         AppMenuItem(
+          label: 'Add to group…',
+          icon: AppIcons.plus,
+          onPressed: () => unawaited(_groupMenu(anchor, channel)),
+        ),
+        AppMenuItem(
           label: 'Rename…',
           icon: AppIcons.edit,
           onPressed: () => unawaited(_rename(anchor, channel)),
@@ -505,6 +530,55 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
         ),
       ],
     );
+  }
+
+  /// "Add to group…": the source's groups (its own ticked), No group for
+  /// a favorite in one, and New group…. A channel not yet a favorite
+  /// becomes one; it goes at the end of the group.
+  Future<void> _groupMenu(BuildContext anchor, ChannelItem channel) async {
+    final favorites = ref.read(favoritesRepositoryProvider);
+    final groups = await ref.read(
+      favoriteGroupsProvider(channel.sourceId).future,
+    );
+    if (!anchor.mounted) return;
+    Future<void> into(int? groupId) =>
+        favorites.moveChannel(channel, groupId: groupId, index: 1 << 30);
+    await showAppMenu(
+      anchor,
+      items: [
+        for (final group in groups)
+          AppMenuItem(
+            label: group.name,
+            checked: channel.favoriteGroupId == group.id,
+            onPressed: () => unawaited(into(group.id)),
+          ),
+        if (channel.favoriteGroupId != null)
+          AppMenuItem(
+            label: 'No group',
+            onPressed: () => unawaited(into(null)),
+          ),
+        if (groups.isNotEmpty) const AppMenuItem.separator(),
+        AppMenuItem(
+          label: 'New group…',
+          icon: AppIcons.plus,
+          onPressed: () => unawaited(_newGroup(anchor, channel)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _newGroup(BuildContext anchor, ChannelItem channel) async {
+    final favorites = ref.read(favoritesRepositoryProvider);
+    final name = await showGroupNameDialog(
+      anchor,
+      title: 'New group',
+      action: 'Create',
+    );
+    if (name == null) return;
+    final created = await favorites.createGroup(channel.sourceId, name);
+    if (created.valueOrNull case final groupId?) {
+      await favorites.moveChannel(channel, groupId: groupId, index: 1 << 30);
+    }
   }
 
   Future<void> _rename(BuildContext anchor, ChannelItem channel) async {

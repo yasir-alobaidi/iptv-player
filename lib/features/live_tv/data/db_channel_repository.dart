@@ -12,7 +12,7 @@ const channelColumns =
     'c.id, c.source_id, c.remote_key, c.name, c.display_name, '
     'c.clean_name, c.quality, c.number, c.logo_url, c.category_id, '
     'c.epg_key, c.archive_days, c.is_hidden, '
-    'f.id IS NOT NULL AS is_favorite';
+    'f.id IS NOT NULL AS is_favorite, f.group_id AS favorite_group_id';
 
 /// The name a channel is shown by, and so sorted and filtered by
 /// ([ChannelItem.name]'s order).
@@ -38,6 +38,7 @@ ChannelItem channelFromRow(QueryRow row) {
     archiveDays: row.read<int>('archive_days'),
     isHidden: row.read<bool>('is_hidden'),
     isFavorite: row.read<bool>('is_favorite'),
+    favoriteGroupId: row.read<int?>('favorite_group_id'),
   );
 }
 
@@ -67,6 +68,7 @@ final class DbChannelRepository implements ChannelRepository {
     _db.channels,
     _db.categories,
     _db.favorites,
+    _db.favoriteGroups,
   };
 
   @override
@@ -78,7 +80,7 @@ final class DbChannelRepository implements ChannelRepository {
     final (where, variables) = _where(query);
     final rows = await _db
         .customSelect(
-          'SELECT $channelColumns ${_from()} $where ${_order(query.sort)} '
+          'SELECT $channelColumns ${_from()} $where ${_order(query)} '
           'LIMIT ? OFFSET ?',
           variables: [
             ...variables,
@@ -98,7 +100,7 @@ final class DbChannelRepository implements ChannelRepository {
         final row = await _db
             .customSelect(
               'SELECT i FROM (SELECT c.id AS id, '
-              'ROW_NUMBER() OVER (${_order(query.sort)}) - 1 AS i '
+              'ROW_NUMBER() OVER (${_order(query)}) - 1 AS i '
               '${_from()} $where) WHERE id = ?',
               variables: [...variables, Variable.withInt(id)],
               readsFrom: _tables,
@@ -164,7 +166,8 @@ final class DbChannelRepository implements ChannelRepository {
       'FROM channels c '
       'LEFT JOIN categories k ON k.id = c.category_id '
       "LEFT JOIN favorites f ON f.item_type = 'live' "
-      'AND f.source_id = c.source_id AND f.remote_key = c.remote_key';
+      'AND f.source_id = c.source_id AND f.remote_key = c.remote_key '
+      'LEFT JOIN favorite_groups fg ON fg.id = f.group_id';
 
   static (String, List<Variable<Object>>) _where(ChannelQuery query) {
     final clauses = <String>['c.source_id = ?'];
@@ -175,6 +178,9 @@ final class DbChannelRepository implements ChannelRepository {
         clauses.add('(k.id IS NULL OR k.is_hidden = 0)');
       case FavoriteChannels():
         clauses.add('f.id IS NOT NULL');
+      case FavoriteGroupChannels(:final groupId):
+        clauses.add('f.group_id = ?');
+        variables.add(Variable.withInt(groupId));
       case CategoryChannels(:final categoryId):
         clauses.add('c.category_id = ?');
         variables.add(Variable.withInt(categoryId));
@@ -193,7 +199,13 @@ final class DbChannelRepository implements ChannelRepository {
     return ('WHERE ${clauses.join(' AND ')}', variables);
   }
 
-  static String _order(ChannelSort sort) => switch (sort) {
+  /// The favorites' "number" order is the user's: the groups in their
+  /// order, the ones in no group last, and in each its channels in their
+  /// place (the ones from before v7, with none, by when they were added).
+  static String _order(ChannelQuery query) => switch (query.sort) {
+    ChannelSort.number when isFavoritesFilter(query.filter) =>
+      'ORDER BY fg.id IS NULL, fg.sort_order, fg.id, '
+          'f.sort_order IS NULL, f.sort_order, f.added_at, f.id',
     ChannelSort.number =>
       'ORDER BY c.number IS NULL, c.number, c.position, c.id',
     ChannelSort.name => 'ORDER BY $channelShownName COLLATE NOCASE, c.id',

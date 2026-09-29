@@ -19,6 +19,7 @@ final class ChannelItem {
     this.epgKey,
     this.archiveDays = 0,
     this.isFavorite = false,
+    this.favoriteGroupId,
     this.isHidden = false,
   });
 
@@ -50,6 +51,9 @@ final class ChannelItem {
   /// Catch-up days the provider keeps (0 = none).
   final int archiveDays;
   final bool isFavorite;
+
+  /// The group of favorites it is in; null when it is in none.
+  final int? favoriteGroupId;
   final bool isHidden;
 
   @override
@@ -68,6 +72,7 @@ final class ChannelItem {
       other.epgKey == epgKey &&
       other.archiveDays == archiveDays &&
       other.isFavorite == isFavorite &&
+      other.favoriteGroupId == favoriteGroupId &&
       other.isHidden == isHidden;
 
   @override
@@ -85,6 +90,7 @@ final class ChannelItem {
     epgKey,
     archiveDays,
     isFavorite,
+    favoriteGroupId,
     isHidden,
   );
 
@@ -136,6 +142,21 @@ final class CategoryChannels extends ChannelFilter {
   int get hashCode => Object.hash(3, categoryId);
 }
 
+/// One group of favorites, in the user's order (Phase 6 decision 7).
+@immutable
+final class FavoriteGroupChannels extends ChannelFilter {
+  const new(this.groupId);
+
+  final int groupId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FavoriteGroupChannels && other.groupId == groupId;
+
+  @override
+  int get hashCode => Object.hash(5, groupId);
+}
+
 /// Channels with no category, or one the provider no longer lists.
 @immutable
 final class UncategorizedChannels extends ChannelFilter {
@@ -149,10 +170,15 @@ final class UncategorizedChannels extends ChannelFilter {
 }
 
 enum ChannelSort {
-  /// The provider's numbers, then its order.
+  /// The provider's numbers, then its order; for the favorites, the
+  /// user's order.
   number,
   name,
 }
+
+/// The lists whose "number" order is the user's own.
+bool isFavoritesFilter(ChannelFilter filter) =>
+    filter is FavoriteChannels || filter is FavoriteGroupChannels;
 
 @immutable
 final class ChannelQuery {

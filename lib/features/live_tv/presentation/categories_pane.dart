@@ -6,6 +6,8 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
+import 'package:iptv_player/features/favorites/domain/favorites.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
@@ -53,6 +55,9 @@ class CategoriesPane extends ConsumerWidget {
     final all = ref
         .watch(channelCountProvider(ChannelQuery(sourceId: sourceId)))
         .value;
+    final groups =
+        ref.watch(favoriteGroupsProvider(sourceId)).value ??
+        const <FavoriteGroup>[];
     final notifier = ref.read(liveTvControllerProvider.notifier);
 
     void show(ChannelFilter filter) {
@@ -115,6 +120,19 @@ class CategoriesPane extends ConsumerWidget {
                             selected: current is FavoriteChannels,
                             onPressed: () => show(const FavoriteChannels()),
                           ),
+                          // Each group is a list of its own to zap
+                          // through, in the user's order (decision 7).
+                          for (final group in groups)
+                            _CategoryItem(
+                              label: group.name,
+                              count: group.count,
+                              nested: true,
+                              selected:
+                                  current is FavoriteGroupChannels &&
+                                  current.groupId == group.id,
+                              onPressed: () =>
+                                  show(FavoriteGroupChannels(group.id)),
+                            ),
                           _CategoryItem(
                             label: 'All channels',
                             count: all,
@@ -206,6 +224,7 @@ class _CategoryItem extends StatelessWidget {
     required this.onPressed,
     this.count,
     this.icon,
+    this.nested = false,
   });
 
   final String label;
@@ -213,6 +232,9 @@ class _CategoryItem extends StatelessWidget {
   final AppIcons? icon;
   final bool selected;
   final VoidCallback onPressed;
+
+  /// A group of favorites: under Favorites, set in by the star's width.
+  final bool nested;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +271,8 @@ class _CategoryItem extends StatelessWidget {
                   if (icon case final icon?) ...[
                     AppIcon(icon, size: 16, color: colors.textSecondary),
                     SizedBox(width: tokens.spacing.s8 + 2),
-                  ],
+                  ] else if (nested)
+                    SizedBox(width: 16 + tokens.spacing.s8 + 2),
                   Expanded(
                     child: Text(
                       label,

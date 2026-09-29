@@ -452,7 +452,7 @@ class _CategoryFilter extends ConsumerWidget {
     final notifier = ref.read(guideChannelsProvider.notifier);
     final label = switch (query.filter) {
       AllChannels() => 'All channels',
-      FavoriteChannels() => 'Favorites',
+      FavoriteChannels() || FavoriteGroupChannels() => 'Favorites',
       UncategorizedChannels() => 'Uncategorized',
       CategoryChannels(:final categoryId) =>
         categories.where((c) => c.id == categoryId).firstOrNull?.name ??

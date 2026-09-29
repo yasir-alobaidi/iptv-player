@@ -38,6 +38,33 @@ void main() {
     expect(seen.last, ['Arena Sports 1', 'Velocity Motors']);
   });
 
+  test('favorite channels follow the order the user set, groups first '
+      '(Phase 6 decision 7)', () async {
+    final db = home.db;
+    await db.favoritesDao.add(UserItemType.live, 'src-1', '203', home.now);
+    await db.favoritesDao.add(UserItemType.live, 'src-1', '202', home.now);
+    final group = await db.favoritesDao.createGroup('src-1', 'Motors');
+    await db.favoritesDao.move(
+      UserItemType.live,
+      'src-1',
+      '202',
+      groupId: group,
+      index: 0,
+      at: home.now,
+    );
+    await db.favoritesDao.move(
+      UserItemType.live,
+      'src-1',
+      '201',
+      groupId: null,
+      index: 5,
+      at: home.now,
+    );
+
+    final list = await rows.favoriteChannels('src-1').first;
+    expect([for (final c in list) c.remoteKey], ['202', '203', '201']);
+  });
+
   test('recently watched channels: newest first; hidden and gone ones '
       'left out', () async {
     Future<void> watched(String key, int minutesAgo) =>
