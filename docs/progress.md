@@ -104,7 +104,7 @@ _Update at the end of every session._
 
 ## Next
 1. **You:** review step 8 and push; CI then runs the walk and the poster grid (in debug, 48 s)
-2. **Phase 6 — Search and polish:** plan first (the Ctrl+K overlay over FTS, the Favorites screen, display-name cleanup with quality badges, hide/unhide everywhere)
+2. **Phase 6 — Search and polish: the plan is written and waits for your approval** (`docs/plans/phase-6-search-and-polish.md`: eight decisions, eight steps, three sketches). The step to start with once approved: step 1, channel name cleanup and schema v7
 3. The Windows test failures (Known issues), one small commit each, confirmed by CI after a push
 4. With your go-ahead: one guide import from your panel (the scheduler would now do it on its own at launch); a rerun of the VOD test would time a seek on your panel (the first run couldn't: ADR-012 step 8)
 5. The 8-hour soak before a release; the Windows playback run when your Windows PC is available
