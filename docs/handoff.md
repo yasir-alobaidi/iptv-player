@@ -9,12 +9,10 @@ docs/08-phases-and-prompts.md and docs/04-casting.md.
 1. **Read the Phase 7 plan** (`docs/plans/phase-7-casting.md`): eight
    decisions, each with a recommendation first, and five sketches. Say
    which recommendations you accept or what to change.
-2. **Push** this session's three local commits: "Remind me goes into
-   Phase 9…", "No movie-name cleanup for v1…" and "Phase 7 plan:
-   casting, for approval".
-3. **CI:** the Phase 6 push (abd0c1a) ran **green on Windows for the first
-   time since Phase 4**. Linux's unit tests were green; its integration
-   walks were still running at the end of this session — check the run.
+2. **Push** this session's four local commits, from "Remind me goes into
+   Phase 9…" to "CI green on both systems…".
+3. **CI:** the Phase 6 push (abd0c1a) ran **green on both systems** —
+   Windows for the first time since Phase 4.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -33,8 +31,7 @@ The Phase 7 plan is <approved as written | approved with these changes: …>. St
   format, `build_runner` leaves no diff; **2,101 app tests** (11 skipped)
   under `TZ=UTC`; the fake provider's 141; all 17 integration walks under
   xvfb. This session changed docs only.
-- **CI (abd0c1a):** Windows green, every test; Linux unit tests green,
-  integration walks pending at the time of writing.
+- **CI (abd0c1a): green on Linux and Windows.**
 
 ## Done this session (2026-09-29, the third)
 - **"Remind me" goes into Phase 9** (your answer to ADR-013 decision 5):
@@ -66,8 +63,6 @@ The Phase 7 plan is <approved as written | approved with these changes: …>. St
    **Ask before every cast** to the Living Room TV (memory), one
    announced, watched cast at a time; the plan names the three times the
    TV is used (steps 2, 6 and 8).
-2. **Alongside:** whatever the Linux integration walks of run 36612277646
-   name, if any.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -80,8 +75,7 @@ The Phase 7 plan is <approved as written | approved with these changes: …>. St
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems.** Windows: green on abd0c1a. Linux: unit
-  tests green there; confirm its integration walks.
+- ~~**CI green on both systems.**~~ Done on abd0c1a; keep it so.
 - **Phase 7 — Casting**, the largest and riskiest phase: our own Cast v2
   client, the ffprobe-based planner, the FFmpeg relay with its supervisor,
   the UI, and the casting matrix on the user's TV.

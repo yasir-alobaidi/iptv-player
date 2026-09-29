@@ -3,7 +3,7 @@
 _Update at the end of every session._
 
 ## Current phase
-**Phase 6 — Search, favorites, names and hiding: done, ADR-013 Accepted at the phase exit (2026-09-29).** Every exit criterion proved: search by keyboard on the `large` catalogue, favorites' order and groups through a restart and a re-sync, the name corpus, and hidden channels and categories gone from Live TV, the Guide, Search and Home and back from Settings. **Next: Phase 7 — Casting: the plan is written and waiting for your approval** (`docs/plans/phase-7-casting.md`). CI at the Phase 6 push (abd0c1a, run 36612277646): **Windows green, every test passing, for the first time since Phase 4** (the four fixes worked); Linux's unit tests green, its integration walks still running when this was written.
+**Phase 6 — Search, favorites, names and hiding: done, ADR-013 Accepted at the phase exit (2026-09-29).** Every exit criterion proved: search by keyboard on the `large` catalogue, favorites' order and groups through a restart and a re-sync, the name corpus, and hidden channels and categories gone from Live TV, the Guide, Search and Home and back from Settings. **Next: Phase 7 — Casting: the plan is written and waiting for your approval** (`docs/plans/phase-7-casting.md`). CI at the Phase 6 push (abd0c1a, run 36612277646): **green on both systems** — Windows passing every test for the first time since Phase 4 (the four fixes worked), Linux with every integration walk.
 
 ## Done
 - 2026-09-14: Planning docs and CLAUDE.md created
@@ -118,7 +118,7 @@ _Update at the end of every session._
 - **The Phase 7 plan, for your approval** (`docs/plans/phase-7-casting.md`): eight steps in docs/08's order, eight decisions with a recommendation first, five sketches (the casting view for a movie, Live TV while casting, Settings → Casting, the casting view's states, Add by address)
 
 ## Next
-1. **You:** approve the Phase 7 plan (or change it), and push this session's three local commits
+1. **You:** approve the Phase 7 plan (or change it), and push this session's four local commits
 2. **Phase 7 step 1** once approved: discovery and known devices (listening only, nothing shown on the TV). Ask before every cast (memory)
 3. ~~"Remind me": Phase 9 or after v1~~ — **Phase 9** (you, 2026-09-29; now docs/08's Phase 9 step 3 and an exit criterion). ~~A movie-name cleanup~~ — **none for v1** (you, 2026-09-29; ADR-013 step 8)
 4. The 8-hour soak before a release; the Windows playback run when your Windows PC is available
