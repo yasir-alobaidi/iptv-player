@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/table_changes.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/features/vod/data/vod_rows.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
@@ -98,20 +99,15 @@ final class DbWatchProgress implements WatchProgress {
   /// Worked out again whenever the history, the catalogue or its details
   /// change: the history says what was watched, the catalogue what it is.
   @override
-  Stream<List<ContinueItem>> continueWatching({int limit = 20}) => _db
-      .customSelect(
-        'SELECT 1',
-        readsFrom: {
-          _db.watchHistory,
-          _db.movies,
-          _db.movieDetails,
-          _db.series,
-          _db.episodes,
-          _db.favorites,
-        },
-      )
-      .watch()
-      .asyncMap((_) => _continueWatching(limit));
+  Stream<List<ContinueItem>> continueWatching({int limit = 20}) =>
+      tableChanges(_db, {
+        _db.watchHistory,
+        _db.movies,
+        _db.movieDetails,
+        _db.series,
+        _db.episodes,
+        _db.favorites,
+      }).asyncMap((_) => _continueWatching(limit));
 
   Future<List<ContinueItem>> _continueWatching(int limit) async {
     final movies = await _movies(limit);

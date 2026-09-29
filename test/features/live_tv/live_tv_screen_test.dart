@@ -360,6 +360,44 @@ void main() {
     await _finish(tester);
   });
 
+  testWidgets('Tab goes round the screen: the categories, Manage, the '
+      'filter, the sort, the list', (tester) async {
+    await pump(tester);
+    String? stop() {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      if (focused == null) return null;
+      if (focused.findAncestorWidgetOfExactType<SearchField>() != null) {
+        return 'filter';
+      }
+      if (focused.findAncestorWidgetOfExactType<ChannelRow>() case final row?) {
+        return 'row ${row.name}';
+      }
+      return focused
+          .findAncestorWidgetOfExactType<FocusableSurface>()
+          ?.semanticLabel;
+    }
+
+    Focus.of(tester.element(find.text('Sports').first)).requestFocus();
+    await tester.pump();
+    final stops = <String?>[];
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      stops.add(stop());
+    }
+
+    expect(stops, [
+      'Manage',
+      'filter',
+      'No.',
+      'A–Z',
+      'row Arena Sports 1',
+      // Back into the categories pane, on its first item.
+      'Favorites, 0',
+    ]);
+    await _finish(tester);
+  });
+
   testWidgets('an empty category offers to show hidden channels', (
     tester,
   ) async {

@@ -284,118 +284,132 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     final title = _title(query.filter);
     final notifier = ref.read(liveTvControllerProvider.notifier);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface1,
-        borderRadius: tokens.radii.lgAll,
-        border: Border.all(color: colors.borderSubtle),
-      ),
-      padding: EdgeInsets.all(tokens.spacing.s12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              tokens.spacing.s4 + 2,
-              tokens.spacing.s4,
-              tokens.spacing.s4 + 2,
-              tokens.spacing.s12,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final heading = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.text.h3
-                          .withWeight(700)
-                          .copyWith(color: colors.textPrimary),
-                    ),
-                    SizedBox(height: tokens.spacing.s4 - 2),
-                    Text(
-                      switch (count.value) {
-                        null => ' ',
-                        1 => '1 channel',
-                        final n => '${formatCount(n)} channels',
-                      },
-                      style: tokens.text.labelSmall.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ],
-                );
-                final sort = SegmentedControl<ChannelSort>(
-                  options: [
-                    SegmentOption(
-                      value: ChannelSort.number,
-                      // The favorites' first order is the user's own.
-                      label: isFavoritesFilter(query.filter) ? 'Order' : 'No.',
-                    ),
-                    const SegmentOption(value: ChannelSort.name, label: 'A–Z'),
-                  ],
-                  value: query.sort,
-                  onChanged: notifier.setSort,
-                );
-                SearchField filter({double? width}) => SearchField(
-                  key: ValueKey('live-filter-${query.filter.hashCode}'),
-                  controller: _filterText,
-                  hint: 'Filter $title',
-                  shortcut: null,
-                  width: width,
-                  onChanged: notifier.setText,
-                );
-                // Narrow: the filter and the sort go under the title.
-                if (constraints.maxWidth < 560) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Its own group: in the screen's reading order the tall panes beside
+    // it make one band of everything, where the list (on the filter's
+    // left edge) came before the filter, so Tab from the filter skipped
+    // it. Inside, the header comes first, then the list.
+    return FocusTraversalGroup(
+      policy: ReadingOrderTraversalPolicy(),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface1,
+          borderRadius: tokens.radii.lgAll,
+          border: Border.all(color: colors.borderSubtle),
+        ),
+        padding: EdgeInsets.all(tokens.spacing.s12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                tokens.spacing.s4 + 2,
+                tokens.spacing.s4,
+                tokens.spacing.s4 + 2,
+                tokens.spacing.s12,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final heading = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      heading,
-                      SizedBox(height: tokens.spacing.s12),
-                      Row(
-                        children: [
-                          Expanded(child: filter()),
-                          SizedBox(width: tokens.spacing.s8),
-                          sort,
-                        ],
+                      Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.text.h3
+                            .withWeight(700)
+                            .copyWith(color: colors.textPrimary),
+                      ),
+                      SizedBox(height: tokens.spacing.s4 - 2),
+                      Text(
+                        switch (count.value) {
+                          null => ' ',
+                          1 => '1 channel',
+                          final n => '${formatCount(n)} channels',
+                        },
+                        style: tokens.text.labelSmall.copyWith(
+                          color: colors.textTertiary,
+                        ),
                       ),
                     ],
                   );
-                }
-                return Row(
-                  children: [
-                    Expanded(child: heading),
-                    SizedBox(width: tokens.spacing.s12),
-                    filter(width: 200),
-                    SizedBox(width: tokens.spacing.s12),
-                    sort,
-                  ],
-                );
-              },
-            ),
-          ),
-          Expanded(
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.arrowLeft):
-                    ?widget.onBack,
-                const SingleActivator(LogicalKeyboardKey.arrowRight):
-                    ?widget.onForward,
-                const SingleActivator(LogicalKeyboardKey.keyF): () {
-                  final channel = ref.read(liveTvControllerProvider)?.selected;
-                  if (channel != null) unawaited(_toggleFavorite(channel));
+                  final sort = SegmentedControl<ChannelSort>(
+                    options: [
+                      SegmentOption(
+                        value: ChannelSort.number,
+                        // The favorites' first order is the user's own.
+                        label: isFavoritesFilter(query.filter)
+                            ? 'Order'
+                            : 'No.',
+                      ),
+                      const SegmentOption(
+                        value: ChannelSort.name,
+                        label: 'A–Z',
+                      ),
+                    ],
+                    value: query.sort,
+                    onChanged: notifier.setSort,
+                  );
+                  SearchField filter({double? width}) => SearchField(
+                    key: ValueKey('live-filter-${query.filter.hashCode}'),
+                    controller: _filterText,
+                    hint: 'Filter $title',
+                    shortcut: null,
+                    width: width,
+                    onChanged: notifier.setText,
+                  );
+                  // Narrow: the filter and the sort go under the title.
+                  if (constraints.maxWidth < 560) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        heading,
+                        SizedBox(height: tokens.spacing.s12),
+                        Row(
+                          children: [
+                            Expanded(child: filter()),
+                            SizedBox(width: tokens.spacing.s8),
+                            sort,
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: heading),
+                      SizedBox(width: tokens.spacing.s12),
+                      filter(width: 200),
+                      SizedBox(width: tokens.spacing.s12),
+                      sort,
+                    ],
+                  );
                 },
-              },
-              child: FocusPane(
-                debugLabel: 'live-channels',
-                controller: widget.controller,
-                tabStop: true,
-                child: _body(context, view, count),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowLeft):
+                      ?widget.onBack,
+                  const SingleActivator(LogicalKeyboardKey.arrowRight):
+                      ?widget.onForward,
+                  const SingleActivator(LogicalKeyboardKey.keyF): () {
+                    final channel = ref
+                        .read(liveTvControllerProvider)
+                        ?.selected;
+                    if (channel != null) unawaited(_toggleFavorite(channel));
+                  },
+                },
+                child: FocusPane(
+                  debugLabel: 'live-channels',
+                  controller: widget.controller,
+                  tabStop: true,
+                  child: _body(context, view, count),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/table_changes.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/features/home/domain/home.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -25,7 +26,7 @@ final class DbHomeRepository implements HomeRepository {
   /// Fires once at once, then after every write to [tables].
   Stream<void> _changes(
     Set<ResultSetImplementation<dynamic, dynamic>> tables,
-  ) => _db.customSelect('SELECT 1', readsFrom: tables).watch();
+  ) => tableChanges(_db, tables);
 
   static T _valueOf<T>(Result<T> result) => switch (result) {
     Ok(:final value) => value,
