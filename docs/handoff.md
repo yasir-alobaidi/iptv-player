@@ -1,119 +1,103 @@
-# Handoff — 2026-09-29 (Phase 6: steps 1–6 built, step 7 half built)
+# Handoff — 2026-09-29 (Phase 6 done; Phase 7, casting, next)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-013 in
-docs/decisions.md, and docs/plans/phase-6-search-and-polish.md.
+it. Read this file whole, then CLAUDE.md, docs/progress.md, and the Phase 7
+part of docs/08-phases-and-prompts.md with docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review and push** the local commits, oldest first: "Phase 6 step 1:
-   channel names cleaned and stored, schema v7", steps 2–6, "CI: run
-   every integration test and name each one that fails", "Phase 6 step
-   7a: …" and this handoff. The plan commit (eff4053) is pushed.
-2. **CI after the push:** the plan push's run failed one Linux integration
-   test that the public annotations don't name. With the CI change, every
-   integration file runs and each failure is an annotation, so the next
-   run says which. Windows fails its 4 known tests.
-3. **Schema v7 upgrades your database** the first time the new build runs;
-   channel names are then cleaned in the background (about a second per
-   50,000) and your next guide import stores programmes in the order
-   search needs.
-4. **Try it:** Ctrl+K or `/` and type — ↑/↓, Tab between groups, Enter
-   plays a channel or opens a title, the Menu key has the channel menu;
-   Favorites (Ctrl+6): New group, Alt+↑/↓ to move, F to remove (Undo);
-   Live TV: a group under Favorites, Show hidden channels in a channel's
-   menu, the categories pane's menu and Alt+↑/↓; Settings → Categories →
-   Hidden channels.
+1. **Review and push** the local commits, oldest first: "Fix CI's VOD walk:
+   an episode left through the next-episode card is watched" through
+   "Phase 6 step 8b: your panel's names reviewed, and the phase exit", and
+   this handoff.
+2. **CI after the push:** Linux should be green (its one failure,
+   `vod_walk_test.dart`, is fixed). On Windows, four of its failures were
+   worked on without a Windows machine: the path test, the two "file in
+   use" deletions, and the timeouts of many-commit tests (the database now
+   keeps a write-ahead log). The run says which are gone.
+3. **Your channel names change a little at the next sync:** 52 of your
+   12,608 (`BEIN SPORTS FR 1 4K | France |` → BEIN SPORTS FR 1 with a 4K
+   badge; `STV | UK |` → STV).
+4. **Try it:** hide a channel from Search's menu — the toast now shows over
+   the overlay, and **Ctrl+Z** undoes any "… · Undo" toast; Settings →
+   Categories: the list is one Tab stop, the Menu key renames and moves;
+   Live TV: Tab now goes categories → Manage → filter → sort → list.
 5. **Decide when you can:** "Remind me" on upcoming programmes — Phase 9,
-   or after v1 (decision 5)?
+   or after v1 (ADR-013 decision 5)? And whether you want a cleanup of
+   movie names (not recommended for v1: ADR-013 step 8).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-ADR-013 in docs/decisions.md and docs/plans/phase-6-search-and-polish.md first.
-Phase 6 steps 1–7a are reviewed and pushed; CI is <green | red: …>.
-Finish step 7 (its tests and walk), then step 8, the phase exit.
+docs/08-phases-and-prompts.md (Phase 7) and docs/04-casting.md first.
+Phase 6 is pushed; CI is <green | red: …>. Write the Phase 7 (casting) plan for my approval.
 ```
 
 ## Where things stand
-- **Phase 6 steps 1–6 are built and committed; step 7 is half built**
-  (part a committed, all green). ADR-013 has each step as built.
-- **Checks, all green at the step 7a commit:** analyze, format,
-  `build_runner` leaves no diff; **2,057 app tests** (10 skipped) under
-  `TZ=UTC`; under xvfb: `search_keyboard` (new, the `large` catalogue),
-  `live_tv_keyboard`, `guide_keyboard`, `guide_settings_keyboard`,
-  `guide_watch`, `vod_walk`, `app_launch`.
-- **Measured:** search on the `large` catalogue with a 611,328-programme
-  guide: median 6.6 ms, p95 24 ms, worst 31 ms (proposed budget 50 ms);
-  the channel-name fill 1.2 s for 50,000.
+- **Phase 6 is done: ADR-013 Accepted** at the phase exit. Every exit
+  criterion is proved (search by keyboard on the `large` catalogue;
+  favorites' order and groups through a restart and a re-sync; the name
+  corpus; hidden channels and categories gone from Live TV, the Guide,
+  Search and Home, back from Settings).
+- **Checks, all green at the last commit:** analyze, format,
+  `build_runner` leaves no diff; **2,101 app tests** (11 skipped) under
+  `TZ=UTC`; the fake provider's 141; **all 17 integration walks** under
+  xvfb (every file but the real-provider ones, the soak, the zap benchmark
+  and the two profile-mode scroll measurements).
+- **Measured:** typing into search on the `large` catalogue, 0 of 488
+  frames over 16 ms; search per query median 6.5 ms, worst 29.7 ms; the
+  `large` sync 5.8 s (write-ahead log).
 
-## Done this session (2026-09-29)
-- **The plan approved** ("continue the work"); your panel's "1 of 1
-  connections" was another of your devices (noted in ADR-012).
-- **Step 1:** `cleanChannelName` with a 111-name corpus and a fuzz; the
-  matcher's tag tables shared; schema v7 (`clean_name`, `quality`,
-  `favorite_groups`, `favorites.group_id`, the search index on the name
-  shown); sync writes both columns; the guarded fill for older catalogues.
-  **Departure:** codec, frame-rate and Backup/VIP tags stay in the name —
-  only resolution tags become the badge — so two feeds of one channel
-  don't read the same.
-- **Step 2:** `ChannelBadge` after the name on Live TV's and the player
-  panel's rows; Rename shows the provider's name and returns to the
-  cleaned one.
-- **Step 3:** the search repository. Found by the benchmark: short words
-  took 0.7–5.2 s on the programme index. Fixed by storing the guide in
-  start order and reading matches in that order from the first programme
-  on now (31 ms worst).
-- **Step 4:** the overlay, every state, the keyboard in the field, the
-  hand-offs (Guide on a programme, Show all into filters), goldens, the
-  integration walk.
-- **Step 5:** favorites' order and groups; Live TV's groups under
-  Favorites; Home in your order; exit criterion 2 proved against the fake
-  panel.
-- **Step 6:** the Favorites screen (canvas), its model, drag and keyboard
-  moves, Undo, goldens.
-- **Step 7a:** one channel menu (Live TV, Guide, Home, Favorites, Search),
-  hide with Undo, the categories pane's menu and moves, Show hidden
-  channels, the Hidden channels tab, Live TV's list keeping the keyboard
-  under the wheel.
-- **CI:** every integration file runs, each failure named.
+## Done this session (2026-09-29, the second)
+- **CI's Linux failure** was `vod_walk_test.dart`, never green on CI: with
+  CI's 120 s samples an episode left through the next-episode card was
+  saved at 92 %, under "watched". A real bug for short episodes: moving on
+  through the card now saves it as watched. CI annotates each failing
+  integration test with its error.
+- **Windows, four fixes** (one commit each): the path test; the playlist
+  check and a stopped sync close the file before the isolate is killed;
+  the write-ahead log.
+- **Step 7, the rest:** its tests; the Categories manager's list one Tab
+  stop; the hiding walk. Found and fixed: toasts now show over every route
+  and **Ctrl+Z** runs a shown Undo; menu items run once the menu has faded
+  (a semantics assertion in the Guide); Tab from Live TV's filter never
+  reached the list; Home's Recently watched kept a hidden category's
+  channel; Home's rows missed changes made elsewhere (drift shared every
+  `SELECT 1` change stream).
+- **Step 8, the exit:** the favorites walk; the typing-frames measurement;
+  your panel's names (with your go-ahead: one catalogue-only sync, no
+  stream) — the trailing-country fix; docs/05, 02 and 06; ADR-013
+  Accepted.
 
 ## What's next
-1. **Step 7, the rest:** widget tests for the Hidden channels tab (list,
-   filter, Show and the focus moving on, Show all, the tab appearing),
-   the categories pane's menu (Hide with Undo, Rename, Move) and Alt+↑/↓,
-   the Guide's menu key, Search's channel menu; the **exit-criterion-4
-   walk** (an integration test: hide a channel and a hidden category's
-   non-favorite → gone from Live TV, the Guide, Search and Home → Settings
-   → Hidden channels → Show → back); the Categories manager's list as one
-   Tab stop (Known issues). Record in ADR-013 step 7.
-2. **Step 8 — the exit** (plan): the keyboard walk against the fake panel;
-   frames while typing into search in profile mode on the real display;
-   with your go-ahead (a pop-up first: catalogue calls only, no stream)
-   one sync of your panel into a throwaway database to review the cleanup
-   on its 12,610 channel names and look at its movie names; docs/05 "As
-   built" (Search, Favorites, names), docs/02's schema v7, docs/06's
-   search budget (50 ms); ADR-013 Accepted; progress; handoff.
-3. **Alongside:** the Linux integration test CI names; the Windows
-   failures, one commit each.
+1. **Phase 7 — Casting: write the plan first**, for approval, as every
+   phase has (docs/plans/phase-7-….md; decisions with a recommendation
+   first; ADR-014 as steps land). docs/08's Phase 7 and docs/04 are the
+   spec; ADR-004 and ADR-006 hold the spike's findings (HEVC as one
+   continuous fragmented MP4, 4K needing the TV's Input Signal Plus, a
+   re-LOAD after FINISHED, multicast_dns as the proven discovery
+   fallback), ADR-010 that the relay must own its sockets. **Ask before
+   every cast** to the Living Room TV (memory), one announced, watched
+   cast at a time.
+2. **Alongside:** whatever Windows failures the next CI run still names.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
-- A guide imported before this build keeps channel order until its next
-  import, so programme search hits may not be the soonest for up to a day.
+- Tab coming round into Live TV's categories pane lands on its first item,
+  not the chosen category.
+- A guide imported before Phase 6 keeps channel order until its next
+  import (at most a day).
 - `GuideGridController.showProgramme` is lost if the Guide's view is
   rebuilt for another source before the grid has rows.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems.** Linux: one integration test to identify
-  (see above); Windows fails 4 named tests (progress.md Known issues).
-- **Phase 6 — Search and polish:** steps 7 (rest) and 8 left.
+- **CI green on both systems.** Linux: should be green now. Windows: see
+  what the next run names.
 - **Phase 7 — Casting**, the largest and riskiest phase: our own Cast v2
   client, the ffprobe-based planner, the FFmpeg relay with its supervisor,
-  the UI, and the casting matrix on the user's TV. Ask before every cast
-  (memory). The relay must own its sockets (ADR-010).
+  the UI, and the casting matrix on the user's TV.
 - **Phase 8 — Downloads and the local library:** resumable downloads
   (`.part` + verify + rename; they yield to playback), the library
   scanner, offline playback, library casting, the SIGKILL-safety tests.
@@ -190,6 +174,21 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
+New this session (Phase 6 steps 7–8, and alongside):
+- **Toasts live at the app's root** (`lib/app/shell/app_toasts.dart`, `AppToasts` around the router's navigator, in `app.dart` and the test harness), over every route. `AppNotice.undoable(message, onUndo:)` makes an Undo toast that **Ctrl+Z** runs; `ToastHostController.act()` / `undo()`; an action ends its toast. The shell no longer hosts toasts.
+- **A menu item runs once the menu has faded out** (`_MenuRoute` in `app_popups.dart`: `completed.then(...)`, 120 ms). Tests that check an item's effect must pump past it: `settleApp` pumps one more frame; files with their own `_settle` loops use 8 rounds where they open menus.
+- **Change streams:** never `customSelect('SELECT 1', readsFrom: …).watch()` — drift shares query streams by SQL and variables, not tables. Use `tableChanges(db, tables)` (`lib/data/db/table_changes.dart`).
+- **`ChannelItem.inHiddenCategory` and `isVisible`** (decision 8's rule in one getter); `channelColumns` reads `k.is_hidden`, so every query using it must `LEFT JOIN categories k`.
+- **Name cleanup's step 6:** `withoutTrailingCountries` and `trailingCountries` in `channel_name_tags.dart`, shared by the cleaner and the guide's matcher. The corpus has the real panel's cases.
+- **`JobCancellation.beforeStop(close)`:** work a guarded job runs before it answers that it can be killed (close files). `parseM3u(stop:)` and `StopReading` end a parse cleanly; `readM3uInBackground(stopAfter:)`.
+- **The database keeps a write-ahead log** (`configureAppDatabase`, used by `openAppDatabase`); a test that opens its own file database with `NativeDatabase(file, setup: configureAppDatabase)` gets the same. A `-wal` file sits beside the database while it is open.
+- **`playVod(finishedLeaving: true)`** saves the file being left as watched (the next-episode card).
+- **Live TV's list pane is its own `FocusTraversalGroup`** (reading order inside); Settings → Categories' list is a `FocusPane(tabStop: true)` with a row menu.
+- **Integration support:** `PanelApp.restart()` (same data folder and keyring); `Keys` maps F and Z to physical keys; a walk that types under `flutter drive` must `tester.testTextInput.register()`. New walks: `hiding_walk_test.dart`, `favorites_walk_test.dart`; the measurement `search_typing_test.dart` (profile mode on the real display).
+- **`test/tools/real_panel_names_test.dart`** (tag `real_provider`, skipped unless run with `--tags real_provider --run-skipped`): syncs the user's panel into a throwaway database and writes the name review to `build/real_provider_run/names/`. **Only with the user's go-ahead.**
+- **CI:** `tools/ci/failed_tests.dart` reads a widget test's printed exception; the integration loop writes a JSON report per file.
+- **Traps met this session:** CI's VOD samples are 120 s, this laptop's 600 s — reproduce CI failures with CI's samples (generate into the scratchpad with `OUT_DIR=`, swap them in, put them back); a killed isolate's files stay open until collected; `git checkout <file>` to undo a temporary edit also drops the file's other uncommitted changes; the shell's safety check sometimes gives no verdict for a while — carry on with file edits and come back.
+
 New this session (Phase 6 steps 1–7a):
 - **Channel names** (`lib/features/live_tv/domain/channel_names.dart`: `cleanChannelName`, `ChannelQuality` stored by name; `channel_name_tags.dart`: the tag tables and scanners the guide's matcher shares — keep them in one place). `ChannelItem.name` is rename ?? `clean_name` ?? provider name (`channelShownName`, `channelColumns`, `channelFromRow` in `db_channel_repository.dart` — reuse them in any query that lists channels); `providerName` is the raw name whenever it differs; `isRenamed`; `quality`; `favoriteGroupId`.
 - **Every channel row sync writes goes through `withCleanName`** (`lib/data/sync/channel_rows.dart`); `clean_name`/`quality` are in the channels DAO's `DoUpdate` list. Tests that insert channels and expect search or the cleaned name must use it too. `ChannelNameFill` (+ `runChannelNameWork`) fills rows with no cleaned name after launch, guarded, before the launch syncs.
@@ -644,6 +643,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 6 exit (ADR-013): toasts over every route with Ctrl+Z for Undo; menu items after the menu's fade; the write-ahead log (`synchronous = NORMAL`); an episode left through the next-episode card is watched; trailing countries dropped only from the list (not the UK's nations, regions, languages or Georgia), a bare country after a lone tag kept as the name; no movie-name cleanup for v1 (unless the user asks).
 - Phase 6 (ADR-013): cleaned names stored (`clean_name`, `quality`), technical tags kept in the name, only resolution tags as the badge; the search index on the name shown; search's ranking (source, favorites, prefix, rank) and the programme query by row-id order from the first programme on now (measured: 0.7–5.2 s → 31 ms worst); one-letter words only narrow programmes; no "Show all" for programmes; favorites' order per group with renumbering moves; groups under Favorites in Live TV; "Order" on favorites' sort; the flat header/row list for the Favorites screen; one channel menu everywhere; "Hidden" as a tag.
 - Phase 5 step 8 (ADR-012): the first control after a jump in reading
   order, with the screen's own autofocus winning; the details chip out of
@@ -755,6 +755,8 @@ From earlier sessions (still true):
 ## Open questions for the user
 - Remind me on upcoming programmes: Phase 9, or after v1? (Phase 6
   decision 5; the plan suggested Phase 9.)
+- A movie-name cleanup: not recommended for v1 (ADR-013 step 8); the
+  `Title - HD` pairs could get the channels' badge later if wanted.
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
