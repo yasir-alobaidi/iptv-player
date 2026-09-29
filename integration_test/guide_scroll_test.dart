@@ -14,14 +14,12 @@
 // which writes them to build/integration_response_data.json as well. The
 // Linux embedder reports raster time as 0, so build time is the number.
 
-import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +42,7 @@ import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import 'support/fake_panel.dart';
+import 'support/frames.dart';
 import 'support/keyboard.dart';
 
 void main() {
@@ -152,39 +151,15 @@ void main() {
       );
       final center = tester.getCenter(list);
 
-      Future<void> wait(int ms) => tester.runAsync(
-        () => Future<void>.delayed(Duration(milliseconds: ms)),
-      );
+      Future<void> wait(int ms) => waitReal(tester, ms);
       final pointer = TestPointer(1, PointerDeviceKind.mouse);
       Future<void> wheel(Offset delta) async {
         await tester.sendEventToBinding(pointer.hover(center));
         await tester.sendEventToBinding(pointer.scroll(delta));
       }
 
-      Future<_FrameStats> measure(Future<void> Function() scroll) async {
-        final frames = <FrameTiming>[];
-        void collect(List<FrameTiming> timings) => frames.addAll(timings);
-        var last = DateTime.now();
-        var worstGap = Duration.zero;
-        final ticker = Timer.periodic(const Duration(milliseconds: 16), (_) {
-          final now = DateTime.now();
-          if (now.difference(last) > worstGap) worstGap = now.difference(last);
-          last = now;
-        });
-        SchedulerBinding.instance.addTimingsCallback(collect);
-        final policy = binding.framePolicy;
-        binding.framePolicy =
-            LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-        final watch = Stopwatch()..start();
-        await scroll();
-        await wait(600);
-        watch.stop();
-        ticker.cancel();
-        SchedulerBinding.instance.removeTimingsCallback(collect);
-        binding.framePolicy = policy;
-        await tester.pump();
-        return _FrameStats(frames, worstGap, watch.elapsed);
-      }
+      Future<FrameStats> measure(Future<void> Function() scroll) =>
+          measureFrames(tester, binding, scroll);
 
       // With --dart-define=GUIDE_TIMELINE=true: the keys again, traced,
       // into build/integration_response_data.json instead of measured.
@@ -219,7 +194,7 @@ void main() {
         return;
       }
 
-      final results = <String, _FrameStats>{
+      final results = <String, FrameStats>{
         // Down the channels: flings, then the wheel, a notch a frame.
         'fling': await measure(() async {
           for (var i = 0; i < 12; i++) {
@@ -288,43 +263,4 @@ void main() {
     // semantics tree on every frame unless told not to.
     semanticsEnabled: false,
   );
-}
-
-/// Frame build and raster times over one kind of scroll, and the UI
-/// isolate's longest pause (a 16 ms timer's worst late tick).
-final class _FrameStats {
-  new(List<FrameTiming> frames, this.worstGap, this.duration)
-    : build = [for (final f in frames) f.buildDuration]..sort(),
-      raster = [for (final f in frames) f.rasterDuration]..sort();
-
-  final List<Duration> build;
-  final List<Duration> raster;
-  final Duration worstGap;
-  final Duration duration;
-
-  static double _ms(Duration d) => d.inMicroseconds / 1000;
-
-  double _pct(List<Duration> sorted, double p) =>
-      sorted.isEmpty ? 0 : _ms(sorted[((sorted.length - 1) * p).round()]);
-
-  int _over(List<Duration> sorted, int ms) =>
-      sorted.where((d) => d > Duration(milliseconds: ms)).length;
-
-  Map<String, Object> toJson() => {
-    'ms': duration.inMilliseconds,
-    'frames': build.length,
-    'build_p50_ms': _pct(build, .5),
-    'build_p90_ms': _pct(build, .9),
-    'build_p99_ms': _pct(build, .99),
-    'build_worst_ms': _pct(build, 1),
-    'build_over_16ms': _over(build, 16),
-    'raster_worst_ms': _pct(raster, 1),
-    'ui_isolate_worst_gap_ms': worstGap.inMilliseconds,
-  };
-
-  @override
-  String toString() => [
-    for (final MapEntry(:key, :value) in toJson().entries)
-      '$key ${value is double ? value.toStringAsFixed(1) : value}',
-  ].join(' · ');
 }

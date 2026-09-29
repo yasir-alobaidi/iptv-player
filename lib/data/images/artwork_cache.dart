@@ -72,6 +72,10 @@ final class ArtworkCache {
   var _writtenSinceSweep = 0;
   Future<int>? _sweeping;
 
+  /// The folder's size as the last sweep left it, plus what was written
+  /// since; unknown until a sweep ran.
+  int? _knownBytes;
+
   static HttpClient _client(String userAgent) => HttpClient()
     ..userAgent = userAgent
     ..connectionTimeout = const Duration(seconds: 15)
@@ -106,11 +110,22 @@ final class ArtworkCache {
   /// [maxBytes] (to 90 % of it, so the next picture doesn't start another
   /// sweep), and `.part` files a killed download left behind. Runs in an
   /// isolate; one at a time. Completes with how many files went.
-  Future<int> sweep() => _sweeping ??= _sweepInIsolate(
-    directory.path,
-    maxBytes,
-    _clock().millisecondsSinceEpoch,
-  ).whenComplete(() => _sweeping = null);
+  Future<int> sweep() => _sweeping ??= _sweep();
+
+  Future<int> _sweep() async {
+    _writtenSinceSweep = 0;
+    try {
+      final swept = await _sweepInIsolate(
+        directory.path,
+        maxBytes,
+        _clock().millisecondsSinceEpoch,
+      );
+      _knownBytes = swept.bytes + _writtenSinceSweep;
+      return swept.removed;
+    } finally {
+      _sweeping = null;
+    }
+  }
 
   void close() {
     _http.close(force: true);
@@ -212,8 +227,12 @@ final class ArtworkCache {
       return;
     }
     _writtenSinceSweep += bytes.length;
-    if (_writtenSinceSweep >= sweepAfterWriting) {
-      _writtenSinceSweep = 0;
+    final known = _knownBytes == null ? null : _knownBytes! + bytes.length;
+    _knownBytes = known;
+    // Past the cap by what the last sweep left, or, before any sweep ran,
+    // after every [sweepAfterWriting].
+    if ((known != null && known > maxBytes) ||
+        _writtenSinceSweep >= sweepAfterWriting) {
       unawaited(sweep());
     }
   }
@@ -266,13 +285,16 @@ bool looksLikeImage(Uint8List bytes) {
 
 /// Built here, at the top level, so the closure sent to the isolate
 /// carries these three values and nothing of its caller.
-Future<int> _sweepInIsolate(String path, int maxBytes, int nowMs) =>
+Future<ArtworkSweep> _sweepInIsolate(String path, int maxBytes, int nowMs) =>
     Isolate.run(() => sweepArtwork(path, maxBytes, nowMs));
 
+/// What a sweep did: the files it deleted, and the bytes left.
+typedef ArtworkSweep = ({int removed, int bytes});
+
 /// [ArtworkCache.sweep]'s work, synchronous, for the isolate.
-int sweepArtwork(String path, int maxBytes, int nowMs) {
+ArtworkSweep sweepArtwork(String path, int maxBytes, int nowMs) {
   final directory = Directory(path);
-  if (!directory.existsSync()) return 0;
+  if (!directory.existsSync()) return (removed: 0, bytes: 0);
   final files = <(File, int, int)>[];
   var total = 0;
   var removed = 0;
@@ -295,7 +317,7 @@ int sweepArtwork(String path, int maxBytes, int nowMs) {
     files.add((entity, stat.size, stat.modified.millisecondsSinceEpoch));
     total += stat.size;
   }
-  if (total <= maxBytes) return removed;
+  if (total <= maxBytes) return (removed: removed, bytes: total);
   files.sort((a, b) => a.$3.compareTo(b.$3));
   final target = maxBytes * 9 ~/ 10;
   for (final (file, size, _) in files) {
@@ -304,7 +326,7 @@ int sweepArtwork(String path, int maxBytes, int nowMs) {
     total -= gone * size;
     removed += gone;
   }
-  return removed;
+  return (removed: removed, bytes: total);
 }
 
 int _delete(File file) {

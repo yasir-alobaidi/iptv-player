@@ -85,6 +85,19 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
   /// Laid out: what [_move] needs to jump by rows.
   int _columns = 1;
   double _stride = 1;
+  double _inset = 0;
+
+  /// Holds the keyboard's focus while the focused card is gone: the mouse
+  /// scrolled it away and it is no longer built. Without it the focus
+  /// would leave the grid, and the grid's keys with it.
+  final _holder = FocusNode(debugLabel: 'title grid', skipTraversal: true);
+
+  /// A key's move is on its way to its card (after the next frame).
+  bool _moving = false;
+
+  /// The card a key went to before it was built (End, before its page
+  /// was read): it takes the focus as soon as it is.
+  int? _pendingFocus;
 
   @override
   void didUpdateWidget(TitleGrid<T> oldWidget) {
@@ -95,6 +108,7 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
       _nodes.clear();
       _error = null;
       _focused = 0;
+      _pendingFocus = null;
       if (_scroll.hasClients) _scroll.jumpTo(0);
     } else if (oldWidget.revision != widget.revision) {
       _loading.clear();
@@ -107,6 +121,7 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
   @override
   void dispose() {
     _scroll.dispose();
+    _holder.dispose();
     super.dispose();
   }
 
@@ -142,6 +157,9 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
   void _move({int delta = 0, int? to}) {
     final total = widget.total;
     if (total == 0 || !_scroll.hasClients) return;
+    _pendingFocus = null;
+    // From what is on screen when the mouse took the view elsewhere.
+    if (!_rowOnScreen(_focused ~/ _columns)) _focused = _firstOnScreen();
     final target = (to ?? _focused + delta).clamp(0, total - 1);
     final fromRow = _focused ~/ _columns;
     final toRow = target ~/ _columns;
@@ -151,15 +169,84 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
       position.minScrollExtent,
       position.maxScrollExtent,
     );
+    _moving = true;
     _scroll.jumpTo(offset);
     _focused = target;
     // The card may only be built in the next frame. A jump that didn't
     // scroll asks for no frame, so one is asked for here.
     WidgetsBinding.instance
       ..addPostFrameCallback((_) {
-        if (mounted) _nodes[target]?.requestFocus();
+        _moving = false;
+        if (mounted) _focusCard(target);
       })
       ..scheduleFrame();
+  }
+
+  /// Focuses card [index]; the grid holds the focus until it is built.
+  void _focusCard(int index) {
+    _focused = index;
+    final node = _nodes[index];
+    if (node != null && node.context != null) {
+      _pendingFocus = null;
+      node.requestFocus();
+    } else {
+      _pendingFocus = index;
+      _holder.requestFocus();
+    }
+  }
+
+  bool _rowOnScreen(int row) {
+    final position = _scroll.position;
+    final top = _inset + row * _stride;
+    return top + _stride > position.pixels &&
+        top < position.pixels + position.viewportDimension;
+  }
+
+  /// The card in [_focused]'s column in the first row wholly on screen.
+  int _firstOnScreen() {
+    final pixels = _scroll.position.pixels;
+    final row = math.max(0, ((pixels - _inset) / _stride).ceil());
+    return math.min(row * _columns + _focused % _columns, widget.total - 1);
+  }
+
+  /// The mouse scrolled the focused card away. After the frame, once the
+  /// card's own node has let go: a card on screen takes the focus, or,
+  /// while the view still moves, the grid holds it until the scroll ends.
+  void _onFocusedCardGone() {
+    if (_moving) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _moving || !_scroll.hasClients) return;
+      if (_scroll.position.isScrollingNotifier.value) {
+        _holder.requestFocus();
+      } else {
+        _focusOnScreen();
+      }
+    });
+  }
+
+  void _focusOnScreen() {
+    if (!_scroll.hasClients || widget.total == 0) return;
+    _focusCard(_firstOnScreen());
+  }
+
+  /// With the holder focused, an arrow or Enter lands on a card on screen
+  /// first; PageUp, PageDown, Home and End go on to the grid's shortcuts,
+  /// which count from the view.
+  KeyEventResult _holderKey(FocusNode node, KeyEvent event) {
+    if (!_holder.hasPrimaryFocus || event is KeyUpEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space) {
+      _focusOnScreen();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   /// Keeps [_nodes] to the cards built now: a card that moves to another
@@ -167,6 +254,15 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
   void _register(int index, FocusNode node, {required bool add}) {
     if (add) {
       _nodes[index] = node;
+      if (index == _pendingFocus) {
+        _pendingFocus = null;
+        // Once its own `Focus` is built.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _holder.hasPrimaryFocus && node.context != null) {
+            node.requestFocus();
+          }
+        });
+      }
     } else if (identical(_nodes[index], node)) {
       _nodes.remove(index);
     }
@@ -226,7 +322,8 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
                 (width - TitleGrid.columnGap * (_columns - 1)) / _columns;
             final extent = cardWidth * 3 / 2 + TitleGrid.captionHeight;
             _stride = extent + TitleGrid.rowGap;
-            return GridView.builder(
+            _inset = inset;
+            final grid = GridView.builder(
               controller: _scroll,
               padding: EdgeInsets.all(inset),
               // A row beyond the screen is built, so ↓ always has a card
@@ -251,11 +348,23 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
                   key: ValueKey(widget.identity(item)),
                   index: index,
                   onFocus: (index) => _focused = index,
+                  onFocusedGone: _onFocusedCardGone,
                   register: _register,
                   builder: (context, focus) =>
                       widget.card(context, item, focus, cardWidth),
                 );
               },
+            );
+            return NotificationListener<ScrollEndNotification>(
+              onNotification: (_) {
+                if (_holder.hasPrimaryFocus && !_moving) _focusOnScreen();
+                return false;
+              },
+              child: Focus(
+                focusNode: _holder,
+                onKeyEvent: _holderKey,
+                child: grid,
+              ),
             );
           },
         ),
@@ -269,6 +378,7 @@ class _Card extends StatefulWidget {
   const new({
     required this.index,
     required this.onFocus,
+    required this.onFocusedGone,
     required this.register,
     required this.builder,
     super.key,
@@ -276,6 +386,9 @@ class _Card extends StatefulWidget {
 
   final int index;
   final void Function(int index) onFocus;
+
+  /// This card goes while it has the focus: scrolled out of what is built.
+  final VoidCallback onFocusedGone;
   final void Function(int index, FocusNode node, {required bool add}) register;
   final Widget Function(BuildContext context, FocusNode focus) builder;
 
@@ -300,6 +413,13 @@ class _CardState extends State<_Card> {
       oldWidget.register(oldWidget.index, _focus, add: false);
       widget.register(widget.index, _focus, add: true);
     }
+  }
+
+  @override
+  void deactivate() {
+    // Before the card's `Focus` goes: it lets go of the focus then.
+    if (_focus.hasFocus) widget.onFocusedGone();
+    super.deactivate();
   }
 
   @override

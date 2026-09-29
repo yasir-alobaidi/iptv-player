@@ -131,6 +131,52 @@ final class ErrorReporterProvider
 
 String _$errorReporterHash() => r'c7d27ec2845820d96d058060f5b96b2013f77188';
 
+/// When the launch became usable; `bootstrap()` gives the real one.
+
+@ProviderFor(launchMark)
+final launchMarkProvider = LaunchMarkProvider._();
+
+/// When the launch became usable; `bootstrap()` gives the real one.
+
+final class LaunchMarkProvider
+    extends $FunctionalProvider<LaunchMark, LaunchMark, LaunchMark>
+    with $Provider<LaunchMark> {
+  /// When the launch became usable; `bootstrap()` gives the real one.
+  LaunchMarkProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'launchMarkProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$launchMarkHash();
+
+  @$internal
+  @override
+  $ProviderElement<LaunchMark> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LaunchMark create(Ref ref) {
+    return launchMark(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LaunchMark value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LaunchMark>(value),
+    );
+  }
+}
+
+String _$launchMarkHash() => r'04284d0f58ca6e4735613cba1ef8189f575b7284';
+
 /// The system keyring in the app; `InMemoryCredentialStore` in tests.
 
 @ProviderFor(credentialStore)

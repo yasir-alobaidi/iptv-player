@@ -223,13 +223,13 @@ void main() {
       final recent = file('c', 400, t.add(const Duration(days: 2)));
       final newest = file('d', 400, t.add(const Duration(days: 3)));
 
-      final removed = sweepArtwork(
+      final swept = sweepArtwork(
         directory.path,
         1000,
         t.add(const Duration(days: 4)).millisecondsSinceEpoch,
       );
 
-      expect(removed, 2);
+      expect(swept, (removed: 2, bytes: 800));
       expect(oldest.existsSync(), isFalse);
       expect(old.existsSync(), isFalse);
       expect(recent.existsSync(), isTrue);
@@ -247,16 +247,46 @@ void main() {
         t.subtract(const Duration(hours: 1)),
       );
 
-      final removed = sweepArtwork(
+      final swept = sweepArtwork(
         directory.path,
         1000,
         t.add(const Duration(minutes: 1)).millisecondsSinceEpoch,
       );
 
-      expect(removed, 1);
+      expect(swept.removed, 1);
+      // What is left, the .part being written not counted.
+      expect(swept.bytes, 100);
       expect(kept.existsSync(), isTrue);
       expect(writing.existsSync(), isTrue);
       expect(leftOver.existsSync(), isFalse);
+    });
+
+    test('once a sweep knows the folder, the cache sweeps as soon as its '
+        'writes pass the cap', () async {
+      final server = await _Server.start();
+      final t = DateTime.utc(2026, 9);
+      // 900 bytes used of a 1,000-byte cap.
+      file('old', 900, t);
+      final artwork = ArtworkCache(
+        directory: directory,
+        maxBytes: 1000,
+        // Never reached here: the cap is what starts the sweep.
+        sweepAfterWriting: 1 << 30,
+        clock: () => t.add(const Duration(days: 1)),
+      );
+      addTearDown(artwork.close);
+      expect(await artwork.sweep(), 0);
+
+      // Two pictures of 72 bytes: 1,044 bytes, past the cap.
+      await artwork.bytes(server.url('/ok/a'));
+      await artwork.bytes(server.url('/ok/b'));
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (File('${directory.path}/old').existsSync() &&
+          DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      expect(File('${directory.path}/old').existsSync(), isFalse);
+      expect(artwork.fileFor(server.url('/ok/b')).existsSync(), isTrue);
     });
 
     test('runs in an isolate from the cache, one at a time', () async {

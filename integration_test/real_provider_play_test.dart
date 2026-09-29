@@ -11,7 +11,6 @@
 //
 // Run: flutter test integration_test/real_provider_play_test.dart -d linux
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -36,9 +35,11 @@ import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:logger/logger.dart';
 
+import 'support/real_provider.dart';
+
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  final login = _readLogin();
+  final login = readPlayLogin();
 
   testWidgets(
     'plays from the real provider and lets go of its connection',
@@ -68,7 +69,7 @@ void main() {
         ..add(username);
       Directory('build/real_provider_run').createSync(recursive: true);
       final log = AppLog(
-        output: _FileOutput(File('build/real_provider_run/play_app.log')),
+        output: LogFileOutput(File('build/real_provider_run/play_app.log')),
         secrets: secrets,
         level: Level.debug,
       );
@@ -243,37 +244,5 @@ void main() {
     },
     skip: login == null,
     timeout: const Timeout(Duration(minutes: 5)),
-  );
-}
-
-/// (server, username, password) when the login file asks for playback.
-(String, String, String)? _readLogin() {
-  final home = Platform.environment['HOME'] ?? '';
-  final file = File(
-    Platform.environment['IPTV_REAL_PROVIDER'] ??
-        '$home/.config/iptv-player-dev/real_provider.json',
-  );
-  if (!file.existsSync()) return null;
-  final json = jsonDecode(file.readAsStringSync());
-  if (json is! Map || json['play'] != true) return null;
-  final server = '${json['server'] ?? ''}'.trim();
-  final username = '${json['username'] ?? ''}'.trim();
-  final password = '${json['password'] ?? ''}';
-  if ([server, username, password].any((v) => v.isEmpty)) return null;
-  return (server, username, password);
-}
-
-/// The app log, already masked by [AppLog], to a file.
-final class _FileOutput extends LogOutput {
-  new(this._file) {
-    _file.writeAsStringSync('');
-  }
-
-  final File _file;
-
-  @override
-  void output(OutputEvent event) => _file.writeAsStringSync(
-    '${event.lines.join('\n')}\n',
-    mode: FileMode.append,
   );
 }

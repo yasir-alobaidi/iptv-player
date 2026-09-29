@@ -66,6 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     for (final row in _Row.values) row: HomeRowController(),
   };
   final _hero = FocusNode(debugLabel: 'home hero', skipTraversal: true);
+  bool _marked = false;
 
   /// The rows on screen now, top to bottom, for the arrow keys.
   List<HomeRowController> _shown = const [];
@@ -259,6 +260,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } else if (all.any((a) => !a.hasValue)) {
       body = const _Loading();
     } else {
+      _markShown();
       body = _content(
         source,
         continuing: continuing.requireValue,
@@ -271,6 +273,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
     return FocusPane(debugLabel: 'screen-home', child: body);
+  }
+
+  /// The launch's first Home with its rows: the end of a cold start.
+  void _markShown() {
+    if (_marked) return;
+    _marked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(launchMarkProvider).homeShown();
+    });
   }
 
   /// The hero leaves once something was watched. A screen coming back into

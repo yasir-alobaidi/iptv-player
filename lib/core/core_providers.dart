@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
+import 'package:iptv_player/core/logging/launch_mark.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
@@ -25,6 +26,10 @@ SecretRegistry secretRegistry(Ref ref) => throw UnimplementedError(
 ErrorReporter errorReporter(Ref ref) => throw UnimplementedError(
   'errorReporterProvider is overridden in bootstrap()',
 );
+
+/// When the launch became usable; `bootstrap()` gives the real one.
+@Riverpod(keepAlive: true)
+LaunchMark launchMark(Ref ref) => LaunchMark.none();
 
 /// The system keyring in the app; `InMemoryCredentialStore` in tests.
 @Riverpod(keepAlive: true)

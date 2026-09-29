@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -230,6 +231,38 @@ void main() {
     expect(focusedLabel(), 'The Quiet Harbor');
   });
 
+  testWidgets('End lands on the last card once its page is read', (
+    tester,
+  ) async {
+    final vod = VodFakes();
+    addTearDown(() => tester.runAsync(vod.db.close));
+    await tester.runAsync(() async {
+      await vod.seed();
+      // Three pages of 120: the last card's page isn't read until End.
+      await vod.seedMany(300);
+    });
+    await pumpApp(
+      tester,
+      initialLocation: AppDestination.movies.path,
+      overrides: vod.overrides,
+    );
+    await settle(tester);
+    tester
+        .widget<PosterCard>(poster('The Quiet Harbor'))
+        .focusNode!
+        .requestFocus();
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await settle(tester);
+    // Undated, so last (as in the three-movie test above).
+    expect(focusedLabel(), 'Ember Road');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await settle(tester);
+    expect(focusedLabel(), 'The Quiet Harbor');
+  });
+
   testWidgets('PageDown goes a screen of cards down, PageUp back', (
     tester,
   ) async {
@@ -262,6 +295,66 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
     await settle(tester);
     expect(focusedLabel(), 'The Quiet Harbor');
+  });
+
+  testWidgets('scrolled away by the mouse, the keys carry on from what is '
+      'on screen', (tester) async {
+    final vod = VodFakes();
+    addTearDown(() => tester.runAsync(vod.db.close));
+    await tester.runAsync(() async {
+      await vod.seed();
+      await vod.seedMany(80);
+    });
+    await pumpApp(
+      tester,
+      initialLocation: AppDestination.movies.path,
+      overrides: vod.overrides,
+    );
+    await settle(tester);
+    tester
+        .widget<PosterCard>(poster('The Quiet Harbor'))
+        .focusNode!
+        .requestFocus();
+    await tester.pump();
+
+    // The wheel, well past the focused card: it is no longer built.
+    final grid = find.byType(GridView);
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: grid, matching: find.byType(Scrollable)),
+        )
+        .position;
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(pointer.hover(tester.getCenter(grid)));
+    for (var i = 0; i < 6; i++) {
+      await tester.sendEventToBinding(pointer.scroll(const Offset(0, 400)));
+      await tester.pump();
+    }
+    await settle(tester);
+    expect(poster('The Quiet Harbor'), findsNothing);
+    final scrolled = position.pixels;
+    expect(scrolled, greaterThan(1000));
+
+    // The focus is on a card on screen, in the first card's column.
+    final landed = focusedLabel();
+    expect(landed, startsWith('Movie '), reason: 'a card of the view');
+    final card = find.widgetWithText(PosterCard, landed!);
+    final box = tester.getRect(card);
+    expect(box.top, greaterThanOrEqualTo(tester.getRect(grid).top - 1));
+    expect(
+      box.left,
+      closeTo(tester.getRect(find.byType(PosterCard).first).left, 1),
+    );
+
+    // ↓ goes on from there, and PageDown from the view, not from the top.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    expect(focusedLabel(), isNot(landed));
+    expect(focusedLabel(), startsWith('Movie '));
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await settle(tester);
+    expect(position.pixels, greaterThan(scrolled));
+    expect(focusedLabel(), startsWith('Movie '));
   });
 
   testWidgets('Series: the same grid', (tester) async {

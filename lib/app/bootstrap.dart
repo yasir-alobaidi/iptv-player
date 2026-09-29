@@ -12,6 +12,7 @@ import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
+import 'package:iptv_player/core/logging/launch_mark.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
@@ -37,6 +38,7 @@ import 'package:logger/logger.dart';
 
 /// Sets up logging and the global error handlers, then starts the app.
 Future<void> bootstrap() async {
+  final sinceMain = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   registerBundledFontLicenses();
 
@@ -93,6 +95,7 @@ Future<void> bootstrap() async {
       appLogProvider.overrideWithValue(log),
       secretRegistryProvider.overrideWithValue(secrets),
       errorReporterProvider.overrideWithValue(errors),
+      launchMarkProvider.overrideWithValue(LaunchMark(log, sinceMain)),
       appDatabaseProvider.overrideWithValue(database),
       credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
       windowBoundsStoreProvider.overrideWithValue(windowBounds),
