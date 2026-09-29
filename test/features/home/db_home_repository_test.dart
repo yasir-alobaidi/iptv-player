@@ -89,6 +89,37 @@ void main() {
     );
   });
 
+  test('recently watched channels: a hidden category takes its channels '
+      'out, but not its favorites, at once (decision 8)', () async {
+    await home.db.watchHistoryDao.touch(
+      UserItemType.live,
+      'src-1',
+      '203',
+      home.now.subtract(const Duration(minutes: 10)),
+    );
+    await home.db.watchHistoryDao.touch(
+      UserItemType.live,
+      'src-1',
+      '201',
+      home.now.subtract(const Duration(minutes: 20)),
+    );
+    final seen = <List<String>>[];
+    final listening = rows
+        .recentChannels('src-1')
+        .listen((list) => seen.add([for (final c in list) c.remoteKey]));
+    await pumpEventQueue();
+    expect(seen.last, ['203', '201']);
+
+    final sports = await (home.db.select(
+      home.db.categories,
+    )..where((c) => c.name.equals('Sports'))).getSingle();
+    await home.db.categoriesDao.setHidden(sports.id, hidden: true);
+    await pumpEventQueue();
+    // 201 is a favorite: the more specific choice.
+    expect(seen.last, ['201']);
+    await listening.cancel();
+  });
+
   test('recently added movies and series come newest first', () async {
     final movies = await rows.recentMovies('src-1').first;
     // 503 is in a hidden category.

@@ -5,13 +5,15 @@ import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/features/live_tv/domain/channel_names.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 
-/// `channels c` as a `ChannelItem` reads it, with its favorite `f` (a
+/// `channels c` as a `ChannelItem` reads it, with its category `k` (a
+/// `LEFT JOIN categories k` on its category id) and its favorite `f` (a
 /// `LEFT JOIN favorites f` on the channel's source and remote key). Shared
 /// by every query that lists channels (Live TV, search).
 const channelColumns =
     'c.id, c.source_id, c.remote_key, c.name, c.display_name, '
     'c.clean_name, c.quality, c.number, c.logo_url, c.category_id, '
     'c.epg_key, c.archive_days, c.is_hidden, '
+    'COALESCE(k.is_hidden, 0) AS category_hidden, '
     'f.id IS NOT NULL AS is_favorite, f.group_id AS favorite_group_id';
 
 /// The name a channel is shown by, and so sorted and filtered by
@@ -37,6 +39,7 @@ ChannelItem channelFromRow(QueryRow row) {
     epgKey: row.read<String?>('epg_key'),
     archiveDays: row.read<int>('archive_days'),
     isHidden: row.read<bool>('is_hidden'),
+    inHiddenCategory: row.read<bool>('category_hidden'),
     isFavorite: row.read<bool>('is_favorite'),
     favoriteGroupId: row.read<int?>('favorite_group_id'),
   );

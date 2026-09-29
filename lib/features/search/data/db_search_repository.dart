@@ -243,11 +243,10 @@ final class DbSearchRepository implements SearchRepository {
         .customSelect(
           'SELECT $channelColumns, src.name AS source_name FROM channels c '
           'JOIN sources src ON src.id = c.source_id '
-          "LEFT JOIN favorites f ON f.item_type = 'live' "
-          'AND f.source_id = c.source_id AND f.remote_key = c.remote_key '
+          '$_channelFilterJoins '
           'WHERE c.id IN (${List.filled(ids.length, '?').join(', ')})',
           variables: [for (final id in ids) Variable.withInt(id)],
-          readsFrom: {_db.channels, _db.favorites, _db.sources},
+          readsFrom: {_db.channels, _db.categories, _db.favorites, _db.sources},
         )
         .get();
     return {

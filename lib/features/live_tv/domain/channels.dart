@@ -21,6 +21,7 @@ final class ChannelItem {
     this.isFavorite = false,
     this.favoriteGroupId,
     this.isHidden = false,
+    this.inHiddenCategory = false,
   });
 
   /// The database row id: stable within a sync, not across them. User
@@ -54,7 +55,17 @@ final class ChannelItem {
 
   /// The group of favorites it is in; null when it is in none.
   final int? favoriteGroupId;
+
+  /// The user hid the channel itself.
   final bool isHidden;
+
+  /// The user hid the category it is in.
+  final bool inHiddenCategory;
+
+  /// Whether a list that isn't about hidden channels shows it (Phase 6
+  /// decision 8): not hidden itself, and in a category the user didn't
+  /// hide unless it is a favorite — the more specific choice.
+  bool get isVisible => !isHidden && (!inHiddenCategory || isFavorite);
 
   @override
   bool operator ==(Object other) =>
@@ -73,7 +84,8 @@ final class ChannelItem {
       other.archiveDays == archiveDays &&
       other.isFavorite == isFavorite &&
       other.favoriteGroupId == favoriteGroupId &&
-      other.isHidden == isHidden;
+      other.isHidden == isHidden &&
+      other.inHiddenCategory == inHiddenCategory;
 
   @override
   int get hashCode => Object.hash(
@@ -92,6 +104,7 @@ final class ChannelItem {
     isFavorite,
     favoriteGroupId,
     isHidden,
+    inHiddenCategory,
   );
 
   @override

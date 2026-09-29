@@ -48,9 +48,12 @@ final class DbHomeRepository implements HomeRepository {
 
   @override
   Stream<List<ChannelItem>> recentChannels(String sourceId, {int limit = 20}) =>
-      _changes({_db.watchHistory, _db.channels, _db.favorites}).asyncMap((
-        _,
-      ) async {
+      _changes({
+        _db.watchHistory,
+        _db.channels,
+        _db.categories,
+        _db.favorites,
+      }).asyncMap((_) async {
         final rows = await Result.guard(
           () => _db.watchHistoryDao.recent(
             UserItemType.live,
@@ -61,8 +64,9 @@ final class DbHomeRepository implements HomeRepository {
         final recent = <ChannelItem>[];
         for (final row in _valueOf(rows)) {
           final found = await _channels.byRemoteKey(sourceId, row.remoteKey);
-          // Gone from the provider's list, or hidden: not on Home.
-          if (found.valueOrNull case final channel? when !channel.isHidden) {
+          // Gone from the provider's list, or hidden (itself, or its
+          // category unless it is a favorite): not on Home.
+          if (found.valueOrNull case final channel? when channel.isVisible) {
             recent.add(channel);
           }
         }
