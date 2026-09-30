@@ -1,68 +1,67 @@
-# Handoff — 2026-09-29 (Phase 7 plan written, waiting for approval)
+# Handoff — 2026-09-29 (Phase 7 step 1 done, stopped for review)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/plans/phase-7-casting.md, the Phase 7 part of
-docs/08-phases-and-prompts.md and docs/04-casting.md.
+docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
+part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Read the Phase 7 plan** (`docs/plans/phase-7-casting.md`): eight
-   decisions, each with a recommendation first, and five sketches. Say
-   which recommendations you accept or what to change.
-2. **Push** this session's four local commits, from "Remind me goes into
-   Phase 9…" to "CI green on both systems…".
-3. **CI:** the Phase 6 push (abd0c1a) ran **green on both systems** —
-   Windows for the first time since Phase 4.
+1. **Review Phase 7 step 1** (ADR-014 "Discovery, known devices, FFmpeg in
+   the build"). One departure from the plan: Add by address asks the
+   device's mDNS port directly (it answers with its name in 0.2–0.5 s,
+   nothing on screen); the Cast CONNECT + GET_STATUS check becomes its
+   fallback in step 2.
+2. **Push** the five local commits, from "Remind me goes into Phase 9…" to
+   "Phase 7 step 1…".
+3. **Step 2 uses the TV once**: one LAUNCH and LOAD of the MP4 sample, then
+   STOP. The session will ask first.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-7-casting.md, docs/08-phases-and-prompts.md (Phase 7) and docs/04-casting.md first.
-The Phase 7 plan is <approved as written | approved with these changes: …>. Start step 1.
+docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
+and docs/04-casting.md first. Step 1 is <approved | approved with these changes: …>. Start step 2.
 ```
 
 ## Where things stand
-- **Phase 6 is done: ADR-013 Accepted** at the phase exit.
-- **Phase 7 (casting): the plan is written, not yet approved.** No code
-  yet. ADR-014 starts when the plan is approved.
-- **Checks, all green at the last code commit (Phase 6's exit):** analyze,
-  format, `build_runner` leaves no diff; **2,101 app tests** (11 skipped)
-  under `TZ=UTC`; the fake provider's 141; all 17 integration walks under
-  xvfb. This session changed docs only.
-- **CI (abd0c1a): green on Linux and Windows.**
+- **Phase 7 (casting): plan approved 2026-09-29, every recommendation and
+  the five sketches (ADR-014 started). Step 1 done.**
+- **Checks at the step 1 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,249 app tests** (12 skipped) under `TZ=UTC`; the cast tests
+  stable 8 of 8 run in parallel; the launch walk under xvfb; `flutter build
+  linux --debug` carries FFmpeg. The fake provider and the other
+  integration walks weren't touched.
+- **CI:** green on both systems at abd0c1a; nothing pushed since.
 
-## Done this session (2026-09-29, the third)
-- **"Remind me" goes into Phase 9** (your answer to ADR-013 decision 5):
-  docs/08's Phase 9 has it as step 3 and an exit criterion — a system
-  notification at the programme's start, from Search's upcoming rows and
-  the Guide's programme sheet.
-- **No movie-name cleanup for v1** (your choice).
-- **The Phase 7 plan** (`docs/plans/phase-7-casting.md`). What it proposes
-  beyond docs/04, in short:
-  1. movies and episodes cast in this phase too (direct file, or the relay
-     with a seek that restarts it);
-  2. while casting, everything played goes to the TV;
-  3. FFmpeg reads the provider through a loopback proxy in the relay (no
-     credentials on command lines, URLs rebuilt per reconnect, the
-     connection visible to the app, orphans die with the app);
-  4. the plan's facts from the laptop's player or a remembered probe
-     before ffprobe;
-  5. the relay in its own isolate;
-  6. bonsoir and multicast_dns side by side;
-  7. the desktop portal's Inhibit (the `dbus` package) to keep the laptop
-     awake;
-  8. a fake receiver that fetches and checks what it is told to play, so
-     most of the matrix runs without the TV.
+## Done this session (2026-09-29, the fourth)
+- **The Phase 7 plan approved** ("do the recommended").
+- **Step 1:**
+  - discovery: bonsoir and multicast_dns side by side, merged by device
+    id (the IPv4 address wins);
+  - Add by address through a direct DNS-SD query;
+  - `cast_devices` (schema v8, with `last_port`);
+  - FFmpeg hard-linked into the Linux bundle, and installed into the
+    Windows one when present;
+  - measured on this laptop, listening only: Living Room TV seen by
+    bonsoir in 64–139 ms and by multicast_dns in 367–584 ms; the Nest Mini
+    left out by both.
 
 ## What's next
-1. **Phase 7 step 1 once the plan is approved:** discovery (bonsoir and
-   multicast_dns, merged), known devices (schema v8, `cast_devices`),
-   FFmpeg copied into the Linux build. On the TV: listening only.
-   **Ask before every cast** to the Living Room TV (memory), one
-   announced, watched cast at a time; the plan names the three times the
-   TV is used (steps 2, 6 and 8).
+1. **Phase 7 step 2 once step 1 is approved:** `CastChannel` (TLS to
+   host:8009 accepting the self-signed certificate, 4-byte length +
+   protobuf framing, request ids with timeouts, PING every 5 s and 3 missed
+   = lost, tolerant parsing), `ReceiverChannel`, `MediaChannel`,
+   reconnect and rejoin by transport id; `tools/fake_receiver`'s protocol
+   side (TLS with a test-only certificate, a slow LAUNCH option); the
+   CONNECT + GET_STATUS fallback for Add by address (a device that ignores
+   the direct DNS-SD query, and the fake receiver at `127.0.0.1:<port>`).
+   The spike's client (`spike/cast_spike/lib/cast_channel.dart`) and its
+   generated protobuf (`spike/cast_spike/lib/src/proto`) are the starting
+   point; the generated code gets committed into `lib/`.
+   **Ask before the one TV use** (memory): a LAUNCH and LOAD of the MP4
+   sample served from the laptop with Range, then STOP.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -157,7 +156,16 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session (Phase 6 steps 7–8, and alongside):
+New this session (Phase 7 step 1):
+- **Casting's domain is in `lib/core/cast/`, its data side in `lib/data/cast/`, its providers in `lib/features/casting/data/casting_providers.dart`** (the screens in step 7 go in `lib/features/casting/presentation/` and import only that provider file and `lib/core/cast/`).
+- **Discovery:** `castDevicesProvider` is auto-dispose — discovery runs only while something watches it. `MergedCastDiscovery` wraps any `CastBrowser`s; tests use fake browsers and a fake `CastAddressCheck` (`test/data/cast/merged_cast_discovery_test.dart`). A found device is never stored; `markUsed` (step 6's first cast) and `addManual` write rows.
+- **bonsoir in `flutter test`:** its Linux side is a Dart plugin that `flutter test` doesn't register; call `BonsoirLinux.registerWith()` (dev dependency `bonsoir_linux`) — only the `real_network` measurement does. Unit tests fake the platform (`_FakePlatform` in `cast_browsers_test.dart`).
+- **`test_fixtures/cast/*.bin`** are the TV's and the speaker's real DNS-SD answers with ids, serials and addresses replaced by made-up values **of the same length**, so the compression pointers stay valid. Scrub a new capture the same way before committing (the repo is public).
+- **Generated drift code copies a column default's expression as written:** `withDefault(const Constant(castPort))` compiled in the table but not in `app_database.g.dart`. Write the literal.
+- **`FfmpegBinaries.locate()`** looks beside the executable (`bundle/ffmpeg/`), then for `third_party/ffmpeg/<platform>/` from the working folder up. The Linux bundle's copies are hard links (link count 2).
+- **New tag `real_network`** (dart_test.yaml): listens on the real network; skipped unless `--tags real_network --run-skipped`.
+
+From the session before (Phase 6 steps 7–8, and alongside):
 - **Toasts live at the app's root** (`lib/app/shell/app_toasts.dart`, `AppToasts` around the router's navigator, in `app.dart` and the test harness), over every route. `AppNotice.undoable(message, onUndo:)` makes an Undo toast that **Ctrl+Z** runs; `ToastHostController.act()` / `undo()`; an action ends its toast. The shell no longer hosts toasts.
 - **A menu item runs once the menu has faded out** (`_MenuRoute` in `app_popups.dart`: `completed.then(...)`, 120 ms). Tests that check an item's effect must pump past it: `settleApp` pumps one more frame; files with their own `_settle` loops use 8 rounds where they open menus.
 - **Change streams:** never `customSelect('SELECT 1', readsFrom: …).watch()` — drift shares query streams by SQL and variables, not tables. Use `tableChanges(db, tables)` (`lib/data/db/table_changes.dart`).
@@ -626,6 +634,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 7 plan (ADR-014): the eight decisions as recommended; step 1: Add by address by a direct DNS-SD query (CONNECT + GET_STATUS as the fallback), the IPv4 address preferred over IPv6, speakers left out by `ca` bit 0 but a device with no readable `ca` listed, found devices not stored, FFmpeg hard-linked into the Linux bundle.
 - Phase 6 exit (ADR-013): toasts over every route with Ctrl+Z for Undo; menu items after the menu's fade; the write-ahead log (`synchronous = NORMAL`); an episode left through the next-episode card is watched; trailing countries dropped only from the list (not the UK's nations, regions, languages or Georgia), a bare country after a lone tag kept as the name; no movie-name cleanup for v1 (unless the user asks).
 - Phase 6 (ADR-013): cleaned names stored (`clean_name`, `quality`), technical tags kept in the name, only resolution tags as the badge; the search index on the name shown; search's ranking (source, favorites, prefix, rank) and the programme query by row-id order from the first programme on now (measured: 0.7–5.2 s → 31 ms worst); one-letter words only narrow programmes; no "Show all" for programmes; favorites' order per group with renumbering moves; groups under Favorites in Live TV; "Order" on favorites' sort; the flat header/row list for the Favorites screen; one channel menu everywhere; "Hidden" as a tag.
 - Phase 5 step 8 (ADR-012): the first control after a jump in reading
@@ -736,9 +745,6 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
-- ~~Remind me on upcoming programmes: Phase 9, or after v1?~~ Phase 9
-  (answered 2026-09-29; ADR-013).
-- ~~A movie-name cleanup?~~ None for v1 (answered 2026-09-29).
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.

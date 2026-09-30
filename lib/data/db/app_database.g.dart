@@ -12071,6 +12071,596 @@ class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
   }
 }
 
+class $CastDevicesTable extends CastDevices
+    with TableInfo<$CastDevicesTable, CastDeviceRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CastDevicesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastHostMeta = const VerificationMeta(
+    'lastHost',
+  );
+  @override
+  late final GeneratedColumn<String> lastHost = GeneratedColumn<String>(
+    'last_host',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastPortMeta = const VerificationMeta(
+    'lastPort',
+  );
+  @override
+  late final GeneratedColumn<int> lastPort = GeneratedColumn<int>(
+    'last_port',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(8009),
+  );
+  static const VerificationMeta _isManualMeta = const VerificationMeta(
+    'isManual',
+  );
+  @override
+  late final GeneratedColumn<bool> isManual = GeneratedColumn<bool>(
+    'is_manual',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_manual" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<HevcSupport, String> hevcSupport =
+      GeneratedColumn<String>(
+        'hevc_support',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: Constant(HevcSupport.auto.name),
+      ).withConverter<HevcSupport>($CastDevicesTable.$converterhevcSupport);
+  static const VerificationMeta _learnedJsonMeta = const VerificationMeta(
+    'learnedJson',
+  );
+  @override
+  late final GeneratedColumn<String> learnedJson = GeneratedColumn<String>(
+    'learned_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastUsedAtMeta = const VerificationMeta(
+    'lastUsedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUsedAt = GeneratedColumn<DateTime>(
+    'last_used_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    deviceId,
+    name,
+    model,
+    lastHost,
+    lastPort,
+    isManual,
+    hevcSupport,
+    learnedJson,
+    lastUsedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cast_devices';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CastDeviceRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('last_host')) {
+      context.handle(
+        _lastHostMeta,
+        lastHost.isAcceptableOrUnknown(data['last_host']!, _lastHostMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lastHostMeta);
+    }
+    if (data.containsKey('last_port')) {
+      context.handle(
+        _lastPortMeta,
+        lastPort.isAcceptableOrUnknown(data['last_port']!, _lastPortMeta),
+      );
+    }
+    if (data.containsKey('is_manual')) {
+      context.handle(
+        _isManualMeta,
+        isManual.isAcceptableOrUnknown(data['is_manual']!, _isManualMeta),
+      );
+    }
+    if (data.containsKey('learned_json')) {
+      context.handle(
+        _learnedJsonMeta,
+        learnedJson.isAcceptableOrUnknown(
+          data['learned_json']!,
+          _learnedJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_used_at')) {
+      context.handle(
+        _lastUsedAtMeta,
+        lastUsedAt.isAcceptableOrUnknown(
+          data['last_used_at']!,
+          _lastUsedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {deviceId};
+  @override
+  CastDeviceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CastDeviceRow(
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      lastHost: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_host'],
+      )!,
+      lastPort: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_port'],
+      )!,
+      isManual: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_manual'],
+      )!,
+      hevcSupport: $CastDevicesTable.$converterhevcSupport.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}hevc_support'],
+        )!,
+      ),
+      learnedJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}learned_json'],
+      ),
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_used_at'],
+      ),
+    );
+  }
+
+  @override
+  $CastDevicesTable createAlias(String alias) {
+    return $CastDevicesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<HevcSupport, String, String> $converterhevcSupport =
+      const EnumNameConverter<HevcSupport>(HevcSupport.values);
+}
+
+class CastDeviceRow extends DataClass implements Insertable<CastDeviceRow> {
+  /// The device's own id (TXT `id`).
+  final String deviceId;
+  final String name;
+  final String? model;
+
+  /// Where it was last seen or used.
+  final String lastHost;
+
+  /// 8009 (`castPort`, written out: the generated code copies the
+  /// literal) for every real device; another only for a test receiver
+  /// added by address (`127.0.0.1:<port>`).
+  final int lastPort;
+  final bool isManual;
+  final HevcSupport hevcSupport;
+
+  /// What was learned from refusals (`CastLearned`), as JSON; null is
+  /// nothing yet.
+  final String? learnedJson;
+  final DateTime? lastUsedAt;
+  const CastDeviceRow({
+    required this.deviceId,
+    required this.name,
+    this.model,
+    required this.lastHost,
+    required this.lastPort,
+    required this.isManual,
+    required this.hevcSupport,
+    this.learnedJson,
+    this.lastUsedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['device_id'] = Variable<String>(deviceId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    map['last_host'] = Variable<String>(lastHost);
+    map['last_port'] = Variable<int>(lastPort);
+    map['is_manual'] = Variable<bool>(isManual);
+    {
+      map['hevc_support'] = Variable<String>(
+        $CastDevicesTable.$converterhevcSupport.toSql(hevcSupport),
+      );
+    }
+    if (!nullToAbsent || learnedJson != null) {
+      map['learned_json'] = Variable<String>(learnedJson);
+    }
+    if (!nullToAbsent || lastUsedAt != null) {
+      map['last_used_at'] = Variable<DateTime>(lastUsedAt);
+    }
+    return map;
+  }
+
+  CastDevicesCompanion toCompanion(bool nullToAbsent) {
+    return CastDevicesCompanion(
+      deviceId: Value(deviceId),
+      name: Value(name),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      lastHost: Value(lastHost),
+      lastPort: Value(lastPort),
+      isManual: Value(isManual),
+      hevcSupport: Value(hevcSupport),
+      learnedJson: learnedJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(learnedJson),
+      lastUsedAt: lastUsedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastUsedAt),
+    );
+  }
+
+  factory CastDeviceRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CastDeviceRow(
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      name: serializer.fromJson<String>(json['name']),
+      model: serializer.fromJson<String?>(json['model']),
+      lastHost: serializer.fromJson<String>(json['lastHost']),
+      lastPort: serializer.fromJson<int>(json['lastPort']),
+      isManual: serializer.fromJson<bool>(json['isManual']),
+      hevcSupport: $CastDevicesTable.$converterhevcSupport.fromJson(
+        serializer.fromJson<String>(json['hevcSupport']),
+      ),
+      learnedJson: serializer.fromJson<String?>(json['learnedJson']),
+      lastUsedAt: serializer.fromJson<DateTime?>(json['lastUsedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'deviceId': serializer.toJson<String>(deviceId),
+      'name': serializer.toJson<String>(name),
+      'model': serializer.toJson<String?>(model),
+      'lastHost': serializer.toJson<String>(lastHost),
+      'lastPort': serializer.toJson<int>(lastPort),
+      'isManual': serializer.toJson<bool>(isManual),
+      'hevcSupport': serializer.toJson<String>(
+        $CastDevicesTable.$converterhevcSupport.toJson(hevcSupport),
+      ),
+      'learnedJson': serializer.toJson<String?>(learnedJson),
+      'lastUsedAt': serializer.toJson<DateTime?>(lastUsedAt),
+    };
+  }
+
+  CastDeviceRow copyWith({
+    String? deviceId,
+    String? name,
+    Value<String?> model = const Value.absent(),
+    String? lastHost,
+    int? lastPort,
+    bool? isManual,
+    HevcSupport? hevcSupport,
+    Value<String?> learnedJson = const Value.absent(),
+    Value<DateTime?> lastUsedAt = const Value.absent(),
+  }) => CastDeviceRow(
+    deviceId: deviceId ?? this.deviceId,
+    name: name ?? this.name,
+    model: model.present ? model.value : this.model,
+    lastHost: lastHost ?? this.lastHost,
+    lastPort: lastPort ?? this.lastPort,
+    isManual: isManual ?? this.isManual,
+    hevcSupport: hevcSupport ?? this.hevcSupport,
+    learnedJson: learnedJson.present ? learnedJson.value : this.learnedJson,
+    lastUsedAt: lastUsedAt.present ? lastUsedAt.value : this.lastUsedAt,
+  );
+  CastDeviceRow copyWithCompanion(CastDevicesCompanion data) {
+    return CastDeviceRow(
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      name: data.name.present ? data.name.value : this.name,
+      model: data.model.present ? data.model.value : this.model,
+      lastHost: data.lastHost.present ? data.lastHost.value : this.lastHost,
+      lastPort: data.lastPort.present ? data.lastPort.value : this.lastPort,
+      isManual: data.isManual.present ? data.isManual.value : this.isManual,
+      hevcSupport: data.hevcSupport.present
+          ? data.hevcSupport.value
+          : this.hevcSupport,
+      learnedJson: data.learnedJson.present
+          ? data.learnedJson.value
+          : this.learnedJson,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CastDeviceRow(')
+          ..write('deviceId: $deviceId, ')
+          ..write('name: $name, ')
+          ..write('model: $model, ')
+          ..write('lastHost: $lastHost, ')
+          ..write('lastPort: $lastPort, ')
+          ..write('isManual: $isManual, ')
+          ..write('hevcSupport: $hevcSupport, ')
+          ..write('learnedJson: $learnedJson, ')
+          ..write('lastUsedAt: $lastUsedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    deviceId,
+    name,
+    model,
+    lastHost,
+    lastPort,
+    isManual,
+    hevcSupport,
+    learnedJson,
+    lastUsedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CastDeviceRow &&
+          other.deviceId == this.deviceId &&
+          other.name == this.name &&
+          other.model == this.model &&
+          other.lastHost == this.lastHost &&
+          other.lastPort == this.lastPort &&
+          other.isManual == this.isManual &&
+          other.hevcSupport == this.hevcSupport &&
+          other.learnedJson == this.learnedJson &&
+          other.lastUsedAt == this.lastUsedAt);
+}
+
+class CastDevicesCompanion extends UpdateCompanion<CastDeviceRow> {
+  final Value<String> deviceId;
+  final Value<String> name;
+  final Value<String?> model;
+  final Value<String> lastHost;
+  final Value<int> lastPort;
+  final Value<bool> isManual;
+  final Value<HevcSupport> hevcSupport;
+  final Value<String?> learnedJson;
+  final Value<DateTime?> lastUsedAt;
+  final Value<int> rowid;
+  const CastDevicesCompanion({
+    this.deviceId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.model = const Value.absent(),
+    this.lastHost = const Value.absent(),
+    this.lastPort = const Value.absent(),
+    this.isManual = const Value.absent(),
+    this.hevcSupport = const Value.absent(),
+    this.learnedJson = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CastDevicesCompanion.insert({
+    required String deviceId,
+    required String name,
+    this.model = const Value.absent(),
+    required String lastHost,
+    this.lastPort = const Value.absent(),
+    this.isManual = const Value.absent(),
+    this.hevcSupport = const Value.absent(),
+    this.learnedJson = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : deviceId = Value(deviceId),
+       name = Value(name),
+       lastHost = Value(lastHost);
+  static Insertable<CastDeviceRow> custom({
+    Expression<String>? deviceId,
+    Expression<String>? name,
+    Expression<String>? model,
+    Expression<String>? lastHost,
+    Expression<int>? lastPort,
+    Expression<bool>? isManual,
+    Expression<String>? hevcSupport,
+    Expression<String>? learnedJson,
+    Expression<DateTime>? lastUsedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (deviceId != null) 'device_id': deviceId,
+      if (name != null) 'name': name,
+      if (model != null) 'model': model,
+      if (lastHost != null) 'last_host': lastHost,
+      if (lastPort != null) 'last_port': lastPort,
+      if (isManual != null) 'is_manual': isManual,
+      if (hevcSupport != null) 'hevc_support': hevcSupport,
+      if (learnedJson != null) 'learned_json': learnedJson,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CastDevicesCompanion copyWith({
+    Value<String>? deviceId,
+    Value<String>? name,
+    Value<String?>? model,
+    Value<String>? lastHost,
+    Value<int>? lastPort,
+    Value<bool>? isManual,
+    Value<HevcSupport>? hevcSupport,
+    Value<String?>? learnedJson,
+    Value<DateTime?>? lastUsedAt,
+    Value<int>? rowid,
+  }) {
+    return CastDevicesCompanion(
+      deviceId: deviceId ?? this.deviceId,
+      name: name ?? this.name,
+      model: model ?? this.model,
+      lastHost: lastHost ?? this.lastHost,
+      lastPort: lastPort ?? this.lastPort,
+      isManual: isManual ?? this.isManual,
+      hevcSupport: hevcSupport ?? this.hevcSupport,
+      learnedJson: learnedJson ?? this.learnedJson,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (lastHost.present) {
+      map['last_host'] = Variable<String>(lastHost.value);
+    }
+    if (lastPort.present) {
+      map['last_port'] = Variable<int>(lastPort.value);
+    }
+    if (isManual.present) {
+      map['is_manual'] = Variable<bool>(isManual.value);
+    }
+    if (hevcSupport.present) {
+      map['hevc_support'] = Variable<String>(
+        $CastDevicesTable.$converterhevcSupport.toSql(hevcSupport.value),
+      );
+    }
+    if (learnedJson.present) {
+      map['learned_json'] = Variable<String>(learnedJson.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<DateTime>(lastUsedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CastDevicesCompanion(')
+          ..write('deviceId: $deviceId, ')
+          ..write('name: $name, ')
+          ..write('model: $model, ')
+          ..write('lastHost: $lastHost, ')
+          ..write('lastPort: $lastPort, ')
+          ..write('isManual: $isManual, ')
+          ..write('hevcSupport: $hevcSupport, ')
+          ..write('learnedJson: $learnedJson, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12187,6 +12777,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FavoriteGroupsTable favoriteGroups = $FavoriteGroupsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $WatchHistoryTable watchHistory = $WatchHistoryTable(this);
+  late final $CastDevicesTable castDevices = $CastDevicesTable(this);
   late final Index watchHistoryRecent = Index(
     'watch_history_recent',
     'CREATE INDEX watch_history_recent ON watch_history (item_type, updated_at)',
@@ -12203,6 +12794,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final MoviesDao moviesDao = MoviesDao(this as AppDatabase);
   late final SeriesDao seriesDao = SeriesDao(this as AppDatabase);
   late final EpgDao epgDao = EpgDao(this as AppDatabase);
+  late final CastDevicesDao castDevicesDao = CastDevicesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12253,6 +12847,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     favoriteGroups,
     favorites,
     watchHistory,
+    castDevices,
     watchHistoryRecent,
   ];
   @override
@@ -22916,6 +23511,299 @@ typedef $$WatchHistoryTableProcessedTableManager =
       WatchHistoryRow,
       PrefetchHooks Function({bool sourceId})
     >;
+typedef $$CastDevicesTableCreateCompanionBuilder =
+    CastDevicesCompanion Function({
+      required String deviceId,
+      required String name,
+      Value<String?> model,
+      required String lastHost,
+      Value<int> lastPort,
+      Value<bool> isManual,
+      Value<HevcSupport> hevcSupport,
+      Value<String?> learnedJson,
+      Value<DateTime?> lastUsedAt,
+      Value<int> rowid,
+    });
+typedef $$CastDevicesTableUpdateCompanionBuilder =
+    CastDevicesCompanion Function({
+      Value<String> deviceId,
+      Value<String> name,
+      Value<String?> model,
+      Value<String> lastHost,
+      Value<int> lastPort,
+      Value<bool> isManual,
+      Value<HevcSupport> hevcSupport,
+      Value<String?> learnedJson,
+      Value<DateTime?> lastUsedAt,
+      Value<int> rowid,
+    });
+
+class $$CastDevicesTableFilterComposer
+    extends Composer<_$AppDatabase, $CastDevicesTable> {
+  $$CastDevicesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastHost => $composableBuilder(
+    column: $table.lastHost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastPort => $composableBuilder(
+    column: $table.lastPort,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isManual => $composableBuilder(
+    column: $table.isManual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<HevcSupport, HevcSupport, String>
+  get hevcSupport => $composableBuilder(
+    column: $table.hevcSupport,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get learnedJson => $composableBuilder(
+    column: $table.learnedJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CastDevicesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CastDevicesTable> {
+  $$CastDevicesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastHost => $composableBuilder(
+    column: $table.lastHost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastPort => $composableBuilder(
+    column: $table.lastPort,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isManual => $composableBuilder(
+    column: $table.isManual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hevcSupport => $composableBuilder(
+    column: $table.hevcSupport,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get learnedJson => $composableBuilder(
+    column: $table.learnedJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CastDevicesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CastDevicesTable> {
+  $$CastDevicesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<String> get lastHost =>
+      $composableBuilder(column: $table.lastHost, builder: (column) => column);
+
+  GeneratedColumn<int> get lastPort =>
+      $composableBuilder(column: $table.lastPort, builder: (column) => column);
+
+  GeneratedColumn<bool> get isManual =>
+      $composableBuilder(column: $table.isManual, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<HevcSupport, String> get hevcSupport =>
+      $composableBuilder(
+        column: $table.hevcSupport,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get learnedJson => $composableBuilder(
+    column: $table.learnedJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$CastDevicesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CastDevicesTable,
+          CastDeviceRow,
+          $$CastDevicesTableFilterComposer,
+          $$CastDevicesTableOrderingComposer,
+          $$CastDevicesTableAnnotationComposer,
+          $$CastDevicesTableCreateCompanionBuilder,
+          $$CastDevicesTableUpdateCompanionBuilder,
+          (
+            CastDeviceRow,
+            BaseReferences<_$AppDatabase, $CastDevicesTable, CastDeviceRow>,
+          ),
+          CastDeviceRow,
+          PrefetchHooks Function()
+        > {
+  $$CastDevicesTableTableManager(_$AppDatabase db, $CastDevicesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CastDevicesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CastDevicesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CastDevicesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> deviceId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<String> lastHost = const Value.absent(),
+                Value<int> lastPort = const Value.absent(),
+                Value<bool> isManual = const Value.absent(),
+                Value<HevcSupport> hevcSupport = const Value.absent(),
+                Value<String?> learnedJson = const Value.absent(),
+                Value<DateTime?> lastUsedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CastDevicesCompanion(
+                deviceId: deviceId,
+                name: name,
+                model: model,
+                lastHost: lastHost,
+                lastPort: lastPort,
+                isManual: isManual,
+                hevcSupport: hevcSupport,
+                learnedJson: learnedJson,
+                lastUsedAt: lastUsedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String deviceId,
+                required String name,
+                Value<String?> model = const Value.absent(),
+                required String lastHost,
+                Value<int> lastPort = const Value.absent(),
+                Value<bool> isManual = const Value.absent(),
+                Value<HevcSupport> hevcSupport = const Value.absent(),
+                Value<String?> learnedJson = const Value.absent(),
+                Value<DateTime?> lastUsedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CastDevicesCompanion.insert(
+                deviceId: deviceId,
+                name: name,
+                model: model,
+                lastHost: lastHost,
+                lastPort: lastPort,
+                isManual: isManual,
+                hevcSupport: hevcSupport,
+                learnedJson: learnedJson,
+                lastUsedAt: lastUsedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CastDevicesTable, CastDeviceRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CastDevicesTable,
+                    CastDeviceRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CastDevicesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CastDevicesTable,
+      CastDeviceRow,
+      $$CastDevicesTableFilterComposer,
+      $$CastDevicesTableOrderingComposer,
+      $$CastDevicesTableAnnotationComposer,
+      $$CastDevicesTableCreateCompanionBuilder,
+      $$CastDevicesTableUpdateCompanionBuilder,
+      (
+        CastDeviceRow,
+        BaseReferences<_$AppDatabase, $CastDevicesTable, CastDeviceRow>,
+      ),
+      CastDeviceRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -22966,4 +23854,6 @@ class $AppDatabaseManager {
       $$FavoritesTableTableManager(_db, _db.favorites);
   $$WatchHistoryTableTableManager get watchHistory =>
       $$WatchHistoryTableTableManager(_db, _db.watchHistory);
+  $$CastDevicesTableTableManager get castDevices =>
+      $$CastDevicesTableTableManager(_db, _db.castDevices);
 }

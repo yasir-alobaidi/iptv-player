@@ -28,6 +28,7 @@ dependencies:
   media_kit_libs_video: ^1.0.7
   media_kit_video: ^2.0.1
   meta: ^1.19.0
+  multicast_dns: ^0.3.3+1
   path: ^1.9.1
   path_provider: ^2.1.6
   protobuf: ^6.1.0
@@ -41,6 +42,7 @@ dependencies:
   xdg_directories: ^1.1.0
 
 dev_dependencies:
+  bonsoir_linux: ^7.1.0
   build_runner: ^2.16.1
   # tools/extract_icons.dart identifies canvas icons by an md5 of their markup.
   crypto: ^3.0.6

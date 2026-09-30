@@ -1,6 +1,6 @@
 # Phase 7 — Casting: plan
 
-**Status: for your approval (written 2026-09-29).** Once approved, what is built and every departure from this plan go into ADR-014 (docs/decisions.md) as the steps land.
+**Status: approved 2026-09-29, every recommendation and the five sketches (the user: "do the recommended").** What is built and every departure from this plan go into ADR-014 (docs/decisions.md) as the steps land.
 
 ## Context
 Phases 1–6 built everything that plays on the laptop. Casting is the largest and riskiest phase left. Phase 0 proved each piece on your TV (ADR-004), but none of it is in the app yet.

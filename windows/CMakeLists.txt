@@ -102,6 +102,19 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# The bundled FFmpeg and ffprobe that casting runs (docs/04; fetched by
+# tools/fetch_ffmpeg.sh windows-x64 into third_party/, which git ignores).
+# A checkout without them builds an app that says it can't cast.
+set(FFMPEG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/ffmpeg/windows-x64")
+if(EXISTS "${FFMPEG_SOURCE_DIR}/ffmpeg.exe" AND EXISTS "${FFMPEG_SOURCE_DIR}/ffprobe.exe")
+  install(PROGRAMS "${FFMPEG_SOURCE_DIR}/ffmpeg.exe" "${FFMPEG_SOURCE_DIR}/ffprobe.exe"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/ffmpeg" COMPONENT Runtime)
+  install(FILES "${FFMPEG_SOURCE_DIR}/LICENSE.txt" "${FFMPEG_SOURCE_DIR}/VERSION"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/ffmpeg" OPTIONAL COMPONENT Runtime)
+else()
+  message(STATUS "No FFmpeg in ${FFMPEG_SOURCE_DIR}: this build can't cast (run tools/fetch_ffmpeg.sh windows-x64)")
+endif()
+
 # Install the AOT library on non-Debug builds only.
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release

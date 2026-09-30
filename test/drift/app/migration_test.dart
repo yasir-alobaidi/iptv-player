@@ -3,6 +3,7 @@
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
@@ -16,6 +17,7 @@ import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
+import 'generated/schema_v8.dart' as v8;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -628,6 +630,60 @@ void main() {
         database.sources,
       )..where((t) => t.id.equals('src-1'))).go();
       expect(await database.select(database.favoriteGroups).get(), isEmpty);
+    });
+  });
+
+  group('v7 → v8', () {
+    const created = '2026-09-29T08:00:00.000Z';
+    const source = v7.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+
+    test('keeps the sources and adds an empty cast_devices', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 7,
+        newVersion: 8,
+        createOld: v7.DatabaseAtV7.new,
+        createNew: v8.DatabaseAtV8.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) => batch.insert(oldDb.sources, source),
+        validateItems: (newDb) async {
+          expect((await newDb.select(newDb.sources).get()).single.id, 'src-1');
+          expect(await newDb.select(newDb.castDevices).get(), isEmpty);
+        },
+      );
+    });
+
+    test('a migrated database keeps a device with its defaults', () async {
+      final schema = await verifier.schemaAt(7);
+      final old = v7.DatabaseAtV7(schema.newConnection());
+      await old.into(old.sources).insert(source);
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+      await database.castDevicesDao.upsertSeen(
+        id: 'aaaa',
+        name: 'Living Room TV',
+        host: '192.168.1.60',
+        port: castPort,
+        manual: true,
+      );
+      final row = (await database.castDevicesDao.byId('aaaa'))!;
+      expect(row.lastPort, 8009);
+      expect(row.isManual, isTrue);
+      expect(row.hevcSupport, HevcSupport.auto);
+      expect(row.learnedJson, isNull);
+      expect(row.lastUsedAt, isNull);
     });
   });
 }

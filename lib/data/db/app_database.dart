@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:iptv_player/data/db/app_database.steps.dart';
+import 'package:iptv_player/data/db/cast_tables.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
+import 'package:iptv_player/data/db/daos/cast_devices_dao.dart';
 import 'package:iptv_player/data/db/daos/categories_dao.dart';
 import 'package:iptv_player/data/db/daos/channels_dao.dart';
 import 'package:iptv_player/data/db/daos/epg_dao.dart';
@@ -46,6 +48,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     EpgProgramsStaging,
     EpgMappings,
     EpgMatches,
+    CastDevices,
   ],
   include: {'search.drift'},
   daos: [
@@ -59,6 +62,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     MoviesDao,
     SeriesDao,
     EpgDao,
+    CastDevicesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -68,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -179,6 +183,10 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.database.customStatement(
       "INSERT INTO channels_fts(channels_fts) VALUES ('rebuild')",
     );
+  },
+  from7To8: (m, schema) async {
+    // Phase 7: the Cast devices the app keeps.
+    await m.createTable(schema.castDevices);
   },
 );
 
