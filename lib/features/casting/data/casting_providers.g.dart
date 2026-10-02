@@ -537,3 +537,101 @@ final class CastEncoderDetectionProvider
 
 String _$castEncoderDetectionHash() =>
     r'b81569f22ca469f743113a01f0af69bf67e464f3';
+
+/// Where the relay keeps its sessions' segments. `bootstrap()` points it
+/// into the app's cache folder; this is the fallback when it has none.
+
+@ProviderFor(relayFolder)
+final relayFolderProvider = RelayFolderProvider._();
+
+/// Where the relay keeps its sessions' segments. `bootstrap()` points it
+/// into the app's cache folder; this is the fallback when it has none.
+
+final class RelayFolderProvider
+    extends $FunctionalProvider<Directory, Directory, Directory>
+    with $Provider<Directory> {
+  /// Where the relay keeps its sessions' segments. `bootstrap()` points it
+  /// into the app's cache folder; this is the fallback when it has none.
+  RelayFolderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayFolderProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayFolderHash();
+
+  @$internal
+  @override
+  $ProviderElement<Directory> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Directory create(Ref ref) {
+    return relayFolder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Directory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Directory>(value),
+    );
+  }
+}
+
+String _$relayFolderHash() => r'df0fb27423157e733546f2ce6c809d955c3f1a84';
+
+/// The relay (Phase 7 step 5): its isolate starts with the first cast or
+/// probe, and stops with the app.
+
+@ProviderFor(castRelay)
+final castRelayProvider = CastRelayProvider._();
+
+/// The relay (Phase 7 step 5): its isolate starts with the first cast or
+/// probe, and stops with the app.
+
+final class CastRelayProvider
+    extends $FunctionalProvider<CastRelay, CastRelay, CastRelay>
+    with $Provider<CastRelay> {
+  /// The relay (Phase 7 step 5): its isolate starts with the first cast or
+  /// probe, and stops with the app.
+  CastRelayProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castRelayProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castRelayHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastRelay> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastRelay create(Ref ref) {
+    return castRelay(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastRelay value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastRelay>(value),
+    );
+  }
+}
+
+String _$castRelayHash() => r'05adf9ebd69f6808860eec67bf511256ca46bbc7';

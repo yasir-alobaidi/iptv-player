@@ -32,4 +32,7 @@ final class AppPaths {
 
   /// Casting's own files: the encoders found (Phase 7 step 4).
   Directory get cast => Directory(p.join(root.path, 'cast'));
+
+  /// The relay's sessions: HLS segments for the TV (Phase 7 step 5).
+  Directory get relay => Directory(p.join(cacheRoot.path, 'relay'));
 }

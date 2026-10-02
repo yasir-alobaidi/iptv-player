@@ -57,7 +57,7 @@ void main() {
   CastReceiverSession? session;
 
   Future<void> startFake({
-    FakeDevice device = const FakeDevice(),
+    FakeDevice device = FakeDevice.tv4k,
     Duration launchDelay = const Duration(milliseconds: 50),
     bool receiverRunning = false,
   }) async {

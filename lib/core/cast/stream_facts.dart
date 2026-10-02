@@ -39,6 +39,9 @@ enum StreamFactsOrigin {
 
   /// ffprobe.
   probe,
+
+  /// The relay's FFmpeg: what it opened (Phase 7 step 5).
+  relay,
 }
 
 /// The stream's container, as far as casting cares.

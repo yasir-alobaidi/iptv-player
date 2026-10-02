@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:fake_receiver/src/cast_wire.dart';
+import 'package:fake_receiver/src/fake_playback.dart';
 import 'package:fake_receiver/src/test_certificate.dart';
 
 const nsConnection = 'urn:x-cast:com.google.cast.tp.connection';
@@ -27,7 +28,29 @@ final class FakeDevice {
     this.capabilities = 458757,
     this.multizone = true,
     this.fixedVolume = true,
+    this.hevc = true,
+    this.maxHeight = 2160,
+    this.linkHeight,
   });
+
+  /// Living Room TV as found: 4K, HEVC (Chromecast with Google TV 4K).
+  static const tv4k = FakeDevice();
+
+  /// A 1080p Chromecast that plays H.264 only.
+  static const chromecastHd = FakeDevice(
+    name: 'Fake Chromecast',
+    id: 'fa4e7ec0000000000000000000000002',
+    hevc: false,
+    maxHeight: 1080,
+  );
+
+  /// A 4K TV whose HDMI link runs at 1080p (Input Signal Plus off): it
+  /// refuses anything taller with a bare LOAD_FAILED (docs/04).
+  static const tvOnHdLink = FakeDevice(
+    name: 'Fake TV on an HD link',
+    id: 'fa4e7ec0000000000000000000000003',
+    linkHeight: 1080,
+  );
 
   /// The friendly name (TXT `fn`, MULTIZONE_STATUS `name`).
   final String name;
@@ -44,6 +67,26 @@ final class FakeDevice {
   /// Its volume follows the TV's own (`controlType: fixed`), as Living
   /// Room TV's does: SET_VOLUME changes nothing.
   final bool fixedVolume;
+
+  /// Plays HEVC. Without, an HEVC picture is refused (with [FakePlayback]).
+  final bool hevc;
+
+  /// The tallest picture it plays.
+  final int maxHeight;
+
+  /// The HDMI link's height, when it is less than the device's: taller
+  /// pictures are refused as by [maxHeight].
+  final int? linkHeight;
+
+  /// Why it won't play [check]'s picture, or null.
+  String? refuses(FakeMediaCheck check) {
+    final height = check.height ?? 0;
+    if (check.videoCodec == 'hevc' && !hevc) return 'HEVC';
+    if (height > maxHeight) return '${height}p';
+    if (linkHeight case final link? when height > link) return '${height}p';
+    if (!check.hasVideo && !check.hasAudio) return 'nothing to play';
+    return null;
+  }
 
   /// [id] as a UUID, which MULTIZONE_STATUS sends.
   String get uuid =>
@@ -115,19 +158,21 @@ final class FakeReceiver {
     required this.launchDelay,
     required this.loadDelay,
     required this.pingEvery,
+    this.playback,
     this.log,
   });
 
   /// Starts on [host]:[port] (0 picks a free port). [receiverRunning]
   /// starts it with the Default Media Receiver already up.
   static Future<FakeReceiver> start({
-    FakeDevice device = const FakeDevice(),
+    FakeDevice device = FakeDevice.tv4k,
     String host = '127.0.0.1',
     int port = 0,
     Duration launchDelay = Duration.zero,
     Duration loadDelay = const Duration(milliseconds: 100),
     Duration? pingEvery = const Duration(seconds: 5),
     bool receiverRunning = false,
+    FakePlayback? playback,
     void Function(String line)? log,
   }) async {
     final context = SecurityContext()
@@ -140,6 +185,7 @@ final class FakeReceiver {
       launchDelay: launchDelay,
       loadDelay: loadDelay,
       pingEvery: pingEvery,
+      playback: playback,
       log: log,
     );
     if (receiverRunning) receiver._app = receiver._newDefaultMediaReceiver();
@@ -156,7 +202,15 @@ final class FakeReceiver {
   final Duration launchDelay;
   final Duration loadDelay;
   final Duration? pingEvery;
+
+  /// Fetches and checks what LOAD names, as a TV does; null pretends to
+  /// play anything.
+  final FakePlayback? playback;
   final void Function(String line)? log;
+
+  final _fetches = <FakeFetch>[];
+  final _checks = <FakeMediaCheck>[];
+  final _checksStream = StreamController<FakeMediaCheck>.broadcast();
 
   final _senders = <_Sender>[];
   final _received = <FakeReceived>[];
@@ -210,6 +264,15 @@ final class FakeReceiver {
 
   /// Where the media session is now, in seconds.
   double? get position => _media == null ? null : _positionOf(_media!);
+
+  /// Every request made for the media, in order ([playback] only).
+  List<FakeFetch> get fetches => List.unmodifiable(_fetches);
+
+  /// What ffprobe found in each segment, or at the start of a continuous
+  /// stream ([playback] only).
+  List<FakeMediaCheck> get checks => List.unmodifiable(_checks);
+
+  Stream<FakeMediaCheck> get onChecked => _checksStream.stream;
 
   /// The messages received of [type] (on any namespace).
   List<FakeReceived> requests(String type) =>
@@ -281,9 +344,11 @@ final class FakeReceiver {
     _launching?.cancel();
     _loading?.cancel();
     _finishing?.cancel();
+    _media?.watch?.cancel();
     dropConnections();
     await _server.close();
     await _receivedStream.close();
+    await _checksStream.close();
   }
 
   void _accept(SecureSocket socket) {
@@ -523,6 +588,7 @@ final class FakeReceiver {
     }
     _loading?.cancel();
     _finishing?.cancel();
+    _media?.watch?.cancel();
     if (_media case final previous? when previous.loading) {
       final requester = previous.requester;
       if (requester != null) {
@@ -543,6 +609,21 @@ final class FakeReceiver {
       'status': [_mediaStatus(session, full: true)],
     });
     final autoplay = m.payload['autoplay'] != false;
+    final play = playback;
+    if (play != null && !(_refuse?.call(media) ?? false)) {
+      final url = Uri.tryParse('${media['contentId']}');
+      if (url == null || !url.hasScheme) {
+        _refuseLoad(session, sender, m);
+        return;
+      }
+      session.watch = FakeWatch(
+        url: url,
+        contentType: '${media['contentType'] ?? ''}',
+        playback: play,
+        listener: _Watching(this, session, sender, m, autoplay: autoplay),
+      )..start();
+      return;
+    }
     _loading = Timer(loadDelay, () {
       if (!identical(_media, session)) return;
       session
@@ -588,11 +669,26 @@ final class FakeReceiver {
     _tellMedia(media, reply);
   }
 
+  /// A LOAD refused: LOAD_FAILED as its second answer, then IDLE/ERROR.
+  void _refuseLoad(_Media session, _Sender sender, FakeReceived m) {
+    if (!identical(_media, session)) return;
+    session
+      ..loading = false
+      ..requester = null;
+    _reply(sender, m, nsMedia, {
+      'type': 'LOAD_FAILED',
+      'severity': 2,
+      'itemId': 1,
+    });
+    _end('ERROR');
+  }
+
   /// Ends the media session: IDLE with [reason], then no session.
   void _end(String reason, {(_Sender, FakeReceived)? reply}) {
     final media = _media;
     if (media == null) return;
     _finishing?.cancel();
+    media.watch?.cancel();
     media
       ..position = _positionOf(media)
       ..since = _now
@@ -624,6 +720,7 @@ final class FakeReceiver {
     if (app == null) return;
     _loading?.cancel();
     _finishing?.cancel();
+    _media?.watch?.cancel();
     _media = null;
     _app = null;
     for (final sender in _senders) {
@@ -842,5 +939,79 @@ final class _Media {
   /// Ended: STOP, LOAD_FAILED or played to its end.
   bool done = false;
 
+  /// Fetching the stream ([FakeReceiver.playback]).
+  FakeWatch? watch;
+
   bool get ended => done;
+}
+
+/// One LOAD's stream, as the fake plays it: the media session follows
+/// what was really fetched.
+final class _Watching implements FakeWatchListener {
+  new(
+    this._fake,
+    this._session,
+    this._sender,
+    this._load, {
+    required this.autoplay,
+  });
+
+  final FakeReceiver _fake;
+  final _Media _session;
+  final _Sender _sender;
+  final FakeReceived _load;
+  final bool autoplay;
+
+  bool get _current => identical(_fake._media, _session) && !_session.done;
+
+  @override
+  void fetched(FakeFetch fetch) => _fake._fetches.add(fetch);
+
+  @override
+  void checked(FakeMediaCheck check) {
+    _fake._checks.add(check);
+    _fake.log?.call('checked $check');
+    if (!_fake._checksStream.isClosed) _fake._checksStream.add(check);
+  }
+
+  @override
+  void started(FakeMediaCheck check) {
+    if (!_current) return;
+    final refused = _fake.device.refuses(check);
+    if (refused != null) {
+      _fake.log?.call('refusing $refused');
+      Timer(_fake.playback!.refuseDelay, () {
+        if (_current) _fake._refuseLoad(_session, _sender, _load);
+      });
+      return;
+    }
+    _session
+      ..loading = false
+      ..requester = null;
+    _fake
+      .._setState('BUFFERING')
+      .._setState(autoplay ? 'PLAYING' : 'PAUSED');
+  }
+
+  @override
+  void stalled({required bool stalled}) {
+    if (!_current || _session.loading || _session.state == 'PAUSED') return;
+    _fake._setState(stalled ? 'BUFFERING' : 'PLAYING');
+  }
+
+  @override
+  void finished() {
+    if (_current && !_session.loading) _fake._end('FINISHED');
+  }
+
+  @override
+  void failed(String reason) {
+    if (!_current) return;
+    _fake.log?.call('playback failed: $reason');
+    if (_session.loading) {
+      _fake._refuseLoad(_session, _sender, _load);
+    } else {
+      _fake._end('ERROR');
+    }
+  }
 }

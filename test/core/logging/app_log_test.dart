@@ -61,6 +61,21 @@ void main() {
 
       expect(lines().single, contains('WARN [ui] shown'));
     });
+
+    test("another isolate's lines: as they are, redacted again, by level", () {
+      secrets.add('hunter22');
+      log
+        ..forward(Level.warning, [
+          '2026-10-02T09:00:00.000Z WARN [relay] cast-1: FFmpeg: hunter22',
+          '  error: GET http://p.example/live/john/s3cret/1.ts',
+        ])
+        ..forward(Level.debug, ['2026-10-02T09:00:00.000Z DEBUG [relay] x']);
+
+      expect(lines(), [
+        '2026-10-02T09:00:00.000Z WARN [relay] cast-1: FFmpeg: ***',
+        '  error: GET http://p.example/live/***/***/1.ts',
+      ]);
+    });
   });
 
   group('ErrorReporter', () {

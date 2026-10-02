@@ -14,9 +14,15 @@ final class AppLog {
          printer: _LinePrinter(secrets),
          output: output,
          level: level,
-       );
+       ),
+       _output = output,
+       _secrets = secrets,
+       _level = level;
 
   final Logger _logger;
+  final LogOutput _output;
+  final SecretRegistry _secrets;
+  final Level _level;
 
   void debug(String tag, String message) => _logger.d(_Record(tag, message));
 
@@ -35,6 +41,21 @@ final class AppLog {
     Object? error,
     StackTrace? stackTrace,
   }) => _logger.e(_Record(tag, message), error: error, stackTrace: stackTrace);
+
+  /// Lines another isolate's log made (the cast relay's, Phase 7 decision
+  /// 5), written as they are, after redaction with this log's secrets.
+  void forward(Level level, List<String> lines) {
+    if (level.value < _level.value) return;
+    try {
+      _output.output(
+        OutputEvent(LogEvent(level, ''), [
+          for (final line in lines) redact(line, secrets: _secrets.values),
+        ]),
+      );
+    } on Object {
+      // Closed: the app is quitting.
+    }
+  }
 
   /// Flushes and closes the outputs.
   Future<void> close() => _logger.close();

@@ -294,6 +294,17 @@ final class SupervisedProcess {
     await exitCode;
   }
 
+  /// SIGKILL at once (TerminateProcess on Windows), for a process that is
+  /// stuck: a relay FFmpeg blocked on a stalled stream doesn't heed
+  /// SIGTERM. Completes once it has ended.
+  Future<void> kill() async {
+    if (_exited) return;
+    _stopping = true;
+    _kill?.cancel();
+    _process.kill(ProcessSignal.sigkill);
+    await exitCode;
+  }
+
   void _stopAfter(Duration timeout) {
     _timeout = Timer(timeout, () {
       _timedOut = true;

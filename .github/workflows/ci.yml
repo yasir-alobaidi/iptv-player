@@ -93,6 +93,23 @@ jobs:
         # Not `.`: third_party/ is vendored upstream code and is not
         # formatted to our settings (docs/06).
 
+      - name: Media samples for the player and relay tests
+        if: runner.os == 'Linux'
+        # Before the unit tests: the relay's tests cast the fake panel's
+        # channels through FFmpeg to the fake receiver (Phase 7 step 5).
+        # The fault suite and the engine test play these through the
+        # fake provider; 30 s each is plenty for a loop (ADR-010, step
+        # 8). The VOD tests play movies and episodes: 120 s holds a resume
+        # past a minute, the next-episode card's 20 s and a drop half-way
+        # (Phase 5 step 6). The 4K samples take too long to encode here;
+        # their relay tests skip themselves.
+        run: |
+          FFMPEG=/usr/bin/ffmpeg LIVE_SECONDS=30 VOD_SECONDS=120 \
+            tools/media_samples/generate.sh \
+            h264_1080p50_aac h264_1080p25_ac3 hevc_1080p50_aac \
+            h264_1080i50_mp2 mpeg2_576i25_mp2 \
+            vod_h264_aac_10min vod_h264_ac3_10min
+
       - name: Test (Linux, including goldens)
         if: runner.os == 'Linux'
         run: flutter test --file-reporter json:test-results.json
@@ -118,19 +135,6 @@ jobs:
       - name: Fake receiver tests
         run: dart test
         working-directory: tools/fake_receiver
-
-      - name: Media samples for the player tests
-        if: runner.os == 'Linux'
-        # The fault suite and the engine test play these through the fake
-        # provider; 30 s each is plenty for a loop (ADR-010, step 8). The
-        # VOD tests play movies and episodes: 120 s holds a resume past a
-        # minute, the next-episode card's 20 s and a drop half-way
-        # (Phase 5 step 6).
-        run: |
-          FFMPEG=/usr/bin/ffmpeg LIVE_SECONDS=30 VOD_SECONDS=120 \
-            tools/media_samples/generate.sh \
-            h264_1080p50_aac h264_1080p25_ac3 hevc_1080p50_aac \
-            vod_h264_aac_10min vod_h264_ac3_10min
 
       - name: Integration tests under xvfb
         if: runner.os == 'Linux'

@@ -21,6 +21,7 @@ import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/player/unavailable_player_engine.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
+import 'package:iptv_player/data/cast/relay/relay_folders.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
@@ -110,13 +111,23 @@ Future<void> bootstrap() async {
       if (paths != null) ...[
         processFolderProvider.overrideWithValue(paths.processes),
         castFolderProvider.overrideWithValue(paths.cast),
+        relayFolderProvider.overrideWithValue(paths.relay),
       ],
       ...sourceShellOverrides,
     ],
   );
   // Before anything starts a process: FFmpeg or ffprobe left running by a
   // run that didn't get to stop them (hard rule 8).
-  unawaited(container.read(processSupervisorProvider).sweep());
+  // Then the relay's segments from those runs (docs/04 "On app start").
+  unawaited(
+    container
+        .read(processSupervisorProvider)
+        .sweep()
+        .then(
+          (_) =>
+              sweepRelayFolders(container.read(relayFolderProvider), log: log),
+        ),
+  );
   runApp(
     UncontrolledProviderScope(
       container: container,

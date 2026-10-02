@@ -1,4 +1,4 @@
-# Handoff — 2026-10-02 (Phase 7 step 4 done, stopped for review; the TV run put off)
+# Handoff — 2026-10-02 (Phase 7 step 5 done, stopped for review; the TV run waits)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -6,19 +6,24 @@ docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
 part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 4** (ADR-014 "Hardware encoders"). Its choices to
-   look at:
-   - **the departure: the Linux build carries libva 2.22** for the bundled
-     FFmpeg (built by `tools/fetch_libva.sh` with docker). Without it,
-     FFmpeg aborts on every VA-API encode on Ubuntu 22.04 and 24.04;
-   - the bundled libva tried first, the system's second;
-   - the arguments per encoder (bit rate caps, a keyframe every 2 s, one
-     picture per field, never taller);
-   - what detection remembers, and for how long (per FFmpeg version, 7 days).
-2. **Push** the three local commits (steps 2, 3 and 4).
-3. **The TV run is put off, as you asked.** When you want it, be on your
-   home network and say so; the session will ask before it casts. It can go
-   with step 6's cast through the app, in one sitting.
+1. **Review Phase 7 step 5** (ADR-014 "The relay, its proxy and its
+   supervisor"). Its choices to look at:
+   - **the departures from docs/04's FFmpeg options:** no `-user_agent`
+     (the proxy sends the source's), `-reconnect_delay_max 1` (FFmpeg
+     ends 3 s after the app is killed, not 16), FFmpeg reading 2 s of the
+     stream before it starts (as the probe does), `aac_adtstoasc` for AAC
+     copied into MP4;
+   - **the program watch:** the proxy reads a live channel's PAT/PMT to
+     catch a codec switch, which FFmpeg, copying, never reports;
+   - **the continuous stream written on the TV's own connection**, so a
+     TV that leaves is seen at once (ADR-010's lesson, met again);
+   - **CI** now generates the media samples before the unit tests (two
+     more, 1080i and 576i), so the relay's tests run there with FFmpeg
+     4.4.
+2. **Push** the local commit (step 5).
+3. **The TV run waits** (the TV isn't on the network for now). When you
+   want it, say so; the session asks before it casts. It can go with
+   step 6's cast through the app, in one sitting.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -26,64 +31,77 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Step 4 is <approved | approved with these changes: …>.
-<The TV run waits | I'm home, the TV run can go ahead after you ask>. Then start step 5.
+and docs/04-casting.md first. Step 5 is <approved | approved with these changes: …>.
+<The TV run waits | The TV is on the network: the TV run can go ahead after you ask>. Then start step 6.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1–3 approved; step 4 done; step 2's TV run
-  put off at the user's request (2026-10-02: "consider the test on living
-  room tv to do it later").**
-- **Checks at the step 4 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,635 app tests** (14 skipped) under `TZ=UTC`; the new tests
-  stable 8 of 8 run in parallel (103 each); the fake receiver's 19, the
-  fake provider's 141; `app_launch_test` under xvfb; the Linux build
-  bundles `ffmpeg/libva/`.
-- **CI:** green on both systems at 337db4e (step 1). Steps 2–4 aren't
-  pushed: check the first run after the push. Step 2 added the "Fake
-  receiver tests" step; step 3's supervisor tests run on Windows with
-  PING.EXE (the win32 image check has never run on real Windows); step 4's
-  real-FFmpeg detection test runs on CI's Linux job with the system FFmpeg
-  4.4 (libx264 only).
+- **Phase 7 (casting): steps 1–4 approved; step 5 done; step 2's TV run
+  waits (2026-10-02: "consider the test on living room tv to do it
+  later"; then "I dont have the living room tv on network so we gonna do
+  it later").**
+- **Checks at the step 5 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,791 app tests** (15 skipped) under `TZ=UTC`, about 2 min
+  20 s now (the relay's end-to-end tests stream in real time); the
+  relay's seven unit files 8 of 8 with eight copies at once, the
+  real-FFmpeg ones 3 of 3 three at once, and all 30 also with the system
+  FFmpeg 4.4 (`RELAY_FFMPEG_DIR=/usr/bin`); the fake receiver's 32, the
+  fake provider's 141; `app_launch_test` under xvfb; the real app's
+  launch deleted a planted stale relay folder.
+- **CI:** green on both systems at a3a07bd (steps 2–4). Step 5 moves the
+  sample generation before `flutter test`: check the first run after the
+  push (the Linux job now runs the relay's end-to-end tests with 4.4).
 
-## Done this session (2026-10-02, third session)
-- **Step 3 approved; the TV run put off** (the laptop was on 192.168.26.x
-  anyway).
-- **Step 4** (details in ADR-014 "Hardware encoders"):
-  - the domain: `lib/core/cast/cast_encoders.dart`;
-  - the arguments: `videoTranscodeArgs` (`lib/data/cast/ffmpeg_video_args.dart`);
-  - detection: `FfmpegEncoderDetector` (`lib/data/cast/ffmpeg_encoder_detector.dart`),
-    `castEncoderDetectionProvider`, `castFolderProvider` (bootstrap:
-    `AppPaths.cast`);
-  - `ProcessSupervisor.start`/`run` take an `environment`;
-  - `FfmpegBinaries.libva` and `libvaEnvironment()`;
-  - `tools/fetch_libva.sh`, the Linux build's `ffmpeg/libva/`;
-  - the measurement: `test/tools/cast_transcode_measure_test.dart`.
+## Done this session (2026-10-02, fourth session)
+- **Step 4 approved; the TV run waits** (the TV isn't on the network).
+- **Step 5** (details in ADR-014 "The relay, its proxy and its supervisor"):
+  - the domain: `lib/core/cast/cast_relay.dart`;
+  - `lib/data/cast/relay/`: `isolate_cast_relay.dart` (the app's side),
+    `relay_isolate.dart` (the isolate and its messages),
+    `relay_runtime.dart` (sessions and the supervisor), `relay_proxy.dart`,
+    `relay_server.dart`, `relay_job.dart` (`relayArguments`),
+    `relay_args.dart` (`castRelayJob`), `ffmpeg_log.dart`,
+    `hls_playlists.dart`, `ts_programs.dart`, `relay_folders.dart`;
+  - `castRelayProvider`, `relayFolderProvider`, `AppPaths.relay`, the
+    folders' sweep in `bootstrap()`; `AppLog.forward`;
+    `SupervisedProcess.kill`; `StreamFactsOrigin.relay`;
+  - the fake receiver plays (`fake_playback.dart`), with device profiles
+    and `--ffprobe`/`--device`; its test client moved to
+    `test/support/test_sender.dart`;
+  - CI: samples before the unit tests;
+  - the measurement: `test/tools/cast_relay_measure_test.dart`.
 
 ## What's next
-1. **Phase 7 step 5** (plan "Step 5"): the relay isolate; `RelayServer`
-   (bound to the Cast connection's local address, ports 38400–38499, a
-   128-bit token per session, docs/04's routes, CORS, MIME, `no-cache`);
-   the loopback proxy (decision 3: the provider connection rebuilt through
-   `StreamResolver`, counted against the source, refusals classified);
-   `FfmpegRelay` (docs/04's input and muxer arguments + step 4's
-   `videoTranscodeArgs` for a transcode plan, with its `environment`;
-   stderr through `redact()`; the streams FFmpeg opened, reported back);
-   `RelaySupervisor` (HLS stall restart, continuous re-LOAD signal, 5 in
-   2 minutes); the fake receiver fetching and ffprobe-checking what it is
-   told to play; exit criterion 2 as a SIGKILL test; the UI isolate's
-   longest pause at 4K and the relay's CPU for 1080p50 copy, measured.
-   Every FFmpeg goes through `ProcessSupervisor.start` (owner "relay").
+1. **Phase 7 step 6** (plan "Step 6"): `CastCoordinator` in
+   `lib/features/casting/domain/`. It now has every piece:
+   - `castReceiversProvider` (join, LOAD, follow the TV),
+     `streamFactsLookupProvider` (probe through `castRelay.openInput`,
+     close it after), `planCast`, `castEncoderDetectionProvider`
+     (`encoders()` at a session's start, beside LAUNCH; `softwareOnly` to
+     the planner; on `encoderFailed`: `detectAgain()`, then `after()`),
+     `castRelayProvider`;
+   - LOAD on `session.ready`; listen to `session.events` right after
+     `start` (one listener); renew a continuous stream on FINISHED
+     (counted); plan again on `CastRelayStreamsChanged` or on
+     `CastRelayOpened` facts that differ (and `remember` them in the
+     lookup); classify `CastRelayFailure` with
+     `classifyStreamFailure(status:, body:)`;
+   - "couldn't reach this computer": no `CastRelayFetched` within 10 s of
+     LOAD;
+   - the connection count: `castRelay.connections` + local playback + the
+     TV's direct connection;
+   - sleep inhibition (the `dbus` package, ADR-002 style), quitting stops
+     the TV's media and the relay, the playback coordinator hands what
+     plays to the cast coordinator (decision 2).
+   - Then one cast through the app to the TV, **only after asking**, with
+     the user watching.
 2. **The TV run, only when the user asks for it, after asking (memory) and
    with the user watching:** `CAST_HOST=192.168.1.155 flutter test --tags
    real_cast --run-skipped test/tools/cast_tv_test.dart` — about 30 s on
-   screen: the two address checks (nothing shown), LAUNCH, LOAD of the MP4
-   sample served from the laptop with Range, PAUSE, SEEK 1:00, PLAY, STOP
-   (the TV goes home). Check first that the laptop is on 192.168.1.x
-   (`ip -4 addr`). Record in ADR-014: join and PLAYING times, the Range
-   requests, whether **MULTIZONE_STATUS's id equals the TXT id**, and what
-   SET_VOLUME would mean on a fixed volume (not tried). It can go together
-   with step 6's cast through the app.
+   screen. Check first that the laptop is on 192.168.1.x (`ip -4 addr`)
+   and that the user says the TV is on the network. Record in ADR-014:
+   join and PLAYING times, the Range requests, whether **MULTIZONE_STATUS's
+   id equals the TXT id**. It can go with step 6's cast through the app.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -93,13 +111,16 @@ and docs/04-casting.md first. Step 4 is <approved | approved with these changes:
   import (at most a day).
 - `GuideGridController.showProgramme` is lost if the Guide's view is
   rebuilt for another source before the grid has rows.
+- A provider's own HLS isn't watched for a codec switch (only MPEG-TS
+  channels are).
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
 - ~~**CI green on both systems.**~~ Done on abd0c1a; keep it so.
-- **Phase 7 — Casting**, the largest and riskiest phase: our own Cast v2
-  client, the ffprobe-based planner, the FFmpeg relay with its supervisor,
-  the UI, and the casting matrix on the user's TV.
+- **Phase 7 — Casting**, the largest and riskiest phase: ~~our own Cast v2
+  client, the ffprobe-based planner, the FFmpeg relay with its
+  supervisor~~ (steps 2–5), the coordinator, the UI, and the casting
+  matrix on the user's TV.
 - **Phase 8 — Downloads and the local library:** resumable downloads
   (`.part` + verify + rename; they yield to playback), the library
   scanner, offline playback, library casting, the SIGKILL-safety tests.
@@ -112,13 +133,14 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   MB).
 - **Phase 10 — Packaging:** a Windows installer bundling libmpv and FFmpeg
   (MSIX vs Inno Setup: recommend, then build); a Linux AppImage tested on
-  clean Ubuntu 22.04 and 24.04 VMs; semantic versioning, CHANGELOG.md,
-  docs/release.md, a final regression, and the tag v1.0.0.
-- **Only the user can unblock:** the Windows PC (playback and hardware
-  decoding have never run on real Windows; ADR-007's GO covers Linux
-  only); the app's name and icon; the window_manager #585 check; access
-  to their TV for the casting matrices; permission for each real-provider
-  stream.
+  clean Ubuntu 22.04 and 24.04 VMs (with the bundled libva); semantic
+  versioning, CHANGELOG.md, docs/release.md, a final regression, and the
+  tag v1.0.0.
+- **Only the user can unblock:** the Windows PC (playback, hardware
+  decoding and the relay have never run on real Windows; ADR-007's GO
+  covers Linux only); the app's name and icon; the window_manager #585
+  check; access to their TV for the casting matrices; permission for each
+  real-provider stream.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -128,23 +150,20 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   - **Before playing from the user's real provider**, show a pop-up and
     wait for a yes: the plan allows one connection.
   - **Before casting to the Living Room TV**, ask, unless allowed this
-    session.
+    session. The TV is off the network for now: wait for the user to say
+    it's back.
   - **Decide UX yourself**: pick the option with the best experience and
     record it; don't ask.
   - Read CI with `curl` on the public Actions API (no `gh`).
   - Use `~/develop/flutter/bin` on PATH in the Bash tool (the shell is
     fish).
-  - The user asked (2026-10-02) for the TV run to be done later: keep it
-    listed, and run it (after asking) when they say they're home, or
-    with step 6's TV cast.
 - **CI runs in UTC; this laptop is New York time.** Run the full suite as
-  `TZ=UTC flutter test` before every commit (about 75 s). Check the last CI
-  run at the start of a session:
+  `TZ=UTC flutter test` before every commit (about 2 min 20 s now). Check
+  the last CI run at the start of a session:
   `curl -s "https://api.github.com/repos/yasir-alobaidi/iptv-player/actions/runs?per_page=3"`,
   then each job from its `jobs_url`. **Failed tests by name** (public, no
   admin rights): `curl -s
-  https://api.github.com/repos/yasir-alobaidi/iptv-player/check-runs/<job id>/annotations`
-  — one "Failed test" annotation per test since the step 5 commit.
+  https://api.github.com/repos/yasir-alobaidi/iptv-player/check-runs/<job id>/annotations`.
 - **The multi-agent pattern that worked (steps 3 and 4)**, when the user
   asks for agents:
   1. Write the shared contract yourself first: the public API as a stub
@@ -157,31 +176,82 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
      Anyone running build_runner goes through
      `flock <scratchpad>/build_runner.lock dart run build_runner build
      --delete-conflicting-outputs`.
-- **Ask agents to measure what the spec only assumes.** In step 5 the spec
-  said "Isolate.run above 2,000 guide channels"; the agent timed it, found
-  it blocked the UI longer than no isolate at all, and reported rather than
-  shipped it.
+- **Ask agents to measure what the spec only assumes**, and measure
+  yourself: in step 5 the plan assumed FFmpeg 8 copies AAC into MP4 and
+  reports a codec switch; it does neither.
 - **Verify agents' claims before committing; the reviews found real
   bugs:**
   - Run the full suite under `TZ=UTC`, and stress-run anything flaky
-    (`xargs -P 8`).
+    (`xargs -P 8`). **Under that load, timing tests fail on the test's
+    assumptions first** (step 5: a Dart server's `flush()` that never
+    reports its client gone; ports taken by another test file): read the
+    error before touching the product code.
   - Look at every re-recorded golden PNG.
   - Grep new files for literal invisible characters (BOM, zero-width space,
-    U+FFFD, NBSP) and write them as escapes.
+    U+FFFD, NBSP) and write them as escapes. **The file tool did it twice
+    again in step 5** (`'\ufeff'` written as a BOM).
   - Confirm `build_runner` leaves no diff.
 - **Run widget tests with a timeout** (`flutter test … --timeout 40s`,
   and `--plain-name` to run one): a widget test that fails part-way can
-  otherwise hang until the 10-minute default, which happened several
-  times this session.
+  otherwise hang until the 10-minute default.
 - **The session's end:** analyze, `dart format --set-exit-if-changed lib
   test integration_test tools`, `TZ=UTC flutter test`, the fake provider's
-  `dart test` (in `tools/fake_provider`), and the integration tests that
+  and the fake receiver's `dart test`, and the integration tests that
   touch what changed, each under `xvfb-run -a … -d linux`, one file per
-  run. Then add to ADR-013, update docs/progress.md, rewrite this file,
+  run. Then add to ADR-014, update docs/progress.md, rewrite this file,
   and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 4):
+New this session (Phase 7 step 5):
+- **The relay's isolate code is plain Dart** (`lib/data/cast/relay/`
+  except `isolate_cast_relay.dart` and `relay_args.dart`, which use the
+  plan's Flutter-tainted types): never import `package:flutter` (or
+  `lib/core/player/`, or `stream_facts.dart`) there, or
+  `relay_kill_test.dart`'s `dart run` victim stops compiling. Messages
+  between the isolates are plain classes in `relay_isolate.dart`; the
+  app's side maps them to the domain's.
+- **`CastRelaySession.events` is single-subscription and buffered:** one
+  listener, which gets the events from the start. Tests use `Relayed`
+  (`test/data/cast/relay/relay_rig.dart`), which listens at once and has
+  `next<T>()`.
+- **The proxy turns a live stream's end into a cut** (no last chunk) so
+  FFmpeg's `-reconnect` makes a fresh connection; a file's or a
+  segment's complete answer ends cleanly. The upstream's URL is asked
+  for on every main request of a live channel or a file; a provider's
+  HLS keeps it between playlist refreshes until a failure (`stale`).
+- **Responses that must notice a closed peer are written on the detached
+  socket** (the proxy's to FFmpeg, the continuous stream to the TV),
+  with HTTP framed by hand: an `HttpResponse` held back by its reader
+  never reports the reader gone.
+- **The test rig** (`relay_rig.dart`): `RelayRig.start(device:,
+  maxConnections:, proxyTimings:)` — the fake panel in-process, the relay
+  in its isolate, a fake receiver that plays, the app's Cast client;
+  `probe`, `plan`, `relayed`, `load`, `playing`, `joinAgain`, `running`
+  (PID files), `sessions` (folders); `channelOf` maps a sample to its
+  channel; `relaySkip([...samples])`; `RELAY_FFMPEG_DIR=/usr/bin` runs
+  everything with the system FFmpeg; `RELAY_LOG=1` prints the relay's log
+  at the end of each test.
+- **Faults go in the stream's query** (`rig.source(1, query:
+  'drop_after_s=4')`): the fake panel lays a request's query over its
+  fault set; probe the clean channel first.
+- **The scripted FFmpeg** (`relay_runtime_test.dart`'s `_Ffmpeg`)
+  writes segments and a playlist into the folder its arguments name,
+  continues after `append_list`, says lines, sends bytes, exits, ignores
+  SIGTERM on request. Timings are short there (`segmentSeconds: 0`, so
+  the stall rule is the floor alone).
+- **Measuring the UI isolate needs the fake panel and the reader in
+  their own processes** (`cast_relay_measure_test.dart`'s `_Panel`, curl,
+  an FFmpeg reader): in-process, their traffic is the isolate's.
+- **Traps met this session:** `HttpServer.port` throws once closed (a
+  test resolver read it, and the proxy rightly said "unresolved"); a
+  `Stream.first` on an HTTP response closes the connection; Dart's own
+  "shared flag" error, not EADDRINUSE, when this process already holds
+  a port; FFmpeg's exit can be seen before its last stderr lines; FFmpeg
+  retries a dead input in two nested loops (16 s at
+  `-reconnect_delay_max 5`); FFmpeg 4.4 ends at once on a broken pipe,
+  8.1 only once its input fails.
+
+From the session before (Phase 7 step 4):
 - **Re-encoding's video arguments come only from `videoTranscodeArgs`** (`lib/data/cast/ffmpeg_video_args.dart`): `input` before `-i`, `output` after the maps, `environment` for the process (the bundled libva's `LD_LIBRARY_PATH`, only when `CastEncoder.bundledLibva`). The relay must pass `environment` to `ProcessSupervisor.start`, or VA-API aborts on Ubuntu's libva.
 - **Detection is the test of those arguments:** `FfmpegEncoderDetector` runs them on a lavfi source (encode) and on test pictures it makes (decode), so changing the builder changes what detection accepts. A test passes on exit 0 *and* `frame=` > 0 from `-progress pipe:1`.
 - **`CastEncoders.softwareOnly` is what `CastPlanRequest.softwareEncoderOnly` wants;** `best` the encoder to use; `after(kind)` the next one after a failure; `canTranscode` false means no re-encode is possible (step 6 must say so rather than plan one).

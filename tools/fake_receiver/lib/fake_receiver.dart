@@ -4,4 +4,5 @@ library;
 import 'package:fake_receiver/src/fake_receiver.dart';
 
 export 'src/cast_wire.dart';
+export 'src/fake_playback.dart';
 export 'src/fake_receiver.dart';

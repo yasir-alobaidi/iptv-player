@@ -26,7 +26,7 @@ final class _Scripted implements CastAddressCheck {
 void main() {
   late FakeReceiver fake;
 
-  Future<void> startFake([FakeDevice device = const FakeDevice()]) async =>
+  Future<void> startFake([FakeDevice device = FakeDevice.tv4k]) async =>
       fake = await FakeReceiver.start(device: device, pingEvery: null);
 
   CastAddress address() => CastAddress(fake.host, fake.port);

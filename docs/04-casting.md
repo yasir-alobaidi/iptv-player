@@ -17,9 +17,9 @@ Phase 0 proved this end to end on a Chromecast with Google TV (4K) with our own 
 | CastPlanner | pure function (probe, device profile, settings) → CastPlan (direct / relay-copy / relay-transcode, container, audio action). As built: `planCast` in `lib/core/cast/` (domain code never imports `lib/data/`), with `CastDeviceProfile`, `CastPlan` and the badge's words in `lib/features/casting/presentation/cast_plan_text.dart` |
 | CastEncoderDetection | the H.264 encoders that work here (rule 3), each with what its chip decodes, found by test encodes and decodes and remembered per FFmpeg. As built (Phase 7 step 4): `FfmpegEncoderDetector` and `videoTranscodeArgs` in `lib/data/cast/`, the domain in `lib/core/cast/cast_encoders.dart` |
 | ProcessSupervisor | every FFmpeg and ffprobe (hard rule 8): a PID file per process (`<app support>/processes/`), a timeout, SIGTERM then SIGKILL after 3 s, `stopAll` on quit, and the launch sweep, which kills a leftover only if it still runs the executable its file names and the app that started it is gone. `lib/data/process/` (Phase 7 step 3) |
-| RelayServer | shelf server bound to the LAN interface sharing the device's subnet; port 38400–38499; random session token in path; CORS; MIME; serves HLS sessions, continuous fragmented MP4 streams, and files with Range |
-| FfmpegRelay | builds args from the plan, starts bundled ffmpeg, writes PID file, pipes stderr to logs (redacted) |
-| RelaySupervisor | stall detection, restart from original URL, restart budget, cleanup |
+| RelayServer | shelf server bound to the LAN interface sharing the device's subnet; port 38400–38499; random session token in path; CORS; MIME; serves HLS sessions, continuous fragmented MP4 streams, and files with Range. As built (Phase 7 step 5): `RelayServer` on dart:io, bound to the Cast connection's own local address; beside it the loopback `RelayProxy` FFmpeg and ffprobe read the provider through (decision 3), both in the relay's own isolate (`IsolateCastRelay`, decision 5) behind `CastRelay` in `lib/core/cast/` |
+| FfmpegRelay | builds args from the plan, starts bundled ffmpeg, writes PID file, pipes stderr to logs (redacted). As built: `castRelayJob` (the plan's maps and codecs, app side) and `relayArguments` (the input and the muxer, in the isolate); FFmpeg runs under the `ProcessSupervisor` as "relay"; its warnings logged (10 a minute), its input's description reported (`CastRelayOpened`) |
+| RelaySupervisor | stall detection, restart from original URL, restart budget, cleanup. As built: `RelayRuntime`, below "Supervisor"; plus the proxy's watch of a live MPEG-TS stream's program map, which tells a codec switch FFmpeg never reports |
 | CastCoordinator | orchestration: plan, relay, LOAD, fallbacks, device learning, re-LOAD after a continuous stream ends, local-player suspension, sleep inhibition, session state |
 
 ## Cast v2 protocol essentials
@@ -104,6 +104,8 @@ Relay-copy, HEVC (and low-latency mode) → one continuous fragmented MP4:
 ```
 (drop `-tag:v hvc1` for H.264). When copying, HLS segments are cut at source keyframes; `-hls_time` is a target, not a guarantee.
 
+As built (Phase 7 step 5, ADR-014): the input is the relay's loopback proxy, never the provider (decision 3), so there is **no `-user_agent`** (the proxy sends the source's) and **`-reconnect_delay_max 1`** (FFmpeg's one peer is the proxy, which retries the provider itself: after the app's SIGKILL FFmpeg ends in about 3 s, not 16); **`-analyzeduration 2000000 -probesize 5000000`**, as the probe reads; `-loglevel repeat+level+info -nostats`; `-map 0:V:0` (never a cover picture); `-max_muxing_queue_size 1024`; **AAC copied into MP4 needs `-bsf:a aac_adtstoasc`** (FFmpeg 8 doesn't add it); segments named `seg%05d.ts`; a restarted HLS FFmpeg adds `append_list` to `-hls_flags`, so its playlist carries on behind an `#EXT-X-DISCONTINUITY`.
+
 ## Relay HTTP server
 - Bind to the LAN IP on the same subnet as the device (fallback 0.0.0.0)
 - Routes: `/r/<sessionToken>/index.m3u8` and `/r/<sessionToken>/<segment>` (HLS); `/p/<sessionToken>/stream.mp4` (continuous fMP4); for library items `/f/<sessionToken>/media.<ext>` (Range requests: `Accept-Ranges: bytes`, 206 responses) and `/f/<sessionToken>/subs/<n>.vtt`; each token maps to exactly one session or file; everything else 404
@@ -111,6 +113,7 @@ Relay-copy, HEVC (and low-latency mode) → one continuous fragmented MP4:
 - Headers: `Access-Control-Allow-Origin: *`, `Access-Control-Allow-Headers: *`, `Access-Control-Allow-Methods: GET, HEAD, OPTIONS` (receiver requests carry `Origin: https://www.gstatic.com`); `Cache-Control: no-cache` on playlists and continuous streams
 - MIME: `.m3u8` application/vnd.apple.mpegurl · `.ts` video/mp2t · `.m4s` video/iso.segment · `.mp4`, `.m4v`, `.mov` video/mp4 · `.webm` video/webm · `.vtt` text/vtt
 - HLS: send LOAD only after the playlist lists at least 2 segments. With 2–3 segments listed the receiver started near the live edge and reported BUFFERING more often than with about 4 (one run each; Phase 7 tunes this). Continuous fMP4: send LOAD right away (PLAYING about 3 s later at 4K)
+- As built (Phase 7 step 5): CORS on every answer, 404s and OPTIONS (204) included; JPEG, PNG and WebP served too (the LOAD's picture); a port that won't bind moves on, an address that isn't this computer's fails at once. **The continuous stream is written on the TV's own connection** (ADR-010), so a TV that leaves is seen at once. The relay's **loopback proxy** (decision 3) serves FFmpeg and ffprobe `http://127.0.0.1:<port>/in/<token>`: every connection asks the app for the stream's URL; a live stream that ends, breaks or goes quiet for 8 s reaches FFmpeg as a cut, so FFmpeg reconnects and a fresh connection is made; a provider's HLS playlists are rewritten so their segments come through it; the source's connections are counted, and a full account is tried again after 1, 1 and 2 s
 
 ## Supervisor
 - HLS stall: newest segment older than max(3 × hls_time, 10 s) → restart FFmpeg from the original URL, keeping the session dir and token so the receiver keeps polling
@@ -118,6 +121,7 @@ Relay-copy, HEVC (and low-latency mode) → one continuous fragmented MP4:
 - Budget: 5 restarts within 2 minutes → stop and show an error with Details
 - Session end (media IDLE after fallbacks, receiver app stopped, user stops, app quits) → SIGTERM, SIGKILL after 3 s (TerminateProcess on Windows), delete session dir
 - On app start: read PID files in the relay temp root, kill leftovers, delete stale dirs
+- As built (Phase 7 step 5): HLS also restarts when no first segment comes within 20 s and when FFmpeg ends; a stalled FFmpeg is SIGKILLed at once (it ignores SIGTERM while blocked on its input); an FFmpeg that ends before any output fails the session (a re-encode at once, as the encoder's failure; anything else after two); a recent refusal by the provider fails it with the provider's status and words. Restarts wait 0.5, 1, 2 s. The session folders are `<cache>/relay/<pid>/`; the launch sweep deletes those whose app is gone. A codec switch, which FFmpeg copying never reports, is told by the proxy's watch of the PAT and PMT
 
 ## Local files and downloads (docs/09)
 Library items cast as seekable VOD (`streamType: BUFFERED`) and use no provider connection. CastPlanner decides from a probe of the file:

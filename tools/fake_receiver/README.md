@@ -20,7 +20,9 @@ dart run tools/fake_receiver/bin/fake_receiver.dart --port 8010
 | `--host` | `127.0.0.1` | |
 | `--name` | `Fake TV` | what MULTIZONE_STATUS names it |
 | `--launch-delay-ms` | `0` | Living Room TV takes 3000–6000 |
-| `--load-delay-ms` | `300` | LOAD → BUFFERING → PLAYING |
+| `--load-delay-ms` | `300` | LOAD → BUFFERING → PLAYING (without `--ffprobe`) |
+| `--ffprobe` | none | plays for real: fetches what LOAD names and checks it with this ffprobe |
+| `--device` | `tv4k` | with `--ffprobe`: `tv4k`, `chromecast-hd` (1080p, H.264 only), `tv-hd-link` (a 4K TV on a 1080p HDMI link) |
 | `--verbose` | off | prints every message received |
 
 ## In a test
@@ -60,10 +62,35 @@ Each of these was seen on Living Room TV in Phase 0 (spike/cast_spike/results):
 | `remotePause()` `remotePlay()` `remoteBack()` | the TV's remote |
 | `sendRaw(bytes)` `sendJson(namespace, payload)` | anything, to every sender |
 
-## Not yet
-Fetching what LOAD names, checking it with ffprobe, and reporting PLAYING,
-IDLE/FINISHED or IDLE/ERROR from what it actually got, with device
-profiles (4K HEVC, 1080p H.264-only, a 4K TV on a 1080p link): step 5.
+## Playing for real (Phase 7 step 5)
+With `playback: FakePlayback(ffprobe: …)` (or `--ffprobe`), a LOAD is
+fetched the way the TV fetches it, and the media session follows what
+arrived:
+- **HLS** (`application/x-mpegurl`): the playlist polled every half
+  segment, from the live edge (the last three segments), each new segment
+  read and checked with ffprobe — codec, height, channels and **frames**,
+  since a stream named in a header with nothing behind it plays nothing.
+  Every request carries `Origin: https://www.gstatic.com`; an answer
+  without `Access-Control-Allow-Origin` is dropped, as the TV's browser
+  drops it. PLAYING once the first segment checks out; BUFFERING after
+  three segment lengths with nothing new, PLAYING again when something
+  comes; IDLE/ERROR when the playlist goes unreadable for `giveUp`, or its
+  numbering goes back (a restart that didn't continue it); `#EXT-X-
+  DISCONTINUITY` is recorded on the segment after it; `#EXT-X-ENDLIST`
+  plays out to IDLE/FINISHED.
+- **A continuous stream or a file** (`video/mp4`): read from the start
+  with `Range: bytes=0-`; its first 256 KB checked; IDLE/FINISHED after
+  its end and `endDelay` (Living Room TV plays out about 4 s).
+- **The device profiles** (`FakeDevice.tv4k`, `chromecastHd`,
+  `tvOnHdLink`): a picture the device refuses (HEVC on an H.264-only
+  device, taller than its picture or its HDMI link) gets a bare
+  LOAD_FAILED `refuseDelay` after its first segment, then IDLE/ERROR, as
+  docs/04 describes the TV on a 1080p link.
+- `fetches` and `checks` (and `onChecked`) say what was fetched and what
+  ffprobe found, so a test can check video and sound really arrived.
+
+Without it, the fake plays anything it's told to after `loadDelay`, as
+before.
 
 ## Its wire format
 `lib/src/cast_wire.dart` reads and writes the `CastMessage` protobuf by

@@ -7,6 +7,7 @@ import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
+import 'package:iptv_player/core/cast/cast_relay.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/cast/cast_browsers.dart';
@@ -17,6 +18,7 @@ import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/ffmpeg_encoder_detector.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
+import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
 import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
@@ -113,4 +115,26 @@ CastEncoderDetection castEncoderDetection(Ref ref) {
     supervisor: ref.watch(processSupervisorProvider),
     log: ref.watch(appLogProvider),
   );
+}
+
+/// Where the relay keeps its sessions' segments. `bootstrap()` points it
+/// into the app's cache folder; this is the fallback when it has none.
+@Riverpod(keepAlive: true)
+Directory relayFolder(Ref ref) =>
+    Directory(p.join(Directory.systemTemp.path, 'iptv_player', 'relay'));
+
+/// The relay (Phase 7 step 5): its isolate starts with the first cast or
+/// probe, and stops with the app.
+@Riverpod(keepAlive: true)
+CastRelay castRelay(Ref ref) {
+  final binaries = ref.watch(ffmpegBinariesProvider);
+  if (binaries == null) return const UnavailableCastRelay();
+  final relay = IsolateCastRelay(
+    binaries: binaries,
+    processFolder: ref.watch(processFolderProvider),
+    relayFolder: ref.watch(relayFolderProvider),
+    log: ref.watch(appLogProvider),
+  );
+  ref.onDispose(relay.close);
+  return relay;
 }

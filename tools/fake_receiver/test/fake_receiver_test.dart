@@ -1,82 +1,9 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:fake_receiver/fake_receiver.dart';
 import 'package:test/test.dart';
 
-/// A bare Cast sender: TLS, frames and JSON, nothing else.
-final class _Client {
-  new _(this._socket) {
-    _socket.listen((data) {
-      for (final body in _splitter.add(data) ?? const <List<int>>[]) {
-        _inbox.add(WireMessage.decode(Uint8List.fromList(body)));
-      }
-    }, onDone: _inbox.close);
-    // The fake closing the connection fails a write here; the reading
-    // side reports it.
-    _socket.done.ignore();
-  }
-
-  static Future<_Client> connect(FakeReceiver receiver) async => _Client._(
-    await SecureSocket.connect(
-      receiver.host,
-      receiver.port,
-      onBadCertificate: (_) => true,
-    ),
-  );
-
-  final SecureSocket _socket;
-  final _splitter = FrameSplitter();
-  final _inbox = StreamController<WireMessage>.broadcast();
-
-  Stream<WireMessage> get inbox => _inbox.stream;
-
-  void send(String destination, String namespace, Map<String, Object?> json) {
-    _socket.add(
-      frame(
-        WireMessage.json(
-          sourceId: 'sender-0',
-          destinationId: destination,
-          namespace: namespace,
-          payload: json,
-        ).encode(),
-      ),
-    );
-  }
-
-  void connectTo(String destination) =>
-      send(destination, nsConnection, {'type': 'CONNECT'});
-
-  /// The next message of [type] that [where] accepts, listened for
-  /// before [then] runs.
-  Future<WireMessage> next(
-    String type, [
-    void Function()? then,
-    bool Function(WireMessage message)? where,
-  ]) {
-    final found = inbox
-        .firstWhere(
-          (m) => m.payload?['type'] == type && (where?.call(m) ?? true),
-        )
-        .timeout(const Duration(seconds: 3));
-    then?.call();
-    return found;
-  }
-
-  /// Every message of [type] within [window].
-  Future<List<WireMessage>> collect(String type, Duration window) async {
-    final seen = <WireMessage>[];
-    final subscription = inbox
-        .where((m) => m.payload?['type'] == type)
-        .listen(seen.add);
-    await Future<void>.delayed(window);
-    await subscription.cancel();
-    return seen;
-  }
-
-  Future<void> close() async => _socket.destroy();
-}
+import 'support/test_sender.dart';
 
 Map<String, Object?> _status(WireMessage m) =>
     m.payload!['status']! as Map<String, Object?>;
@@ -86,7 +13,7 @@ Map<String, Object?> _media(WireMessage m) =>
 
 void main() {
   late FakeReceiver receiver;
-  late _Client client;
+  late TestSender client;
 
   setUp(() async {
     receiver = await FakeReceiver.start(
@@ -94,7 +21,7 @@ void main() {
       loadDelay: const Duration(milliseconds: 50),
       pingEvery: null,
     );
-    client = await _Client.connect(receiver);
+    client = await TestSender.connect(receiver);
   });
 
   tearDown(() async {
@@ -321,7 +248,7 @@ void main() {
     await client.close();
     await receiver.close();
     receiver = await FakeReceiver.start(pingEvery: 50.ms);
-    client = await _Client.connect(receiver)
+    client = await TestSender.connect(receiver)
       ..connectTo(receiverId);
     final pong = client.next(
       'PONG',
