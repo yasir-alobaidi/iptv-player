@@ -117,7 +117,7 @@ All provider items are keyed by `(source_id, remote_key)` so user data survives 
 | favorites | id, item_type, source_id, remote_key, group_id (its favorite group, or null; v7 — the never-written group_name is gone), sort_order (its place in its group or among those in none; a move renumbers the list it lands in), added_at |
 | favorite_groups | id, source_id, name, sort_order, collapsed (v7) — removing the source removes them; deleting a group leaves its channels favorites, in none |
 | watch_history | id, item_type, source_id, remote_key, position_ms, duration_ms, completed (at 95 %), series_key (an episode's series, v6), dismissed (out of Continue watching until watched again, v6), updated_at |
-| cast_devices | device_id (TXT `id`), name, model, last_host, last_port (8009; another only for a test receiver added by address), is_manual, hevc_support (auto/yes/no), learned_json (max height, refused codecs, sources refused a direct play), last_used_at (v8) — a row only for a device added by address, cast to or set up in Settings → Casting, never for one only seen |
+| cast_devices | device_id (TXT `id`), name, model, last_host, last_port (8009; another only for a test receiver added by address), is_manual, hevc_support (auto/yes/no), learned_json (max height, refused codecs, sources refused a direct play, an interlaced picture refused — Phase 7 step 3), last_used_at (v8) — a row only for a device added by address, cast to or set up in Settings → Casting, never for one only seen |
 | settings | key, value_json |
 | FTS5 | channels_fts (clean_name, display_name — the name shown, not the provider's, since v7), movies_fts, series_fts (name), programs_fts — external-content tables kept current by triggers |
 

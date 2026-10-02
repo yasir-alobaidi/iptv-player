@@ -148,12 +148,21 @@ void main() {
       'a negative height': '{"max_height":-1}',
       'a fractional height': '{"max_height":1080.5}',
       'odd list items': '{"refused_codecs":[1,null,"",{"a":1}]}',
+      'interlaced as text': '{"refused_interlaced":"true"}',
+      'interlaced as a number': '{"refused_interlaced":1}',
     };
     for (final MapEntry(key: what, value: json) in odd.entries) {
       test('$what reads as nothing learned', () {
         expect(decodeCastLearned(json), const CastLearned());
       });
     }
+
+    test('a refused interlaced picture round-trips', () {
+      const learned = CastLearned(refusedInterlaced: true, maxHeight: 1080);
+      final json = encodeCastLearned(learned);
+      expect(json, '{"max_height":1080,"refused_interlaced":true}');
+      expect(decodeCastLearned(json), learned);
+    });
 
     test('unknown keys are ignored, known ones kept', () {
       expect(

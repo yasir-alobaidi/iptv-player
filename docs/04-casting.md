@@ -13,8 +13,9 @@ Phase 0 proved this end to end on a Chromecast with Google TV (4K) with our own 
 | CastDiscovery | bonsoir browse `_googlecast._tcp`; TXT `fn` (name), `md` (model), `id`, `ca` (capability bits: devices without bit 0, video out, are audio-only speakers and aren't listed); manual IP devices; dedupe by id. multicast_dns (proven in Phase 0) is the fallback if bonsoir fails |
 | CastV2Client | TLS socket to host:8009 (device uses a self-signed cert), framing (4-byte big-endian length + protobuf `CastMessage`), namespaces, request ids, heartbeat; tolerant parsing (unknown namespaces and types, a `status` that isn't an object, messages arriving after CLOSE). As built (Phase 7 step 2): `CastChannel`, `ReceiverChannel`, `MediaChannel`, `CastV2Receivers` behind `CastReceivers` / `CastReceiverSession` in `lib/core/cast/` |
 | MediaChannel | LOAD, PLAY, PAUSE, STOP, SEEK, GET_STATUS; volume via receiver namespace; MEDIA_STATUS parsing |
-| StreamProbe | bundled ffprobe on the source (UA, 8 s timeout): codecs, profile, level, resolution, fps, field order, audio tracks, bitrate |
-| CastPlanner | pure function (probe, device profile, settings) → CastPlan (direct / relay-copy / relay-transcode, container, audio action) |
+| StreamProbe | bundled ffprobe on the source (UA, 8 s timeout): codecs, profile, level, resolution, fps, field order, audio tracks, bitrate. As built (Phase 7 step 3): `FfprobeStreamProbe` in `lib/data/cast/` reads 2 s of a stream (`-analyzeduration 2000000 -probesize 5000000`; 0.5–1.7 s on the fake panel's live channels, against 4–4.8 s for ffprobe's own 5 s) through the `ProcessSupervisor`; `readFfprobeJson` reads its JSON tolerantly. `StreamFactsLookup` (`lib/features/casting/domain/`) asks the laptop's player first, then what this run remembers, then the probe (Phase 7 decision 4) |
+| CastPlanner | pure function (probe, device profile, settings) → CastPlan (direct / relay-copy / relay-transcode, container, audio action). As built: `planCast` in `lib/core/cast/` (domain code never imports `lib/data/`), with `CastDeviceProfile`, `CastPlan` and the badge's words in `lib/features/casting/presentation/cast_plan_text.dart` |
+| ProcessSupervisor | every FFmpeg and ffprobe (hard rule 8): a PID file per process (`<app support>/processes/`), a timeout, SIGTERM then SIGKILL after 3 s, `stopAll` on quit, and the launch sweep, which kills a leftover only if it still runs the executable its file names and the app that started it is gone. `lib/data/process/` (Phase 7 step 3) |
 | RelayServer | shelf server bound to the LAN interface sharing the device's subnet; port 38400–38499; random session token in path; CORS; MIME; serves HLS sessions, continuous fragmented MP4 streams, and files with Range |
 | FfmpegRelay | builds args from the plan, starts bundled ffmpeg, writes PID file, pipes stderr to logs (redacted) |
 | RelaySupervisor | stall detection, restart from original URL, restart budget, cleanup |
@@ -63,6 +64,15 @@ Learning: if a relay-copy plan fails with `LOAD_FAILED` or `idleReason: ERROR` w
    - **HEVC → one continuous fragmented MP4 response** (`video/mp4`, `-tag:v hvc1`; smooth at 4K). Not HLS with fMP4 segments: FFmpeg's HLS segmenter mistimes open-GOP HEVC (CRA keyframes with leading frames, x265's default) at every segment cut, which visibly stutters on the TV (ADR-004 Finding 7). The Cast docs say HEVC isn't supported in TS (untested).
    - Advanced setting "Low-latency mode" → continuous fragmented MP4 for H.264 too.
 6. **Tracks:** map the audio track selected in the local player (or preferred language); never send bitmap subtitles.
+
+As built (Phase 7 step 3, ADR-014), the planner also:
+- re-encodes H.264 that Cast devices don't decode (more than 8 bits, 4:2:2, 4:4:4) and HEVC beyond Main and Main 10, an unknown video codec, and VP8/VP9/AV1 (the `md` can't tell which models play them);
+- re-encodes at the source's height, else at most 1080p when the height isn't known, and deinterlaces whatever interlaced picture it re-encodes, one picture per field (up to 60);
+- bit rates: 1.3 × the source's, scaled by pixels when made smaller, between a floor and a ceiling per height (1080p: 6–15 Mbps; 2160p: 16–40 Mbps; an unknown source gets the floor);
+- converts LATM AAC (`aac_latm`) and any audio codec the device refused before;
+- plays direct only with no User-Agent of the source's own, the stream's first audio track, and (live) Low-latency mode off; a file goes direct as MP4/M4V/MOV with AAC or MP3, and through the relay as one continuous fragmented MP4 otherwise (decision 1);
+- picks the audio track: the laptop's, then the first preferred language (two- and three-letter codes both), then the stream's default, then the first;
+- lets the user's HEVC "Yes" win over a learned refusal.
 
 ## FFmpeg (bundled recent static build — never the system 4.4)
 Input options for every plan:

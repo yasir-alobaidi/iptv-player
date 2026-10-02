@@ -3,15 +3,19 @@ import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
+import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/cast/cast_browsers.dart';
 import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/db_cast_device_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
 import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/process/process_providers.dart';
+import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'casting_providers.g.dart';
@@ -66,3 +70,21 @@ CastReadiness castReadiness(Ref ref) =>
     ref.watch(ffmpegBinariesProvider) == null
     ? CastReadiness.ffmpegMissing
     : CastReadiness.ready;
+
+/// The bundled ffprobe under the process supervisor (docs/04).
+@Riverpod(keepAlive: true)
+StreamProbe streamProbe(Ref ref) {
+  final binaries = ref.watch(ffmpegBinariesProvider);
+  if (binaries == null) return const UnavailableStreamProbe();
+  return FfprobeStreamProbe(
+    ffprobe: binaries.ffprobe,
+    supervisor: ref.watch(processSupervisorProvider),
+    log: ref.watch(appLogProvider),
+  );
+}
+
+/// A cast's facts, cheapest first; remembered for the app's run (Phase 7
+/// decision 4).
+@Riverpod(keepAlive: true)
+StreamFactsLookup streamFactsLookup(Ref ref) =>
+    StreamFactsLookup(probe: ref.watch(streamProbeProvider));

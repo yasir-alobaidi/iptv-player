@@ -62,6 +62,10 @@ abstract class CastLearned with _$CastLearned {
     /// Sources whose streams it could not play directly (docs/04 rule 1);
     /// they go through the relay from then on.
     @Default(<String>{}) Set<String> directRefusedSources,
+
+    /// It refused an interlaced picture it was sent as it was (docs/04
+    /// rule 2): interlaced pictures are deinterlaced from then on.
+    @Default(false) bool refusedInterlaced,
   }) = _CastLearned;
 }
 

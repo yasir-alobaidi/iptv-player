@@ -113,6 +113,7 @@ String? encodeCastLearned(CastLearned learned) {
       'refused_codecs': [...learned.refusedCodecs]..sort(),
     if (learned.directRefusedSources.isNotEmpty)
       'direct_refused_sources': [...learned.directRefusedSources]..sort(),
+    if (learned.refusedInterlaced) 'refused_interlaced': true,
   });
 }
 
@@ -137,5 +138,6 @@ CastLearned decodeCastLearned(String? json) {
     maxHeight: height is int && height > 0 ? height : null,
     refusedCodecs: texts(value['refused_codecs']),
     directRefusedSources: texts(value['direct_refused_sources']),
+    refusedInterlaced: value['refused_interlaced'] == true,
   );
 }

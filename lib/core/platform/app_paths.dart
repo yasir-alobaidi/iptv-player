@@ -26,4 +26,7 @@ final class AppPaths {
 
   /// Posters, logos, backdrops and stills (Phase 5 decision 6).
   Directory get artwork => Directory(p.join(cacheRoot.path, 'artwork'));
+
+  /// The PID files of the FFmpeg and ffprobe the app runs (hard rule 8).
+  Directory get processes => Directory(p.join(root.path, 'processes'));
 }

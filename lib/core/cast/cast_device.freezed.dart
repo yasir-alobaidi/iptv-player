@@ -336,7 +336,9 @@ mixin _$CastLearned {
 /// `hevc`), transcoded from then on.
  Set<String> get refusedCodecs;/// Sources whose streams it could not play directly (docs/04 rule 1);
 /// they go through the relay from then on.
- Set<String> get directRefusedSources;
+ Set<String> get directRefusedSources;/// It refused an interlaced picture it was sent as it was (docs/04
+/// rule 2): interlaced pictures are deinterlaced from then on.
+ bool get refusedInterlaced;
 /// Create a copy of CastLearned
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -348,20 +350,20 @@ $CastLearnedCopyWith<CastLearned> get copyWith => _$CastLearnedCopyWithImpl<Cast
 @override
 bool operator ==(Object other) {
   final _this = this as CastLearned;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastLearned&&(identical(other.maxHeight, _this.maxHeight) || other.maxHeight == _this.maxHeight)&&const DeepCollectionEquality().equals(other.refusedCodecs, _this.refusedCodecs)&&const DeepCollectionEquality().equals(other.directRefusedSources, _this.directRefusedSources));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastLearned&&(identical(other.maxHeight, _this.maxHeight) || other.maxHeight == _this.maxHeight)&&const DeepCollectionEquality().equals(other.refusedCodecs, _this.refusedCodecs)&&const DeepCollectionEquality().equals(other.directRefusedSources, _this.directRefusedSources)&&(identical(other.refusedInterlaced, _this.refusedInterlaced) || other.refusedInterlaced == _this.refusedInterlaced));
 }
 
 
 @override
 int get hashCode {
   final _this = this as CastLearned;
-  return Object.hash(runtimeType,_this.maxHeight,const DeepCollectionEquality().hash(_this.refusedCodecs),const DeepCollectionEquality().hash(_this.directRefusedSources));
+  return Object.hash(runtimeType,_this.maxHeight,const DeepCollectionEquality().hash(_this.refusedCodecs),const DeepCollectionEquality().hash(_this.directRefusedSources),_this.refusedInterlaced);
 }
 
 @override
 String toString() {
   final _this = this as CastLearned;
-  return 'CastLearned(maxHeight: ${_this.maxHeight}, refusedCodecs: ${_this.refusedCodecs}, directRefusedSources: ${_this.directRefusedSources})';
+  return 'CastLearned(maxHeight: ${_this.maxHeight}, refusedCodecs: ${_this.refusedCodecs}, directRefusedSources: ${_this.directRefusedSources}, refusedInterlaced: ${_this.refusedInterlaced})';
 }
 
 
@@ -372,7 +374,7 @@ abstract mixin class $CastLearnedCopyWith<$Res>  {
   factory $CastLearnedCopyWith(CastLearned value, $Res Function(CastLearned) _then) = _$CastLearnedCopyWithImpl;
 @useResult
 $Res call({
- int? maxHeight, Set<String> refusedCodecs, Set<String> directRefusedSources
+ int? maxHeight, Set<String> refusedCodecs, Set<String> directRefusedSources, bool refusedInterlaced
 });
 
 
@@ -389,12 +391,13 @@ class _$CastLearnedCopyWithImpl<$Res>
 
 /// Create a copy of CastLearned
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? maxHeight = freezed,Object? refusedCodecs = null,Object? directRefusedSources = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? maxHeight = freezed,Object? refusedCodecs = null,Object? directRefusedSources = null,Object? refusedInterlaced = null,}) {
   return _then(CastLearned(
 maxHeight: freezed == maxHeight ? _self.maxHeight : maxHeight // ignore: cast_nullable_to_non_nullable
 as int?,refusedCodecs: null == refusedCodecs ? _self.refusedCodecs : refusedCodecs // ignore: cast_nullable_to_non_nullable
 as Set<String>,directRefusedSources: null == directRefusedSources ? _self.directRefusedSources : directRefusedSources // ignore: cast_nullable_to_non_nullable
-as Set<String>,
+as Set<String>,refusedInterlaced: null == refusedInterlaced ? _self.refusedInterlaced : refusedInterlaced // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -479,10 +482,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources,  bool refusedInterlaced)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CastLearned() when $default != null:
-return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);case _:
+return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources,_that.refusedInterlaced);case _:
   return orElse();
 
 }
@@ -500,10 +503,10 @@ return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources,  bool refusedInterlaced)  $default,) {final _that = this;
 switch (_that) {
 case _CastLearned():
-return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);case _:
+return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources,_that.refusedInterlaced);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -520,10 +523,10 @@ return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? maxHeight,  Set<String> refusedCodecs,  Set<String> directRefusedSources,  bool refusedInterlaced)?  $default,) {final _that = this;
 switch (_that) {
 case _CastLearned() when $default != null:
-return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);case _:
+return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources,_that.refusedInterlaced);case _:
   return null;
 
 }
@@ -535,7 +538,7 @@ return $default(_that.maxHeight,_that.refusedCodecs,_that.directRefusedSources);
 
 
 class _CastLearned implements CastLearned {
-  const _CastLearned({this.maxHeight,  Set<String> refusedCodecs = const <String>{},  Set<String> directRefusedSources = const <String>{}}): _refusedCodecs = refusedCodecs,_directRefusedSources = directRefusedSources;
+  const _CastLearned({this.maxHeight,  Set<String> refusedCodecs = const <String>{},  Set<String> directRefusedSources = const <String>{}, this.refusedInterlaced = false}): _refusedCodecs = refusedCodecs,_directRefusedSources = directRefusedSources;
   
 
 /// The tallest picture the device took; null until one was refused.
@@ -562,6 +565,9 @@ class _CastLearned implements CastLearned {
   return EqualUnmodifiableSetView(_directRefusedSources);
 }
 
+/// It refused an interlaced picture it was sent as it was (docs/04
+/// rule 2): interlaced pictures are deinterlaced from then on.
+@override@JsonKey() final  bool refusedInterlaced;
 
 /// Create a copy of CastLearned
 /// with the given fields replaced by the non-null parameter values.
@@ -573,18 +579,18 @@ _$CastLearnedCopyWith<_CastLearned> get copyWith => __$CastLearnedCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastLearned&&(identical(other.maxHeight, maxHeight) || other.maxHeight == maxHeight)&&const DeepCollectionEquality().equals(other.refusedCodecs, _refusedCodecs)&&const DeepCollectionEquality().equals(other.directRefusedSources, _directRefusedSources));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastLearned&&(identical(other.maxHeight, maxHeight) || other.maxHeight == maxHeight)&&const DeepCollectionEquality().equals(other.refusedCodecs, _refusedCodecs)&&const DeepCollectionEquality().equals(other.directRefusedSources, _directRefusedSources)&&(identical(other.refusedInterlaced, refusedInterlaced) || other.refusedInterlaced == refusedInterlaced));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,maxHeight,const DeepCollectionEquality().hash(_refusedCodecs),const DeepCollectionEquality().hash(_directRefusedSources));
+    return Object.hash(runtimeType,maxHeight,const DeepCollectionEquality().hash(_refusedCodecs),const DeepCollectionEquality().hash(_directRefusedSources),refusedInterlaced);
 }
 
 @override
 String toString() {
-    return 'CastLearned(maxHeight: $maxHeight, refusedCodecs: $refusedCodecs, directRefusedSources: $directRefusedSources)';
+    return 'CastLearned(maxHeight: $maxHeight, refusedCodecs: $refusedCodecs, directRefusedSources: $directRefusedSources, refusedInterlaced: $refusedInterlaced)';
 }
 
 
@@ -595,7 +601,7 @@ abstract mixin class _$CastLearnedCopyWith<$Res> implements $CastLearnedCopyWith
   factory _$CastLearnedCopyWith(_CastLearned value, $Res Function(_CastLearned) _then) = __$CastLearnedCopyWithImpl;
 @override @useResult
 $Res call({
- int? maxHeight, Set<String> refusedCodecs, Set<String> directRefusedSources
+ int? maxHeight, Set<String> refusedCodecs, Set<String> directRefusedSources, bool refusedInterlaced
 });
 
 
@@ -612,12 +618,13 @@ class __$CastLearnedCopyWithImpl<$Res>
 
 /// Create a copy of CastLearned
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? maxHeight = freezed,Object? refusedCodecs = null,Object? directRefusedSources = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? maxHeight = freezed,Object? refusedCodecs = null,Object? directRefusedSources = null,Object? refusedInterlaced = null,}) {
   return _then(_CastLearned(
 maxHeight: freezed == maxHeight ? _self.maxHeight : maxHeight // ignore: cast_nullable_to_non_nullable
 as int?,refusedCodecs: null == refusedCodecs ? _self._refusedCodecs : refusedCodecs // ignore: cast_nullable_to_non_nullable
 as Set<String>,directRefusedSources: null == directRefusedSources ? _self._directRefusedSources : directRefusedSources // ignore: cast_nullable_to_non_nullable
-as Set<String>,
+as Set<String>,refusedInterlaced: null == refusedInterlaced ? _self.refusedInterlaced : refusedInterlaced // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

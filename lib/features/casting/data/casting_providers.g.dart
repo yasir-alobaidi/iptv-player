@@ -331,3 +331,104 @@ final class CastReadinessProvider
 }
 
 String _$castReadinessHash() => r'776336fc1d67db549842eba96e82196e4f532348';
+
+/// The bundled ffprobe under the process supervisor (docs/04).
+
+@ProviderFor(streamProbe)
+final streamProbeProvider = StreamProbeProvider._();
+
+/// The bundled ffprobe under the process supervisor (docs/04).
+
+final class StreamProbeProvider
+    extends $FunctionalProvider<StreamProbe, StreamProbe, StreamProbe>
+    with $Provider<StreamProbe> {
+  /// The bundled ffprobe under the process supervisor (docs/04).
+  StreamProbeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streamProbeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streamProbeHash();
+
+  @$internal
+  @override
+  $ProviderElement<StreamProbe> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  StreamProbe create(Ref ref) {
+    return streamProbe(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(StreamProbe value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<StreamProbe>(value),
+    );
+  }
+}
+
+String _$streamProbeHash() => r'f1db79b84d20aefee7cd6ad1ad73d48beba1c824';
+
+/// A cast's facts, cheapest first; remembered for the app's run (Phase 7
+/// decision 4).
+
+@ProviderFor(streamFactsLookup)
+final streamFactsLookupProvider = StreamFactsLookupProvider._();
+
+/// A cast's facts, cheapest first; remembered for the app's run (Phase 7
+/// decision 4).
+
+final class StreamFactsLookupProvider
+    extends
+        $FunctionalProvider<
+          StreamFactsLookup,
+          StreamFactsLookup,
+          StreamFactsLookup
+        >
+    with $Provider<StreamFactsLookup> {
+  /// A cast's facts, cheapest first; remembered for the app's run (Phase 7
+  /// decision 4).
+  StreamFactsLookupProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streamFactsLookupProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streamFactsLookupHash();
+
+  @$internal
+  @override
+  $ProviderElement<StreamFactsLookup> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  StreamFactsLookup create(Ref ref) {
+    return streamFactsLookup(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(StreamFactsLookup value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<StreamFactsLookup>(value),
+    );
+  }
+}
+
+String _$streamFactsLookupHash() => r'ac3046409205a750fc9788d23c5cc297290324fb';

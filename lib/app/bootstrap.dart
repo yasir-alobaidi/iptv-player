@@ -26,6 +26,7 @@ import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
 import 'package:iptv_player/data/images/cached_artwork.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
+import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
 import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
@@ -105,9 +106,14 @@ Future<void> bootstrap() async {
       ),
       if (artwork != null)
         artworkImagesProvider.overrideWithValue(CachedArtworkImages(artwork)),
+      if (paths != null)
+        processFolderProvider.overrideWithValue(paths.processes),
       ...sourceShellOverrides,
     ],
   );
+  // Before anything starts a process: FFmpeg or ffprobe left running by a
+  // run that didn't get to stop them (hard rule 8).
+  unawaited(container.read(processSupervisorProvider).sweep());
   runApp(
     UncontrolledProviderScope(
       container: container,

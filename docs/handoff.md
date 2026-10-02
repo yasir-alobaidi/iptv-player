@@ -1,4 +1,4 @@
-# Handoff — 2026-10-02 (Phase 7 step 2 done but its TV run, stopped for review)
+# Handoff — 2026-10-02 (Phase 7 step 3 done, stopped for review; step 2's TV run still waiting)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -6,16 +6,19 @@ docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
 part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 2** (ADR-014 "The Cast v2 client and the fake
-   receiver"). Its choices to look at: commands answer sealed results
-   rather than `AppFailure`s; a LOAD is "done" once the TV took it, and a
-   later LOAD_FAILED shows as IDLE/ERROR; the heartbeat counts any message
-   as heard; reconnecting lasts 30 s; Add by address's fallback names a
-   device by its MULTIZONE_STATUS.
-2. **Push** the local commit ("Phase 7 step 2…").
+1. **Review Phase 7 step 3** (ADR-014 "The probe and the planner"). Its
+   choices to look at:
+   - the planner's rules beyond docs/04's (10-bit H.264 and HEVC beyond
+     Main 10 re-encoded; direct only without a User-Agent of the source's
+     own, on the first audio track, and not in Low-latency mode; bit-rate
+     floors and ceilings per height; one picture per field when
+     deinterlacing; your HEVC "Yes" beating a learned refusal);
+   - the process supervisor moved forward from step 5;
+   - the probe's 2 s window (measured);
+   - the badge's sentences.
+2. **Push** the two local commits (step 2, c4b9f8e, and step 3).
 3. **For the TV run, be on your home network** (this session the laptop was
-   on 192.168.26.x, so the TV was out of reach). The session will ask
-   before it casts.
+   on 192.168.26.x again). The session will ask before it casts.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -23,32 +26,36 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Step 2 is <approved | approved with these changes: …>.
-I'm <home, the TV run can go ahead after you ask | not home yet>. Then start step 3.
+and docs/04-casting.md first. Step 3 is <approved | approved with these changes: …>.
+I'm <home, the TV run can go ahead after you ask | not home yet>. Then start step 4.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): step 1 approved 2026-10-02 ("continue"); step 2 done
-  but its one TV run.**
-- **Checks at the step 2 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,332 app tests** (13 skipped) under `TZ=UTC`; the casting
-  tests stable 8 of 8 run in parallel; the fake receiver's 19 tests (8 of 8
-  in parallel), the fake provider's 141; the launch walk under xvfb.
-- **CI:** green on both systems at 337db4e (step 1, which the user pushed).
-  This commit adds a "Fake receiver tests" step and the fake receiver's
-  `pub get` to CI: check the first run.
+- **Phase 7 (casting): steps 1 and 2 approved; step 3 done; step 2's TV run
+  still waits for the home network.**
+- **Checks at the step 3 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,560 app tests** (13 skipped) under `TZ=UTC`; the new tests
+  stable 8 of 8 run in parallel (254 each); the fake receiver's 19, the
+  fake provider's 141; the launch sweep checked on the real debug build.
+- **CI:** green on both systems at 337db4e (step 1). Steps 2 and 3 aren't
+  pushed: check the first run after the push — step 2 added the "Fake
+  receiver tests" step, and step 3's supervisor tests run on Windows with
+  PING.EXE (the win32 image check has never run on real Windows).
 
-## Done this session (2026-10-02)
-- **Step 1 approved;** CI green at 337db4e.
-- **Step 2** (details in ADR-014):
-  - the domain seam `lib/core/cast/cast_receiver.dart`;
-  - the channel, the namespaces, the status readers, the session with
-    reconnecting (`lib/data/cast/`), the committed protobuf and
-    `tools/gen_cast_proto.sh`;
-  - `CastConnectionCheck` as Add by address's fallback;
-  - `tools/fake_receiver` (protocol side);
-  - the TV script `test/tools/cast_tv_test.dart` (tag `real_cast`),
-    dry-run against the fake.
+## Done this session (2026-10-02, second session)
+- **Step 2 approved;** the laptop was on 192.168.26.x again, so no TV run.
+- **Step 3** (details in ADR-014):
+  - the domain: `StreamFacts` (+ the laptop's player's facts),
+    `StreamProbe`, `CastDeviceProfile`, `CastPlan`, the pure `planCast`
+    (`lib/core/cast/`);
+  - the probe: `readFfprobeJson`, `FfprobeStreamProbe` (`lib/data/cast/`);
+  - **`ProcessSupervisor`** (`lib/data/process/`), with the launch sweep in
+    `bootstrap()` — moved forward from step 5;
+  - `StreamFactsLookup` (decision 4's order,
+    `lib/features/casting/domain/`);
+  - the badge's words (`lib/features/casting/presentation/cast_plan_text.dart`);
+  - `CastLearned.refusedInterlaced`;
+  - ffprobe's answers for every sample in `test_fixtures/cast/probe/`.
 
 ## What's next
 1. **The TV run, only after asking (memory) and with the user watching:**
@@ -61,9 +68,15 @@ I'm <home, the TV run can go ahead after you ask | not home yet>. Then start ste
    id equals the TXT id** (the fallback assumes it; the test asserts it at
    the end, after STOP), and what SET_VOLUME would mean on a fixed volume
    (not tried: volume on the family TV wasn't asked for).
-2. **Phase 7 step 3:** `StreamProbe` (bundled ffprobe through the proxy,
-   8 s, supervised) and the pure `CastPlanner` (plan doc, step 3), with
-   exhaustive unit tests. The probe sources of decision 4.
+2. **Phase 7 step 4:** hardware encoder detection — a one-second test
+   encode per candidate (Linux NVENC → VA-API → QSV; libx264 for ≤ 1080p
+   only), the matching hardware decoder's test decode, the result cached per
+   FFmpeg version; the transcode arguments per encoder from a
+   `CastVideoTranscode` (height, bit rate, `deinterlace` = bwdif
+   `send_field`, which the plan's fps already assumes). Run them through
+   `ProcessSupervisor.run`. Feed `CastPlanRequest.softwareEncoderOnly`.
+   Measure HEVC 4K → H.264 1080p and MPEG-2 576i → H.264 CPU with NVENC and
+   VA-API on this laptop.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -158,6 +171,16 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
+New this session (Phase 7 step 3):
+- **The planner is pure, in `lib/core/cast/cast_planner.dart`:** `planCast(CastPlanRequest)` → `CastPlanned(plan)` or `CastNothingToPlay`. The request: `StreamFacts`, `CastSourceInfo` (source id, live, `hls`, `customUserAgent`, `fileExtension`), `CastDeviceProfile`, `CastSettings` (Dolby passthrough, Low-latency, Smooth interlaced — stored in step 7), `CastAudioChoice` (the player's track, the preferred languages), `softwareEncoderOnly` (step 4). `transcodeBitRate`, `pickAudioTrack`, `sameLanguage` are public for the coordinator and tests.
+- **`CastPlan`'s parts are hand-written sealed classes with `==`** (`CastVideoCopy`/`CastVideoTranscode`/`CastNoVideo`, `CastAudioCopy`/`CastAudioToAac`/`CastNoAudio`): freezed unions aren't used in this codebase. `CastDelivery.contentType` is the LOAD's; `plan.quality` the badge; `plan.output` the details line.
+- **`StreamFacts` audio indexes are FFmpeg's `0:a:<n>`** — every audio stream counts, readable or not. The player's tracks map by position (mpv's `aid` order is the demuxer's).
+- **`ProcessSupervisor` (`processSupervisorProvider`, `lib/data/process/process_providers.dart`) runs every FFmpeg and ffprobe.** `start` (the caller must read stdout/stderr, or the pipe fills) or `run` (gathers, never throws). PID files in `processFolderProvider` (bootstrap: `AppPaths.processes`; the fallback is the system temp). `ref.onDispose` → `stopAll`. Tests inject `launcher`, `image`, `kill`.
+- **The probe's input is the relay's proxy URL** (decision 3) — step 5 builds the proxy; `StreamFactsLookup.factsFor(probeInput:)` asks for it lazily. Never pass a provider URL with credentials to ffprobe.
+- **Probe tests make their own clip with ffmpeg** (lavfi testsrc2 + sine, libx264) and fall back to `/usr/bin/ff*` when the bundled ones are missing (CI): the fixture comparisons need the bundled ffprobe (4.4 gives an MP4 no field order).
+- **`test/data/cast/probe_fixtures.dart`:** `probeFixture`, `readFixture`, `liveSampleNames`. Re-record a fixture with the probe's own arguments and replace the `filename` (the repo is public).
+- **Traps met this session:** a whole `a && b && sleep 300 &` chain goes to the background, assignments included — put the `&` on its own line; the fuzz found `double.maxFinite` seconds overflowing `round()`.
+
 New this session (Phase 7 step 2):
 - **The seam:** step 6's `CastCoordinator` talks to `CastReceivers` / `CastReceiverSession` (`lib/core/cast/cast_receiver.dart`) — `castReceiversProvider`. Sessions report through `states` (a broadcast, async); commands answer `CastCommandResult` (done / refused / unanswered / disconnected) and never throw.
 - **`CastV2Receivers`** (`lib/data/cast/cast_v2_receivers.dart`) holds `CastTimings` — tests shorten every wait (`test/data/cast/cast_v2_receivers_test.dart`'s `_timings`: heartbeat 100 ms, reconnect for 2 s). The session is the private `_CastV2Session`; `_ending` marks this app's own stop or leave, so the TV's answer to it isn't read as news.
@@ -648,6 +671,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 7 step 3 (ADR-014): the probe's 2 s window (measured 0.5–1.7 s); the planner pure in `lib/core/cast/`; only Chromecast Ultra seeded by `md`; HEVC and 4K tried until refused; the user's HEVC "Yes" over a learned refusal; 10-bit/4:2:2/4:4:4 H.264, HEVC beyond Main 10, unknown codecs and VP8/VP9/AV1 re-encoded; an unknown height held at 1080p; deinterlacing one picture per field (≤ 60); bit rates by pixels with floors and ceilings; `aac_latm` converted; direct only without a custom User-Agent, on the first audio track, and not in Low-latency mode; files through the relay as one continuous fMP4; `refusedInterlaced` learned; the process supervisor moved to step 3; the sweep only killing what still runs the recorded executable while its app is gone; facts remembered for the run (LRU 256).
 - Phase 7 step 2 (ADR-014): sealed command and join results rather than `AppFailure`; a LOAD done once taken, a later LOAD_FAILED as IDLE/ERROR; the heartbeat lost after 3 intervals with nothing heard (any message counts); reconnect for 30 s, rejoining by session id; a RECEIVER_STATUS whose `status` isn't an object never ends a session; the fake receiver's own hand-written codec; Add by address's fallback over a Cast connection named by MULTIZONE_STATUS (its id assumed to equal TXT `id` until the TV run checks it).
 - Phase 7 plan (ADR-014): the eight decisions as recommended; step 1: Add by address by a direct DNS-SD query (CONNECT + GET_STATUS as the fallback), the IPv4 address preferred over IPv6, speakers left out by `ca` bit 0 but a device with no readable `ca` listed, found devices not stored, FFmpeg hard-linked into the Linux bundle.
 - Phase 6 exit (ADR-013): toasts over every route with Ctrl+Z for Undo; menu items after the menu's fade; the write-ahead log (`synchronous = NORMAL`); an episode left through the next-episode card is watched; trailing countries dropped only from the list (not the UK's nations, regions, languages or Georgia), a bare country after a lone tag kept as the name; no movie-name cleanup for v1 (unless the user asks).
