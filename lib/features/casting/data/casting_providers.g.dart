@@ -432,3 +432,108 @@ final class StreamFactsLookupProvider
 }
 
 String _$streamFactsLookupHash() => r'ac3046409205a750fc9788d23c5cc297290324fb';
+
+/// Where casting keeps its own files. `bootstrap()` points it into the
+/// app's own folder; this is the fallback when it has none.
+
+@ProviderFor(castFolder)
+final castFolderProvider = CastFolderProvider._();
+
+/// Where casting keeps its own files. `bootstrap()` points it into the
+/// app's own folder; this is the fallback when it has none.
+
+final class CastFolderProvider
+    extends $FunctionalProvider<Directory, Directory, Directory>
+    with $Provider<Directory> {
+  /// Where casting keeps its own files. `bootstrap()` points it into the
+  /// app's own folder; this is the fallback when it has none.
+  CastFolderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castFolderProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castFolderHash();
+
+  @$internal
+  @override
+  $ProviderElement<Directory> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Directory create(Ref ref) {
+    return castFolder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Directory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Directory>(value),
+    );
+  }
+}
+
+String _$castFolderHash() => r'8aef71c94265809af952681c927a06bcdb799ba2';
+
+/// The encoders a re-encode can use (Phase 7 step 4), found once per
+/// FFmpeg and remembered.
+
+@ProviderFor(castEncoderDetection)
+final castEncoderDetectionProvider = CastEncoderDetectionProvider._();
+
+/// The encoders a re-encode can use (Phase 7 step 4), found once per
+/// FFmpeg and remembered.
+
+final class CastEncoderDetectionProvider
+    extends
+        $FunctionalProvider<
+          CastEncoderDetection,
+          CastEncoderDetection,
+          CastEncoderDetection
+        >
+    with $Provider<CastEncoderDetection> {
+  /// The encoders a re-encode can use (Phase 7 step 4), found once per
+  /// FFmpeg and remembered.
+  CastEncoderDetectionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castEncoderDetectionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castEncoderDetectionHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastEncoderDetection> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CastEncoderDetection create(Ref ref) {
+    return castEncoderDetection(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastEncoderDetection value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastEncoderDetection>(value),
+    );
+  }
+}
+
+String _$castEncoderDetectionHash() =>
+    r'b81569f22ca469f743113a01f0af69bf67e464f3';

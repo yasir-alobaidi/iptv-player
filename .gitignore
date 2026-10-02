@@ -37,6 +37,8 @@ Thumbs.db
 
 # Bundled FFmpeg binaries (tools/fetch_ffmpeg.sh)
 third_party/ffmpeg/
+# The libva built for it (tools/fetch_libva.sh)
+third_party/libva/
 
 # Generated media samples (tools/media_samples/generate.sh)
 tools/media_samples/out/

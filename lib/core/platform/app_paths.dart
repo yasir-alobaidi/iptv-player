@@ -29,4 +29,7 @@ final class AppPaths {
 
   /// The PID files of the FFmpeg and ffprobe the app runs (hard rule 8).
   Directory get processes => Directory(p.join(root.path, 'processes'));
+
+  /// Casting's own files: the encoders found (Phase 7 step 4).
+  Directory get cast => Directory(p.join(root.path, 'cast'));
 }

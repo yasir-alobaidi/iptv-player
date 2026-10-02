@@ -126,4 +126,83 @@ void main() {
       isNull,
     );
   });
+
+  group('the bundled libva (Linux)', () {
+    const linuxOnly = 'execute bits and libva: Linux';
+    final skip = Platform.isWindows ? linuxOnly : null;
+
+    test("beside FFmpeg in a build's ffmpeg/libva/", () {
+      final folder = p.join(root.path, 'bundle', 'ffmpeg');
+      put(folder, ['ffmpeg', 'ffprobe']);
+      put(p.join(folder, 'libva'), ['libva.so.2', 'libva-drm.so.2']);
+
+      final found = FfmpegBinaries.locate(
+        executable: app('bundle'),
+        workingDirectory: root.path,
+        windows: false,
+      );
+
+      expect(found!.libva, p.join(folder, 'libva'));
+    }, skip: skip);
+
+    test("in a checkout's third_party/libva/linux-x64/", () {
+      final third = p.join(root.path, 'third_party');
+      put(p.join(third, 'ffmpeg', 'linux-x64'), ['ffmpeg', 'ffprobe']);
+      put(p.join(third, 'libva', 'linux-x64'), ['libva.so.2']);
+
+      final found = FfmpegBinaries.locate(
+        executable: app('elsewhere'),
+        workingDirectory: p.join(root.path, 'lib'),
+        windows: false,
+      );
+
+      expect(found!.libva, p.join(third, 'libva', 'linux-x64'));
+    }, skip: skip);
+
+    test('none fetched: FFmpeg without it', () {
+      put(p.join(root.path, 'bundle', 'ffmpeg'), ['ffmpeg', 'ffprobe']);
+
+      final found = FfmpegBinaries.locate(
+        executable: app('bundle'),
+        workingDirectory: root.path,
+        windows: false,
+      );
+
+      expect(found, isNotNull);
+      expect(found!.libva, isNull);
+      expect(found.libvaEnvironment(), isEmpty);
+    }, skip: skip);
+
+    test('never on Windows', () {
+      final folder = p.join(root.path, 'bundle', 'ffmpeg');
+      put(folder, ['ffmpeg.exe', 'ffprobe.exe']);
+      put(p.join(folder, 'libva'), ['libva.so.2']);
+
+      final found = FfmpegBinaries.locate(
+        executable: app('bundle'),
+        workingDirectory: root.path,
+        windows: true,
+      );
+
+      expect(found!.libva, isNull);
+    });
+
+    test('found before the system libraries, keeping any already set', () {
+      const binaries = FfmpegBinaries(
+        ffmpeg: '/app/ffmpeg/ffmpeg',
+        ffprobe: '/app/ffmpeg/ffprobe',
+        libva: '/app/ffmpeg/libva',
+      );
+
+      expect(binaries.libvaEnvironment(const {}), {
+        'LD_LIBRARY_PATH': '/app/ffmpeg/libva',
+      });
+      expect(binaries.libvaEnvironment(const {'LD_LIBRARY_PATH': ''}), {
+        'LD_LIBRARY_PATH': '/app/ffmpeg/libva',
+      });
+      expect(binaries.libvaEnvironment(const {'LD_LIBRARY_PATH': '/opt/lib'}), {
+        'LD_LIBRARY_PATH': '/app/ffmpeg/libva:/opt/lib',
+      });
+    });
+  });
 }

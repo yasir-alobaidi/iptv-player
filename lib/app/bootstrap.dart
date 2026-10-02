@@ -32,6 +32,7 @@ import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
+import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
@@ -106,8 +107,10 @@ Future<void> bootstrap() async {
       ),
       if (artwork != null)
         artworkImagesProvider.overrideWithValue(CachedArtworkImages(artwork)),
-      if (paths != null)
+      if (paths != null) ...[
         processFolderProvider.overrideWithValue(paths.processes),
+        castFolderProvider.overrideWithValue(paths.cast),
+      ],
       ...sourceShellOverrides,
     ],
   );

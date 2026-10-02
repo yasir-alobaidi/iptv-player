@@ -6,6 +6,7 @@
 | OS / shell | Ubuntu 22.04.5 LTS (kernel 6.8), fish; Secure Boot off; about 690 GB free |
 | git, curl, unzip, zip, xz-utils | installed |
 | FFmpeg | system 4.4.2 — too old for the relay and never used. Bundled 8.1.2 (BtbN GPL) in `third_party/ffmpeg/linux-x64/`, fetched by `tools/fetch_ffmpeg.sh` on 2026-09-15 |
+| libva for FFmpeg | system 2.14 (Ubuntu 22.04), too old for the bundled FFmpeg's VA-API. libva 2.22.0 built by `tools/fetch_libva.sh` into `third_party/libva/linux-x64/` on 2026-10-02 (docker) |
 | Flutter / Dart | 3.47.4 / 3.13.3 in `~/develop/flutter` (manual install). Scripts and non-interactive shells may not have it on PATH; call `~/develop/flutter/bin/flutter` there |
 | Media samples | generated in `tools/media_samples/out/` (gitignored); regenerate with `tools/media_samples/generate.sh` |
 | Build tools | clang 14.0.0, cmake 3.22.1, ninja 1.10.1, pkg-config 0.29.2 |
@@ -60,6 +61,8 @@ flutter doctor -v
 
 ## 4. FFmpeg for the app
 `tools/fetch_ffmpeg.sh` downloads recent static ffmpeg/ffprobe builds into `third_party/ffmpeg/<platform>/` (gitignored). The app never calls the system FFmpeg. BtbN's `latest` release is rebuilt daily; set `FFMPEG_TAG` to a dated autobuild tag to pin a build before packaging.
+
+`tools/fetch_libva.sh` (Linux, needs docker or podman) builds libva 2.22.0 in a throwaway Ubuntu 22.04 container into `third_party/libva/linux-x64/` (gitignored). The bundled FFmpeg's VA-API needs libva 2.21 or newer, and Ubuntu 22.04 and 24.04 ship older ones (ADR-014 step 4). Without it, casting still works; re-encodes just never use VA-API (NVENC or the processor instead). The Linux build copies it into `bundle/ffmpeg/libva/`.
 
 ## 5. Windows machine (builds and testing)
 - Windows 10/11 on real hardware (VM GPU decoding isn't representative)

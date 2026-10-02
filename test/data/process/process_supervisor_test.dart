@@ -163,7 +163,7 @@ void main() {
       final strict = ProcessSupervisor(
         folder: folder,
         log: AppLog(output: output, secrets: SecretRegistry()),
-        launcher: (executable, arguments) async =>
+        launcher: (executable, arguments, {environment}) async =>
             started = await Process.start(executable, arguments),
       );
       final (executable, arguments) = sleeper();
@@ -197,6 +197,17 @@ void main() {
       expect(run.timedOut, isFalse);
       expect(run.overflowed, isFalse);
       expect(pidFiles(), isEmpty);
+    }, skip: Platform.isWindows ? _posixOnly : false);
+
+    test("the environment it is given adds to the app's", () async {
+      final run = await supervisor.run(
+        '/bin/sh',
+        ['-c', r'echo "$SUPERVISOR_TEST_VALUE ${PATH:+and the path}"'],
+        owner: 'test',
+        timeout: const Duration(seconds: 10),
+        environment: {'SUPERVISOR_TEST_VALUE': 'given'},
+      );
+      expect(utf8.decode(run.stdout), 'given and the path\n');
     }, skip: Platform.isWindows ? _posixOnly : false);
 
     test('keeps the end of a long standard error', () async {

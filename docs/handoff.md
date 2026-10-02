@@ -1,4 +1,4 @@
-# Handoff — 2026-10-02 (Phase 7 step 3 done, stopped for review; step 2's TV run still waiting)
+# Handoff — 2026-10-02 (Phase 7 step 4 done, stopped for review; the TV run put off)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -6,19 +6,19 @@ docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
 part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 3** (ADR-014 "The probe and the planner"). Its
-   choices to look at:
-   - the planner's rules beyond docs/04's (10-bit H.264 and HEVC beyond
-     Main 10 re-encoded; direct only without a User-Agent of the source's
-     own, on the first audio track, and not in Low-latency mode; bit-rate
-     floors and ceilings per height; one picture per field when
-     deinterlacing; your HEVC "Yes" beating a learned refusal);
-   - the process supervisor moved forward from step 5;
-   - the probe's 2 s window (measured);
-   - the badge's sentences.
-2. **Push** the two local commits (step 2, c4b9f8e, and step 3).
-3. **For the TV run, be on your home network** (this session the laptop was
-   on 192.168.26.x again). The session will ask before it casts.
+1. **Review Phase 7 step 4** (ADR-014 "Hardware encoders"). Its choices to
+   look at:
+   - **the departure: the Linux build carries libva 2.22** for the bundled
+     FFmpeg (built by `tools/fetch_libva.sh` with docker). Without it,
+     FFmpeg aborts on every VA-API encode on Ubuntu 22.04 and 24.04;
+   - the bundled libva tried first, the system's second;
+   - the arguments per encoder (bit rate caps, a keyframe every 2 s, one
+     picture per field, never taller);
+   - what detection remembers, and for how long (per FFmpeg version, 7 days).
+2. **Push** the three local commits (steps 2, 3 and 4).
+3. **The TV run is put off, as you asked.** When you want it, be on your
+   home network and say so; the session will ask before it casts. It can go
+   with step 6's cast through the app, in one sitting.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -26,57 +26,64 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Step 3 is <approved | approved with these changes: …>.
-I'm <home, the TV run can go ahead after you ask | not home yet>. Then start step 4.
+and docs/04-casting.md first. Step 4 is <approved | approved with these changes: …>.
+<The TV run waits | I'm home, the TV run can go ahead after you ask>. Then start step 5.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1 and 2 approved; step 3 done; step 2's TV run
-  still waits for the home network.**
-- **Checks at the step 3 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,560 app tests** (13 skipped) under `TZ=UTC`; the new tests
-  stable 8 of 8 run in parallel (254 each); the fake receiver's 19, the
-  fake provider's 141; the launch sweep checked on the real debug build.
-- **CI:** green on both systems at 337db4e (step 1). Steps 2 and 3 aren't
-  pushed: check the first run after the push — step 2 added the "Fake
-  receiver tests" step, and step 3's supervisor tests run on Windows with
-  PING.EXE (the win32 image check has never run on real Windows).
+- **Phase 7 (casting): steps 1–3 approved; step 4 done; step 2's TV run
+  put off at the user's request (2026-10-02: "consider the test on living
+  room tv to do it later").**
+- **Checks at the step 4 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,635 app tests** (14 skipped) under `TZ=UTC`; the new tests
+  stable 8 of 8 run in parallel (103 each); the fake receiver's 19, the
+  fake provider's 141; `app_launch_test` under xvfb; the Linux build
+  bundles `ffmpeg/libva/`.
+- **CI:** green on both systems at 337db4e (step 1). Steps 2–4 aren't
+  pushed: check the first run after the push. Step 2 added the "Fake
+  receiver tests" step; step 3's supervisor tests run on Windows with
+  PING.EXE (the win32 image check has never run on real Windows); step 4's
+  real-FFmpeg detection test runs on CI's Linux job with the system FFmpeg
+  4.4 (libx264 only).
 
-## Done this session (2026-10-02, second session)
-- **Step 2 approved;** the laptop was on 192.168.26.x again, so no TV run.
-- **Step 3** (details in ADR-014):
-  - the domain: `StreamFacts` (+ the laptop's player's facts),
-    `StreamProbe`, `CastDeviceProfile`, `CastPlan`, the pure `planCast`
-    (`lib/core/cast/`);
-  - the probe: `readFfprobeJson`, `FfprobeStreamProbe` (`lib/data/cast/`);
-  - **`ProcessSupervisor`** (`lib/data/process/`), with the launch sweep in
-    `bootstrap()` — moved forward from step 5;
-  - `StreamFactsLookup` (decision 4's order,
-    `lib/features/casting/domain/`);
-  - the badge's words (`lib/features/casting/presentation/cast_plan_text.dart`);
-  - `CastLearned.refusedInterlaced`;
-  - ffprobe's answers for every sample in `test_fixtures/cast/probe/`.
+## Done this session (2026-10-02, third session)
+- **Step 3 approved; the TV run put off** (the laptop was on 192.168.26.x
+  anyway).
+- **Step 4** (details in ADR-014 "Hardware encoders"):
+  - the domain: `lib/core/cast/cast_encoders.dart`;
+  - the arguments: `videoTranscodeArgs` (`lib/data/cast/ffmpeg_video_args.dart`);
+  - detection: `FfmpegEncoderDetector` (`lib/data/cast/ffmpeg_encoder_detector.dart`),
+    `castEncoderDetectionProvider`, `castFolderProvider` (bootstrap:
+    `AppPaths.cast`);
+  - `ProcessSupervisor.start`/`run` take an `environment`;
+  - `FfmpegBinaries.libva` and `libvaEnvironment()`;
+  - `tools/fetch_libva.sh`, the Linux build's `ffmpeg/libva/`;
+  - the measurement: `test/tools/cast_transcode_measure_test.dart`.
 
 ## What's next
-1. **The TV run, only after asking (memory) and with the user watching:**
-   `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
-   test/tools/cast_tv_test.dart` — about 30 s on screen: the two address
-   checks (nothing shown), LAUNCH, LOAD of the MP4 sample served from the
-   laptop with Range, PAUSE, SEEK 1:00, PLAY, STOP (the TV goes home). Check
-   first that the laptop is on 192.168.1.x (`ip -4 addr`). Record in ADR-014:
-   join and PLAYING times, the Range requests, whether **MULTIZONE_STATUS's
-   id equals the TXT id** (the fallback assumes it; the test asserts it at
-   the end, after STOP), and what SET_VOLUME would mean on a fixed volume
-   (not tried: volume on the family TV wasn't asked for).
-2. **Phase 7 step 4:** hardware encoder detection — a one-second test
-   encode per candidate (Linux NVENC → VA-API → QSV; libx264 for ≤ 1080p
-   only), the matching hardware decoder's test decode, the result cached per
-   FFmpeg version; the transcode arguments per encoder from a
-   `CastVideoTranscode` (height, bit rate, `deinterlace` = bwdif
-   `send_field`, which the plan's fps already assumes). Run them through
-   `ProcessSupervisor.run`. Feed `CastPlanRequest.softwareEncoderOnly`.
-   Measure HEVC 4K → H.264 1080p and MPEG-2 576i → H.264 CPU with NVENC and
-   VA-API on this laptop.
+1. **Phase 7 step 5** (plan "Step 5"): the relay isolate; `RelayServer`
+   (bound to the Cast connection's local address, ports 38400–38499, a
+   128-bit token per session, docs/04's routes, CORS, MIME, `no-cache`);
+   the loopback proxy (decision 3: the provider connection rebuilt through
+   `StreamResolver`, counted against the source, refusals classified);
+   `FfmpegRelay` (docs/04's input and muxer arguments + step 4's
+   `videoTranscodeArgs` for a transcode plan, with its `environment`;
+   stderr through `redact()`; the streams FFmpeg opened, reported back);
+   `RelaySupervisor` (HLS stall restart, continuous re-LOAD signal, 5 in
+   2 minutes); the fake receiver fetching and ffprobe-checking what it is
+   told to play; exit criterion 2 as a SIGKILL test; the UI isolate's
+   longest pause at 4K and the relay's CPU for 1080p50 copy, measured.
+   Every FFmpeg goes through `ProcessSupervisor.start` (owner "relay").
+2. **The TV run, only when the user asks for it, after asking (memory) and
+   with the user watching:** `CAST_HOST=192.168.1.155 flutter test --tags
+   real_cast --run-skipped test/tools/cast_tv_test.dart` — about 30 s on
+   screen: the two address checks (nothing shown), LAUNCH, LOAD of the MP4
+   sample served from the laptop with Range, PAUSE, SEEK 1:00, PLAY, STOP
+   (the TV goes home). Check first that the laptop is on 192.168.1.x
+   (`ip -4 addr`). Record in ADR-014: join and PLAYING times, the Range
+   requests, whether **MULTIZONE_STATUS's id equals the TXT id**, and what
+   SET_VOLUME would mean on a fixed volume (not tried). It can go together
+   with step 6's cast through the app.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -127,6 +134,9 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   - Read CI with `curl` on the public Actions API (no `gh`).
   - Use `~/develop/flutter/bin` on PATH in the Bash tool (the shell is
     fish).
+  - The user asked (2026-10-02) for the TV run to be done later: keep it
+    listed, and run it (after asking) when they say they're home, or
+    with step 6's TV cast.
 - **CI runs in UTC; this laptop is New York time.** Run the full suite as
   `TZ=UTC flutter test` before every commit (about 75 s). Check the last CI
   run at the start of a session:
@@ -171,7 +181,17 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 3):
+New this session (Phase 7 step 4):
+- **Re-encoding's video arguments come only from `videoTranscodeArgs`** (`lib/data/cast/ffmpeg_video_args.dart`): `input` before `-i`, `output` after the maps, `environment` for the process (the bundled libva's `LD_LIBRARY_PATH`, only when `CastEncoder.bundledLibva`). The relay must pass `environment` to `ProcessSupervisor.start`, or VA-API aborts on Ubuntu's libva.
+- **Detection is the test of those arguments:** `FfmpegEncoderDetector` runs them on a lavfi source (encode) and on test pictures it makes (decode), so changing the builder changes what detection accepts. A test passes on exit 0 *and* `frame=` > 0 from `-progress pipe:1`.
+- **`CastEncoders.softwareOnly` is what `CastPlanRequest.softwareEncoderOnly` wants;** `best` the encoder to use; `after(kind)` the next one after a failure; `canTranscode` false means no re-encode is possible (step 6 must say so rather than plan one).
+- **Nothing in the app calls detection yet.** Step 6 calls `encoders()` at a session's start, beside LAUNCH; step 7's picker may warm it. A fresh detection here takes 3.2 s (more on a first CUDA use: about 6 s to compile its filters, then cached in `~/.nv/ComputeCache`).
+- **The bundled libva** (`third_party/libva/linux-x64/`, `tools/fetch_libva.sh`, docker) is found by `FfmpegBinaries.locate` beside FFmpeg (`bundle/ffmpeg/libva/`) or in a checkout. CI has none; nothing there needs it.
+- **Render nodes:** FFmpeg's default VA-API device is `renderD128`, NVIDIA's on this laptop (no VA-API). Always name the node (`CastEncoder.device`).
+- **Tests:** `test/data/cast/ffmpeg_encoder_detector_test.dart` drives the real `ProcessSupervisor` with a scripted fake FFmpeg (`_FakeProcess`, `_laptop` describes this laptop); the real-FFmpeg group restricts detection to libx264 with `kinds:` (CI has no GPU). The GPUs themselves: `flutter test --tags benchmark --run-skipped test/tools/cast_transcode_measure_test.dart` (about 5 minutes; `MEASURE_SECONDS`).
+- **Traps met this session:** `-hwaccel cuda` on a codec the chip can't decode silently decodes on the processor, which a GPU filter then refuses (exit 69), so a decode test must use the GPU filters; FFmpeg's last stderr line is usually a generic trailer ("Error parsing global options"), not the reason; libva's `driverdir` takes a colon-separated list.
+
+From the session before (Phase 7 step 3):
 - **The planner is pure, in `lib/core/cast/cast_planner.dart`:** `planCast(CastPlanRequest)` → `CastPlanned(plan)` or `CastNothingToPlay`. The request: `StreamFacts`, `CastSourceInfo` (source id, live, `hls`, `customUserAgent`, `fileExtension`), `CastDeviceProfile`, `CastSettings` (Dolby passthrough, Low-latency, Smooth interlaced — stored in step 7), `CastAudioChoice` (the player's track, the preferred languages), `softwareEncoderOnly` (step 4). `transcodeBitRate`, `pickAudioTrack`, `sameLanguage` are public for the coordinator and tests.
 - **`CastPlan`'s parts are hand-written sealed classes with `==`** (`CastVideoCopy`/`CastVideoTranscode`/`CastNoVideo`, `CastAudioCopy`/`CastAudioToAac`/`CastNoAudio`): freezed unions aren't used in this codebase. `CastDelivery.contentType` is the LOAD's; `plan.quality` the badge; `plan.output` the details line.
 - **`StreamFacts` audio indexes are FFmpeg's `0:a:<n>`** — every audio stream counts, readable or not. The player's tracks map by position (mpv's `aid` order is the demuxer's).

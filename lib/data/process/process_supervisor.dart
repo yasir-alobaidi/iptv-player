@@ -7,11 +7,13 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/data/process/windows_process_image.dart';
 import 'package:path/path.dart' as p;
 
-/// Starts a process: [Process.start], but for tests.
+/// Starts a process: [Process.start], but for tests. [environment] adds
+/// to the app's own.
 typedef ProcessLauncher = Future<Process> Function(
   String executable,
-  List<String> arguments,
-);
+  List<String> arguments, {
+  Map<String, String>? environment,
+});
 
 /// The executable a running process runs; null when it isn't running or
 /// can't be asked.
@@ -32,7 +34,7 @@ final class ProcessSupervisor {
     ProcessImage? image,
     ProcessKiller? kill,
     this.grace = const Duration(seconds: 3),
-  }) : _launch = launcher ?? Process.start,
+  }) : _launch = launcher ?? _startNow,
        _image = image ?? processImage,
        _kill = kill ?? _killNow;
 
@@ -52,17 +54,23 @@ final class ProcessSupervisor {
   int get runningCount => _running.length;
 
   /// Starts [executable] for [owner] ("ffprobe", "relay"), stopped after
-  /// [timeout] when one is given. Whoever starts it reads its output: an
-  /// unread pipe fills and the process stops moving. Throws a
-  /// [ProcessException] when it can't be started, or its PID file can't
-  /// be written (it is killed then: no process runs unswept).
+  /// [timeout] when one is given, with [environment] added to the app's.
+  /// Whoever starts it reads its output: an unread pipe fills and the
+  /// process stops moving. Throws a [ProcessException] when it can't be
+  /// started, or its PID file can't be written (it is killed then: no
+  /// process runs unswept).
   Future<SupervisedProcess> start(
     String executable,
     List<String> arguments, {
     required String owner,
     Duration? timeout,
+    Map<String, String>? environment,
   }) async {
-    final process = await _launch(executable, arguments);
+    final process = await _launch(
+      executable,
+      arguments,
+      environment: environment,
+    );
     final pidFile = File(p.join(folder.path, '$owner-${process.pid}.pid'));
     try {
       folder.createSync(recursive: true);
@@ -108,6 +116,7 @@ final class ProcessSupervisor {
     required String owner,
     required Duration timeout,
     int maxOutput = 4 << 20,
+    Map<String, String>? environment,
   }) async {
     final SupervisedProcess process;
     try {
@@ -116,6 +125,7 @@ final class ProcessSupervisor {
         arguments,
         owner: owner,
         timeout: timeout,
+        environment: environment,
       );
     } on Object catch (error) {
       return SupervisedRun(startError: '$error');
@@ -212,6 +222,12 @@ final class ProcessSupervisor {
   }
 
   static bool _killNow(int pid) => Process.killPid(pid, ProcessSignal.sigkill);
+
+  static Future<Process> _startNow(
+    String executable,
+    List<String> arguments, {
+    Map<String, String>? environment,
+  }) => Process.start(executable, arguments, environment: environment);
 }
 
 /// One process under the [ProcessSupervisor].

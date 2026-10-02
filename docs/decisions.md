@@ -988,3 +988,56 @@ The eight, in short: **1** movies and episodes cast in this phase too (a file th
   - **The supervisor against real processes:** PID files, the timeout, SIGTERM then SIGKILL on a process that ignores SIGTERM, `run`'s output, overflow and timeout, a folder that can't be written, the sweep (ours, a reused pid, another copy of the app's, our own, junk).
   - **The probe with ffprobe:** a clip it makes itself (so CI's Linux job runs it with the system ffprobe), a live stream over HTTP with the User-Agent, a server that hangs (the timeout, no ffprobe left), a 401 on a URL with credentials (the status named, the credentials nowhere in the result or the log), a page, subtitles alone, a missing ffprobe, and every media sample against its recording (bundled ffprobe only: the system's 4.4 gives an MP4 no field order).
   - **Stability:** the new tests 8 of 8 run in parallel (254 each); **2,560 app tests** (13 skipped) under `TZ=UTC`; the fake receiver's 19 and the fake provider's 141.
+
+### Hardware encoders (step 4, 2026-10-02)
+- **Step 3 approved** (the user: "continue", 2026-10-02). **Step 2's TV run is put off at the user's request** ("consider the test on living room tv to do it later"); the laptop was on 192.168.26.x again anyway. It can share one sitting with step 6's TV cast.
+- **Domain** (`lib/core/cast/cast_encoders.dart`):
+  - `CastEncoderKind` (FFmpeg's name, a label; docs/04's order for each system);
+  - `HardwareDecode`: 8-bit 4:2:0 H.264, HEVC Main, HEVC Main 10, MPEG-2. `of(VideoFacts)` says which a picture is; anything else (10-bit H.264, HEVC range extensions, VC-1, VP9, AV1) is decoded on the processor;
+  - `CastEncoder` (the kind, its render node, what its chip decodes, whether it needs the bundled libva);
+  - `CastEncoders`: `available` in docs/04's order, `best`, `canTranscode`, `softwareOnly` (what feeds `CastPlanRequest.softwareEncoderOnly`), `after(failed)` for step 6's fallback;
+  - `CastEncoderDetection` (`encoders()`, `detectAgain()`), and `NoCastEncoders` for a build without FFmpeg.
+- **The arguments** (`videoTranscodeArgs`, `lib/data/cast/ffmpeg_video_args.dart`): what goes before `-i`, after the maps, and the process's environment. Audio, the maps and the muxer are step 5's.
+  - **NVENC:** decoded on the chip with `-hwaccel cuda -hwaccel_output_format cuda`; `bwdif_cuda=mode=send_field:parity=auto:deint=all`; `scale_cuda=w=-2:h=<H>:format=nv12` (also 10-bit to 8); `-preset p4 -rc vbr`.
+  - **VA-API:** `-hwaccel vaapi -hwaccel_device <node> -hwaccel_output_format vaapi`; `deinterlace_vaapi=rate=field` (the driver's best method); `scale_vaapi=…:format=nv12`; `-rc_mode VBR`.
+  - **Quick Sync:** a `qsv` device on the node's VA-API (Linux) or Direct3D 11 (Windows); its own decoders (`h264_qsv`, `hevc_qsv`, `mpeg2_qsv`); `vpp_qsv` with `deinterlace=2:rate=field` and an explicit even width (it takes no `-2`); `-preset medium`.
+  - **AMF (Windows):** decoded with `-hwaccel d3d11va`, filtered on the processor; `-usage transcoding -rc vbr_peak`.
+  - **libx264:** `-preset veryfast`.
+  - **A picture the chip doesn't decode** is decoded and filtered on the processor (`bwdif` with `send_field`, `scale`), then handed over as `yuv420p` (NVENC, libx264), `nv12` (AMF) or `nv12` uploaded (VA-API, Quick Sync).
+  - **Every encoder:** `-profile:v high`; `-b:v` the plan's, `-maxrate` 1.5 ×, `-bufsize` 2 ×; `-g` two seconds of the output's pictures (docs/04's HLS segments). A picture is only ever made smaller: no scaling at the source's height, and `min(ih,<H>)` when its height isn't known.
+- **Detection** (`FfmpegEncoderDetector`, `lib/data/cast/`):
+  - FFmpeg's version line first. A result remembered for the same version, system and bundled-libva-or-not, under **7 days** old (a driver or a GPU can change without FFmpeg changing), is used as it is.
+  - Otherwise, per candidate, **the one-second test encode**: a 1080p25 `testsrc2` from the processor, through the same arguments a re-encode uses. VA-API and Quick Sync are tried on each render node.
+  - For each hardware encoder that passes, **a test decode of each `HardwareDecode` kind** on its chip, scaled (MPEG-2 also deinterlaced) there, with the re-encode's own arguments. The test pictures (1 s each, made by the bundled FFmpeg with libx264, libx265 and mpeg2video, the MPEG-2 one interlaced) are deleted after.
+  - **A test passes when FFmpeg exits 0 and its `-progress` reports pictures made.** A chip that can't decode a codec makes FFmpeg fall back to the processor, and the GPU's scaler then refuses those pictures (exit 69; checked with AV1 on both GPUs here).
+  - One detection at a time; anyone asking meanwhile shares it. A result with a test cut short (a timeout, the app quitting, a process that couldn't start) isn't remembered. It never throws. The log names what was found, and for each refusal FFmpeg's real reason, past the generic lines it ends every failure with.
+  - Remembered in `<app support>/cast/encoders.json` (`castFolderProvider`, set by `bootstrap()`).
+- **Departure: VA-API on Linux needs a libva bundled with FFmpeg.**
+  - BtbN's FFmpeg 8.1 calls `vaMapBuffer2`, which libva has only since 2.21. Ubuntu 22.04 ships 2.14 and 24.04 ships 2.20 (checked: neither has it). So **every VA-API encode with the system's libva aborts** (SIGABRT and a core dump), and the plan's "NVENC and VA-API both detected" was impossible as planned.
+  - `tools/fetch_libva.sh` builds libva 2.22.0 (MIT; 220 KB + 15 KB; needs glibc 2.34) in a throwaway Ubuntu 22.04 container (docker or podman) into `third_party/libva/linux-x64/` (gitignored; the source checksum is pinned). The Linux build hard-links it into `bundle/ffmpeg/libva/`. FFmpeg gets it through `LD_LIBRARY_PATH`, and only for an encoder that needs it.
+  - The drivers stay the system's. Its driver path lists Debian/Ubuntu's, Fedora's and Arch's folders, and `LIBVA_DRIVERS_PATH` still wins.
+  - **The bundled libva is tried first, then the system's.** On 22.04 and 24.04 the system's aborts. On a system newer than 2.22, whose driver may only offer a newer init function, ours fails cleanly and the system's works.
+  - A checkout that hasn't run the script simply finds no VA-API, and the next candidate is used. **Phase 10's AppImage must carry it.**
+  - Quick Sync fails here on its own grounds: the Intel driver (iHD 22.3.1) is older than the VA-API 1.15 it asks for. It comes after VA-API in the order, so nothing is lost on this laptop.
+- **FFmpeg's default VA-API device is the first render node,** which here is NVIDIA's (renderD128, no VA-API driver), so every node is tried.
+- **The first use of a CUDA filter compiles it: about 6 s** (6.2–6.6 s with `CUDA_CACHE_DISABLE=1`, against 0.7 s), cached in `~/.nv/ComputeCache`. Detection runs those filters, so a first cast doesn't pay it. The per-test timeout is 20 s, for this and for a GPU waking.
+- **Measured on this laptop** (i7-10750H, 12 threads; GTX 1650 Ti; UHD 630 through the bundled libva) with `test/tools/cast_transcode_measure_test.dart` (tag `benchmark`). Each case is planned by `planCast` from the bundled ffprobe's facts and runs video only, 30 s at the stream's own pace. CPU is FFmpeg's processor time ÷ wall time, in % of one core; "speed" is the same re-encode unpaced:
+
+  | Re-encode | NVENC | VA-API | libx264 |
+  |---|---|---|---|
+  | HEVC 2160p25 → H.264 1080p (6 Mbps) | 7 %, 11.1× | 8 %, 6.0× | 219 %, 4.0× |
+  | MPEG-2 576i25 → H.264 576p50 (5 Mbps) | 4 %, 21.7× | 7 %, 17.6× | 117 %, 13.5× |
+  | H.264 1080i50 → 1080p50, Smooth interlaced (10.7 Mbps) | 6 %, 6.6× | 7 %, 5.9× | 311 %, 3.4× |
+
+  Both chips decode all four kinds. **Detection: 3.2 s fresh** (NVENC; VA-API on renderD129 with the bundled libva; libx264), **18 ms remembered.** In the experiments that led to these arguments (each path by hand, NVENC, VA-API and the processor), ffprobe found every output H.264 High, 8-bit 4:2:0, at the planned height, one picture per field, with the source's pixel shape (576i's 16:15 kept).
+- **Not tried on real hardware:** Quick Sync, AMF, and everything on Windows. Their arguments are FFmpeg's documented ones; a wrong one only makes detection pass over that encoder (the test runs the same arguments), down to libx264.
+- **For steps 5 and 6:** the relay adds the audio, maps and muxer to these. Step 6 asks `encoders()` when a session starts (alongside LAUNCH; step 7's picker can start it earlier), feeds `softwareOnly` to the planner, refuses a plan that needs a re-encode when nothing can, and on a failed re-encode calls `detectAgain()` and then `after()`.
+- **Known gap:** HDR10 HEVC re-encoded to H.264 isn't tone-mapped, so its colours look washed out. That happens only when a TV refuses HEVC or 4K. `tonemap_vaapi` and `tonemap_opencl` exist; another option is HEVC 1080p out for a TV that plays HEVC.
+- **Tests: 75 new** (and the measurement, skipped by default):
+  - the domain;
+  - the arguments for every encoder, on the chip and off, scaled or not, deinterlaced or not, an unknown height and frame rate;
+  - **detection against a scripted FFmpeg behind the real supervisor:** this laptop's case, a system newer than the bundled libva, none bundled, no render nodes, Windows, the processor only, nothing, a test with no pictures, partial decodes, a test picture FFmpeg can't make, the folder cleared, the log's reasons;
+  - remembering: version, a week, a clock gone back, a libva added, junk files, `detectAgain`, a timeout, the app quitting, a folder that can't be written; one detection at a time;
+  - **with a real FFmpeg** (the system's on CI): libx264 found and remembered, and its arguments make what the plan says (MPEG-2 576i → 360 × 288 at 50 pictures a second, H.264 High);
+  - the locator's libva; the supervisor's environment.
+  - **Stability:** the new tests 8 of 8 run in parallel (103 each); **2,635 app tests** (14 skipped) under `TZ=UTC`.

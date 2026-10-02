@@ -141,6 +141,24 @@ else()
   message(STATUS "No FFmpeg in ${FFMPEG_SOURCE_DIR}: this build can't cast (run tools/fetch_ffmpeg.sh)")
 endif()
 
+# The libva the bundled FFmpeg needs for VA-API where the system's is too
+# old (tools/fetch_libva.sh, ADR-014 step 4), in ffmpeg/libva/. Without it
+# VA-API encodes only on systems with libva 2.21 or newer.
+set(LIBVA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/libva/linux-x64")
+if(EXISTS "${LIBVA_SOURCE_DIR}/libva.so.2")
+  install(CODE "
+    file(MAKE_DIRECTORY \"${CMAKE_INSTALL_PREFIX}/ffmpeg/libva\")
+    foreach(name libva.so.2 libva-drm.so.2 COPYING VERSION)
+      if(EXISTS \"${LIBVA_SOURCE_DIR}/\${name}\")
+        file(CREATE_LINK \"${LIBVA_SOURCE_DIR}/\${name}\"
+          \"${CMAKE_INSTALL_PREFIX}/ffmpeg/libva/\${name}\" COPY_ON_ERROR)
+      endif()
+    endforeach()
+    " COMPONENT Runtime)
+else()
+  message(STATUS "No libva in ${LIBVA_SOURCE_DIR}: VA-API needs the system's to be 2.21 or newer (run tools/fetch_libva.sh)")
+endif()
+
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

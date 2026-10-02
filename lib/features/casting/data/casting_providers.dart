@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
+
 import 'package:iptv_player/core/cast/cast_discovery.dart';
+import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
@@ -10,12 +14,14 @@ import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/db_cast_device_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffmpeg_encoder_detector.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
 import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
+import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'casting_providers.g.dart';
@@ -88,3 +94,23 @@ StreamProbe streamProbe(Ref ref) {
 @Riverpod(keepAlive: true)
 StreamFactsLookup streamFactsLookup(Ref ref) =>
     StreamFactsLookup(probe: ref.watch(streamProbeProvider));
+
+/// Where casting keeps its own files. `bootstrap()` points it into the
+/// app's own folder; this is the fallback when it has none.
+@Riverpod(keepAlive: true)
+Directory castFolder(Ref ref) =>
+    Directory(p.join(Directory.systemTemp.path, 'iptv_player', 'cast'));
+
+/// The encoders a re-encode can use (Phase 7 step 4), found once per
+/// FFmpeg and remembered.
+@Riverpod(keepAlive: true)
+CastEncoderDetection castEncoderDetection(Ref ref) {
+  final binaries = ref.watch(ffmpegBinariesProvider);
+  if (binaries == null) return const NoCastEncoders();
+  return FfmpegEncoderDetector(
+    binaries: binaries,
+    folder: ref.watch(castFolderProvider),
+    supervisor: ref.watch(processSupervisorProvider),
+    log: ref.watch(appLogProvider),
+  );
+}
