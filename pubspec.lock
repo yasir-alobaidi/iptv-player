@@ -336,6 +336,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  fake_receiver:
+    dependency: "direct dev"
+    description:
+      path: "tools/fake_receiver"
+      relative: true
+    source: path
+    version: "0.1.0"
   ffi:
     dependency: "direct main"
     description:

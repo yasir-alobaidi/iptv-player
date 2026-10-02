@@ -2,8 +2,11 @@ import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
+import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/cast/cast_browsers.dart';
+import 'package:iptv_player/data/cast/cast_connection_check.dart';
+import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/db_cast_device_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
@@ -17,9 +20,16 @@ part 'casting_providers.g.dart';
 CastDeviceStore castDeviceStore(Ref ref) =>
     DbCastDeviceStore(ref.watch(appDatabaseProvider));
 
+/// The device's mDNS port first (its name and model, ADR-014), then a
+/// Cast connection for one that ignores it.
 @Riverpod(keepAlive: true)
-CastAddressCheck castAddressCheck(Ref ref) =>
-    UnicastCastAddressCheck(log: ref.watch(appLogProvider));
+CastAddressCheck castAddressCheck(Ref ref) {
+  final log = ref.watch(appLogProvider);
+  return CastAddressChecks([
+    UnicastCastAddressCheck(log: log),
+    CastConnectionCheck(log: log),
+  ]);
+}
 
 /// bonsoir and multicast_dns side by side (Phase 7 decision 6).
 @Riverpod(keepAlive: true)
@@ -41,6 +51,11 @@ CastDiscovery castDiscovery(Ref ref) {
 @riverpod
 Stream<List<CastDevice>> castDevices(Ref ref) =>
     ref.watch(castDiscoveryProvider).devices;
+
+/// Our own Cast v2 client (docs/04).
+@Riverpod(keepAlive: true)
+CastReceivers castReceivers(Ref ref) =>
+    CastV2Receivers(log: ref.watch(appLogProvider));
 
 /// The bundled FFmpeg and ffprobe; null when this build has none.
 @Riverpod(keepAlive: true)

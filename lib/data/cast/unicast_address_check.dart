@@ -14,8 +14,8 @@ import 'package:iptv_player/data/cast/dns_message.dart';
 /// Living Room TV: about 0.4 s), and nothing shows on its screen.
 ///
 /// Devices on another subnet may not answer (RFC 6762 §5.5 lets a
-/// responder ignore queries from off its link); the Cast connection's
-/// own GET_STATUS is the fallback once the client exists (step 2).
+/// responder ignore queries from off its link); `CastConnectionCheck`
+/// is the fallback.
 final class UnicastCastAddressCheck implements CastAddressCheck {
   new({
     this.log,

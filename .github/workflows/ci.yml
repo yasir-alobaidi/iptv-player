@@ -73,9 +73,10 @@ jobs:
         run: |
           flutter pub get
           dart pub get --directory=tools/fake_provider
-        # The fake provider is its own package, and the root `flutter
-        # analyze` reaches into it: without this every import in it is
-        # unresolved and the analyze step fails.
+          dart pub get --directory=tools/fake_receiver
+        # The fake provider and the fake receiver are their own packages,
+        # and the root `flutter analyze` reaches into them: without this
+        # every import in them is unresolved and the analyze step fails.
 
       - name: Generated code is up to date
         run: |
@@ -113,6 +114,10 @@ jobs:
         working-directory: tools/fake_provider
         # The tests that need ffmpeg and the generated media samples skip
         # themselves with a reason: neither is committed.
+
+      - name: Fake receiver tests
+        run: dart test
+        working-directory: tools/fake_receiver
 
       - name: Media samples for the player tests
         if: runner.os == 'Linux'

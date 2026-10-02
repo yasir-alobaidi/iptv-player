@@ -1,0 +1,7 @@
+# Same lints as the app (docs/plans/phase-1-foundation.md step 6).
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    # A test tool, not a published package.
+    public_member_api_docs: false

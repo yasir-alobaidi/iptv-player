@@ -1,0 +1,14 @@
+name: fake_receiver
+description: Fake Cast device (Cast v2 over TLS on 127.0.0.1) for tests and manual runs. See docs/06-quality.md and docs/plans/phase-7-casting.md (decision 8).
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  args: ^2.7.0
+
+dev_dependencies:
+  test: ^1.26.0
+  very_good_analysis: ^11.0.0

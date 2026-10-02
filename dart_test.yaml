@@ -27,3 +27,10 @@ tags:
       default: CI has no devices. Run with
       `flutter test --tags real_network --run-skipped`.
     skip: "listens on the real network: run with --tags real_network --run-skipped"
+  real_cast:
+    description: >-
+      Casts to a real Cast device on this computer's network (the user's
+      Living Room TV): it shows on that TV's screen. Skipped by default, and
+      never run without the user's go-ahead (they watch it): run with
+      `CAST_HOST=<address> flutter test --tags real_cast --run-skipped`.
+    skip: "casts to a real TV: run with --tags real_cast --run-skipped, with the user's go-ahead"

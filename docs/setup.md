@@ -34,7 +34,7 @@ Notes:
 - `libmpv-dev` on 22.04 is mpv 0.34.1. Phase 0 confirmed it works with media_kit, using our patched media_kit_video (ADR-003); the AppImage must bundle it (Phase 10).
 - `libsecret-1-dev` and `libjsoncpp-dev` are needed by flutter_secure_storage on Linux.
 - `libmimalloc-dev` is listed in media_kit's Linux install instructions.
-- `protobuf-compiler` (`protoc`) generates the Cast v2 protobuf code (ADR-002). `spike/cast_spike/tool/gen_proto.sh` builds `protoc-gen-dart` from the pub cache, so no global activation is needed.
+- `protobuf-compiler` (`protoc`) generates the Cast v2 protobuf code (ADR-002), committed in `lib/data/cast/proto/`. `tools/gen_cast_proto.sh` regenerates it, building `protoc-gen-dart` from the spike's pub cache, so no global activation is needed. Only needed if `cast_channel.proto` changes.
 - Claude can't run sudo: it needs a password and the session has no terminal. Paste these into your own terminal.
 
 ## 2. GPU drivers (for hardware decode/encode tests)

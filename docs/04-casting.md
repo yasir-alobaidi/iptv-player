@@ -11,7 +11,7 @@ Phase 0 proved this end to end on a Chromecast with Google TV (4K) with our own 
 | Component | Responsibility |
 |---|---|
 | CastDiscovery | bonsoir browse `_googlecast._tcp`; TXT `fn` (name), `md` (model), `id`, `ca` (capability bits: devices without bit 0, video out, are audio-only speakers and aren't listed); manual IP devices; dedupe by id. multicast_dns (proven in Phase 0) is the fallback if bonsoir fails |
-| CastV2Client | TLS socket to host:8009 (device uses a self-signed cert), framing (4-byte big-endian length + protobuf `CastMessage`), namespaces, request ids, heartbeat; tolerant parsing (unknown namespaces and types, a `status` that isn't an object, messages arriving after CLOSE) |
+| CastV2Client | TLS socket to host:8009 (device uses a self-signed cert), framing (4-byte big-endian length + protobuf `CastMessage`), namespaces, request ids, heartbeat; tolerant parsing (unknown namespaces and types, a `status` that isn't an object, messages arriving after CLOSE). As built (Phase 7 step 2): `CastChannel`, `ReceiverChannel`, `MediaChannel`, `CastV2Receivers` behind `CastReceivers` / `CastReceiverSession` in `lib/core/cast/` |
 | MediaChannel | LOAD, PLAY, PAUSE, STOP, SEEK, GET_STATUS; volume via receiver namespace; MEDIA_STATUS parsing |
 | StreamProbe | bundled ffprobe on the source (UA, 8 s timeout): codecs, profile, level, resolution, fps, field order, audio tracks, bitrate |
 | CastPlanner | pure function (probe, device profile, settings) → CastPlan (direct / relay-copy / relay-transcode, container, audio action) |
@@ -21,16 +21,16 @@ Phase 0 proved this end to end on a Chromecast with Google TV (4K) with our own 
 | CastCoordinator | orchestration: plan, relay, LOAD, fallbacks, device learning, re-LOAD after a continuous stream ends, local-player suspension, sleep inhibition, session state |
 
 ## Cast v2 protocol essentials
-- `CastMessage` protobuf (Chromium `cast_channel.proto`): protocol_version CASTV2_1_0, source_id `sender-0`, destination_id (`receiver-0` or the app transportId), namespace, payload_type STRING, payload_utf8 (JSON). Generate Dart code once and commit it (`spike/cast_spike/tool/gen_proto.sh` shows how).
+- `CastMessage` protobuf (Chromium `cast_channel.proto`): protocol_version CASTV2_1_0, source_id `sender-0`, destination_id (`receiver-0` or the app transportId), namespace, payload_type STRING, payload_utf8 (JSON). The generated Dart code is committed in `lib/data/cast/proto/` (`tools/gen_cast_proto.sh` regenerates it).
 - Namespaces:
   - `urn:x-cast:com.google.cast.tp.connection` → `CONNECT` / `CLOSE`
-  - `urn:x-cast:com.google.cast.tp.heartbeat` → send `PING` every 5 s, answer `PING` with `PONG`; 3 missed → reconnect
+  - `urn:x-cast:com.google.cast.tp.heartbeat` → send `PING` every 5 s, answer `PING` with `PONG`; 3 intervals with nothing heard from the device (any message counts) → reconnect, and join the same receiver by its session id
   - `urn:x-cast:com.google.cast.receiver` → `LAUNCH {appId}`, `GET_STATUS`, `SET_VOLUME`, `STOP`; `RECEIVER_STATUS` gives the app's `transportId`. After LAUNCH the device also sends `LAUNCH_STATUS`, whose `status` is a string (`USER_ALLOWED`)
   - `urn:x-cast:com.google.cast.media` → `LOAD`, `PLAY`, `PAUSE`, `STOP`, `SEEK`, `GET_STATUS`; `MEDIA_STATUS` with `playerState` and `idleReason` (FINISHED, CANCELLED, INTERRUPTED, ERROR)
-  - The device also sends `urn:x-cast:com.google.cast.multizone` (`MULTIZONE_STATUS`); ignore namespaces and types we don't use
+  - `urn:x-cast:com.google.cast.multizone` → the device sends `MULTIZONE_STATUS` on its own, and answers `GET_STATUS` with it: `devices` with each one's `name`, `deviceId` (a UUID) and `capabilities`. Add by address uses it to name a device its mDNS port didn't answer for (ADR-014 step 2). Ignore namespaces and types we don't use
 - Sequence: TLS connect → CONNECT receiver-0 → GET_STATUS → LAUNCH CC1AD845 → RECEIVER_STATUS with app → CONNECT transportId → LOAD. LAUNCH took 3–6 s when the receiver app wasn't running; reuse a running app
 - LOAD (fields verified against the Google Cast docs and on the device, ADR-004): top-level `media`, `autoplay: true`, `currentTime`; `media.contentId` (relay URL), `contentType` (`application/x-mpegurl` for HLS, `video/mp4` for continuous fMP4 and files), `streamType` (`LIVE` or `BUFFERED`), `metadata` (`metadataType` 0, title, subtitle, images). Don't send `hlsSegmentFormat` / `hlsVideoSegmentFormat`: the receiver ignores them (any value, or none, plays), and the planner never uses HLS with fMP4 segments
-- Errors: a LOAD the receiver can't play is answered with a bare `LOAD_FAILED` (no reason) plus `MEDIA_STATUS` IDLE/ERROR; the media session is then gone (STOP → `INVALID_REQUEST` / `INVALID_MEDIA_SESSION_ID`)
+- Errors: a LOAD the receiver can't play is answered with a bare `LOAD_FAILED` (no reason) plus `MEDIA_STATUS` IDLE/ERROR; the media session is then gone (STOP → `INVALID_REQUEST` / `INVALID_MEDIA_SESSION_ID`). **A LOAD gets two answers under one request id when it fails:** first a `MEDIA_STATUS` (IDLE, `extendedStatus.playerState` LOADING) at once, then the `LOAD_FAILED` (1.6 s later in Phase 0). Status updates leave out `media` once it was sent
 - `playerState` isn't a quality signal: on live HLS it flips between PLAYING and BUFFERING many times a minute (up to 46 % of the time in BUFFERING) with no visible stall, and a stream that visibly stutters can still report PLAYING. Stalls are detected on the relay side (segment age, FFmpeg exit) and by IDLE with an `idleReason`
 
 ## Device capability profiles

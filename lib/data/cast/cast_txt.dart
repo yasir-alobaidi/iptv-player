@@ -39,9 +39,12 @@ CastAddressAnswer? readCastService({
 }) {
   final host = preferredHost(hosts);
   if (host == null) return null;
-  final model = _text(txt['md']);
+  final model = cleanCastText(txt['md']);
   final name =
-      _text(txt['fn']) ?? model ?? _text(_withoutId(instance)) ?? 'Cast device';
+      cleanCastText(txt['fn']) ??
+      model ??
+      cleanCastText(_withoutId(instance)) ??
+      'Cast device';
   final capabilities = int.tryParse(txt['ca']?.trim() ?? '', radix: 10);
   // Bit 0 is video out (docs/04). A device that sent no readable bits is
   // listed: a LOAD it can't play says so, a hidden TV says nothing.
@@ -56,7 +59,7 @@ CastAddressAnswer? readCastService({
       host: host,
       port: port != null && port > 0 && port <= 65535 ? port : castPort,
       capabilities: capabilities,
-      status: _text(txt['rs']),
+      status: cleanCastText(txt['rs']),
     ),
   );
 }
@@ -97,9 +100,9 @@ String? preferredHost(Iterable<String> hosts) {
 String _withoutId(String instance) =>
     instance.replaceFirst(RegExp(r'-?[0-9a-fA-F]{32}$'), '');
 
-/// [value] fit to show: control characters as spaces, runs collapsed,
+/// A name [value] fit to show: control characters as spaces, runs collapsed,
 /// at most 100 characters; null when nothing is left.
-String? _text(String? value) {
+String? cleanCastText(String? value) {
   if (value == null) return null;
   final cleaned = value
       .replaceAll(RegExp(r'[\x00-\x1F\x7F\uFFFD]'), ' ')

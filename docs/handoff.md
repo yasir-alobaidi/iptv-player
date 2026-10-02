@@ -1,4 +1,4 @@
-# Handoff — 2026-09-29 (Phase 7 step 1 done, stopped for review)
+# Handoff — 2026-10-02 (Phase 7 step 2 done but its TV run, stopped for review)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -6,15 +6,16 @@ docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
 part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 1** (ADR-014 "Discovery, known devices, FFmpeg in
-   the build"). One departure from the plan: Add by address asks the
-   device's mDNS port directly (it answers with its name in 0.2–0.5 s,
-   nothing on screen); the Cast CONNECT + GET_STATUS check becomes its
-   fallback in step 2.
-2. **Push** the five local commits, from "Remind me goes into Phase 9…" to
-   "Phase 7 step 1…".
-3. **Step 2 uses the TV once**: one LAUNCH and LOAD of the MP4 sample, then
-   STOP. The session will ask first.
+1. **Review Phase 7 step 2** (ADR-014 "The Cast v2 client and the fake
+   receiver"). Its choices to look at: commands answer sealed results
+   rather than `AppFailure`s; a LOAD is "done" once the TV took it, and a
+   later LOAD_FAILED shows as IDLE/ERROR; the heartbeat counts any message
+   as heard; reconnecting lasts 30 s; Add by address's fallback names a
+   device by its MULTIZONE_STATUS.
+2. **Push** the local commit ("Phase 7 step 2…").
+3. **For the TV run, be on your home network** (this session the laptop was
+   on 192.168.26.x, so the TV was out of reach). The session will ask
+   before it casts.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -22,46 +23,47 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Step 1 is <approved | approved with these changes: …>. Start step 2.
+and docs/04-casting.md first. Step 2 is <approved | approved with these changes: …>.
+I'm <home, the TV run can go ahead after you ask | not home yet>. Then start step 3.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): plan approved 2026-09-29, every recommendation and
-  the five sketches (ADR-014 started). Step 1 done.**
-- **Checks at the step 1 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,249 app tests** (12 skipped) under `TZ=UTC`; the cast tests
-  stable 8 of 8 run in parallel; the launch walk under xvfb; `flutter build
-  linux --debug` carries FFmpeg. The fake provider and the other
-  integration walks weren't touched.
-- **CI:** green on both systems at abd0c1a; nothing pushed since.
+- **Phase 7 (casting): step 1 approved 2026-10-02 ("continue"); step 2 done
+  but its one TV run.**
+- **Checks at the step 2 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,332 app tests** (13 skipped) under `TZ=UTC`; the casting
+  tests stable 8 of 8 run in parallel; the fake receiver's 19 tests (8 of 8
+  in parallel), the fake provider's 141; the launch walk under xvfb.
+- **CI:** green on both systems at 337db4e (step 1, which the user pushed).
+  This commit adds a "Fake receiver tests" step and the fake receiver's
+  `pub get` to CI: check the first run.
 
-## Done this session (2026-09-29, the fourth)
-- **The Phase 7 plan approved** ("do the recommended").
-- **Step 1:**
-  - discovery: bonsoir and multicast_dns side by side, merged by device
-    id (the IPv4 address wins);
-  - Add by address through a direct DNS-SD query;
-  - `cast_devices` (schema v8, with `last_port`);
-  - FFmpeg hard-linked into the Linux bundle, and installed into the
-    Windows one when present;
-  - measured on this laptop, listening only: Living Room TV seen by
-    bonsoir in 64–139 ms and by multicast_dns in 367–584 ms; the Nest Mini
-    left out by both.
+## Done this session (2026-10-02)
+- **Step 1 approved;** CI green at 337db4e.
+- **Step 2** (details in ADR-014):
+  - the domain seam `lib/core/cast/cast_receiver.dart`;
+  - the channel, the namespaces, the status readers, the session with
+    reconnecting (`lib/data/cast/`), the committed protobuf and
+    `tools/gen_cast_proto.sh`;
+  - `CastConnectionCheck` as Add by address's fallback;
+  - `tools/fake_receiver` (protocol side);
+  - the TV script `test/tools/cast_tv_test.dart` (tag `real_cast`),
+    dry-run against the fake.
 
 ## What's next
-1. **Phase 7 step 2 once step 1 is approved:** `CastChannel` (TLS to
-   host:8009 accepting the self-signed certificate, 4-byte length +
-   protobuf framing, request ids with timeouts, PING every 5 s and 3 missed
-   = lost, tolerant parsing), `ReceiverChannel`, `MediaChannel`,
-   reconnect and rejoin by transport id; `tools/fake_receiver`'s protocol
-   side (TLS with a test-only certificate, a slow LAUNCH option); the
-   CONNECT + GET_STATUS fallback for Add by address (a device that ignores
-   the direct DNS-SD query, and the fake receiver at `127.0.0.1:<port>`).
-   The spike's client (`spike/cast_spike/lib/cast_channel.dart`) and its
-   generated protobuf (`spike/cast_spike/lib/src/proto`) are the starting
-   point; the generated code gets committed into `lib/`.
-   **Ask before the one TV use** (memory): a LAUNCH and LOAD of the MP4
-   sample served from the laptop with Range, then STOP.
+1. **The TV run, only after asking (memory) and with the user watching:**
+   `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
+   test/tools/cast_tv_test.dart` — about 30 s on screen: the two address
+   checks (nothing shown), LAUNCH, LOAD of the MP4 sample served from the
+   laptop with Range, PAUSE, SEEK 1:00, PLAY, STOP (the TV goes home). Check
+   first that the laptop is on 192.168.1.x (`ip -4 addr`). Record in ADR-014:
+   join and PLAYING times, the Range requests, whether **MULTIZONE_STATUS's
+   id equals the TXT id** (the fallback assumes it; the test asserts it at
+   the end, after STOP), and what SET_VOLUME would mean on a fixed volume
+   (not tried: volume on the family TV wasn't asked for).
+2. **Phase 7 step 3:** `StreamProbe` (bundled ffprobe through the proxy,
+   8 s, supervised) and the pure `CastPlanner` (plan doc, step 3), with
+   exhaustive unit tests. The probe sources of decision 4.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -156,7 +158,18 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 1):
+New this session (Phase 7 step 2):
+- **The seam:** step 6's `CastCoordinator` talks to `CastReceivers` / `CastReceiverSession` (`lib/core/cast/cast_receiver.dart`) — `castReceiversProvider`. Sessions report through `states` (a broadcast, async); commands answer `CastCommandResult` (done / refused / unanswered / disconnected) and never throw.
+- **`CastV2Receivers`** (`lib/data/cast/cast_v2_receivers.dart`) holds `CastTimings` — tests shorten every wait (`test/data/cast/cast_v2_receivers_test.dart`'s `_timings`: heartbeat 100 ms, reconnect for 2 s). The session is the private `_CastV2Session`; `_ending` marks this app's own stop or leave, so the TV's answer to it isn't read as news.
+- **`CastLoad` is not freezed** on purpose: its `toString` leaves the URL out (a direct play carries credentials). The channel logs message types only.
+- **The fake receiver** (`tools/fake_receiver`, a path dev dependency like the fake provider): `FakeReceiver.start(...)` in-process; its README lists the TV's behaviours it copies and its faults. It only answers a destination after a CONNECT, and answers requests *and* broadcasts the same status with `requestId: 0` — a test waiting for "the next RECEIVER_STATUS" may get the broadcast of the previous change; wait for the one you mean (`next(type, then, where)` in its tests). Its own codec is independent of the app's generated code: keep it so.
+- **Channel tests run under fake time on `PipeTransport`** (`test/data/cast/cast_test_support.dart`), which decodes what the channel writes with the fake's codec. Its `destroy()` keeps the input open (a device still sending); `close()` ends it.
+- **Racing the fake in-process:** a test's write reaches the fake only after the test yields; do a round trip (a GET_STATUS) before triggering a fault that depends on the fake having read it (the fake's own tests' `launch()`).
+- **Add by address** now asks the mDNS port (3 s), then a Cast connection (`CastAddressChecks`). For the fake at `127.0.0.1:<port>`, the first check waits its 3 s for nothing, then the second answers.
+- **`real_cast`** is a new tag: casts to a real TV. Never run it without asking.
+- **Traps met this session:** a `test('… device's …')` in single quotes is a syntax error (the analyzer says so, the runner fails the whole file); the shell's safety check refuses `rm` on a variable path (`"${S:?}"` or a literal path passes).
+
+From the session before (Phase 7 step 1):
 - **Casting's domain is in `lib/core/cast/`, its data side in `lib/data/cast/`, its providers in `lib/features/casting/data/casting_providers.dart`** (the screens in step 7 go in `lib/features/casting/presentation/` and import only that provider file and `lib/core/cast/`).
 - **Discovery:** `castDevicesProvider` is auto-dispose — discovery runs only while something watches it. `MergedCastDiscovery` wraps any `CastBrowser`s; tests use fake browsers and a fake `CastAddressCheck` (`test/data/cast/merged_cast_discovery_test.dart`). A found device is never stored; `markUsed` (step 6's first cast) and `addManual` write rows.
 - **bonsoir in `flutter test`:** its Linux side is a Dart plugin that `flutter test` doesn't register; call `BonsoirLinux.registerWith()` (dev dependency `bonsoir_linux`) — only the `real_network` measurement does. Unit tests fake the platform (`_FakePlatform` in `cast_browsers_test.dart`).
@@ -611,9 +624,10 @@ From earlier sessions (still true):
 - **`DoUpdate.withExcluded` inside `Batch.insertAll` needs explicit type
    arguments** (`DoUpdate<$ChannelsTable, ChannelRow>.withExcluded`), or the
    analyzer reports every `excluded.x` as a nullable access.
-- Root `flutter analyze` reaches into `tools/fake_provider`; `dart pub get`
-   there first. Work in it with `dart test` from `tools/fake_provider`, and
-   `dart run tools/fake_provider/bin/server.dart` from the repo root.
+- Root `flutter analyze` reaches into `tools/fake_provider` and
+   `tools/fake_receiver`; `dart pub get` in each first. Work in them with
+   `dart test` from their folders, and `dart run tools/fake_provider/bin/server.dart`
+   (or `tools/fake_receiver/bin/fake_receiver.dart`) from the repo root.
 - The ffmpeg tests need `third_party/ffmpeg/linux-x64/ffmpeg` and
    `tools/media_samples/out`, and skip with a reason without them. Keep it
    that way: CI on Windows has neither.
@@ -634,6 +648,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 7 step 2 (ADR-014): sealed command and join results rather than `AppFailure`; a LOAD done once taken, a later LOAD_FAILED as IDLE/ERROR; the heartbeat lost after 3 intervals with nothing heard (any message counts); reconnect for 30 s, rejoining by session id; a RECEIVER_STATUS whose `status` isn't an object never ends a session; the fake receiver's own hand-written codec; Add by address's fallback over a Cast connection named by MULTIZONE_STATUS (its id assumed to equal TXT `id` until the TV run checks it).
 - Phase 7 plan (ADR-014): the eight decisions as recommended; step 1: Add by address by a direct DNS-SD query (CONNECT + GET_STATUS as the fallback), the IPv4 address preferred over IPv6, speakers left out by `ca` bit 0 but a device with no readable `ca` listed, found devices not stored, FFmpeg hard-linked into the Linux bundle.
 - Phase 6 exit (ADR-013): toasts over every route with Ctrl+Z for Undo; menu items after the menu's fade; the write-ahead log (`synchronous = NORMAL`); an episode left through the next-episode card is watched; trailing countries dropped only from the list (not the UK's nations, regions, languages or Georgia), a bare country after a lone tag kept as the name; no movie-name cleanup for v1 (unless the user asks).
 - Phase 6 (ADR-013): cleaned names stored (`clean_name`, `quality`), technical tags kept in the name, only resolution tags as the badge; the search index on the name shown; search's ranking (source, favorites, prefix, rank) and the programme query by row-id order from the first programme on now (measured: 0.7–5.2 s → 31 ms worst); one-letter words only narrow programmes; no "Show all" for programmes; favorites' order per group with renumbering moves; groups under Favorites in Live TV; "Order" on favorites' sort; the flat header/row list for the Favorites screen; one channel menu everywhere; "Hidden" as a tag.

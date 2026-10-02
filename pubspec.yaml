@@ -52,6 +52,10 @@ dev_dependencies:
   fake_async: ^1.3.3
   fake_provider:
     path: tools/fake_provider
+  # The Cast client's tests talk to a fake Cast device on 127.0.0.1
+  # (Phase 7 decision 8).
+  fake_receiver:
+    path: tools/fake_receiver
   # `flutter drive --profile` for the frame-time measurement (docs/06).
   flutter_driver:
     sdk: flutter

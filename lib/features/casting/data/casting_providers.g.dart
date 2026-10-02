@@ -51,8 +51,14 @@ final class CastDeviceStoreProvider
 
 String _$castDeviceStoreHash() => r'e6c1bf3ec511de3d12d1f248282c8d5b06bc71da';
 
+/// The device's mDNS port first (its name and model, ADR-014), then a
+/// Cast connection for one that ignores it.
+
 @ProviderFor(castAddressCheck)
 final castAddressCheckProvider = CastAddressCheckProvider._();
+
+/// The device's mDNS port first (its name and model, ADR-014), then a
+/// Cast connection for one that ignores it.
 
 final class CastAddressCheckProvider
     extends
@@ -62,6 +68,8 @@ final class CastAddressCheckProvider
           CastAddressCheck
         >
     with $Provider<CastAddressCheck> {
+  /// The device's mDNS port first (its name and model, ADR-014), then a
+  /// Cast connection for one that ignores it.
   CastAddressCheckProvider._()
     : super(
         from: null,
@@ -95,7 +103,7 @@ final class CastAddressCheckProvider
   }
 }
 
-String _$castAddressCheckHash() => r'870182b044ab7b10287eab3222bb6e89f3b8fb81';
+String _$castAddressCheckHash() => r'b2e152540865f26610629f850e59bd8693ce35a6';
 
 /// bonsoir and multicast_dns side by side (Phase 7 decision 6).
 
@@ -189,6 +197,52 @@ final class CastDevicesProvider
 }
 
 String _$castDevicesHash() => r'ab3934d44cdc3480df63de9e7a7e4eefa44a477e';
+
+/// Our own Cast v2 client (docs/04).
+
+@ProviderFor(castReceivers)
+final castReceiversProvider = CastReceiversProvider._();
+
+/// Our own Cast v2 client (docs/04).
+
+final class CastReceiversProvider
+    extends $FunctionalProvider<CastReceivers, CastReceivers, CastReceivers>
+    with $Provider<CastReceivers> {
+  /// Our own Cast v2 client (docs/04).
+  CastReceiversProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castReceiversProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castReceiversHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastReceivers> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastReceivers create(Ref ref) {
+    return castReceivers(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastReceivers value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastReceivers>(value),
+    );
+  }
+}
+
+String _$castReceiversHash() => r'0cc828b349476f3509d08347b59ab750c13465ea';
 
 /// The bundled FFmpeg and ffprobe; null when this build has none.
 

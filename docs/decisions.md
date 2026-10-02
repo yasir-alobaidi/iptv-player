@@ -912,3 +912,49 @@ The eight, in short: **1** movies and episodes cast in this phase too (a file th
 - **Providers** (`lib/features/casting/data/casting_providers.dart`): `castDeviceStoreProvider`, `castAddressCheckProvider`, `castDiscoveryProvider`, `castDevicesProvider` (auto-dispose: discovery runs only while something shows the list), `ffmpegBinariesProvider`, `castReadinessProvider`.
 - **Measured on this laptop** (`test/tools/cast_discovery_network_test.dart`, tag `real_network`, listening only): Living Room TV first seen by **bonsoir in 64–139 ms** (Avahi's cache; its IPv4 address 20 ms later when Avahi gave IPv6 first) and by **multicast_dns in 367–584 ms**; the Nest Mini left out by both. **With Avahi out of reach** (`DBUS_SYSTEM_BUS_ADDRESS` pointing nowhere): bonsoir logs and sees nothing, multicast_dns finds the TV in 584 ms. Stopping Avahi itself needs root, which this session hasn't: `sudo systemctl stop avahi-daemon.socket avahi-daemon`, then the test, then `start`.
 - **Tests:** addresses (12 read, 17 refused); TXT records as the TV and the speaker send them and odd ones (no `fn`/`md`/`id`, five unreadable `ca`s, control characters, 300 characters, Arabic and emoji, bad ports, no address); the DNS reader on the TV's recorded answer (`test_fixtures/cast/`, its ids and serials replaced by made-up ones of the same length, so the compression is the TV's), cut at every length, pointer loops, and 25,000 random or corrupted messages; the address check against a loopback responder (answered, speaker, silent after one resend, a lost first query, garbage first, a PTR without TXT, a name that doesn't resolve); both browsers (multicast_dns on scripted rounds under fake time; bonsoir through a fake platform); the merge (IPv4 wins, fields filled, either browser, a failing browser, one list per change, the manual devices' checks and their interval, write-back of a new address); the store on a real database; the locator in temporary folders; the v7 → v8 migration. **148 new tests** (139 for casting; the migrations to v8), the casting ones stable 8 of 8 run in parallel; **2,249 app tests** under `TZ=UTC`.
+
+### The Cast v2 client and the fake receiver (step 2, 2026-10-02)
+- **Step 1 approved** (the user: "continue", 2026-10-02), with its departure (Add by address over the device's mDNS port) and the IPv4 address preferred.
+- **Domain** (`lib/core/cast/cast_receiver.dart`), the seam step 6's coordinator talks to:
+  - `CastReceivers.join(address)` → `CastJoined(session, launched:)`, or `CastJoinFailed` (`unreachable`, `noAnswer`, `launchRefused`, `launchTimedOut`).
+  - `CastReceiverSession`: `load`, `play`, `pause`, `seek` (keeps paused or playing), `stopMedia`, `setVolume`, `setMuted`; `stop` (the receiver closes, the TV goes home) and `leave` (it plays on); `localAddress` (this computer on the connection to the TV, for the relay); `state` and `states`.
+  - `CastSessionState`: the link (connected, reconnecting, ended), why it ended (stopped, left, closedOnDevice, otherApp with the app's name, lost), the media, the volume (`fixed` when the TV's remote sets it, as on Living Room TV).
+  - `CastMediaStatus`: IDLE with `extendedStatus` LOADING reads as loading; a state the app doesn't know reads as buffering (neither an end nor an error).
+  - `CastLoad` is a plain class whose `toString` leaves the URL out, like `PlayRequest`: a direct play's URL carries a provider's credentials.
+  - Commands answer a sealed `CastCommandResult` (done, refused with a `CastRefusal`, unanswered, disconnected), not an `AppFailure`: a refusal is the device's answer, as step 1's `CastAddressAnswer` is.
+- **The channel** (`lib/data/cast/`):
+  - The generated `CastMessage` is committed in `proto/`; `tools/gen_cast_proto.sh` regenerates it byte for byte (the spike's protoc_plugin 25.1.0 matches protobuf 6.1.0).
+  - `CastFrameReader`: a length past 64 KiB loses the framing, and the channel closes.
+  - `CastChannel` runs on a `CastTransport` (TLS, or a pipe in tests). Request ids count from 1; the answer is the first message with its id, which is also passed on with every other message; null on a timeout or a close.
+  - **The heartbeat:** a PING every 5 s, the device's PINGs answered, and the channel lost after **3 intervals with nothing heard** — any message counts, not only a PONG.
+  - **Tolerant reading:** not protobuf, a binary payload, unreadable JSON, JSON that isn't an object, or an unknown namespace — skipped. The device's CLOSE ends that virtual connection.
+  - **It logs message types only, never payloads** (a LOAD's URL); a test checks it.
+  - **TLS:** TCP first, then the handshake with its own timeout (a port that never speaks TLS would otherwise hold the socket); any certificate is accepted.
+  - `ReceiverChannel` and `MediaChannel` (`cast_namespaces.dart`), `loadPayload`, `castCommandResult`.
+  - **Status readers** (`cast_status_json.dart`): a RECEIVER_STATUS whose `status` isn't an object says nothing — never "the app is gone"; a MEDIA_STATUS without `media` keeps the session's URL, length and picture size; MULTIZONE_STATUS's devices.
+- **The session** (`CastV2Receivers`):
+  - **Join:** connect, GET_STATUS, then reuse the running Default Media Receiver or LAUNCH it. The answer to LAUNCH comes once the app runs; the LAUNCH_STATUS before it is not the answer. If the answer doesn't list the app yet, the status is asked every 0.5 s, up to 30 s. Then CONNECT to its transport id, and ask the media status.
+  - **A LOAD is done once the TV took it**: the first answer is a MEDIA_STATUS (IDLE, LOADING). A LOAD_FAILED arriving later as a second answer to the same request (1.6 s later on the TV in Phase 0) shows at once as media IDLE/ERROR; the TV's own IDLE/ERROR follows. A status of an older media session is out of date (ids only grow).
+  - **Following the TV:** a RECEIVER_STATUS without this session's app ends it (closedOnDevice, or otherApp with the name). The app's CLOSE makes the session ask GET_STATUS to tell which; receiver-0's CLOSE is a lost connection.
+  - **Reconnecting:** a socket error or close, the heartbeat, or an oversized frame → `reconnecting`. Retries start after 0.5 s, doubling to 5 s, for 30 s. Each connects, asks GET_STATUS and joins the same app by its session id (or transport id), CONNECTs and asks the media status; the TV plays on meanwhile. The app gone → the session ends as above; nothing within 30 s → `lost`.
+  - Commands while reconnecting answer `CastDisconnected` without sending anything. `stop` while reconnecting ends the session at once; the TV, out of reach, is not told.
+- **Add by address's fallback** (`CastConnectionCheck`): CONNECT, GET_STATUS and the multizone GET_STATUS side by side, then CLOSE — nothing launched, nothing on screen.
+  - MULTIZONE_STATUS gives the name and the id: its UUID without dashes, in lower case. **That this equals TXT `id` is assumed; the TV run checks it.**
+  - Capabilities with bit 0 clear are a speaker. Without multizone the device is named by its address, with the id `address:<host>:<port>`.
+  - `castAddressCheckProvider` is now `CastAddressChecks([unicast, connection])`: the DNS-SD answer first (it has the model), the Cast connection when that gets none. New: `castReceiversProvider`.
+- **`tools/fake_receiver`** (decision 8, the protocol side):
+  - TLS on 127.0.0.1 with a test-only self-signed EC certificate, in source and public on purpose.
+  - **Its own hand-written `CastMessage` codec**, checked against bytes from `protoc --encode`, so the app's generated code and the fake can't share a mistake.
+  - What it does like the TV is listed in its README. Faults: silent, heartbeat off, dropped or refused connections, a refused LAUNCH, refused LOADs, another app, the remote's pause, play and Back, raw bytes and JSON.
+  - A CLI (`dart run tools/fake_receiver/bin/fake_receiver.dart --port 8010`); its own 19 tests, which CI now runs.
+- **The TV run** (`test/tools/cast_tv_test.dart`, new tag `real_cast`, skipped unless run on purpose):
+  - What it does: both address checks; join; a LOAD of the MP4 sample from a Range server on the Cast connection's own local address (port 38400–38499); PAUSE, SEEK to 1:00, PLAY; STOP, in a `finally`.
+  - **Dry-run against the fake receiver:** joined in 1.5 s (the launch delay set), PLAYING 314 ms after LOAD, playing from 1:00 14 ms after the SEEK.
+  - **Not run on the TV yet:** the laptop was on another network this session (192.168.26.x).
+- **Tests: 83 new app tests.**
+  - Framing: every split point, the 64 KiB edge, 500 random streams in random reads, 2,000 random byte runs.
+  - The channel under fake time: ids, timeouts, the heartbeat, tolerant reading, a 300-round fuzz, a LOAD's URL never logged.
+  - The status readers on the TV's recorded payloads, with made-up ids; the namespaces.
+  - **The client against the fake over TLS (27):** every way to join, every command, the refusals, the remote, another app, junk, a dropped connection, heartbeat loss, an oversized frame, commands while reconnecting, the app gone while away, giving up, stop, leave.
+  - The fallback check (7).
+  - **Stability:** the casting tests 8 of 8 run in parallel (55 each), the fake's suite 8 of 8. **2,332 app tests** (13 skipped) under `TZ=UTC`.
