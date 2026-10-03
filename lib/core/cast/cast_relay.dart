@@ -4,6 +4,8 @@ import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:meta/meta.dart';
 
+export 'package:iptv_player/core/cast/cast_relay_ports.dart';
+
 /// The relay (docs/04): serves a cast the TV can't fetch from the provider
 /// itself, from this computer. It runs in its own isolate (Phase 7
 /// decision 5) and reads the provider through a loopback proxy (decision

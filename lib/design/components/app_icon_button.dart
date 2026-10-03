@@ -15,6 +15,8 @@ class AppIconButton extends StatelessWidget {
     this.shortcut,
     this.selected = false,
     this.bordered = false,
+    this.filled = false,
+    this.danger = false,
     this.size = 40,
     this.iconSize = 20,
     this.autofocus = false,
@@ -30,6 +32,13 @@ class AppIconButton extends StatelessWidget {
   final String? shortcut;
   final bool selected;
   final bool bordered;
+
+  /// On a [AppColors.surface3] tile, as the casting screens draw their
+  /// controls.
+  final bool filled;
+
+  /// The icon in [AppColors.danger]: Stop casting.
+  final bool danger;
   final double size;
   final double iconSize;
   final bool autofocus;
@@ -49,8 +58,8 @@ class AppIconButton extends StatelessWidget {
         enabled: enabled,
         autofocus: autofocus,
         focusNode: focusNode,
-        background: selected ? colors.surface3 : null,
-        hoverBackground: colors.surface3,
+        background: selected || filled ? colors.surface3 : null,
+        hoverBackground: filled ? colors.borderStrong : colors.surface3,
         borderRadius: tokens.radii.controlAll,
         semanticLabel: tooltip,
         builder: (context, states) => Opacity(
@@ -66,7 +75,13 @@ class AppIconButton extends StatelessWidget {
             child: AppIcon(
               icon,
               size: iconSize,
-              color: selected ? colors.accentBase : colors.textSecondary,
+              color: danger
+                  ? colors.danger
+                  : selected
+                  ? colors.accentBase
+                  : filled
+                  ? colors.textPrimary
+                  : colors.textSecondary,
             ),
           ),
         ),

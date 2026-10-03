@@ -1,4 +1,4 @@
-# Handoff — 2026-10-03 (Phase 7 step 6 done, stopped for review; the TV runs wait)
+# Handoff — 2026-10-03 (Phase 7 steps 6 and 7 done, stopped for review; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -6,26 +6,31 @@ docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
 part of docs/08-phases-and-prompts.md and docs/04-casting.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 6** (ADR-014 "The cast coordinator"). Its choices
-   to look at:
-   - **a screen's stop leaves a cast alone** (Live TV, Home, Search and the
-     Guide stop what they showed when they're left); only Stop casting ends
-     it;
-   - **the TV's remote stopping a cast leaves the session on**, with
-     nothing playing (the next play goes to the TV again);
-   - **a refusal more than 15 s after a LOAD** reloads a live stream that
-     played (3 automatic LOADs within 2 minutes, then it fails) but fails a
-     file (Try again);
-   - **learning also catches a copied sound other than AAC** (Dolby passed
-     through, MP3), beyond docs/04's two rules;
-   - **quitting now waits up to 4 s** for the TV and the relay (the
-     window's close runs the quit tasks first; ~1 ms with nothing cast);
-   - `dbus` 0.7.15 is now a direct dependency (sleep held off while
-     casting).
-2. **Push** the two local commits (6ebff8e, the Windows CI fixes; step 6).
-3. **The TV runs wait** until you say Living Room TV is back. Then step 2's
-   script and one cast through the app can go in one sitting (asked first,
-   with you watching).
+1. **Review Phase 7 step 6** (ADR-014 "The cast coordinator"): a screen's
+   stop leaves a cast alone; the TV's remote stopping a cast leaves the
+   session on with nothing playing; a refusal more than 15 s after a LOAD
+   reloads a live stream (3 within 2 minutes) but fails a file; learning
+   also catches a copied sound other than AAC; quitting waits up to 4 s
+   for the TV and the relay; `dbus` is a direct dependency.
+2. **Review Phase 7 step 7** (ADR-014 "The casting UI"). Its UX decisions:
+   - **the casting view is an overlay on the content pane**, not a page:
+     Esc goes back to exactly where you were while the cast goes on; the
+     full-screen player hands over to it;
+   - **while casting, a click in Live TV only chooses a channel**; Enter
+     (or "Play on Living Room TV") plays it on the TV;
+   - **live has no pause** (as the canvas); ←/→ seek files by 10 s, ↑/↓
+     zap, Space, M, Esc;
+   - **Forget for every kept device**, not only those added by address;
+   - the picker's help opens by itself after 10 s with no device.
+   And the fixes the keyboard walk led to: **the relay no longer takes a
+   TV that holds back (buffer full, paused) for a stall**, and **stopping
+   or seeking a relayed stream no longer waits 3 s**. Without them every
+   relayed movie on the TV would have broken within minutes.
+3. **Push** the three local commits (6ebff8e the Windows CI fixes; step 6;
+   step 7).
+4. **The TV runs wait** until you say Living Room TV is back. Then step 2's
+   script and step 8's matrix can go in one sitting (asked first, with you
+   watching).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -33,82 +38,73 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Step 6 is <approved | approved with these changes: …>.
-<The TV runs wait | The TV is on the network: the TV runs can go ahead after you ask>. Then start step 7.
+and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these changes: …>.
+<The TV runs wait | The TV is on the network: the TV runs can go ahead after you ask>.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1–5 approved; step 6 done; the TV runs wait**
-  (2026-10-03: "no living room tv yet till I tell u we have it").
-- **Checks at the step 6 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,899 app tests** (15 skipped) under `TZ=UTC`, about 2 min
-  40 s; the new unit files 8 of 8 with eight copies at once, the three
-  end-to-end files 3 of 3 with three at once; the fake receiver's 32, the
-  fake provider's 141; `app_launch_test` under Xvfb; the release build
-  closed by a script under Xvfb (exit 0, 50 ms after the close).
-- **CI:** the step 5 push (f506920) was green on Linux and red on Windows
-  (4 tests); fixed in 6ebff8e, not yet pushed. Check the first run after
-  the push: the Windows sync cancel timeout is intermittent, and if it
-  comes back its annotation now says where the test waited.
+- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done; the TV runs
+  wait** (2026-10-03: "no living room tv yet till I tell u we have it").
+  Step 8 (the matrix on the TV and the phase exit) needs the TV.
+- **Checks at the step 7 commit:** analyze, format, `build_runner` leaves
+  no diff; **2,953 app tests** (15 skipped) under `TZ=UTC`; the fake
+  receiver's 35 (also with FFmpeg 4.4), the fake provider's 141; the cast
+  walk 4 of 4 under Xvfb (one CI-style: `IPTV_PLAYER_VIDEO=0
+  RELAY_FFMPEG_DIR=/usr/bin`), `favorites_walk_test` and `vod_walk_test`
+  (PanelApp changed); the end-to-end cast files.
+- **CI:** not run since the step 5 push (red on Windows; fixed in 6ebff8e,
+  not yet pushed). Check the first run after the push. The new
+  `cast_walk_test.dart` runs in CI's integration loop (system FFmpeg 4.4,
+  no picture); it skips itself without FFmpeg or the samples.
 
 ## Done this session (2026-10-03)
-- **Step 5 approved; the TV runs wait.**
-- **CI fixes** (6ebff8e): `relayArguments`' path test follows the system;
-  two relay tests no longer meet Windows' ~2 s refusal of a closed loopback
-  port; the sync cancel test prints its phases on a timeout;
-  `tools/ci/failed_tests.dart` keeps a failure's whole first paragraph and
-  a timeout's last printed lines.
-- **Step 6** (details in ADR-014 "The cast coordinator"):
-  - `lib/features/casting/domain/`: `cast_coordinator.dart`,
-    `casting_state.dart` (+ freezed), `cast_items.dart`,
-    `cast_learning.dart`;
-  - `lib/features/playback/domain/`: `remote_playback.dart`
-    (`RemotePlayback`, `PlaybackHandover`), `source_connections.dart`;
-    `PlaybackCasting` in `playback_state.dart`; the playback coordinator's
-    `castStarted`/`castShows`/`castEnded`, delegation, `connections`;
-    `ResolvedStream.customUserAgent`;
-  - `CastReceivers.join(onConnected:)`; `CastRelay.servePicture` (isolate
-    messages, `RelayRuntime.servePicture`/`unserve`, `pictureExtension`);
-  - `lib/core/platform/sleep_inhibitor.dart`,
-    `lib/data/platform/sleep_inhibitors.dart` and `platform_providers.dart`;
-  - `lib/features/casting/data/artwork_cast_pictures.dart`; providers
-    `castCoordinatorProvider`, `castSettingsProvider`,
-    `castPicturesProvider`, `relayFirewallNoticeProvider`;
-    `streamResolverProvider`, `playbackHistoryProvider`;
-  - `AppWindow.beforeClose` + `setPreventClose`, `_quit` in `bootstrap()`;
-  - docs: ADR-014 step 6, ADR-002's `dbus` row, docs/04 and docs/01 "as
-    built".
+- **Step 6** (committed aaa231e) — see ADR-014 "The cast coordinator".
+- **Step 7** (details in ADR-014 "The casting UI"):
+  - `lib/features/casting/presentation/`: `cast_picker.dart`,
+    `add_cast_device_dialog.dart`, `cast_help.dart`, `casting_view.dart`,
+    `casting_view_state.dart` (+ .g), `cast_preview_card.dart`,
+    `cast_settings_section.dart`, `cast_shell_slots.dart` (+ .g),
+    `cast_actions.dart`, `cast_text.dart`;
+  - the shell: `shellCastButtonProvider`, `shellContentOverlayProvider`,
+    `ShellCastSession` grown, the overlay in `desktop_shell.dart`, the top
+    bar's Casting state, `CastIntent` on C (`lib/app/shortcuts.dart`);
+    `bootstrap()` adds `castShellOverrides`, reads
+    `castNoticeToastsProvider`, and on Windows gives
+    `relayFirewallNoticeProvider` its dialog;
+  - design: `AppCastTokens`, `castTitle`/`castKicker`/`qualityTag`,
+    `AppSpinner`, `QualityTag`, `AppIconButton.filled`/`danger`,
+    `AppButtonVariant.dangerOutline`, `AppSlider(compact:)`, `CastingBar`;
+  - data: `CastSettingsController` (`SettingsKeys.cast`),
+    `castNetworkAvailable`, `CastFirewallNoticeStore`;
+    `cast_relay_ports.dart`;
+  - **the relay fixes** (`relay_runtime.dart`: the continuous quiet rule
+    paused with the TV, `dropStream()` before FFmpeg stops;
+    `relay_proxy.dart`: the idle rule paused with FFmpeg);
+  - **the fake receiver** reads like a TV's buffer (`fmp4_clock.dart`,
+    `FakePlayback.bufferAhead`/`bufferRefill`, `FakeWatchListener.played`)
+    and deletes its scratch on cancel;
+  - tests: `test/features/casting/presentation/*` (+ `cast_ui_harness.dart`),
+    `test/golden/casting_golden_test.dart`, the relay's and the fake's new
+    tests, the pause test in `cast_e2e_files_test.dart`,
+    `integration_test/cast_walk_test.dart` (+ `support/cast_tv.dart`);
+  - docs: ADR-014 step 7, docs/05 (Casting as built, Settings → Casting,
+    the player's and details pages' Cast), docs/04 (backpressure), docs/06
+    and the fake's README (its buffer).
 
 ## What's next
-1. **Phase 7 step 7** (plan "Step 7"): the casting UI. Everything it shows
-   comes from `castCoordinatorProvider`: `state`/`states` (`CastingState`:
-   phase, device, item, plan, paused, buffering, reconnecting, volume,
-   problem), `timeline`/`timelines` for files, `notices` for toasts
-   (`CastSessionClosed`, `CastPlanChanged`, `CastStoppedOnDevice`). Actions:
-   `connect(device)`, `disconnect()` (Stop casting), `playHere()`,
-   `retry()`, `setVolume`, `setMuted`; plays, seeks and pauses go through
-   the playback coordinator as now (it passes them on). Also:
-   - the Cast button (top bar, OSD after Stream info, details pages, C);
-     the picker over `castDevicesProvider` (+ Add by address, sketch E);
-   - the casting view replacing the player while `PlaybackCasting` (live:
-     ↑/↓ zap through the playback coordinator; files: sketch A), its states
-     (sketch D) with the badge's words from `cast_plan_text.dart`;
-   - the shell's casting bar: override `shellCastSessionProvider`;
-   - Live TV's preview while casting (sketch B);
-   - Settings → Casting (sketch C): store `CastSettings` (replace
-     `castSettingsProvider`'s defaults), the devices' HEVC and Reset of
-     what was learned (`CastDeviceStore`);
-   - the Windows firewall dialog through `relayFirewallNoticeProvider`;
-   - read the design canvas first (Artifact read) for CastPicker and
-     CastingView.
-2. **The TV runs, only when the user says the TV is back, after asking and
+1. **The TV runs, only when the user says the TV is back, after asking and
    with the user watching:** step 2's `CAST_HOST=192.168.1.155 flutter test
    --tags real_cast --run-skipped test/tools/cast_tv_test.dart` (about 30
-   s), then one cast through the app (a fake panel channel, a zap, Stop).
-   Check first that the laptop is on 192.168.1.x (`ip -4 addr`; it was on
-   192.168.26.x on 2026-10-03). Record in ADR-014: join and PLAYING times,
-   the Range requests, whether MULTIZONE_STATUS's id equals the TXT id.
-3. **Step 8:** the matrix on the TV and the phase exit.
+   s). Check first that the laptop is on 192.168.1.x (`ip -4 addr`; it was
+   on 192.168.26.x on 2026-10-03).
+2. **Step 8** (plan "Step 8"): docs/04's matrix on Living Room TV through
+   the app (the user watching; one cast at a time, announced), cast-start
+   times (proposed ≤ 8 s with the receiver launched, ≤ 5 s running),
+   whether MULTIZONE_STATUS's id equals the TXT id, **what the TV's screen
+   shows for a relayed movie started at a place** (LOADed with the whole
+   length while its stream starts at 0:00), whether the fixed-volume TV
+   heeds mute, and **a relayed movie paused for a minute on the real TV**
+   (the backpressure fix). Then the phase exit: ADR-014 Accepted.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -126,10 +122,9 @@ and docs/04-casting.md first. Step 6 is <approved | approved with these changes:
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
 - ~~**CI green on both systems.**~~ Done on abd0c1a; keep it so (6ebff8e
   fixes the step 5 push's Windows failures).
-- **Phase 7 — Casting**, the largest and riskiest phase: ~~our own Cast v2
-  client, the ffprobe-based planner, the FFmpeg relay with its
-  supervisor, the coordinator~~ (steps 2–6), the UI, and the casting
-  matrix on the user's TV.
+- **Phase 7 — Casting**: ~~our own Cast v2 client, the ffprobe-based
+  planner, the FFmpeg relay with its supervisor, the coordinator, the
+  UI~~ (steps 2–7), and the casting matrix on the user's TV (step 8).
 - **Phase 8 — Downloads and the local library:** resumable downloads
   (`.part` + verify + rename; they yield to playback — `SourceConnections`
   has their holder), the library scanner, offline playback, library
@@ -181,9 +176,10 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   loopback port refused only after ~2 s (a test's short connect wait reads
   it as a timeout).
 - **Run the app or integration tests under Xvfb with `unset
-  WAYLAND_DISPLAY; export GDK_BACKEND=x11`:** otherwise GTK opens the
-  window on the user's real Wayland desktop, whatever `xvfb-run` does (it
-  happened twice this session). Close a window from a script under Xvfb
+  WAYLAND_DISPLAY; export GDK_BACKEND=x11`** (in fish: `env -u
+  WAYLAND_DISPLAY GDK_BACKEND=x11 xvfb-run -a flutter test
+  integration_test/<file> -d linux`): otherwise GTK opens the window on
+  the user's real Wayland desktop, whatever `xvfb-run` does. Close a window from a script under Xvfb
   with a `WM_DELETE_WINDOW` client message (a ctypes libX11 script; there
   is no xdotool); give every ctypes call its `argtypes`, or a 64-bit
   display pointer is truncated and it segfaults.
@@ -222,6 +218,10 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   - Grep new files for literal invisible characters (BOM, zero-width space,
     U+FFFD, NBSP) and write them as escapes.
   - Confirm `build_runner` leaves no diff.
+- **A fake that is kinder than the real thing hides bugs:** the fake TV
+  read a relayed stream as fast as it came, so nothing ever tested a TV
+  that holds back, and the relay took that for a stall. When a fake
+  stands in for hardware, model its pace too (it buffers, it pauses).
 - **Run widget tests with a timeout** (`flutter test … --timeout 40s`,
   and `--plain-name` to run one): a widget test that fails part-way can
   otherwise hang until the 10-minute default.
@@ -233,7 +233,64 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 6):
+New this session (Phase 7 step 7):
+- **The casting screens import only `casting_providers.dart`,
+  `lib/core/cast/` and domain types** (hard rule 6). What the screens read:
+  `castingStateProvider`, `castTimelineProvider`,
+  `castingViewOpenProvider` (open / close), `knownCastDevicesProvider`,
+  `castDevicesProvider` (discovery runs while the picker shows it).
+- **What a Cast does is in `cast_actions.dart`:** `castFrom(context, item:,
+  from:)` (a session on and an item: the TV at once; else the picker),
+  `castTo(container, device, …)` (connect = the hand-over, then the item
+  if it isn't what moved; the view opens when something plays),
+  `playOnTv(container, item)`.
+- **The shell's slots** (`lib/app/shell/shell_state.dart`) are overridden
+  by `castShellOverrides`: the session for the bar, the top bar's button,
+  and `shellContentOverlayProvider` (any widget over the content pane —
+  the casting view). The shell keeps the screen under an overlay off stage
+  (`Offstage` + `ExcludeFocus` + `TickerMode(false)`) and gives the focus
+  back to the content pane when the overlay goes.
+- **Every sentence is in `cast_text.dart`** (and the plan's in
+  `cast_plan_text.dart`); the toasts' in `cast_shell_slots.dart`.
+- **Widget tests:** `test/features/casting/support/cast_ui_harness.dart`
+  — `CastUi` (Live TV's fakes + a `CastRig` sharing its playback rig,
+  devices, readiness, network, `FakeAddressCheck`, all overrides including
+  `castShellOverrides`); `settleCast(tester, rounds:)`; `focusedLabelOf`.
+  **A test that starts a session must end it while it still pumps**
+  (`castTest` wrappers stop the cast and the playback in `finally`): a
+  session left on keeps timers going and teardown waits for good. Run the
+  coordinator's calls unawaited in the test's zone, never in `runAsync`.
+  `CastPicker._shown` counts open pickers (static state: a test's leak
+  would block the next test's picker — keep it a counter).
+- **Integration:** `PanelApp.open(…, overrides:)`; `PanelApp` quits a cast
+  as `bootstrap()` does; `WALK_LOG=1` prints a walk's app log;
+  `support/cast_tv.dart` — `castBinaries()` (bundled, else
+  `RELAY_FFMPEG_DIR`, else `/usr/bin`), `castOverrides(binaries, folder)`
+  (no network browsers: a walk must never find a real TV),
+  `runningProcesses(folder)`. **`Keys.focusIsOn` is true when the focus is
+  on an ancestor of the target** — the casting view's own focus node
+  holds every control — so Tab until `focusedLabel()` names the control.
+- **Relay rules (fixed this session):** the continuous stream's quiet
+  timer and the proxy's idle timer run only while their reader reads
+  (cancelled in `onPause`, re-armed in `onResume`); a continuous session's
+  `dropStream()` ends the TV's connection before its FFmpeg is stopped
+  (teardown, renew, a second request). Keep both for any new stream path.
+- **The fake receiver buffers like a TV** (`FakePlayback.bufferAhead` 30 s
+  / `bufferRefill` 10 s; null reads as fast as it comes) for fragmented
+  MP4 only; HLS and plain files are read as before. `FakeWatchListener`
+  gained `played`. A test waiting for a new LOAD must allow
+  `tv.loaded == null` (between FINISHED and the LOAD).
+- **Traps met this session:** a static on a widget class leaks between
+  tests; `ExcludeFocus` drops the focus inside it; `find.byTooltip` misses
+  `AppTooltip` (use `findByLabel`); an `AppSlider` in a row needs
+  `compact` or its bubble row overflows; a Flutter import reaching
+  `cast_relay.dart` breaks `relay_kill_test`'s plain-Dart victim (hence
+  `cast_relay_ports.dart`); closing a subscription in `dispose` after a
+  stop that notifies it ("modify a provider during build"): cancel first;
+  a socket's `close()` and `addStream` wait for an unread peer — destroy
+  it when the end needn't be clean.
+
+From the session before (Phase 7 step 6):
 - **The cast coordinator** (`lib/features/casting/domain/cast_coordinator.dart`)
   is domain code: it talks to `CastReceivers`, `CastRelay`,
   `StreamFactsLookup`, `CastEncoderDetection`, `CastDeviceStore`,

@@ -78,7 +78,8 @@ void main() {
       expect(pids, hasLength(1));
       Process.killPid(pids.single, ProcessSignal.sigkill);
       await until(
-        () => rig.tv.loaded!['contentId'] != first,
+        // Between FINISHED and the new LOAD the TV holds no media.
+        () => (rig.tv.loaded?['contentId'] ?? first) != first,
         within: const Duration(seconds: 30),
         what: 'a new LOAD',
       );

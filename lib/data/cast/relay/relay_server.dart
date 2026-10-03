@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:iptv_player/core/cast/cast_relay_ports.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/data/cast/relay/relay_proxy.dart';
 import 'package:path/path.dart' as p;
@@ -10,8 +11,8 @@ import 'package:path/path.dart' as p;
 const _tag = 'relay';
 
 /// docs/04's ports: the firewall help names them.
-const relayFirstPort = 38400;
-const relayLastPort = 38499;
+const int relayFirstPort = castRelayFirstPort;
+const int relayLastPort = castRelayLastPort;
 
 /// Serves a continuous stream's request: the server has set the CORS
 /// headers; the handler answers.

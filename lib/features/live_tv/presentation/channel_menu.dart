@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
 import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
 import 'package:iptv_player/features/favorites/domain/favorites.dart';
 import 'package:iptv_player/features/favorites/presentation/group_name_dialog.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_rename_dialog.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
 
 /// The one channel menu (Phase 6 step 7), wherever a channel's row or
 /// tile is — Live TV, the Guide's channel column, Home, Favorites and
@@ -42,6 +44,12 @@ Future<void> showChannelMenu(
     items: [
       if (onWatch != null)
         AppMenuItem(label: 'Watch', icon: AppIcons.play, onPressed: onWatch),
+      AppMenuItem(
+        label: 'Cast…',
+        icon: AppIcons.cast,
+        onPressed: () =>
+            unawaited(castFrom(anchor, item: PlayableChannel(channel))),
+      ),
       AppMenuItem(
         label: channel.isFavorite
             ? 'Remove from favorites'

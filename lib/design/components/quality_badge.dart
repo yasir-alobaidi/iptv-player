@@ -6,14 +6,65 @@ import 'package:iptv_player/design/tokens.dart';
 
 /// What the relay is doing to a cast stream (docs/04, docs/05).
 enum StreamQuality {
-  original('Original', 'Sent to the TV untouched'),
-  convertedAudio('Converted audio', 'Audio re-encoded to AAC; video untouched'),
-  transcoded('Transcoded', 'Re-encoded for the TV, which costs CPU');
+  original('Original', 'Sent to the TV untouched', 'Original quality'),
+  convertedAudio(
+    'Converted audio',
+    'Audio re-encoded to AAC; video untouched',
+    'Converted audio',
+  ),
+  transcoded(
+    'Transcoded',
+    'Re-encoded for the TV, which costs CPU',
+    'Transcoded',
+  );
 
-  new(this.label, this.explanation);
+  new(this.label, this.explanation, this.sentenceLabel);
 
   final String label;
   final String explanation;
+
+  /// In a sentence: "Casting to Living Room TV · Original quality".
+  final String sentenceLabel;
+}
+
+/// The casting view's tag (canvas `Casting`): "✓ ORIGINAL QUALITY" on a
+/// tint of its tone.
+class QualityTag extends StatelessWidget {
+  const new(this.quality, {super.key});
+
+  final StreamQuality quality;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final (tone, icon) = switch (quality) {
+      StreamQuality.original => (colors.success, AppIcons.check),
+      StreamQuality.convertedAudio => (colors.textEmphasis, AppIcons.audio),
+      StreamQuality.transcoded => (colors.warning, AppIcons.retry),
+    };
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: tokens.spacing.s8 + 1,
+        vertical: tokens.spacing.s4,
+      ),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.14),
+        borderRadius: tokens.radii.xsAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppIcon(icon, size: 13, color: tone),
+          SizedBox(width: tokens.spacing.s4 + 2),
+          Text(
+            quality.sentenceLabel.toUpperCase(),
+            style: tokens.text.qualityTag.copyWith(color: tone),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Says whether a cast is a straight copy or a re-encode, with the reason

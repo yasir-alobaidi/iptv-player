@@ -58,7 +58,8 @@ void main() {
       final first = rig.tv.loaded!['contentId'];
       await rig.playback.seek(const Duration(minutes: 5));
       await until(
-        () => rig.tv.loaded!['contentId'] != first,
+        // Between FINISHED and the new LOAD the TV holds no media.
+        () => (rig.tv.loaded?['contentId'] ?? first) != first,
         what: 'the LOAD after the seek',
       );
       final checked = rig.tv.checks.length;
@@ -74,6 +75,56 @@ void main() {
         rig.progress.lastPosition,
         greaterThanOrEqualTo(const Duration(minutes: 5)),
       );
+      await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
+    },
+    skip:
+        relaySkip(const []) ??
+        (File('${samples.path}/vod_h264_ac3_10min.mkv').existsSync()
+            ? null
+            : 'no vod_h264_ac3_10min.mkv sample'),
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  test(
+    "a relayed movie paused for longer than the relay's quiet rule: the "
+    "TV's buffer holds it back, and it plays on (backpressure, not a "
+    'stall)',
+    () async {
+      rig = await CastE2E.start();
+      await rig.coordinator.connect(rig.device);
+      await rig.phase(CastPhase.idle);
+      unawaited(rig.playback.playVod(PlayableMovie(panelMovie(100001, 'mkv'))));
+      await rig.tvPlaying(checks: 1);
+      await rig.phase(CastPhase.playing);
+      expect(rig.state.plan!.delivery, CastDelivery.relayContinuous);
+      final loads = rig.tv.requests('LOAD').length;
+
+      // FFmpeg copies the file far faster than it plays: the TV's buffer
+      // fills, then the paused TV reads nothing at all.
+      await rig.playback.setPaused(paused: true);
+      await until(() => rig.tv.playerState == 'PAUSED', what: 'paused');
+      await Future<void>.delayed(const Duration(seconds: 14));
+      // FFmpeg waits on the TV, blocked: not stopped as a quiet one,
+      // which would leave the TV the end of what it holds.
+      expect(rig.running, hasLength(1));
+      expect(rig.logLines.where((l) => l.contains('Broken pipe')), isEmpty);
+      await rig.playback.setPaused(paused: false);
+      await until(() => rig.tv.playerState == 'PLAYING', what: 'playing');
+      await Future<void>.delayed(const Duration(seconds: 2));
+
+      expect(rig.state.phase, CastPhase.playing);
+      expect(rig.state.problem, isNull);
+      expect(rig.tv.requests('LOAD'), hasLength(loads), reason: 'no new LOAD');
+      expect(rig.running, hasLength(1));
+      expect(
+        rig.logLines.where((l) => l.contains('the stream to the TV ended')),
+        isEmpty,
+      );
+
+      // Stop casting while the TV's buffer is full: at once all the same.
+      final stopping = Stopwatch()..start();
+      await rig.coordinator.disconnect();
+      expect(stopping.elapsed, lessThan(const Duration(seconds: 2)));
       await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
     },
     skip:

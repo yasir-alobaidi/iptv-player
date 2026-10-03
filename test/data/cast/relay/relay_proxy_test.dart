@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -221,6 +222,41 @@ void main() {
       final read = await _read(openLive('in1', 'movie.mkv', live: false));
       expect(read.cut, isTrue);
       expect(read.bytes, 300);
+    });
+  });
+
+  group('a file, FFmpeg holding back', () {
+    test('FFmpeg that stops reading (its output waits on the TV) is waited '
+        'for: no quiet cut, however long', () async {
+      const chunk = 1 << 20;
+      provider.handler = (request) async {
+        final response = request.response..contentLength = 32 * chunk;
+        for (var i = 0; i < 32; i++) {
+          response.add(Uint8List(chunk));
+        }
+        await response.close();
+      };
+      final url = Uri.parse(openLive('in1', 'movie.mkv', live: false));
+      // FFmpeg, blocked on its output: it asks, then reads nothing.
+      final ffmpeg = await Socket.connect(url.host, url.port);
+      addTearDown(ffmpeg.destroy);
+      ffmpeg.write(
+        'GET ${url.path}${url.hasQuery ? '?${url.query}' : ''} HTTP/1.1\r\n'
+        'Host: ${url.host}\r\n\r\n',
+      );
+      await ffmpeg.flush();
+      var got = 0;
+      final done = Completer<void>();
+      final reading = ffmpeg.listen(
+        (bytes) => got += bytes.length,
+        onDone: done.complete,
+        onError: (Object _) => done.complete(),
+      )..pause();
+      addTearDown(reading.cancel);
+      await Future<void>.delayed(timings.idle * 3);
+      reading.resume();
+      await done.future.timeout(const Duration(seconds: 10));
+      expect(got, greaterThan(32 * chunk), reason: 'the whole file, headed');
     });
   });
 

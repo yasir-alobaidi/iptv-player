@@ -9,6 +9,8 @@ import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
+import 'package:iptv_player/features/casting/presentation/casting_view_state.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
@@ -99,12 +101,33 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _pinned = pinned;
     _card = card;
     _hasNext = hasNext;
-    unawaited(_window!.setFullScreen(on: true));
+    // While casting, the casting view takes the player's place (Phase 7
+    // decision 2): a play that opened the player, or Cast from its OSD.
+    _castWatch = ref.listenManual(playbackStateProvider, (_, next) {
+      if (next.value is PlaybackCasting) _handOffToCast();
+    });
+    if (_coordinator.casting) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handOffToCast());
+    } else {
+      unawaited(_window!.setFullScreen(on: true));
+    }
     _showOsd();
+  }
+
+  bool _handedOff = false;
+  ProviderSubscription<AsyncValue<PlaybackState>>? _castWatch;
+
+  void _handOffToCast() {
+    if (_handedOff || !mounted) return;
+    _handedOff = true;
+    ref.read(castingViewOpenProvider.notifier).open();
+    _exit();
   }
 
   @override
   void dispose() {
+    // Before the stop below: it changes the state this listens to.
+    _castWatch?.close();
     _osdTimer?.cancel();
     _zapTimer?.cancel();
     _bannerTimer?.cancel();
@@ -572,6 +595,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       shortcut: 'I',
       selected: _info,
       onPressed: () => setState(() => _info = !_info),
+    ),
+    AppIconButton(
+      icon: AppIcons.cast,
+      tooltip: 'Cast',
+      shortcut: 'C',
+      onPressed: () => unawaited(castFrom(context)),
     ),
     AppIconButton(
       icon: AppIcons.exitFullscreen,

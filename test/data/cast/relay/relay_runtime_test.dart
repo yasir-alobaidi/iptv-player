@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -391,6 +392,58 @@ void main() {
       await _until(() => ffmpegs.isNotEmpty);
       ffmpegs.single.send([1, 2, 3]);
       expect((await reading).bytes, 3);
+      expect((await next<RelayEnded>()).reason, RelayEndReason.quiet);
+      expect(ffmpegs.single.exited, isTrue);
+    });
+
+    test('a TV that stops reading (its buffer full, or paused) is waited '
+        'for: no quiet end, however long', () async {
+      final url = Uri.parse(await start(relayJob: continuous()));
+      // A TV that asks, then reads nothing until it wants more.
+      final tv = await Socket.connect(url.host, url.port);
+      addTearDown(tv.destroy);
+      tv.write('GET ${url.path} HTTP/1.1\r\nHost: ${url.host}\r\n\r\n');
+      await tv.flush();
+      var got = 0;
+      final reading = tv.listen((bytes) => got += bytes.length)..pause();
+      addTearDown(reading.cancel);
+      await _until(() => ffmpegs.isNotEmpty);
+      final ffmpeg = ffmpegs.single;
+      // More than the sockets between them hold: the relay waits on the
+      // TV, as it does when FFmpeg copies a file faster than it plays.
+      const chunk = 1 << 20;
+      for (var i = 0; i < 32; i++) {
+        ffmpeg.send(Uint8List(chunk));
+      }
+      await Future<void>.delayed(timings.quiet * 4);
+      expect(all<RelayEnded>(), isEmpty);
+      expect(ffmpeg.exited, isFalse);
+
+      reading.resume();
+      await _until(() => got >= 32 * chunk);
+      ffmpeg.exit(0);
+      expect((await next<RelayEnded>()).reason, RelayEndReason.finished);
+    });
+
+    test('FFmpeg quiet while the TV reads is still a stall, after the TV '
+        'held back', () async {
+      final url = Uri.parse(await start(relayJob: continuous()));
+      final tv = await Socket.connect(url.host, url.port);
+      addTearDown(tv.destroy);
+      tv.write('GET ${url.path} HTTP/1.1\r\nHost: ${url.host}\r\n\r\n');
+      await tv.flush();
+      var got = 0;
+      final reading = tv.listen((bytes) => got += bytes.length)..pause();
+      addTearDown(reading.cancel);
+      await _until(() => ffmpegs.isNotEmpty);
+      const chunk = 1 << 20;
+      for (var i = 0; i < 32; i++) {
+        ffmpegs.single.send(Uint8List(chunk));
+      }
+      await Future<void>.delayed(timings.quiet * 2);
+      reading.resume();
+      await _until(() => got >= 32 * chunk);
+      // All read, and FFmpeg sends nothing more.
       expect((await next<RelayEnded>()).reason, RelayEndReason.quiet);
       expect(ffmpegs.single.exited, isTrue);
     });

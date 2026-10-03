@@ -208,6 +208,9 @@ final class PlaybackCoordinator {
   /// A cast session is on: plays go to the device.
   bool get casting => _remote != null;
 
+  /// The device a session is on with ("Living Room TV"); null when none.
+  String? get castDeviceName => _remote?.deviceName;
+
   /// A cast session started (decision 2): what plays here moves to it.
   /// The laptop's stream is closed first (a one-connection source needs
   /// it for the cast), a file's place is saved, and what the player knew
@@ -262,7 +265,8 @@ final class PlaybackCoordinator {
     if (_remote == null) return;
     _remote = null;
     ++_token;
-    if (_state is PlaybackCasting) _set(const PlaybackIdle());
+    // Said even when it was idle already: the screens show the session.
+    _set(const PlaybackIdle());
   }
 
   Future<StreamInfo?> _streamInfo() async {

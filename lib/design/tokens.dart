@@ -284,6 +284,19 @@ class AppTypography {
 
   /// 11/14 — keycaps.
   TextStyle get monoMicro => _font(AppFonts.mono, 11, 14, 500);
+
+  /// 40/48 — what plays on the TV (canvas `Casting`).
+  TextStyle get castTitle =>
+      _font(AppFonts.sans, 40, 48, 800, letterSpacing: -0.6);
+
+  /// 13/18 — "PLAYING ON LIVING ROOM TV" (canvas `Casting`); callers
+  /// upper-case the text.
+  TextStyle get castKicker =>
+      _font(AppFonts.sans, 13, 18, 800, letterSpacing: 0.8);
+
+  /// 12/16 — the quality tag ("ORIGINAL QUALITY", canvas `Casting`).
+  TextStyle get qualityTag =>
+      _font(AppFonts.sans, 12, 16, 800, letterSpacing: 0.5);
 }
 
 /// Durations and curves (docs/05). [reduceMotion] shortens everything and
@@ -470,6 +483,44 @@ class AppGuideTokens {
   double get dashGap => 3;
 }
 
+/// The casting screens' measures (canvas `Cast device picker` and
+/// `Casting`).
+@immutable
+class AppCastTokens {
+  const new();
+
+  /// The casting view: its card's inset, the gap between the artwork and
+  /// the text, the artwork, and the text column's widest.
+  double get viewInset => 64;
+  double get viewGap => 64;
+  double get artworkSize => 360;
+  double get artworkRadius => 28;
+  double get textMaxWidth => 640;
+
+  /// The view's controls (previous and next channel, volume, Stop
+  /// casting) and the volume slider.
+  double get controlSize => 48;
+  double get volumeWidth => 140;
+
+  /// The time line under the programme.
+  double get timelineHeight => 5;
+
+  /// The device picker: its width, padding and gaps.
+  double get pickerWidth => 540;
+  double get pickerPadding => 24;
+  double get pickerGap => 18;
+
+  /// A device row's icon tile and its status dot.
+  double get deviceIconSize => 44;
+  double get deviceIconRadius => 10;
+  double get statusDot => 7;
+
+  /// The casting bar under the content.
+  double get barHeight => 64;
+  double get barRadius => 14;
+  double get barLogo => 40;
+}
+
 /// Shadows. Only floating surfaces get one (docs/05).
 @immutable
 class AppElevation {
@@ -503,6 +554,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.guide = const AppGuideTokens(),
     this.details = const AppDetailsTokens(),
     this.search = const AppSearchTokens(),
+    this.cast = const AppCastTokens(),
   });
 
   /// Defaults: blue accent, comfortable rows, full motion.
@@ -527,6 +579,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppGuideTokens guide;
   final AppDetailsTokens details;
   final AppSearchTokens search;
+  final AppCastTokens cast;
 
   @override
   AppTokens copyWith({
@@ -541,6 +594,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppGuideTokens? guide,
     AppDetailsTokens? details,
     AppSearchTokens? search,
+    AppCastTokens? cast,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -553,6 +607,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     guide: guide ?? this.guide,
     details: details ?? this.details,
     search: search ?? this.search,
+    cast: cast ?? this.cast,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

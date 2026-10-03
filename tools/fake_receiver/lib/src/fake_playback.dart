@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:fake_receiver/src/fmp4_clock.dart';
+
 /// How the fake plays what a LOAD names, when it plays for real (Phase 7
 /// decision 8): it fetches the stream as the TV does and checks it with
 /// ffprobe, so a test passes only when the relay sends something a TV
@@ -14,6 +16,8 @@ final class FakePlayback {
     this.giveUp = const Duration(seconds: 20),
     this.endDelay = const Duration(seconds: 1),
     this.refuseDelay = const Duration(seconds: 1),
+    this.bufferAhead = const Duration(seconds: 30),
+    this.bufferRefill = const Duration(seconds: 10),
   });
 
   /// Reads each segment, and the start of a continuous stream.
@@ -30,6 +34,15 @@ final class FakePlayback {
   /// A picture the device refuses is refused this long after its first
   /// segment (docs/04: a TV on a 1080p HDMI link, about 1 s).
   final Duration refuseDelay;
+
+  /// A continuous stream that is a fragmented MP4 (the relay's) is read
+  /// until it holds [bufferAhead] more than has played, then not again
+  /// until it holds less than [bufferRefill], as a TV's buffer reads: in
+  /// bursts, and not at all while paused. A relayed file, which FFmpeg
+  /// copies far faster than it plays, then waits on the TV for tens of
+  /// seconds at a time. Null reads as fast as it comes.
+  final Duration? bufferAhead;
+  final Duration bufferRefill;
 }
 
 /// One request the fake made, as the TV makes it.
@@ -100,6 +113,10 @@ abstract interface class FakeWatchListener {
   /// A continuous stream or a playlist with an end was played out.
   void finished();
 
+  /// How far it has played since it started: what a TV's buffer has
+  /// given out. It stands still while paused.
+  Duration get played;
+
   /// It can't play: [reason] for the log.
   void failed(String reason);
 
@@ -140,6 +157,13 @@ final class FakeWatch {
   void cancel() {
     _cancelled = true;
     _client.close(force: true);
+    // A test that closes the fake may end before this watch does: its
+    // files go now, not when it gets to its end.
+    try {
+      _scratch?.deleteSync(recursive: true);
+    } on FileSystemException {
+      // Gone already.
+    }
   }
 
   Future<void> _run() async {
@@ -247,13 +271,34 @@ final class FakeWatch {
     if (!cors) return listener.failed('no CORS header');
     final head = File('${_scratch!.path}/stream.mp4');
     final sink = head.openWrite();
+    final clock = Fmp4Clock();
     var bytes = 0;
     var started = false;
+    var full = false;
     final done = Completer<void>();
     late StreamSubscription<List<int>> body;
+
+    /// What it holds and hasn't played yet; null when it can't tell.
+    Duration? held() => switch (clock.media) {
+      final media? when started => media - listener.played,
+      _ => null,
+    };
+
+    // The buffer, filled in bursts (FakePlayback.bufferAhead).
+    final ahead = playback.bufferAhead;
+    final refill = ahead == null
+        ? null
+        : Timer.periodic(const Duration(milliseconds: 100), (_) {
+            final holds = held();
+            if (full && (holds == null || holds < playback.bufferRefill)) {
+              full = false;
+              body.resume();
+            }
+          });
     body = response.listen(
       (chunk) {
         bytes += chunk.length;
+        clock.add(chunk);
         if (!started && bytes <= 4 << 20) sink.add(chunk);
         if (!started && bytes >= 256 << 10) {
           started = true;
@@ -264,19 +309,29 @@ final class FakeWatch {
             }),
           );
         }
+        final holds = held();
+        if (ahead != null && !full && holds != null && holds >= ahead) {
+          full = true;
+          body.pause();
+        }
       },
       onDone: () => done.isCompleted ? null : done.complete(),
       onError: (Object _) => done.isCompleted ? null : done.complete(),
       cancelOnError: true,
     );
     await done.future;
+    refill?.cancel();
     await body.cancel();
     if (_cancelled) return;
     if (!started) {
       if (bytes == 0) return listener.failed('the stream had no bytes');
+      started = true;
       await _startStream(sink, head);
     }
     // The TV plays out what it holds, then says FINISHED.
+    while (!_cancelled && (held() ?? Duration.zero) > Duration.zero) {
+      await _pause(const Duration(milliseconds: 100));
+    }
     await _pause(playback.endDelay);
     if (!_cancelled) listener.finished();
   }

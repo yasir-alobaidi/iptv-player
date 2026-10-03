@@ -8,7 +8,7 @@ part 'settings_section.g.dart';
 enum SettingsSection {
   sources('Sources'),
   playback('Playback'),
-  casting('Casting', phase: 7),
+  casting('Casting'),
   downloads('Downloads & library', phase: 8),
   guide('Guide'),
   categories('Categories'),

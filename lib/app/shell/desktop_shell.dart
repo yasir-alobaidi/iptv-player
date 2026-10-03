@@ -9,6 +9,7 @@ import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -47,6 +48,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
   final _railPane = FocusPaneController();
   final _topBarPane = FocusPaneController();
   final _contentPane = FocusPaneController();
+  bool _hadOverlay = false;
 
   @override
   void dispose() {
@@ -149,6 +151,15 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     final notice = ref.watch(shellNoticeProvider);
     final downloads = ref.watch(shellDownloadsProvider);
     final cast = ref.watch(shellCastSessionProvider);
+    final castButton = ref.watch(shellCastButtonProvider);
+    final overlay = ref.watch(shellContentOverlayProvider);
+    if (overlay == null && _hadOverlay) {
+      // The screen is back from under the overlay: the keyboard with it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _contentPane.focusPane();
+      });
+    }
+    _hadOverlay = overlay != null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -191,6 +202,10 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                               onOpenSource: () => _go(AppDestination.settings),
                               onOpenDownloads: () =>
                                   _go(AppDestination.library),
+                              onCast: castButton == null
+                                  ? null
+                                  : () => castButton.onPressed(context),
+                              castConnected: castButton?.connected ?? false,
                               paneController: _topBarPane,
                             ),
                           if (notice != null && !widget.immersive)
@@ -199,17 +214,51 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                             child: _ContentPane(
                               controller: _contentPane,
                               onLeaveLeft: _railPane.focusPane,
-                              child: widget.navigationShell,
+                              child: overlay == null
+                                  ? widget.navigationShell
+                                  : Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        // Kept, as it was, under the
+                                        // overlay: back to it on Esc.
+                                        Offstage(
+                                          child: ExcludeFocus(
+                                            child: TickerMode(
+                                              enabled: false,
+                                              child: widget.navigationShell,
+                                            ),
+                                          ),
+                                        ),
+                                        overlay,
+                                      ],
+                                    ),
                             ),
                           ),
                           if (cast != null)
-                            CastingBar(
-                              title: cast.title,
-                              deviceName: cast.deviceName,
-                              subtitle: cast.subtitle,
-                              isPlaying: cast.isPlaying,
-                              progress: cast.progress,
-                              reconnecting: cast.reconnecting,
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                tokens.spacing.s16,
+                                0,
+                                tokens.spacing.s16,
+                                tokens.spacing.s16,
+                              ),
+                              child: CastingBar(
+                                title: cast.title,
+                                deviceName: cast.deviceName,
+                                imageName: cast.imageName,
+                                image: artworkFor(
+                                  context,
+                                  cast.imageUrl,
+                                  width: tokens.cast.barLogo,
+                                ),
+                                quality: cast.quality,
+                                status: cast.status,
+                                isPlaying: cast.isPlaying,
+                                reconnecting: cast.reconnecting,
+                                onOpen: cast.onOpen,
+                                onPlayPause: cast.onPlayPause,
+                                onStop: cast.onStop,
+                              ),
                             ),
                         ],
                       ),

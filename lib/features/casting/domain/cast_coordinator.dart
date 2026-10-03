@@ -215,7 +215,10 @@ final class CastCoordinator implements RemotePlayback {
     _encoders = _encoderDetection.encoders();
     _join(device, session);
     if (handover != null) {
-      await _play(handover.item, from: handover.position, handover: handover);
+      // Not waited for: the cast goes on while the screens move on.
+      unawaited(
+        _play(handover.item, from: handover.position, handover: handover),
+      );
     }
   }
 

@@ -81,6 +81,15 @@ arrived:
 - **A continuous stream or a file** (`video/mp4`): read from the start
   with `Range: bytes=0-`; its first 256 KB checked; IDLE/FINISHED after
   its end and `endDelay` (Living Room TV plays out about 4 s).
+- **A buffer, as a TV's** (Phase 7 step 7): a fragmented MP4 (the relay's
+  continuous stream) is read until it holds `bufferAhead` (30 s) more
+  than has played, then not again until it holds less than
+  `bufferRefill` (10 s); nothing while paused. Each fragment's start
+  (`moof/traf/tfdt`) says how far the bytes go. A relayed file, which
+  FFmpeg copies far faster than it plays, then waits on the TV for tens
+  of seconds at a time, as on a real TV; at the stream's end, what it
+  holds is played out first. `bufferAhead: null` reads as fast as it
+  comes.
 - **The device profiles** (`FakeDevice.tv4k`, `chromecastHd`,
   `tvOnHdLink`): a picture the device refuses (HEVC on an H.264-only
   device, taller than its picture or its HDMI link) gets a bare

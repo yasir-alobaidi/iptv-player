@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_settings_section.dart';
 import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
@@ -51,6 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                     SettingsSection.categories => const CategoriesManager(),
                     SettingsSection.playback => const PlaybackSettingsSection(),
                     SettingsSection.guide => const GuideSettingsSection(),
+                    SettingsSection.casting => const CastSettingsSection(),
                     _ => _ComingLater(section: section),
                   },
                 ),
@@ -231,8 +233,6 @@ class _ComingLater extends StatelessWidget {
       SettingsSection.playback =>
         'Buffering, hardware decoding, deinterlacing, preferred audio and '
             'subtitle languages.',
-      SettingsSection.casting =>
-        'Known devices, HEVC and Dolby options, and firewall help.',
       SettingsSection.downloads =>
         'Download folder, downloads at a time, speed limit and library '
             'folders.',
@@ -244,6 +244,7 @@ class _ComingLater extends StatelessWidget {
       SettingsSection.about => 'Version, the log viewer and Copy diagnostics.',
       SettingsSection.sources ||
       SettingsSection.categories ||
+      SettingsSection.casting ||
       SettingsSection.guide => '',
     };
     return SettingsPanel(

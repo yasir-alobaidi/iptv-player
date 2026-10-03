@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/app/shell/shell_state.dart';
 
 /// Jump to a destination (Ctrl+1 … Ctrl+7, Ctrl+,, and G for the
 /// Guide).
@@ -34,6 +35,11 @@ class CloseTopIntent extends Intent {
   const new();
 }
 
+/// C: cast (docs/05's shortcut table) — the device picker, from anywhere.
+class CastIntent extends Intent {
+  const new();
+}
+
 /// The shortcuts that work anywhere in the app. They wrap the router's
 /// navigator, so they fire on every screen, including the search overlay.
 ///
@@ -59,6 +65,7 @@ class AppGlobalShortcuts extends ConsumerWidget {
       printableKey: true,
     ),
     const SingleActivator(LogicalKeyboardKey.escape): const CloseTopIntent(),
+    const SingleActivator(LogicalKeyboardKey.keyC): const CastIntent(),
   };
 
   static const List<LogicalKeyboardKey> _numberKeys = [
@@ -84,6 +91,7 @@ class AppGlobalShortcuts extends ConsumerWidget {
           GoToDestinationIntent: _GoToDestinationAction(router),
           OpenSearchIntent: _OpenSearchAction(router),
           CloseTopIntent: _CloseTopAction(router),
+          CastIntent: _CastAction(router, ref.watch(shellCastButtonProvider)),
         },
         child: child,
       ),
@@ -150,6 +158,26 @@ class _CloseTopAction extends Action<CloseTopIntent> {
   @override
   Object? invoke(CloseTopIntent intent) {
     _router.pop();
+    return null;
+  }
+}
+
+/// C opens the device picker, unless the user is typing or the app can't
+/// cast (no button).
+class _CastAction extends Action<CastIntent> {
+  new(this._router, this._button);
+
+  final GoRouter _router;
+  final ShellCastButton? _button;
+
+  @override
+  bool isEnabled(CastIntent intent, [BuildContext? context]) =>
+      _button != null && !textInputHasFocus();
+
+  @override
+  Object? invoke(CastIntent intent) {
+    final context = _router.routerDelegate.navigatorKey.currentContext;
+    if (context != null) _button?.onPressed(context);
     return null;
   }
 }

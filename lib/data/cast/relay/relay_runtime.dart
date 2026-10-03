@@ -45,8 +45,9 @@ final class RelayTimings {
   /// stall (docs/04).
   final Duration stallFloor;
 
-  /// Continuous: FFmpeg sending nothing for this long has stalled, or the
-  /// TV stopped reading.
+  /// Continuous: FFmpeg sending nothing for this long, while the TV
+  /// reads, has stalled. A TV that stops reading (its buffer full, or
+  /// paused) is waited for: FFmpeg's silence is then the TV's doing.
   final Duration quiet;
 
   /// How often an HLS session's playlist is read.
@@ -489,10 +490,14 @@ sealed class _Session {
     final current = token;
     if (current != null) server.remove(current);
     token = null;
+    dropStream();
     final process = ffmpeg;
     ffmpeg = null;
     await process?.stop();
   }
+
+  /// Ends the stream the TV is reading, before its FFmpeg is stopped.
+  void dropStream() {}
 
   Future<void> fail(RelayFailureInfo why) async {
     if (over) return;
@@ -837,6 +842,18 @@ final class _ContinuousSession extends _Session {
   /// says nothing.
   int _served = 0;
 
+  /// Ends the stream being served. FFmpeg blocked on its output (the TV
+  /// holding back) ignores SIGTERM: closing its output lets it exit at
+  /// once, not after the supervisor's grace.
+  void Function()? _drop;
+
+  @override
+  void dropStream() {
+    final drop = _drop;
+    _drop = null;
+    drop?.call();
+  }
+
   @override
   Future<RelayStartAnswer> start() async {
     inputUrl = runtime._proxy.open(inputId, sourceId: sourceId, live: job.live);
@@ -854,6 +871,7 @@ final class _ContinuousSession extends _Session {
       return RelayStartAnswer(failure: failure);
     }
     _served++;
+    dropStream();
     final process = ffmpeg;
     ffmpeg = null;
     await process?.stop();
@@ -885,6 +903,7 @@ final class _ContinuousSession extends _Session {
     }
     final generation = ++_served;
     // One FFmpeg per session: a second request takes over from the first.
+    dropStream();
     final previous = ffmpeg;
     ffmpeg = null;
     await previous?.stop();
@@ -942,6 +961,13 @@ final class _ContinuousSession extends _Session {
       quiet = Timer(timings.quiet, () => end(RelayEndReason.quiet));
     }
 
+    void drop() {
+      end(RelayEndReason.tvLeft);
+      tv.destroy();
+    }
+
+    _drop = drop;
+
     tv.listen(
       (_) {},
       onDone: () => end(RelayEndReason.tvLeft),
@@ -966,8 +992,16 @@ final class _ContinuousSession extends _Session {
         );
         watch();
       }
-      ..onPause = (() => out.pause())
-      ..onResume = (() => out.resume())
+      // The TV holding back pauses FFmpeg's output, and its quiet rule
+      // with it: a relayed file outruns any TV, whose buffer then fills.
+      ..onPause = () {
+        quiet?.cancel();
+        out.pause();
+      }
+      ..onResume = () {
+        out.resume();
+        watch();
+      }
       ..onCancel = () {
         if (!body.isClosed) end(RelayEndReason.tvLeft);
       };
@@ -988,6 +1022,7 @@ final class _ContinuousSession extends _Session {
       }
     }
     quiet?.cancel();
+    if (identical(_drop, drop)) _drop = null;
     if (identical(ffmpeg, process)) ffmpeg = null;
     await process.stop();
     await ended(process);

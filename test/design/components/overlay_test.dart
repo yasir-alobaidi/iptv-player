@@ -235,7 +235,37 @@ void main() {
   });
 
   group('Casting', () {
-    testWidgets('the bar names the device and its quality', (tester) async {
+    testWidgets('the bar names the device and its quality; it opens, '
+        'pauses and stops', (tester) async {
+      final pressed = <String>[];
+      await pumpDesign(
+        tester,
+        SizedBox(
+          width: 900,
+          child: CastingBar(
+            title: 'Continental Cup · Semi-final',
+            deviceName: 'Living Room TV',
+            quality: StreamQuality.original,
+            onOpen: () => pressed.add('open'),
+            onPlayPause: () => pressed.add('pause'),
+            onStop: () => pressed.add('stop'),
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Casting to Living Room TV · Original quality'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Continental Cup · Semi-final'));
+      await tester.tap(find.byTooltip('Pause'));
+      await tester.tap(find.byTooltip('Stop casting'));
+      expect(pressed, ['open', 'pause', 'stop']);
+    });
+
+    testWidgets('live has no pause; a status replaces the quality', (
+      tester,
+    ) async {
       await pumpDesign(
         tester,
         SizedBox(
@@ -243,16 +273,18 @@ void main() {
           child: CastingBar(
             title: 'Arena Sports 1',
             deviceName: 'Living Room TV',
-            quality: StreamQuality.original,
-            onPlayPause: () {},
+            quality: StreamQuality.transcoded,
+            status: 'Preparing…',
             onStop: () {},
           ),
         ),
       );
-
-      expect(find.text('Playing on Living Room TV'), findsOneWidget);
-      expect(find.text('ORIGINAL'), findsOneWidget);
-      expect(find.text('Pause'), findsOneWidget);
+      expect(
+        find.text('Casting to Living Room TV · Preparing…'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Pause'), findsNothing);
+      expect(find.byTooltip('Play'), findsNothing);
     });
 
     testWidgets('reconnecting changes the line', (tester) async {
@@ -272,7 +304,12 @@ void main() {
       );
 
       expect(find.text('Reconnecting to Living Room TV…'), findsOneWidget);
-      expect(find.text('Play'), findsOneWidget);
+      expect(find.byTooltip('Play'), findsOneWidget);
+    });
+
+    testWidgets('the quality tag, upper case', (tester) async {
+      await pumpDesign(tester, const QualityTag(StreamQuality.original));
+      expect(find.text('ORIGINAL QUALITY'), findsOneWidget);
     });
 
     testWidgets('the reconnecting pill counts tries', (tester) async {

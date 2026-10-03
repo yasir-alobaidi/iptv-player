@@ -964,6 +964,17 @@ final class _Watching implements FakeWatchListener {
 
   bool get _current => identical(_fake._media, _session) && !_session.done;
 
+  /// Where the media session was when the stream started.
+  double? _from;
+
+  @override
+  Duration get played => switch (_from) {
+    final from? => Duration(
+      microseconds: ((_fake._positionOf(_session) - from) * 1e6).round(),
+    ),
+    null => Duration.zero,
+  };
+
   @override
   void fetched(FakeFetch fetch) => _fake._fetches.add(fetch);
 
@@ -991,6 +1002,7 @@ final class _Watching implements FakeWatchListener {
     _fake
       .._setState('BUFFERING')
       .._setState(autoplay ? 'PLAYING' : 'PAUSED');
+    _from = _fake._positionOf(_session);
   }
 
   @override

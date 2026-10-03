@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -35,6 +36,7 @@ import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
 import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
+import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
@@ -118,6 +120,18 @@ Future<void> bootstrap() async {
         relayFolderProvider.overrideWithValue(paths.relay),
       ],
       ...sourceShellOverrides,
+      ...castShellOverrides,
+      if (Platform.isWindows)
+        relayFirewallNoticeProvider.overrideWith(
+          (ref) => windowsFirewallNotice(
+            ref.read(castFirewallNoticeStoreProvider),
+            () => ref
+                .read(routerProvider)
+                .routerDelegate
+                .navigatorKey
+                .currentContext,
+          ),
+        ),
     ],
   );
   // Before anything starts a process: FFmpeg or ffprobe left running by a
@@ -133,6 +147,8 @@ Future<void> bootstrap() async {
         ),
   );
   window.beforeClose = () => _quit(container, log);
+  // The cast's quiet fallbacks and unexpected ends, as toasts.
+  container.read(castNoticeToastsProvider);
   runApp(
     UncontrolledProviderScope(
       container: container,

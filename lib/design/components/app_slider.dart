@@ -15,6 +15,7 @@ class AppSlider extends StatefulWidget {
     this.showBubble = false,
     this.semanticLabel,
     this.enabled = true,
+    this.compact = false,
     this.focusNode,
     super.key,
   });
@@ -34,6 +35,9 @@ class AppSlider extends StatefulWidget {
   final bool showBubble;
   final String? semanticLabel;
   final bool enabled;
+
+  /// No room kept above for the bubble: a volume slider in a row.
+  final bool compact;
   final FocusNode? focusNode;
 
   @override
@@ -58,15 +62,16 @@ class _AppSliderState extends State<AppSlider> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 20,
-            child: showBubble
-                ? Align(
-                    alignment: Alignment(widget.value * 2 - 1, 0),
-                    child: _Bubble(label: widget.bubbleLabel!(widget.value)),
-                  )
-                : null,
-          ),
+          if (!widget.compact)
+            SizedBox(
+              height: 20,
+              child: showBubble
+                  ? Align(
+                      alignment: Alignment(widget.value * 2 - 1, 0),
+                      child: _Bubble(label: widget.bubbleLabel!(widget.value)),
+                    )
+                  : null,
+            ),
           SliderTheme(
             data: SliderThemeData(
               trackHeight: 4,

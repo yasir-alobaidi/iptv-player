@@ -15,6 +15,7 @@ export 'package:iptv_player/design/components/app_mark.dart';
 export 'package:iptv_player/design/components/app_menu.dart';
 export 'package:iptv_player/design/components/app_popups.dart';
 export 'package:iptv_player/design/components/app_slider.dart';
+export 'package:iptv_player/design/components/app_spinner.dart';
 export 'package:iptv_player/design/components/app_text_field.dart';
 export 'package:iptv_player/design/components/app_toast.dart';
 export 'package:iptv_player/design/components/app_tooltip.dart';

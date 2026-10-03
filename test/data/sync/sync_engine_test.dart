@@ -872,6 +872,9 @@ void main() {
       expect(await recorded.single, SyncOutcome.succeeded);
       await hooked.sync(id);
       expect(heard, [id, id]);
+      // The second hook's read too, before teardown closes the database
+      // under it ("Channel was closed before receiving a response").
+      expect(await recorded.last, SyncOutcome.succeeded);
     });
 
     test('a sync that fails is not heard', () async {

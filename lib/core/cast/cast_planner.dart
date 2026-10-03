@@ -68,6 +68,15 @@ final class CastSettings {
     this.smoothInterlaced = false,
   });
 
+  /// Tolerant: anything missing or of another type reads as off.
+  factory fromJson(Object? json) => json is Map
+      ? CastSettings(
+          dolbyPassthrough: json['dolby_passthrough'] == true,
+          lowLatency: json['low_latency'] == true,
+          smoothInterlaced: json['smooth_interlaced'] == true,
+        )
+      : const CastSettings();
+
   /// AC-3 and E-AC-3 go untouched, for a TV on an AV receiver.
   final bool dolbyPassthrough;
 
@@ -77,6 +86,33 @@ final class CastSettings {
 
   /// Interlaced pictures are re-encoded with deinterlacing.
   final bool smoothInterlaced;
+
+  CastSettings copyWith({
+    bool? dolbyPassthrough,
+    bool? lowLatency,
+    bool? smoothInterlaced,
+  }) => CastSettings(
+    dolbyPassthrough: dolbyPassthrough ?? this.dolbyPassthrough,
+    lowLatency: lowLatency ?? this.lowLatency,
+    smoothInterlaced: smoothInterlaced ?? this.smoothInterlaced,
+  );
+
+  Map<String, Object?> toJson() => {
+    'dolby_passthrough': dolbyPassthrough,
+    'low_latency': lowLatency,
+    'smooth_interlaced': smoothInterlaced,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is CastSettings &&
+      other.dolbyPassthrough == dolbyPassthrough &&
+      other.lowLatency == lowLatency &&
+      other.smoothInterlaced == smoothInterlaced;
+
+  @override
+  int get hashCode =>
+      Object.hash(dolbyPassthrough, lowLatency, smoothInterlaced);
 }
 
 /// Which audio track to cast (docs/04 rule 6).

@@ -19,6 +19,7 @@ class ShellTopBar extends StatelessWidget {
     this.onOpenSource,
     this.onOpenDownloads,
     this.onCast,
+    this.castConnected = false,
     this.paneController,
     super.key,
   });
@@ -39,8 +40,12 @@ class ShellTopBar extends StatelessWidget {
   final VoidCallback? onOpenSource;
   final VoidCallback? onOpenDownloads;
 
-  /// Null until Phase 7, which is why the cast button starts disabled.
+  /// The device picker; null disables the button (a build that can't
+  /// cast, the component gallery).
   final VoidCallback? onCast;
+
+  /// A cast is on: the connected icon, as the canvas draws it.
+  final bool castConnected;
   final FocusPaneController? paneController;
 
   @override
@@ -89,10 +94,11 @@ class ShellTopBar extends StatelessWidget {
             ],
             SizedBox(width: tokens.spacing.s16),
             AppIconButton(
-              icon: AppIcons.cast,
-              tooltip: onCast == null ? 'Casting comes in Phase 7' : 'Cast',
+              icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
+              tooltip: castConnected ? 'Casting' : 'Cast',
               shortcut: 'C',
               bordered: true,
+              selected: castConnected,
               onPressed: onCast,
             ),
           ],

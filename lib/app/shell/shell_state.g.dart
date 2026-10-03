@@ -274,6 +274,102 @@ final class ShellCastSessionProvider
 
 String _$shellCastSessionHash() => r'a1331391f0e90e13e6e274b32594ca3c9fa2591f';
 
+@ProviderFor(shellCastButton)
+final shellCastButtonProvider = ShellCastButtonProvider._();
+
+final class ShellCastButtonProvider
+    extends
+        $FunctionalProvider<
+          ShellCastButton?,
+          ShellCastButton?,
+          ShellCastButton?
+        >
+    with $Provider<ShellCastButton?> {
+  ShellCastButtonProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellCastButtonProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellCastButtonHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShellCastButton?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShellCastButton? create(Ref ref) {
+    return shellCastButton(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShellCastButton? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShellCastButton?>(value),
+    );
+  }
+}
+
+String _$shellCastButtonHash() => r'41e045713e39b70e9a2b7803ec7d4542731091cd';
+
+/// Drawn in place of the screen (the casting view, which the canvas draws
+/// inside the shell); null shows the screen.
+
+@ProviderFor(shellContentOverlay)
+final shellContentOverlayProvider = ShellContentOverlayProvider._();
+
+/// Drawn in place of the screen (the casting view, which the canvas draws
+/// inside the shell); null shows the screen.
+
+final class ShellContentOverlayProvider
+    extends $FunctionalProvider<Widget?, Widget?, Widget?>
+    with $Provider<Widget?> {
+  /// Drawn in place of the screen (the casting view, which the canvas draws
+  /// inside the shell); null shows the screen.
+  ShellContentOverlayProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellContentOverlayProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellContentOverlayHash();
+
+  @$internal
+  @override
+  $ProviderElement<Widget?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Widget? create(Ref ref) {
+    return shellContentOverlay(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Widget? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Widget?>(value),
+    );
+  }
+}
+
+String _$shellContentOverlayHash() =>
+    r'ccdf83e76f11ccca2362e932eabe77a16d4bf951';
+
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.
 

@@ -1,11 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
+import 'package:iptv_player/design/components/quality_badge.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'shell_state.g.dart';
@@ -82,25 +83,59 @@ class ShellDownloads {
   final double progress;
 }
 
-/// What the casting bar shows while a cast is running (docs/05). Phase 7
-/// fills it; null keeps the bar out of the tree.
+/// What the casting bar shows while a cast is on (canvas `Casting`,
+/// docs/05). The casting feature fills it; null keeps the bar out of the
+/// tree.
 @immutable
 class ShellCastSession {
   const new({
     required this.title,
     required this.deviceName,
-    this.subtitle,
+    this.imageName,
+    this.imageUrl,
+    this.quality,
+    this.status,
     this.isPlaying = true,
-    this.progress,
     this.reconnecting = false,
+    this.onOpen,
+    this.onPlayPause,
+    this.onStop,
   });
 
   final String title;
   final String deviceName;
-  final String? subtitle;
+
+  /// Whose monogram stands in for a missing picture (the channel's).
+  final String? imageName;
+
+  /// The logo or poster, as the provider names it.
+  final String? imageUrl;
+  final StreamQuality? quality;
+
+  /// "Connecting…", "Preparing…", what failed: said instead of the
+  /// quality.
+  final String? status;
   final bool isPlaying;
-  final double? progress;
   final bool reconnecting;
+
+  /// Opens the casting view.
+  final VoidCallback? onOpen;
+
+  /// Null for live.
+  final VoidCallback? onPlayPause;
+  final VoidCallback? onStop;
+}
+
+/// The top bar's Cast button (and C): the device picker, with the
+/// connected icon while casting.
+@immutable
+class ShellCastButton {
+  const new({required this.connected, required this.onPressed});
+
+  final bool connected;
+
+  /// Called with a context under the app's navigator, for the dialog.
+  final void Function(BuildContext context) onPressed;
 }
 
 // The shell's slots. Each is empty until the phase that owns it
@@ -124,6 +159,14 @@ ShellDownloads? shellDownloads(Ref ref) => null;
 
 @riverpod
 ShellCastSession? shellCastSession(Ref ref) => null;
+
+@riverpod
+ShellCastButton? shellCastButton(Ref ref) => null;
+
+/// Drawn in place of the screen (the casting view, which the canvas draws
+/// inside the shell); null shows the screen.
+@riverpod
+Widget? shellContentOverlay(Ref ref) => null;
 
 /// Whether the nav rail is expanded to 240 px. The shell still collapses
 /// it on a narrow window; this is what the user asked for.

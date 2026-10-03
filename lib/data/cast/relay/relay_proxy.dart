@@ -144,9 +144,9 @@ final class RelayProxyTimings {
   /// channel (docs/04's matrix has an 8 s slow start).
   final Duration answer;
 
-  /// A live stream that sends nothing for this long has stalled: the
-  /// proxy cuts FFmpeg's connection, and FFmpeg's reconnect gets a fresh
-  /// one.
+  /// A stream that sends nothing for this long while FFmpeg reads has
+  /// stalled: the proxy cuts FFmpeg's connection, and FFmpeg's reconnect
+  /// gets a fresh one. FFmpeg holding back is waited for.
   final Duration idle;
 
   /// For one of the source's connections to come free.
@@ -658,8 +658,16 @@ final class RelayProxy {
         );
         watch();
       }
-      ..onPause = (() => upstream.pause())
-      ..onResume = (() => upstream.resume())
+      // FFmpeg holding back (its output waits on the TV) pauses the
+      // provider's body, and the quiet rule with it.
+      ..onPause = () {
+        idle?.cancel();
+        upstream.pause();
+      }
+      ..onResume = () {
+        upstream.resume();
+        watch();
+      }
       ..onCancel = () {
         if (!body.isClosed) stop(_Ending.left);
       };

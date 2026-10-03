@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:iptv_player/core/cast/cast_device.dart';
@@ -10,6 +11,7 @@ import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/cast/cast_browsers.dart';
 import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
@@ -23,6 +25,7 @@ import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/platform/platform_providers.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
+import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/features/casting/domain/cast_coordinator.dart';
 import 'package:iptv_player/features/casting/domain/cast_items.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
@@ -147,9 +150,51 @@ CastRelay castRelay(Ref ref) {
 }
 
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
-/// Smooth interlaced. Step 7 stores them; until then, the defaults.
+/// Smooth interlaced. The defaults at once, the stored choices as soon as
+/// they are read; a change is saved and applies to the next cast.
 @Riverpod(keepAlive: true)
-CastSettings castSettings(Ref ref) => const CastSettings();
+class CastSettingsController extends _$CastSettingsController {
+  @override
+  CastSettings build() {
+    unawaited(_load());
+    return const CastSettings();
+  }
+
+  var _changed = false;
+
+  Future<void> _load() async {
+    final stored = await ref
+        .read(settingsRepositoryProvider)
+        .readValue<Object?>(SettingsKeys.cast, null);
+    // A choice made while loading wins over what was stored.
+    if (!_changed && ref.mounted) {
+      state = CastSettings.fromJson(stored.valueOrNull);
+    }
+  }
+
+  Future<Result<void>> update(CastSettings settings) {
+    _changed = true;
+    state = settings;
+    return ref
+        .read(settingsRepositoryProvider)
+        .writeValue(SettingsKeys.cast, settings.toJson());
+  }
+}
+
+/// Whether this computer has an address on a network a TV could be on
+/// (not only loopback): the picker says so when it hasn't.
+@riverpod
+Future<bool> castNetworkAvailable(Ref ref) async {
+  try {
+    final interfaces = await NetworkInterface.list();
+    return interfaces.any(
+      (interface) => interface.addresses.any((a) => !a.isLoopback),
+    );
+  } on Object {
+    // Can't tell: don't claim there is no network.
+    return true;
+  }
+}
 
 /// The TV's picture, from the app's artwork cache. `bootstrap()` points it
 /// at the cache; without one there is none.
@@ -184,11 +229,32 @@ CastCoordinator castCoordinator(Ref ref) {
     history: ref.watch(playbackHistoryProvider),
     sleep: ref.watch(sleepInhibitorProvider),
     pictures: ref.watch(castPicturesProvider),
-    settings: () => ref.read(castSettingsProvider),
+    settings: () => ref.read(castSettingsControllerProvider),
     audioLanguages: () =>
         ref.read(playbackSettingsControllerProvider).audioLanguages,
     beforeFirstRelay: ref.watch(relayFirewallNoticeProvider),
   );
   ref.onDispose(coordinator.dispose);
   return coordinator;
+}
+
+/// Whether Windows' firewall prompt has been explained before the first
+/// relay start (Phase 7 step 7): once is enough.
+@Riverpod(keepAlive: true)
+CastFirewallNoticeStore castFirewallNoticeStore(Ref ref) =>
+    CastFirewallNoticeStore(ref.watch(settingsRepositoryProvider));
+
+final class CastFirewallNoticeStore {
+  new(this._settings);
+
+  final SettingsRepository _settings;
+
+  Future<bool> explained() async =>
+      (await _settings.readBool(SettingsKeys.castFirewallExplained))
+          .valueOrNull ??
+      false;
+
+  Future<void> markExplained() async {
+    await _settings.writeValue(SettingsKeys.castFirewallExplained, true);
+  }
 }

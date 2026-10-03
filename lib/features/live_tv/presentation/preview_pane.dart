@@ -9,6 +9,7 @@ import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_preview_card.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_request.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -59,6 +60,9 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
     if (channel == null) return;
     _debounce = Timer(PreviewPane.debounce, () {
       final coordinator = ref.read(playbackCoordinatorProvider);
+      // While casting the preview opens no stream of its own (Phase 7
+      // decision 2): moving through the list changes nothing until Enter.
+      if (coordinator.casting) return;
       if (coordinator.current?.id == channel.id &&
           coordinator.current?.sourceId == channel.sourceId) {
         return;
@@ -81,6 +85,8 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
         ? null
         : ref.watch(freshChannelProvider(selected)).value ?? selected;
     final guide = fresh == null ? null : ref.watch(nowNextProvider(fresh));
+    final playback = ref.watch(playbackStateProvider).value;
+    final castingTo = ref.read(playbackCoordinatorProvider).castDeviceName;
 
     return Container(
       decoration: BoxDecoration(
@@ -103,7 +109,12 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
                 aspectRatio: 16 / 9,
                 child: ClipRRect(
                   borderRadius: tokens.radii.mdAll,
-                  child: fresh == null
+                  child: castingTo != null
+                      ? CastPreviewCard(
+                          deviceName: castingTo,
+                          channel: playback?.channel,
+                        )
+                      : fresh == null
                       ? ColoredBox(
                           color: colors.video,
                           child: const EmptyState(
@@ -138,8 +149,12 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
                   children: [
                     Expanded(
                       child: AppButton(
-                        label: 'Watch full screen',
-                        icon: AppIcons.fullscreen,
+                        label: castingTo == null
+                            ? 'Watch full screen'
+                            : 'Play on $castingTo',
+                        icon: castingTo == null
+                            ? AppIcons.fullscreen
+                            : AppIcons.cast,
                         size: AppButtonSize.l,
                         onPressed: widget.onFullscreen == null
                             ? null

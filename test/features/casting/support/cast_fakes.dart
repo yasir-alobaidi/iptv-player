@@ -438,10 +438,18 @@ final class FakeEncoderDetection implements CastEncoderDetection {
 final class MemoryCastDevices implements CastDeviceStore {
   final devices = <String, KnownCastDevice>{};
   final used = <String>[];
+  final _changes = StreamController<void>.broadcast();
+
+  List<KnownCastDevice> get _sorted =>
+      devices.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+
+  void _changed() => _changes.add(null);
 
   @override
-  Stream<List<KnownCastDevice>> watchAll() =>
-      Stream.value(devices.values.toList());
+  Stream<List<KnownCastDevice>> watchAll() async* {
+    yield _sorted;
+    yield* _changes.stream.map((_) => _sorted);
+  }
 
   @override
   Future<Result<KnownCastDevice?>> byId(String id) async => Ok(devices[id]);
@@ -467,6 +475,7 @@ final class MemoryCastDevices implements CastDeviceStore {
   @override
   Future<Result<void>> addManual(CastDevice device) async {
     devices[device.id] = _from(device, manual: true);
+    _changed();
     return const Ok(null);
   }
 
@@ -477,6 +486,7 @@ final class MemoryCastDevices implements CastDeviceStore {
       device,
       manual: device.manual,
     ).copyWith(lastUsedAt: at);
+    _changed();
     return const Ok(null);
   }
 
@@ -486,6 +496,7 @@ final class MemoryCastDevices implements CastDeviceStore {
   @override
   Future<Result<void>> setHevcSupport(String id, HevcSupport value) async {
     devices[id] = devices[id]!.copyWith(hevc: value);
+    _changed();
     return const Ok(null);
   }
 
@@ -494,12 +505,14 @@ final class MemoryCastDevices implements CastDeviceStore {
     final known = devices[id];
     if (known == null) return Err(NotFoundFailure('device $id'));
     devices[id] = known.copyWith(learned: learned);
+    _changed();
     return const Ok(null);
   }
 
   @override
   Future<Result<void>> forget(String id) async {
     devices.remove(id);
+    _changed();
     return const Ok(null);
   }
 }
@@ -538,19 +551,20 @@ const fastTimings = CastTimings(
 
 /// A cast coordinator on fakes, beside a playback coordinator on fakes.
 final class CastRig {
-  new({CastTimings timings = fastTimings, this.beforeFirstRelay}) {
+  new({CastTimings timings = fastTimings, this.beforeFirstRelay, Rig? playback})
+    : playback = playback ?? Rig() {
     coordinator = CastCoordinator(
       receivers: receivers,
       relay: relay,
       lookup: StreamFactsLookup(probe: probe),
       encoderDetection: encoders,
       devices: devices,
-      items: CastItems(resolver: playback.resolver),
-      playback: playback.coordinator,
+      items: CastItems(resolver: this.playback.resolver),
+      playback: this.playback.coordinator,
       classify: classifyStreamFailure,
       log: AppLog(output: logged, secrets: SecretRegistry()),
-      progress: playback.progress,
-      history: playback.history,
+      progress: this.playback.progress,
+      history: this.playback.history,
       sleep: sleep,
       pictures: FakePictures(),
       beforeFirstRelay: beforeFirstRelay,
@@ -561,7 +575,7 @@ final class CastRig {
   }
 
   final Future<void> Function()? beforeFirstRelay;
-  final playback = Rig();
+  final Rig playback;
   final receivers = FakeReceivers();
   final relay = FakeRelay();
   final probe = FakeProbe();

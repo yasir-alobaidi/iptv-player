@@ -7,6 +7,7 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/categories_pane.dart';
@@ -14,6 +15,7 @@ import 'package:iptv_player/features/live_tv/presentation/channel_list_pane.dart
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/live_tv/presentation/preview_pane.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
 
 /// Where the full-screen player lives (step 6); playback carries on
@@ -74,8 +76,17 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
     if (coordinator.current != null) unawaited(coordinator.stop());
   }
 
+  /// A click: the preview plays it. While casting it is only chosen
+  /// (Phase 7 decision 2: the preview opens no stream; Enter plays on the
+  /// TV).
   void _play(ChannelItem channel) {
     ref.read(liveTvControllerProvider.notifier).select(channel);
+    final coordinator = ref.read(playbackCoordinatorProvider);
+    if (coordinator.casting) return;
+    _playNow(channel);
+  }
+
+  void _playNow(ChannelItem channel) {
     final coordinator = ref.read(playbackCoordinatorProvider);
     final playing = coordinator.current;
     if (playing?.id == channel.id && playing?.sourceId == channel.sourceId) {
@@ -85,7 +96,18 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
   }
 
   /// Enter on a row, Watch full screen, or a double-click on the picture.
+  /// While casting: the TV plays it, and the casting view opens.
   void _fullscreen(ChannelItem channel) {
+    if (ref.read(playbackCoordinatorProvider).casting) {
+      ref.read(liveTvControllerProvider.notifier).select(channel);
+      unawaited(
+        playOnTv(
+          ProviderScope.containerOf(context, listen: false),
+          PlayableChannel(channel),
+        ),
+      );
+      return;
+    }
     _play(channel);
     unawaited(context.push(playerRoutePath));
   }
@@ -105,7 +127,10 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
       (index ?? -1) + 1,
       1,
     )).valueOrNull?.firstOrNull;
-    if (next != null && mounted) _play(next);
+    if (next != null && mounted) {
+      ref.read(liveTvControllerProvider.notifier).select(next);
+      _playNow(next);
+    }
   }
 
   @override

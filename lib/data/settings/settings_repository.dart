@@ -12,6 +12,11 @@ abstract final class SettingsKeys {
   static const currentSource = 'shell.current_source';
   static const playback = 'playback.settings';
   static const guide = 'guide.settings';
+  static const cast = 'cast.settings';
+
+  /// Windows' firewall prompt was explained before the first relay start
+  /// (Phase 7 step 7).
+  static const castFirewallExplained = 'cast.firewall_explained';
 }
 
 /// Reads and writes the `settings` table.

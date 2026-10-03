@@ -637,42 +637,37 @@ final class CastRelayProvider
 String _$castRelayHash() => r'05adf9ebd69f6808860eec67bf511256ca46bbc7';
 
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
-/// Smooth interlaced. Step 7 stores them; until then, the defaults.
+/// Smooth interlaced. The defaults at once, the stored choices as soon as
+/// they are read; a change is saved and applies to the next cast.
 
-@ProviderFor(castSettings)
-final castSettingsProvider = CastSettingsProvider._();
+@ProviderFor(CastSettingsController)
+final castSettingsControllerProvider = CastSettingsControllerProvider._();
 
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
-/// Smooth interlaced. Step 7 stores them; until then, the defaults.
-
-final class CastSettingsProvider
-    extends $FunctionalProvider<CastSettings, CastSettings, CastSettings>
-    with $Provider<CastSettings> {
+/// Smooth interlaced. The defaults at once, the stored choices as soon as
+/// they are read; a change is saved and applies to the next cast.
+final class CastSettingsControllerProvider
+    extends $NotifierProvider<CastSettingsController, CastSettings> {
   /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
-  /// Smooth interlaced. Step 7 stores them; until then, the defaults.
-  CastSettingsProvider._()
+  /// Smooth interlaced. The defaults at once, the stored choices as soon as
+  /// they are read; a change is saved and applies to the next cast.
+  CastSettingsControllerProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'castSettingsProvider',
+        name: r'castSettingsControllerProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$castSettingsHash();
+  String debugGetCreateSourceHash() => _$castSettingsControllerHash();
 
   @$internal
   @override
-  $ProviderElement<CastSettings> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  CastSettings create(Ref ref) {
-    return castSettings(ref);
-  }
+  CastSettingsController create() => CastSettingsController();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(CastSettings value) {
@@ -683,7 +678,72 @@ final class CastSettingsProvider
   }
 }
 
-String _$castSettingsHash() => r'df28cd78d3cf3cd145fc9738025ab7021c704e6a';
+String _$castSettingsControllerHash() =>
+    r'37313874078fc0c9e683d51b86dc8a816de21c0a';
+
+/// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
+/// Smooth interlaced. The defaults at once, the stored choices as soon as
+/// they are read; a change is saved and applies to the next cast.
+
+abstract class _$CastSettingsController extends $Notifier<CastSettings> {
+  CastSettings build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<CastSettings, CastSettings>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CastSettings, CastSettings>,
+              CastSettings,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Whether this computer has an address on a network a TV could be on
+/// (not only loopback): the picker says so when it hasn't.
+
+@ProviderFor(castNetworkAvailable)
+final castNetworkAvailableProvider = CastNetworkAvailableProvider._();
+
+/// Whether this computer has an address on a network a TV could be on
+/// (not only loopback): the picker says so when it hasn't.
+
+final class CastNetworkAvailableProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Whether this computer has an address on a network a TV could be on
+  /// (not only loopback): the picker says so when it hasn't.
+  CastNetworkAvailableProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castNetworkAvailableProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castNetworkAvailableHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return castNetworkAvailable(ref);
+  }
+}
+
+String _$castNetworkAvailableHash() =>
+    r'9a3d2417b35af1fcc550092ad5ec876133c0fc92';
 
 /// The TV's picture, from the app's artwork cache. `bootstrap()` points it
 /// at the cache; without one there is none.
@@ -838,4 +898,60 @@ final class CastCoordinatorProvider
   }
 }
 
-String _$castCoordinatorHash() => r'85707b0aaa844e0f711c8d9299cbaa686dfc2597';
+String _$castCoordinatorHash() => r'8cc71bf44c1e6739227a9f7e280943b0a9a3b52c';
+
+/// Whether Windows' firewall prompt has been explained before the first
+/// relay start (Phase 7 step 7): once is enough.
+
+@ProviderFor(castFirewallNoticeStore)
+final castFirewallNoticeStoreProvider = CastFirewallNoticeStoreProvider._();
+
+/// Whether Windows' firewall prompt has been explained before the first
+/// relay start (Phase 7 step 7): once is enough.
+
+final class CastFirewallNoticeStoreProvider
+    extends
+        $FunctionalProvider<
+          CastFirewallNoticeStore,
+          CastFirewallNoticeStore,
+          CastFirewallNoticeStore
+        >
+    with $Provider<CastFirewallNoticeStore> {
+  /// Whether Windows' firewall prompt has been explained before the first
+  /// relay start (Phase 7 step 7): once is enough.
+  CastFirewallNoticeStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castFirewallNoticeStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castFirewallNoticeStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastFirewallNoticeStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CastFirewallNoticeStore create(Ref ref) {
+    return castFirewallNoticeStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastFirewallNoticeStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastFirewallNoticeStore>(value),
+    );
+  }
+}
+
+String _$castFirewallNoticeStoreHash() =>
+    r'75be1b25a2e96139aa033990df9f387a8fca1ade';

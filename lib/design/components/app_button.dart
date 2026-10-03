@@ -3,8 +3,9 @@ import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/tokens.dart';
 
-/// Button emphasis (docs/05).
-enum AppButtonVariant { primary, secondary, ghost, danger }
+/// Button emphasis (docs/05). [dangerOutline] is the canvas's "Stop
+/// casting": red words in a red outline.
+enum AppButtonVariant { primary, secondary, ghost, danger, dangerOutline }
 
 /// Button height (canvas: 36 / 44 / 48 px, and 52 on a details page).
 enum AppButtonSize {
@@ -68,22 +69,28 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.primary => colors.accentBase,
       AppButtonVariant.danger => colors.danger,
       AppButtonVariant.secondary => colors.surface2,
-      AppButtonVariant.ghost => null,
+      AppButtonVariant.ghost || AppButtonVariant.dangerOutline => null,
     };
     final hoverBackground = switch (variant) {
       AppButtonVariant.primary => colors.accentHover,
       AppButtonVariant.danger => colors.danger,
       AppButtonVariant.secondary => colors.surface3,
       AppButtonVariant.ghost => colors.surface2,
+      AppButtonVariant.dangerOutline => colors.danger.withValues(alpha: 0.12),
     };
     final foreground = switch (variant) {
       AppButtonVariant.primary || AppButtonVariant.danger => colors.onAccent,
       AppButtonVariant.secondary => colors.textPrimary,
       AppButtonVariant.ghost => colors.textSecondary,
+      AppButtonVariant.dangerOutline => colors.danger,
     };
-    final border = variant == AppButtonVariant.secondary
-        ? Border.all(color: colors.border)
-        : null;
+    final border = switch (variant) {
+      AppButtonVariant.secondary => Border.all(color: colors.border),
+      AppButtonVariant.dangerOutline => Border.all(
+        color: colors.danger.withValues(alpha: 0.5),
+      ),
+      _ => null,
+    };
 
     final textStyle =
         (size == AppButtonSize.s ? tokens.text.buttonSmall : tokens.text.button)

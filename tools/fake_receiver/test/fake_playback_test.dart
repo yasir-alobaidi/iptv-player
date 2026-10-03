@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:fake_receiver/fake_receiver.dart';
+import 'package:fake_receiver/src/fmp4_clock.dart';
 import 'package:test/test.dart';
 
 import 'support/test_sender.dart';
@@ -145,6 +147,53 @@ void main() {
       final recorder = _Recorder();
       watch(recorder, '/missing.mp4', type: 'video/mp4');
       expect(await recorder.failure.future.timeout(_wait), 'HTTP 404');
+    });
+
+    test('what it holds is played out before FINISHED, and nothing ends '
+        'while paused', () async {
+      final recorder = _Recorder();
+      watch(recorder, '/stream.mp4', type: 'video/mp4');
+      await recorder.firstCheck.future.timeout(_wait);
+      recorder.clock.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      expect(recorder.ended.isCompleted, isFalse, reason: 'paused');
+      recorder.clock.start();
+      await recorder.ended.future.timeout(_wait);
+      // Its fragments start at 0, 1 and 2 s.
+      expect(
+        recorder.clock.elapsed,
+        greaterThanOrEqualTo(const Duration(seconds: 2)),
+      );
+    });
+  }, skip: skip);
+
+  group('a fragmented MP4, as it arrives', () {
+    test("how far into its media it got: each fragment's start", () {
+      final bytes = File('${clips.path}/stream.mp4').readAsBytesSync();
+      final random = Random(7);
+      for (final sizes in [
+        () => 1,
+        () => 1 + random.nextInt(4096),
+        () => bytes.length,
+      ]) {
+        final clock = Fmp4Clock();
+        var at = 0;
+        while (at < bytes.length) {
+          final end = min(at + sizes(), bytes.length);
+          clock.add(bytes.sublist(at, end));
+          at = end;
+        }
+        // A frame either way: the tracks' fragments don't start together.
+        expect(clock.media!.inMilliseconds, closeTo(2000, 100));
+      }
+    });
+
+    test('a header with no fragment, or no MP4 at all: it cannot tell', () {
+      final header = Fmp4Clock()
+        ..add(File('${clips.path}/head.mp4').readAsBytesSync());
+      expect(header.media, isNull);
+      final ts = Fmp4Clock()..add(File('${clips.path}/a.ts').readAsBytesSync());
+      expect(ts.media, isNull);
     });
   }, skip: skip);
 
@@ -305,6 +354,12 @@ String _playlist(
 ].join('\n');
 
 final class _Recorder implements FakeWatchListener {
+  /// The play clock: running from the start unless the test holds it.
+  final clock = Stopwatch();
+
+  @override
+  Duration get played => clock.elapsed;
+
   final firstCheck = Completer<FakeMediaCheck>();
   final ended = Completer<void>();
   final failure = Completer<String>();
@@ -322,6 +377,7 @@ final class _Recorder implements FakeWatchListener {
 
   @override
   void started(FakeMediaCheck check) {
+    clock.start();
     if (!firstCheck.isCompleted) firstCheck.complete(check);
   }
 

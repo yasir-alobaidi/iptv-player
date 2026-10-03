@@ -11,6 +11,8 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
@@ -330,6 +332,19 @@ class _MoviePage extends ConsumerWidget {
                               bordered: true,
                               size: layout.movieActionHeight,
                               onPressed: () => unawaited(toggleFavorite()),
+                            ),
+                            AppIconButton(
+                              icon: AppIcons.cast,
+                              tooltip: 'Cast',
+                              bordered: true,
+                              size: layout.movieActionHeight,
+                              onPressed: () => unawaited(
+                                castFrom(
+                                  context,
+                                  item: PlayableMovie(movie),
+                                  from: resumable ? mark.position : null,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -820,6 +835,22 @@ class _SeriesColumn extends StatelessWidget {
               size: layout.movieActionHeight,
               onPressed: onFavorite,
             ),
+            if (nextUp != null) ...[
+              SizedBox(width: tokens.spacing.s12),
+              AppIconButton(
+                icon: AppIcons.cast,
+                tooltip: 'Cast',
+                bordered: true,
+                size: layout.movieActionHeight,
+                onPressed: () => unawaited(
+                  castFrom(
+                    context,
+                    item: PlayableEpisode(series, nextUp.episode),
+                    from: nextUp.from,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ],

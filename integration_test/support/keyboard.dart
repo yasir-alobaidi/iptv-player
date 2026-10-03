@@ -47,6 +47,7 @@ final class Keys {
     LogicalKeyboardKey.arrowLeft: PhysicalKeyboardKey.arrowLeft,
     LogicalKeyboardKey.arrowRight: PhysicalKeyboardKey.arrowRight,
     LogicalKeyboardKey.comma: PhysicalKeyboardKey.comma,
+    LogicalKeyboardKey.keyC: PhysicalKeyboardKey.keyC,
     LogicalKeyboardKey.keyF: PhysicalKeyboardKey.keyF,
     LogicalKeyboardKey.keyG: PhysicalKeyboardKey.keyG,
     LogicalKeyboardKey.keyK: PhysicalKeyboardKey.keyK,
