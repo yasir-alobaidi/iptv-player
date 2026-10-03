@@ -1,4 +1,4 @@
-# Handoff — 2026-10-03 (Phase 7 steps 6 and 7 done, stopped for review; the TV runs wait)
+# Handoff — 2026-10-03 (Phase 7 steps 6 and 7 done, step 8's matrix runner ready; stopped for review; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
@@ -26,11 +26,12 @@ part of docs/08-phases-and-prompts.md and docs/04-casting.md.
    TV that holds back (buffer full, paused) for a stall**, and **stopping
    or seeking a relayed stream no longer waits 3 s**. Without them every
    relayed movie on the TV would have broken within minutes.
-3. **Push** the three local commits (6ebff8e the Windows CI fixes; step 6;
-   step 7).
+3. **Push** the four local commits (6ebff8e the Windows CI fixes; step 6;
+   step 7; the matrix runner).
 4. **The TV runs wait** until you say Living Room TV is back. Then step 2's
-   script and step 8's matrix can go in one sitting (asked first, with you
-   watching).
+   script and step 8's matrix go in one sitting, about 25 minutes (asked
+   first, with you watching); have the TV's remote at hand, and be ready to
+   switch Input Signal Plus off for one row.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -39,15 +40,19 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
 and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these changes: …>.
-<The TV runs wait | The TV is on the network: the TV runs can go ahead after you ask>.
+<The TV runs wait | The TV is on the network: run step 8's matrix after you ask>.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done; the TV runs
-  wait** (2026-10-03: "no living room tv yet till I tell u we have it").
-  Step 8 (the matrix on the TV and the phase exit) needs the TV.
-- **Checks at the step 7 commit:** analyze, format, `build_runner` leaves
-  no diff; **2,953 app tests** (15 skipped) under `TZ=UTC`; the fake
+- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done; step 8's
+  matrix runner written and checked 16 of 16 on the fake TV; the TV runs
+  wait** (2026-10-03: "no living room tv yet till I tell u we have it";
+  then "continue" and "stop at a proper point and do the hand off"). Step
+  8 itself (the matrix on the TV and the phase exit) needs the TV.
+- **Checks at the last commit (the runner):** analyze, format, **2,953 app
+  tests** (16 skipped: the runner is one) under `TZ=UTC`; the runner with
+  `CAST_HOST=fake` 16 of 16. **At the step 7 commit:** `build_runner`
+  leaves no diff; the fake
   receiver's 35 (also with FFmpeg 4.4), the fake provider's 141; the cast
   walk 4 of 4 under Xvfb (one CI-style: `IPTV_PLAYER_VIDEO=0
   RELAY_FFMPEG_DIR=/usr/bin`), `favorites_walk_test` and `vod_walk_test`
@@ -59,7 +64,7 @@ and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these 
 
 ## Done this session (2026-10-03)
 - **Step 6** (committed aaa231e) — see ADR-014 "The cast coordinator".
-- **Step 7** (details in ADR-014 "The casting UI"):
+- **Step 7** (committed ded9f12; details in ADR-014 "The casting UI"):
   - `lib/features/casting/presentation/`: `cast_picker.dart`,
     `add_cast_device_dialog.dart`, `cast_help.dart`, `casting_view.dart`,
     `casting_view_state.dart` (+ .g), `cast_preview_card.dart`,
@@ -90,21 +95,33 @@ and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these 
   - docs: ADR-014 step 7, docs/05 (Casting as built, Settings → Casting,
     the player's and details pages' Cast), docs/04 (backpressure), docs/06
     and the fake's README (its buffer).
+- **Step 8, before the TV** (ADR-014 "Step 8, before the TV"): the matrix
+  runner `test/tools/cast_matrix_tv_test.dart`, 16 rows through the app's
+  casting stack; `CAST_HOST=fake` 16 of 16. Not yet run on the TV.
 
 ## What's next
 1. **The TV runs, only when the user says the TV is back, after asking and
-   with the user watching:** step 2's `CAST_HOST=192.168.1.155 flutter test
-   --tags real_cast --run-skipped test/tools/cast_tv_test.dart` (about 30
-   s). Check first that the laptop is on 192.168.1.x (`ip -4 addr`; it was
-   on 192.168.26.x on 2026-10-03).
-2. **Step 8** (plan "Step 8"): docs/04's matrix on Living Room TV through
-   the app (the user watching; one cast at a time, announced), cast-start
-   times (proposed ≤ 8 s with the receiver launched, ≤ 5 s running),
-   whether MULTIZONE_STATUS's id equals the TXT id, **what the TV's screen
-   shows for a relayed movie started at a place** (LOADed with the whole
-   length while its stream starts at 0:00), whether the fixed-volume TV
-   heeds mute, and **a relayed movie paused for a minute on the real TV**
-   (the backpressure fix). Then the phase exit: ADR-014 Accepted.
+   with the user watching** (announce each; one cast at a time):
+   - check the laptop is on 192.168.1.x (`ip -4 addr`; it was on
+     192.168.26.x on 2026-10-03);
+   - step 2's `CAST_HOST=192.168.1.155 flutter test --tags real_cast
+     --run-skipped test/tools/cast_tv_test.dart` (about 30 s; also says
+     whether MULTIZONE_STATUS's id equals the TXT id);
+   - **the matrix:** `CAST_HOST=192.168.1.155 flutter test --tags real_cast
+     --run-skipped test/tools/cast_matrix_tv_test.dart` (rows 1–5 and 7–15,
+     about 20 minutes; each row prints what to watch for — ask the user
+     what they saw after each, or note it as it plays), then `CAST_ROWS=6`
+     with Input Signal Plus off (and back on after), and `CAST_ROWS=16`
+     with the remote in hand (the run says when to press);
+   - by hand on the TV: a relayed movie paused for a minute (the
+     backpressure fix); what the TV's screen shows of the time for a movie
+     started at a place; whether it heeds mute (fixed volume); whether the
+     panel's MP4 plays directly without CORS (row 14 says which).
+2. **Then the phase exit:** the results and budgets in ADR-014 (cast start
+   ≤ 8 s launched / ≤ 5 s running — the zaps stand in — and zapping ≤ 6 s
+   proposed for docs/06), ADR-014 Accepted, docs/04 "As built", docs/06's
+   budgets, progress and this file. The plan offers one channel from the
+   user's provider afterwards, only with its own pop-up.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -233,7 +250,23 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 7):
+New this session (Phase 7 step 8, before the TV):
+- **`test/tools/cast_matrix_tv_test.dart`** (`real_cast`): `_rows()` holds
+  the matrix (number, name, what to watch, `asks` for a row that needs the
+  user, `fakeDevice` for the fake run); `_Matrix` is the stack (built like
+  `CastE2E`, plus the panel on the TV-facing address, real encoder
+  detection, `_ReadingEngine` — a player that really reads the stream, so
+  the one-connection row means something). `castChannel`, `castFile`,
+  `zap`, `seekTo`, `playingAgain`, `hold`, `remote`, `relayPid`. Each row
+  starts with a clean device profile and panel query; failures are
+  recorded and the run goes on. `CAST_HOST=fake` is its self-check.
+- **Waiting on the cast in such a runner:** "Playing on" is logged once a
+  play (not after a re-LOAD: wait for "loading it again"); a wait's message
+  must be read when it gives up (`what: () => …`), or it shows the state
+  from when it began; set `HttpOverrides.global = null` in any test that
+  makes real HTTP requests.
+
+From the session before (Phase 7 step 7):
 - **The casting screens import only `casting_providers.dart`,
   `lib/core/cast/` and domain types** (hard rule 6). What the screens read:
   `castingStateProvider`, `castTimelineProvider`,
