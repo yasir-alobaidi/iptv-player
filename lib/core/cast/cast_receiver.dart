@@ -11,7 +11,14 @@ abstract interface class CastReceivers {
   /// Connects to the device at [address] and joins the Default Media
   /// Receiver there: the one already running, or a new launch (3–6 s on
   /// Living Room TV, ADR-004). The TV shows the receiver from then on.
-  Future<CastJoinResult> join(CastAddress address);
+  ///
+  /// [onConnected] hears this computer's address on the connection as
+  /// soon as it is up, before the receiver starts: the relay can listen
+  /// there while the TV launches (Phase 7 step 6).
+  Future<CastJoinResult> join(
+    CastAddress address, {
+    void Function(String localAddress)? onConnected,
+  });
 }
 
 /// How [CastReceivers.join] went.

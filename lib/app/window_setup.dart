@@ -16,6 +16,15 @@ class AppWindow with WindowListener {
   static const _saveDebounce = Duration(milliseconds: 500);
   static const _logTag = 'window';
 
+  /// The most closing waits for [beforeClose].
+  static const closeWithin = Duration(seconds: 4);
+
+  /// Runs when the user closes the window, before it goes: the TV's media
+  /// and the relay stop, every FFmpeg ends (hard rule 8). The window
+  /// closes after it, or after [closeWithin], whatever happens.
+  Future<void> Function()? beforeClose;
+  var _closing = false;
+
   final WindowBoundsStore store;
   final AppLog log;
   Timer? _saveTimer;
@@ -51,6 +60,28 @@ class AppWindow with WindowListener {
 
     windowManager.addListener(this);
     _listening = true;
+    // Closing comes to [onWindowClose] first.
+    await windowManager.setPreventClose(true);
+  }
+
+  @override
+  Future<void> onWindowClose() async {
+    if (_closing) return;
+    _closing = true;
+    final clock = Stopwatch()..start();
+    try {
+      await beforeClose?.call().timeout(closeWithin);
+      log.info(_logTag, 'Closing after ${clock.elapsedMilliseconds} ms');
+    } on Object catch (error) {
+      log.warning(_logTag, 'Closing without finishing up: $error');
+    } finally {
+      await dispose();
+      // Written out before the process goes.
+      try {
+        await log.close();
+      } on Object catch (_) {}
+      await windowManager.destroy();
+    }
   }
 
   /// Stops listening and writes whatever is still pending. Called when

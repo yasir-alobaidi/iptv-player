@@ -13,12 +13,17 @@ final class ResolvedStream {
     required this.maxConnections,
     this.userAgent,
     this.hls = false,
+    this.customUserAgent = false,
   });
 
   /// Carries the credentials.
   final String url;
   final String? userAgent;
   final bool hls;
+
+  /// The source or its playlist line sets a User-Agent of its own, which
+  /// a TV fetching the stream itself can't send (docs/04 rule 1).
+  final bool customUserAgent;
 
   /// Streams the source allows at once: the user's override, the account's
   /// `max_connections`, or 1 when neither says.

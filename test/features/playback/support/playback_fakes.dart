@@ -52,22 +52,39 @@ EpisodeItem episode(int season, int number, {Duration? duration}) =>
 final class FakeResolver implements StreamResolver {
   int maxConnections = 1;
   AppFailure? failure;
+
+  /// Live channels as the provider's own HLS (`.m3u8`).
+  bool hls = false;
+
+  /// The source sets a User-Agent of its own.
+  bool customUserAgent = false;
   final List<ChannelItem> resolved = [];
 
   /// Every movie's and episode's remote key resolved, in order.
   final List<String> resolvedFiles = [];
 
-  Future<Result<ResolvedStream>> _answer(String path) async {
+  Future<Result<ResolvedStream>> _answer(
+    String path, {
+    bool hls = false,
+  }) async {
     if (failure case final failure?) return Err(failure);
     return Ok(
-      ResolvedStream(url: 'http://fake/$path', maxConnections: maxConnections),
+      ResolvedStream(
+        url: 'http://fake/$path',
+        maxConnections: maxConnections,
+        hls: hls,
+        customUserAgent: customUserAgent,
+      ),
     );
   }
 
   @override
   Future<Result<ResolvedStream>> live(ChannelItem channel) {
     resolved.add(channel);
-    return _answer('live/u/p/${channel.remoteKey}.ts');
+    return _answer(
+      'live/u/p/${channel.remoteKey}.${hls ? 'm3u8' : 'ts'}',
+      hls: hls,
+    );
   }
 
   @override

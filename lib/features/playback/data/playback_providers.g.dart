@@ -126,6 +126,94 @@ abstract class _$PlaybackSettingsController
   }
 }
 
+/// Stream URLs built from their source at play time (docs/02).
+
+@ProviderFor(streamResolver)
+final streamResolverProvider = StreamResolverProvider._();
+
+/// Stream URLs built from their source at play time (docs/02).
+
+final class StreamResolverProvider
+    extends $FunctionalProvider<StreamResolver, StreamResolver, StreamResolver>
+    with $Provider<StreamResolver> {
+  /// Stream URLs built from their source at play time (docs/02).
+  StreamResolverProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streamResolverProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streamResolverHash();
+
+  @$internal
+  @override
+  $ProviderElement<StreamResolver> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  StreamResolver create(Ref ref) {
+    return streamResolver(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(StreamResolver value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<StreamResolver>(value),
+    );
+  }
+}
+
+String _$streamResolverHash() => r'754cca1d33cff0c9a620de966aa38c4b48cf1fa3';
+
+@ProviderFor(playbackHistory)
+final playbackHistoryProvider = PlaybackHistoryProvider._();
+
+final class PlaybackHistoryProvider
+    extends
+        $FunctionalProvider<PlaybackHistory, PlaybackHistory, PlaybackHistory>
+    with $Provider<PlaybackHistory> {
+  PlaybackHistoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'playbackHistoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$playbackHistoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<PlaybackHistory> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PlaybackHistory create(Ref ref) {
+    return playbackHistory(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PlaybackHistory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PlaybackHistory>(value),
+    );
+  }
+}
+
+String _$playbackHistoryHash() => r'16119c2fb522f5fefb737e4a1398d2c954b41880';
+
 /// The app's one playback owner (docs/03).
 
 @ProviderFor(playbackCoordinator)
@@ -177,7 +265,7 @@ final class PlaybackCoordinatorProvider
 }
 
 String _$playbackCoordinatorHash() =>
-    r'14d74694094679cfa457f66af4c205e9fd8eccd3';
+    r'f20b451772c28dae7720fdcbf8a555990d16a1ab';
 
 /// What plays, as it changes.
 

@@ -337,6 +337,51 @@ final class RelayRuntime {
     }
   }
 
+  /// Serves the picture at [path] to the TV at [localAddress]: its URL,
+  /// or null when it isn't a JPEG, PNG or WebP or nothing can listen
+  /// there.
+  Future<String?> servePicture(
+    String path, {
+    required String localAddress,
+  }) async {
+    final file = File(path);
+    final String? extension;
+    try {
+      final head = await file
+          .openRead(0, 12)
+          .fold<List<int>>([], (all, chunk) => all..addAll(chunk));
+      extension = pictureExtension(head);
+    } on FileSystemException catch (error) {
+      _log.info(_tag, 'No picture to serve: ${error.osError?.message}');
+      return null;
+    }
+    if (extension == null) return null;
+    try {
+      final server = await _serverFor(localAddress);
+      return server.serveFile(file, extension: extension);
+    } on Object catch (error) {
+      _log.info(_tag, 'The picture could not be served: $error');
+      return null;
+    }
+  }
+
+  /// Stops serving [url], a picture's.
+  Future<void> unserve(String url) async {
+    final origin = Uri.tryParse(url)?.origin;
+    final token = RelayServer.tokenOf(url);
+    if (origin == null || token == null) return;
+    for (final entry in [..._servers.entries]) {
+      if (entry.value.origin != origin) continue;
+      entry.value.remove(token);
+      if (!entry.value.isEmpty || _servedBy(entry.value)) continue;
+      _servers.remove(entry.key);
+      await entry.value.close();
+    }
+  }
+
+  bool _servedBy(RelayServer server) =>
+      _sessions.values.any((session) => identical(session.server, server));
+
   /// What ffprobe reads for [inputId] (decision 3).
   String openInput(
     String inputId, {

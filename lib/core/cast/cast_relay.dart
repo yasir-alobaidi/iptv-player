@@ -17,6 +17,15 @@ abstract interface class CastRelay {
   /// its provider connection stays open until then.
   Future<CastRelayInput?> openInput(CastUpstreamSource source);
 
+  /// Serves the picture at [path] (a channel's logo or a poster, from the
+  /// app's own artwork cache) to a TV that reaches this computer at
+  /// [localAddress], for LOAD's metadata. Null when it can't: not a JPEG,
+  /// PNG or WebP, or nothing can listen there.
+  Future<CastServedFile?> servePicture(
+    String path, {
+    required String localAddress,
+  });
+
   /// The provider connections the proxy holds, per source, as they open
   /// and close (one-connection sources, Phase 8's downloads).
   Stream<CastRelayConnections> get connections;
@@ -247,6 +256,13 @@ enum CastRelayFailureKind {
   couldNotStart,
 }
 
+/// A file the relay serves to the TV; [close] stops serving it.
+abstract interface class CastServedFile {
+  String get url;
+
+  Future<void> close();
+}
+
 /// The proxy's URL for a probe; [close] lets the provider's connection go.
 abstract interface class CastRelayInput {
   String get url;
@@ -294,6 +310,12 @@ final class UnavailableCastRelay implements CastRelay {
 
   @override
   Future<CastRelayInput?> openInput(CastUpstreamSource source) async => null;
+
+  @override
+  Future<CastServedFile?> servePicture(
+    String path, {
+    required String localAddress,
+  }) async => null;
 
   @override
   Stream<CastRelayConnections> get connections => const Stream.empty();

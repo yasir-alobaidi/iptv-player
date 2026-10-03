@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
-
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
+import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
@@ -21,8 +21,15 @@ import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
 import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
 import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/platform/platform_providers.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
+import 'package:iptv_player/features/casting/domain/cast_coordinator.dart';
+import 'package:iptv_player/features/casting/domain/cast_items.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
+import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
+import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
+import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -137,4 +144,51 @@ CastRelay castRelay(Ref ref) {
   );
   ref.onDispose(relay.close);
   return relay;
+}
+
+/// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
+/// Smooth interlaced. Step 7 stores them; until then, the defaults.
+@Riverpod(keepAlive: true)
+CastSettings castSettings(Ref ref) => const CastSettings();
+
+/// The TV's picture, from the app's artwork cache. `bootstrap()` points it
+/// at the cache; without one there is none.
+@Riverpod(keepAlive: true)
+CastPictures castPictures(Ref ref) => const NoCastPictures();
+
+/// What runs before the first relay start: on Windows, the dialog that
+/// explains the firewall prompt which follows (step 7). Null: nothing.
+@Riverpod(keepAlive: true)
+RelayFirewallNotice? relayFirewallNotice(Ref ref) => null;
+
+typedef RelayFirewallNotice = Future<void> Function();
+
+/// The cast session (Phase 7 step 6): the playback coordinator hands it
+/// every play while it is on.
+@Riverpod(keepAlive: true)
+CastCoordinator castCoordinator(Ref ref) {
+  final coordinator = CastCoordinator(
+    receivers: ref.watch(castReceiversProvider),
+    relay: ref.watch(castRelayProvider),
+    lookup: ref.watch(streamFactsLookupProvider),
+    encoderDetection: ref.watch(castEncoderDetectionProvider),
+    devices: ref.watch(castDeviceStoreProvider),
+    items: CastItems(
+      resolver: ref.watch(streamResolverProvider),
+      guide: ref.watch(guideServiceProvider),
+    ),
+    playback: ref.watch(playbackCoordinatorProvider),
+    classify: classifyStreamFailure,
+    log: ref.watch(appLogProvider),
+    progress: ref.watch(watchProgressProvider),
+    history: ref.watch(playbackHistoryProvider),
+    sleep: ref.watch(sleepInhibitorProvider),
+    pictures: ref.watch(castPicturesProvider),
+    settings: () => ref.read(castSettingsProvider),
+    audioLanguages: () =>
+        ref.read(playbackSettingsControllerProvider).audioLanguages,
+    beforeFirstRelay: ref.watch(relayFirewallNoticeProvider),
+  );
+  ref.onDispose(coordinator.dispose);
+  return coordinator;
 }

@@ -635,3 +635,207 @@ final class CastRelayProvider
 }
 
 String _$castRelayHash() => r'05adf9ebd69f6808860eec67bf511256ca46bbc7';
+
+/// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
+/// Smooth interlaced. Step 7 stores them; until then, the defaults.
+
+@ProviderFor(castSettings)
+final castSettingsProvider = CastSettingsProvider._();
+
+/// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
+/// Smooth interlaced. Step 7 stores them; until then, the defaults.
+
+final class CastSettingsProvider
+    extends $FunctionalProvider<CastSettings, CastSettings, CastSettings>
+    with $Provider<CastSettings> {
+  /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
+  /// Smooth interlaced. Step 7 stores them; until then, the defaults.
+  CastSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castSettingsHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastSettings> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastSettings create(Ref ref) {
+    return castSettings(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastSettings value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastSettings>(value),
+    );
+  }
+}
+
+String _$castSettingsHash() => r'df28cd78d3cf3cd145fc9738025ab7021c704e6a';
+
+/// The TV's picture, from the app's artwork cache. `bootstrap()` points it
+/// at the cache; without one there is none.
+
+@ProviderFor(castPictures)
+final castPicturesProvider = CastPicturesProvider._();
+
+/// The TV's picture, from the app's artwork cache. `bootstrap()` points it
+/// at the cache; without one there is none.
+
+final class CastPicturesProvider
+    extends $FunctionalProvider<CastPictures, CastPictures, CastPictures>
+    with $Provider<CastPictures> {
+  /// The TV's picture, from the app's artwork cache. `bootstrap()` points it
+  /// at the cache; without one there is none.
+  CastPicturesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castPicturesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castPicturesHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastPictures> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastPictures create(Ref ref) {
+    return castPictures(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastPictures value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastPictures>(value),
+    );
+  }
+}
+
+String _$castPicturesHash() => r'cc011a914b9f46564c206e2a3b285fc2742c5154';
+
+/// What runs before the first relay start: on Windows, the dialog that
+/// explains the firewall prompt which follows (step 7). Null: nothing.
+
+@ProviderFor(relayFirewallNotice)
+final relayFirewallNoticeProvider = RelayFirewallNoticeProvider._();
+
+/// What runs before the first relay start: on Windows, the dialog that
+/// explains the firewall prompt which follows (step 7). Null: nothing.
+
+final class RelayFirewallNoticeProvider
+    extends
+        $FunctionalProvider<
+          RelayFirewallNotice?,
+          RelayFirewallNotice?,
+          RelayFirewallNotice?
+        >
+    with $Provider<RelayFirewallNotice?> {
+  /// What runs before the first relay start: on Windows, the dialog that
+  /// explains the firewall prompt which follows (step 7). Null: nothing.
+  RelayFirewallNoticeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayFirewallNoticeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayFirewallNoticeHash();
+
+  @$internal
+  @override
+  $ProviderElement<RelayFirewallNotice?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RelayFirewallNotice? create(Ref ref) {
+    return relayFirewallNotice(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RelayFirewallNotice? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RelayFirewallNotice?>(value),
+    );
+  }
+}
+
+String _$relayFirewallNoticeHash() =>
+    r'afe099dc9cb73bda856dca46e74cc2358712683f';
+
+/// The cast session (Phase 7 step 6): the playback coordinator hands it
+/// every play while it is on.
+
+@ProviderFor(castCoordinator)
+final castCoordinatorProvider = CastCoordinatorProvider._();
+
+/// The cast session (Phase 7 step 6): the playback coordinator hands it
+/// every play while it is on.
+
+final class CastCoordinatorProvider
+    extends
+        $FunctionalProvider<CastCoordinator, CastCoordinator, CastCoordinator>
+    with $Provider<CastCoordinator> {
+  /// The cast session (Phase 7 step 6): the playback coordinator hands it
+  /// every play while it is on.
+  CastCoordinatorProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castCoordinatorProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castCoordinatorHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastCoordinator> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastCoordinator create(Ref ref) {
+    return castCoordinator(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastCoordinator value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastCoordinator>(value),
+    );
+  }
+}
+
+String _$castCoordinatorHash() => r'85707b0aaa844e0f711c8d9299cbaa686dfc2597';

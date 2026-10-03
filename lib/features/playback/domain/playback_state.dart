@@ -88,6 +88,19 @@ final class PlaybackEnded extends PlaybackState {
   final Playable item;
 }
 
+/// Playing on a Cast device (Phase 7 decision 2): the cast coordinator
+/// has it and the laptop's player is stopped. What the TV is doing is the
+/// cast coordinator's state.
+final class PlaybackCasting extends PlaybackState {
+  const new(this.item, {required this.deviceName});
+
+  @override
+  final Playable item;
+
+  /// "Living Room TV".
+  final String deviceName;
+}
+
 /// Where a file is, for the seek bar: reported a few times a second while
 /// it plays, and at once after a seek or a pause.
 @immutable

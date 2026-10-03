@@ -499,6 +499,61 @@ void main() {
     expect(Directory(p.join(temp.path, 'relay', '1234')).existsSync(), isFalse);
     expect(supervisor.runningCount, 0);
   });
+
+  group("the TV's picture", () {
+    late File png;
+
+    setUp(() {
+      png = File(p.join(temp.path, '9a3e0f'))
+        ..writeAsBytesSync([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    });
+
+    test(
+      "served by its type on the TV's address; gone once unserved",
+      () async {
+        final url = await runtime.servePicture(
+          png.path,
+          localAddress: '127.0.0.1',
+        );
+        expect(url, matches(RegExp(r'^http://127\.0\.0\.1:384\d\d/f/')));
+        expect(url, endsWith('/media.png'));
+        expect((await _get(url!)).status, 200);
+        await runtime.unserve(url);
+        // Nothing else served there: the server is closed.
+        await expectLater(_get(url), throwsA(isA<SocketException>()));
+      },
+    );
+
+    test('beside a session: unserving keeps the server', () async {
+      final session = await start();
+      final url = await runtime.servePicture(
+        png.path,
+        localAddress: '127.0.0.1',
+      );
+      expect(Uri.parse(url!).origin, Uri.parse(session).origin);
+      await runtime.unserve(url);
+      expect((await _get(url)).status, 404);
+      ffmpegs.single
+        ..segment()
+        ..segment();
+      expect((await _get(session)).status, 200);
+    });
+
+    test('not a picture, or no file: nothing served', () async {
+      final page = File(p.join(temp.path, 'page'))..writeAsStringSync('<html>');
+      expect(
+        await runtime.servePicture(page.path, localAddress: '127.0.0.1'),
+        isNull,
+      );
+      expect(
+        await runtime.servePicture(
+          p.join(temp.path, 'missing'),
+          localAddress: '127.0.0.1',
+        ),
+        isNull,
+      );
+    });
+  });
 }
 
 /// FFmpeg, as the test scripts it.

@@ -7,6 +7,8 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/playback/domain/remote_playback.dart';
+import 'package:iptv_player/features/playback/domain/source_connections.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 const _tag = 'playback';
@@ -76,6 +78,10 @@ final class WatchdogTimings {
 /// was after a drop, is never stalled while paused, ends in
 /// [PlaybackEnded], and saves where it was left: every 10 s while it
 /// plays, on pause, after a seek, on leaving and at the end.
+///
+/// While a cast session is on (Phase 7 decision 2), what the screens play
+/// goes to the device instead ([castStarted]), the state says
+/// [PlaybackCasting], and the laptop's player stays stopped.
 final class PlaybackCoordinator {
   new({
     required this.engine,
@@ -86,8 +92,10 @@ final class PlaybackCoordinator {
     required this._log,
     this._progress,
     PlaybackSettings Function()? settings,
+    SourceConnections? connections,
     this.timings = const WatchdogTimings(),
-  }) : _settings = settings ?? (() => const PlaybackSettings()) {
+  }) : _settings = settings ?? (() => const PlaybackSettings()),
+       connections = connections ?? SourceConnections() {
     _events = engine.events.listen(_onEvent);
   }
 
@@ -106,6 +114,10 @@ final class PlaybackCoordinator {
   final PlaybackSettings Function() _settings;
   final WatchdogTimings timings;
 
+  /// Every holder's connections per source: the player's, a cast's, and
+  /// Phase 8's downloads'.
+  final SourceConnections connections;
+
   late final StreamSubscription<PlayerEvent> _events;
   final _states = StreamController<PlaybackState>.broadcast(sync: true);
   final _timelines = StreamController<VodTimeline>.broadcast(sync: true);
@@ -120,8 +132,24 @@ final class PlaybackCoordinator {
 
   ResolvedStream? _stream;
 
-  /// The source whose stream the engine holds open right now.
-  String? _openSource;
+  /// The source whose stream the engine holds open right now, as
+  /// [connections] counts it.
+  String? _openSourceId;
+  String? get _openSource => _openSourceId;
+  set _openSource(String? id) {
+    final before = _openSourceId;
+    _openSourceId = id;
+    if (before != null && before != id) {
+      connections.set(before, StreamHolder.player, 0);
+    }
+    if (id != null) connections.set(id, StreamHolder.player, 1);
+  }
+
+  /// The cast session plays what the screens play, while one is on.
+  RemotePlayback? _remote;
+
+  /// The stream's tracks, for a cast that takes it over.
+  PlayerTracks? _tracks;
   ChannelItem? _previous;
   int _attempts = 0;
   bool _recorded = false;
@@ -177,6 +205,75 @@ final class PlaybackCoordinator {
   /// The channel before this one, for Backspace.
   ChannelItem? get previous => _previous;
 
+  /// A cast session is on: plays go to the device.
+  bool get casting => _remote != null;
+
+  /// A cast session started (decision 2): what plays here moves to it.
+  /// The laptop's stream is closed first (a one-connection source needs
+  /// it for the cast), a file's place is saved, and what the player knew
+  /// comes along. Null when nothing was playing.
+  Future<PlaybackHandover?> castStarted(RemotePlayback remote) async {
+    final item = this.item;
+    final state = _state;
+    final handover =
+        item == null ||
+            state is PlaybackIdle ||
+            state is PlaybackEnded ||
+            state is PlaybackCasting
+        ? null
+        : PlaybackHandover(
+            item: item,
+            position: item.live ? null : _position,
+            info: state is PlaybackPlaying ? await _streamInfo() : null,
+            tracks: state is PlaybackPlaying ? _tracks : null,
+          );
+    final leaving = _leaving();
+    ++_token;
+    _cancelTimers();
+    _generation = null;
+    _stream = null;
+    _remote = remote;
+    _startFile(null);
+    _set(
+      handover == null
+          ? const PlaybackIdle()
+          : PlaybackCasting(handover.item, deviceName: remote.deviceName),
+    );
+    _publish();
+    await Future.wait([engine.stop(), if (leaving != null) _save(leaving)]);
+    _openSource = null;
+    return handover;
+  }
+
+  /// What the cast shows changed on its own (it ended, failed, or the
+  /// TV's remote stopped it): the screens follow.
+  void castShows(Playable? item) {
+    final remote = _remote;
+    if (remote == null) return;
+    _set(
+      item == null
+          ? const PlaybackIdle()
+          : PlaybackCasting(item, deviceName: remote.deviceName),
+    );
+  }
+
+  /// The cast session ended: nothing plays here by itself (decision 2).
+  void castEnded() {
+    if (_remote == null) return;
+    _remote = null;
+    ++_token;
+    if (_state is PlaybackCasting) _set(const PlaybackIdle());
+  }
+
+  Future<StreamInfo?> _streamInfo() async {
+    try {
+      return await engine.streamInfo();
+    } on Object catch (error) {
+      _log.info(_tag, 'No stream info for the cast: $error');
+      return null;
+    }
+  }
+
   /// Plays [channel], replacing whatever plays now.
   Future<void> playLive(ChannelItem channel) async {
     final now = current;
@@ -208,6 +305,12 @@ final class PlaybackCoordinator {
     Duration? from, {
     bool finishedLeaving = false,
   }) async {
+    if (_remote case final remote?) {
+      ++_token;
+      _set(PlaybackCasting(item, deviceName: remote.deviceName));
+      await remote.play(item, from: from);
+      return;
+    }
     final leaving = _leaving();
     final token = ++_token;
     _attempts = 0;
@@ -225,6 +328,7 @@ final class PlaybackCoordinator {
   /// Tries again after a failure, from the first attempt; a file from
   /// where it was.
   Future<void> retry() async {
+    if (_remote case final remote?) return await remote.retry();
     final item = this.item;
     if (item == null) return;
     final token = ++_token;
@@ -236,8 +340,11 @@ final class PlaybackCoordinator {
   }
 
   /// Stops playback and lets go of the connection; a file's position is
-  /// saved first.
+  /// saved first. While casting nothing plays here, and the cast goes on:
+  /// screens stop what they showed when they are left, and only Stop
+  /// casting ends a cast.
   Future<void> stop() async {
+    if (_remote != null) return;
     final leaving = _leaving();
     ++_token;
     _cancelTimers();
@@ -252,6 +359,7 @@ final class PlaybackCoordinator {
 
   /// Moves the file playing to [position], within its length.
   Future<void> seek(Duration position) async {
+    if (_remote case final remote?) return await remote.seek(position);
     final item = this.item;
     if (item == null || item.live || _state is! PlaybackPlaying) return;
     final length = _duration ?? _knownLength(item);
@@ -271,6 +379,9 @@ final class PlaybackCoordinator {
 
   /// Pauses or resumes the file playing.
   Future<void> setPaused({required bool paused}) async {
+    if (_remote case final remote?) {
+      return await remote.setPaused(paused: paused);
+    }
     final item = this.item;
     if (item == null || item.live || _state is! PlaybackPlaying) return;
     if (paused == _paused) return;
@@ -324,6 +435,18 @@ final class PlaybackCoordinator {
       );
       if (token != _token) return;
     }
+    // Another holder's stream on the source (a cast just ended, Phase 8's
+    // downloads): the panel lets this one in only once that one closes.
+    // After the wait it opens anyway; a refusal is the watchdog's.
+    final room = await connections.room(
+      item.sourceId,
+      limit: stream.maxConnections,
+      holder: StreamHolder.player,
+    );
+    if (!room) {
+      _log.info(_tag, 'Opening while the source has every connection in use');
+    }
+    if (token != _token) return;
     _stream = stream;
     _openSource = item.sourceId;
     _generation = null;
@@ -365,6 +488,7 @@ final class PlaybackCoordinator {
         if (_awaitingOpenFor == token) {
           _generation = generation;
           _awaitingOpenFor = null;
+          _tracks = null;
         }
       case PlayerFirstFrame(:final generation):
         if (generation != _generation || item == null) return;
@@ -430,7 +554,9 @@ final class PlaybackCoordinator {
           return;
         }
         unawaited(_diagnose(item, token, message));
-      case PlayerVideoChanged() || PlayerTracks():
+      case PlayerTracks():
+        if (_generation != null) _tracks = event;
+      case PlayerVideoChanged():
         break;
     }
   }

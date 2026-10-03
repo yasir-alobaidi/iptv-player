@@ -128,6 +128,27 @@ final class IsolateCastRelay implements CastRelay {
   }
 
   @override
+  Future<CastServedFile?> servePicture(
+    String path, {
+    required String localAddress,
+  }) async {
+    if (_closed) return null;
+    Object? url;
+    try {
+      url = await _call(
+        (reply) => RelayServePictureCommand(
+          replyId: reply,
+          path: path,
+          localAddress: localAddress,
+        ),
+      );
+    } on Object catch (error) {
+      _log.info(_tag, 'The relay could not serve a picture: $error');
+    }
+    return url is String ? _Picture(this, url) : null;
+  }
+
+  @override
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
@@ -478,6 +499,25 @@ final class _Session implements CastRelaySession {
       );
     }
     unawaited(_events.close());
+  }
+}
+
+final class _Picture implements CastServedFile {
+  new(this._relay, this.url);
+
+  final IsolateCastRelay _relay;
+  var _closed = false;
+
+  @override
+  final String url;
+
+  @override
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    if (_relay._closed) return;
+    final commands = await _relay._commands;
+    commands?.send(RelayUnserveCommand(url));
   }
 }
 

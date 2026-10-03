@@ -93,7 +93,10 @@ final class CastV2Receivers implements CastReceivers {
   static const _tag = 'cast.session';
 
   @override
-  Future<CastJoinResult> join(CastAddress address) async {
+  Future<CastJoinResult> join(
+    CastAddress address, {
+    void Function(String localAddress)? onConnected,
+  }) async {
     final clock = Stopwatch()..start();
     final (channel, error) = await openCastChannel(
       address,
@@ -105,6 +108,7 @@ final class CastV2Receivers implements CastReceivers {
       log?.info(_tag, 'no connection to $address: $error');
       return CastJoinFailed(CastJoinFailure.unreachable, error);
     }
+    onConnected?.call(channel.localAddress);
     final receiver = ReceiverChannel(channel);
     final status = await receiver.status(timeout: timings.answer);
     if (status == null) {

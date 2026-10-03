@@ -49,16 +49,26 @@ class PlaybackSettingsController extends _$PlaybackSettingsController {
   }
 }
 
+/// Stream URLs built from their source at play time (docs/02).
+@Riverpod(keepAlive: true)
+StreamResolver streamResolver(Ref ref) => DbStreamResolver(
+  ref.watch(appDatabaseProvider),
+  ref.watch(sourceRepositoryProvider),
+);
+
+@Riverpod(keepAlive: true)
+PlaybackHistory playbackHistory(Ref ref) =>
+    DbPlaybackHistory(ref.watch(appDatabaseProvider));
+
 /// The app's one playback owner (docs/03).
 @Riverpod(keepAlive: true)
 PlaybackCoordinator playbackCoordinator(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
   final sources = ref.watch(sourceRepositoryProvider);
   final coordinator = PlaybackCoordinator(
     engine: ref.watch(playerEngineProvider),
-    resolver: DbStreamResolver(database, sources),
+    resolver: ref.watch(streamResolverProvider),
     prober: HttpStreamProber(sources),
-    history: DbPlaybackHistory(database),
+    history: ref.watch(playbackHistoryProvider),
     channels: ref.watch(channelRepositoryProvider),
     progress: ref.watch(watchProgressProvider),
     log: ref.watch(appLogProvider),

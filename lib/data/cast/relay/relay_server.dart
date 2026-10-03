@@ -96,11 +96,12 @@ final class RelayServer {
   }
 
   /// Serves [file] with Range requests (docs/04 "Direct file"; the
-  /// casting view's picture).
-  String serveFile(File file) {
-    final extension = p.extension(file.path).toLowerCase();
-    final token = _add(_FileRoute(file, 'media$extension'));
-    return '$origin/f/$token/media$extension';
+  /// casting view's picture), typed by [extension] (`.png`) or else its
+  /// own.
+  String serveFile(File file, {String? extension}) {
+    final type = extension ?? p.extension(file.path).toLowerCase();
+    final token = _add(_FileRoute(file, 'media$type'));
+    return '$origin/f/$token/media$type';
   }
 
   /// The token in [url], one of this server's.
@@ -150,7 +151,7 @@ final class RelayServer {
           await handler(request);
         case _FileRoute(:final file, :final name):
           if (path[2] != name) return await _notFound(response);
-          await _file(request, file, head: head);
+          await _file(request, file, name, head: head);
       }
     } on Object catch (error) {
       _log.info(
@@ -208,9 +209,12 @@ final class RelayServer {
     await response.close();
   }
 
+  /// [name] is what it is served as (`media.png`): its type, whatever
+  /// the file is called on disk (the artwork cache's have no extension).
   static Future<void> _file(
     HttpRequest request,
-    File file, {
+    File file,
+    String name, {
     required bool head,
   }) async {
     final response = request.response;
@@ -221,7 +225,7 @@ final class RelayServer {
       return await _notFound(response);
     }
     response.headers
-      ..set(HttpHeaders.contentTypeHeader, relayMimeType(file.path))
+      ..set(HttpHeaders.contentTypeHeader, relayMimeType(name))
       ..set(HttpHeaders.acceptRangesHeader, 'bytes');
     final range = request.headers.value(HttpHeaders.rangeHeader);
     final (start, end) = range == null ? (0, size - 1) : _range(range, size);
@@ -322,4 +326,28 @@ final class _FileRoute extends _Route {
 
   final File file;
   final String name;
+}
+
+/// A picture's extension from its first bytes (the artwork cache's files
+/// have none): `.jpg`, `.png` or `.webp`, the types the TV shows; null
+/// for anything else.
+String? pictureExtension(List<int> head) {
+  bool starts(List<int> magic, [int at = 0]) {
+    if (head.length < at + magic.length) return false;
+    for (var i = 0; i < magic.length; i++) {
+      if (head[at + i] != magic[i]) return false;
+    }
+    return true;
+  }
+
+  if (starts(const [0xff, 0xd8, 0xff])) return '.jpg';
+  if (starts(const [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return '.png';
+  }
+  // RIFF, a size, WEBP.
+  if (starts(const [0x52, 0x49, 0x46, 0x46]) &&
+      starts(const [0x57, 0x45, 0x42, 0x50], 8)) {
+    return '.webp';
+  }
+  return null;
 }

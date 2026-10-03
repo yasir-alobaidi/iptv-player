@@ -94,6 +94,26 @@ final class RelayCloseInputCommand {
   final String inputId;
 }
 
+/// Serve the picture at [path] to the TV at [localAddress]; the reply is
+/// its URL, or null.
+final class RelayServePictureCommand {
+  const new({
+    required this.replyId,
+    required this.path,
+    required this.localAddress,
+  });
+
+  final int replyId;
+  final String path;
+  final String localAddress;
+}
+
+final class RelayUnserveCommand {
+  const new(this.url);
+
+  final String url;
+}
+
 /// The app's answer to a [RelayResolveRequest].
 final class RelayResolveAnswer {
   const new(this.requestId, this.resolved);
@@ -221,6 +241,18 @@ Future<void> relayIsolateMain(RelayIsolateSetup setup) async {
         app.send(RelayReply(message.replyId, url));
       case RelayCloseInputCommand(:final inputId):
         runtime.closeInput(inputId);
+      case RelayServePictureCommand(
+        :final replyId,
+        :final path,
+        :final localAddress,
+      ):
+        unawaited(
+          runtime
+              .servePicture(path, localAddress: localAddress)
+              .then((url) => app.send(RelayReply(replyId, url))),
+        );
+      case RelayUnserveCommand(:final url):
+        unawaited(runtime.unserve(url));
       case RelayResolveAnswer(:final requestId, :final resolved):
         final answer = asked[requestId];
         if (answer != null && !answer.isCompleted) answer.complete(resolved);

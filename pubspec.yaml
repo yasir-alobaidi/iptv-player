@@ -10,6 +10,8 @@ environment:
 # Versions: docs/decisions.md ADR-002 (flutter_svg: ADR-008).
 dependencies:
   bonsoir: ^7.1.5
+  # Sleep held off while casting, over the desktop portal or logind (ADR-014).
+  dbus: ^0.7.15
   desktop_drop: ^0.8.4
   dio: ^5.11.1
   drift: ^2.35.0

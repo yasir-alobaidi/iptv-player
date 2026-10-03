@@ -33,6 +33,7 @@ import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/design/fonts.dart';
+import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -74,8 +75,9 @@ Future<void> bootstrap() async {
   final uiPreferences = await _loadUiPreferences(settings, log);
   final firstRun = await _hasNoSources(database, log);
 
+  final window = AppWindow(store: windowBounds, log: log);
   try {
-    await AppWindow(store: windowBounds, log: log).setUp();
+    await window.setUp();
   } on Object catch (error, stackTrace) {
     // A window we could not size still opens; failing to start would be
     // worse than a wrong size.
@@ -106,8 +108,10 @@ Future<void> bootstrap() async {
       startLocationProvider.overrideWithValue(
         firstRun ? welcomeRoutePath : '/',
       ),
-      if (artwork != null)
+      if (artwork != null) ...[
         artworkImagesProvider.overrideWithValue(CachedArtworkImages(artwork)),
+        castPicturesProvider.overrideWithValue(ArtworkCastPictures(artwork)),
+      ],
       if (paths != null) ...[
         processFolderProvider.overrideWithValue(paths.processes),
         castFolderProvider.overrideWithValue(paths.cast),
@@ -128,6 +132,7 @@ Future<void> bootstrap() async {
               sweepRelayFolders(container.read(relayFolderProvider), log: log),
         ),
   );
+  window.beforeClose = () => _quit(container, log);
   runApp(
     UncontrolledProviderScope(
       container: container,
@@ -135,6 +140,22 @@ Future<void> bootstrap() async {
     ),
   );
   _syncAfterLaunch(container, artwork);
+}
+
+/// What quitting stops, of what ran: the cast (its TV goes home), the
+/// relay and its FFmpegs, every other supervised process (hard rule 8).
+Future<void> _quit(ProviderContainer container, AppLog log) async {
+  final clock = Stopwatch()..start();
+  if (container.exists(castCoordinatorProvider)) {
+    await container.read(castCoordinatorProvider).shutdown();
+  }
+  if (container.exists(castRelayProvider)) {
+    await container.read(castRelayProvider).close();
+  }
+  if (container.exists(processSupervisorProvider)) {
+    await container.read(processSupervisorProvider).stopAll();
+  }
+  log.info('bootstrap', 'Quit in ${clock.elapsedMilliseconds} ms');
 }
 
 /// Waits for the first frame and a moment after it, so starting up never

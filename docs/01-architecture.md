@@ -152,6 +152,13 @@ abstract interface class LibraryRepository {
 ## Runtime flow: casting
 See docs/04-casting.md. `CastCoordinator` owns the device session, relay lifecycle, local-player suspension, and sleep inhibition.
 
+As built (Phase 7 step 6, ADR-014):
+1. Cast (step 7's picker) → `CastCoordinator.connect(device)`. The playback coordinator hands over what plays (`castStarted`: the laptop's stream closed first, the item, a file's place, the player's facts) and from then on passes every play to the cast (`RemotePlayback`); its state is `PlaybackCasting`.
+2. The join (connect, then the running receiver or a LAUNCH), the encoder detection and the stream's facts run side by side; the relay starts on the connection's local address as soon as it is up, so its first segments are made while the TV launches.
+3. `planCast` → a direct LOAD, or the relay and its LOAD once ready. The coordinator then follows the TV (playing, paused, finished, stopped, refused) and the relay (fetched, opened, a codec change, failed), learns what the device refuses, and keeps a file's place.
+4. Stop casting (`disconnect`) ends the session; nothing plays on the laptop by itself. Quitting the app does the same within 4 s (the window's close waits for it).
+5. `SourceConnections` counts each source's connections by holder (the player, the cast, Phase 8's downloads), so a one-connection source never gets two.
+
 ## Runtime flow: download
 1. User presses Download (or D) on a movie or episode → `DownloadService.enqueue()` stores the task (item reference only, never the URL).
 2. `DownloadQueue` asks the `PlaybackCoordinator` for a connection on that source; if none is free, the task waits.

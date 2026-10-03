@@ -212,6 +212,38 @@ void main() {
     });
   });
 
+  group("a picture (LOAD's metadata)", () {
+    test('typed from its first bytes', () {
+      expect(pictureExtension([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]), '.jpg');
+      expect(
+        pictureExtension([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]),
+        '.png',
+      );
+      expect(
+        pictureExtension(ascii.encode('RIFF\x10\x00\x00\x00WEBPVP8 ')),
+        '.webp',
+      );
+      expect(
+        pictureExtension(ascii.encode('RIFF\x10\x00\x00\x00WAVEfmt ')),
+        isNull,
+      );
+      expect(pictureExtension(ascii.encode('<html>')), isNull);
+      expect(pictureExtension(const [0xff, 0xd8]), isNull);
+      expect(pictureExtension(const []), isNull);
+    });
+
+    test('a cached file without an extension, served as its type', () async {
+      final cached = File('${folder.path}/5f0c2a1b9e3d4c77')
+        ..writeAsBytesSync([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      final url = server.serveFile(cached, extension: '.png');
+      expect(url, endsWith('/media.png'));
+      final answer = await _get(url);
+      expect(answer.status, 200);
+      expect(answer.header('content-type'), 'image/png');
+      expect(answer.header('access-control-allow-origin'), '*');
+    });
+  });
+
   test('OPTIONS anywhere: 204 and the CORS headers', () async {
     final answer = await _get('${server.origin}/anything', method: 'OPTIONS');
     expect(answer.status, 204);

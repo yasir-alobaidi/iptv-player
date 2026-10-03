@@ -113,8 +113,8 @@ final class DbStreamResolver implements StreamResolver {
       final limit =
           source.maxConnectionsOverride ?? account?.maxConnections ?? 1;
       final maxConnections = limit < 1 ? 1 : limit;
-      final userAgent =
-          source.userAgent ?? _userAgent(row.extras) ?? defaultUserAgent;
+      final ownAgent = source.userAgent ?? _userAgent(row.extras);
+      final userAgent = ownAgent ?? defaultUserAgent;
       switch (source.type) {
         case SourceType.xtream:
           final (:url, :hls) = xtream(credentials, source);
@@ -123,6 +123,7 @@ final class DbStreamResolver implements StreamResolver {
             userAgent: userAgent,
             hls: hls,
             maxConnections: maxConnections,
+            customUserAgent: ownAgent != null,
           );
         case SourceType.m3uUrl || SourceType.m3uFile:
           final template = row.template;
@@ -135,6 +136,7 @@ final class DbStreamResolver implements StreamResolver {
             userAgent: userAgent,
             hls: Uri.tryParse(url)?.path.endsWith('.m3u8') ?? false,
             maxConnections: maxConnections,
+            customUserAgent: ownAgent != null,
           );
       }
     });
