@@ -5,6 +5,7 @@ import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/relay/relay_args.dart';
 import 'package:iptv_player/data/cast/relay/relay_job.dart';
+import 'package:path/path.dart' as p;
 
 /// The relay's command lines: docs/04's input options and muxers around
 /// the plan's maps and codecs, with the proxy, never the provider, as the
@@ -65,8 +66,8 @@ void main() {
         ...['-f', 'hls', '-hls_time', '2', '-hls_list_size', '6'],
         ...['-hls_flags', 'delete_segments+independent_segments+omit_endlist'],
         ...['-hls_segment_type', 'mpegts'],
-        ...['-hls_segment_filename', '/r/cast-1-0/seg%05d.ts'],
-        '/r/cast-1-0/index.m3u8',
+        ...['-hls_segment_filename', p.join('/r/cast-1-0', 'seg%05d.ts')],
+        p.join('/r/cast-1-0', 'index.m3u8'),
       ]);
     });
 

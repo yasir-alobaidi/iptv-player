@@ -274,8 +274,10 @@ void main() {
       },
     );
 
-    test('a provider that does not answer is tried again', () async {
-      await provider.close();
+    test('a provider that hangs up without answering is tried again', () async {
+      // Not a closed port: Windows refuses one only after about 2 s, past
+      // the first segment's wait here.
+      provider.hangUp = true;
       await start();
       final ffmpeg = ffmpegs.single;
       expect((await _get(ffmpeg.input)).status, 502);
@@ -581,6 +583,10 @@ final class _Ffmpeg implements Process {
 final class _Provider {
   new _(this._server) {
     _server.listen((request) async {
+      if (hangUp) {
+        final socket = await request.response.detachSocket(writeHeaders: false);
+        return socket.destroy();
+      }
       final (status, words) = answer;
       request.response
         ..statusCode = status
@@ -594,6 +600,9 @@ final class _Provider {
 
   final HttpServer _server;
   (int, String) answer = (200, 'ts');
+
+  /// Drops every connection before answering.
+  bool hangUp = false;
 
   late final int _port = _server.port;
 

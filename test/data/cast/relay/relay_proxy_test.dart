@@ -22,7 +22,9 @@ void main() {
   late Map<String, int> resolved;
 
   const timings = RelayProxyTimings(
-    connect: Duration(seconds: 2),
+    // Over 2 s: Windows refuses a closed loopback port only after about
+    // 2 s (it sends the SYN again), which a shorter wait calls a timeout.
+    connect: Duration(seconds: 5),
     idle: Duration(milliseconds: 600),
     slotWait: Duration(milliseconds: 800),
     resolve: Duration(seconds: 2),

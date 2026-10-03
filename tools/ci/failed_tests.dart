@@ -9,6 +9,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 void main(List<String> args) {
   if (args.length != 1) {
@@ -74,17 +75,31 @@ void main(List<String> args) {
       root,
     );
     final name = test?.name ?? 'test $id';
-    var error = (errors[id] ?? '').trim().split('\n').first;
+    var error = _paragraph(errors[id] ?? '');
     if (error.startsWith(_seeAbove)) {
       error = _caught(prints[id] ?? const []) ?? error;
+    } else if (error.startsWith('TimeoutException')) {
+      // What the test had said by then: where it was waiting.
+      final said = prints[id] ?? const <String>[];
+      if (said.isNotEmpty) {
+        error = [error, ...said.skip(max(0, said.length - 8))].join('\n');
+      }
     }
-    final shown = error.length > 300 ? '${error.substring(0, 300)}…' : error;
+    final shown = error.length > 1500 ? '${error.substring(0, 1500)}…' : error;
     stdout.writeln(
       '::error file=${_property(path)},title=Failed test::'
       '${_message('$name${shown.isEmpty ? '' : ' — $shown'}')}',
     );
   }
   stdout.writeln('${failed.length} failed of ${tests.length} tests');
+}
+
+/// An error's first paragraph: a matcher's Expected, Actual and Which
+/// lines, without the stack under them.
+String _paragraph(String error) {
+  final lines = error.trim().split('\n');
+  final end = lines.indexWhere((line) => line.trim().isEmpty);
+  return lines.take(end < 0 ? lines.length : end).join('\n').trimRight();
 }
 
 /// What a widget test reports when the framework caught the failure: the

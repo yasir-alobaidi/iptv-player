@@ -696,6 +696,11 @@ void main() {
   });
 
   test('cancel stops the run and leaves a consistent catalogue', () async {
+    // Where it waited, should it time out (it does on Windows CI now and
+    // then: docs/progress.md, Known issues).
+    final clock = Stopwatch()..start();
+    void mark(String what) =>
+        printOnFailure('$what at ${clock.elapsedMilliseconds} ms');
     final env = await _Env.open();
     final lines = StringBuffer('#EXTM3U\n');
     for (var i = 0; i < 20000; i++) {
@@ -713,9 +718,12 @@ void main() {
       }
     });
 
+    mark('playlist written');
     final result = env.engine.sync(id);
     await writing.future;
+    mark('channels being written');
     await env.engine.cancel(id);
+    mark('cancel answered');
     await watching.cancel();
 
     expect((await result).failureOrNull, isA<CancelledFailure>());
@@ -727,9 +735,11 @@ void main() {
     // Whole batches only.
     expect(written % 50, 0);
     await _checkSearchIndexes(env.db);
+    mark('checked');
 
     // And the next sync picks up cleanly.
     expect((await env.engine.sync(id)).valueOrNull!.channels, 20000);
+    mark('synced again');
     expect(await env.db.channelsDao.countFor(id), 20000);
   });
 
