@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/painting.dart';
+import 'package:path/path.dart' as p;
 
 /// Where the app's pictures come from: posters, logos, backdrops, stills
 /// (Phase 5 decision 6). Screens ask this for an [ImageProvider] and never
@@ -26,9 +29,30 @@ final class NetworkArtworkImages implements ArtworkImages {
     double? width,
     double devicePixelRatio = 1,
   }) {
+    if (fileArtwork(url, width, devicePixelRatio) case final file?) {
+      return file;
+    }
     if (!isArtworkUrl(url)) return null;
     return decodedAt(NetworkImage(url!), width, devicePixelRatio);
   }
+}
+
+/// A picture on this computer as artwork's URL (a library video's frame,
+/// a downloaded title's poster, a show folder's): screens pass it to
+/// `artworkFor` like any other (Phase 8 step 6).
+String localArtworkUrl(String path) => Uri.file(p.absolute(path)).toString();
+
+/// A [localArtworkUrl] read from disk, decoded at the size drawn; null for
+/// any other URL. Never through the network cache: the file is already
+/// here.
+ImageProvider? fileArtwork(
+  String? url,
+  double? width,
+  double devicePixelRatio,
+) {
+  final uri = url == null ? null : Uri.tryParse(url);
+  if (uri == null || uri.scheme != 'file') return null;
+  return decodedAt(FileImage(File(uri.toFilePath())), width, devicePixelRatio);
 }
 
 /// Only http(s) URLs can be fetched; a junk icon (`n/a`, `about:blank`,

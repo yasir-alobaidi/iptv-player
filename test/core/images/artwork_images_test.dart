@@ -4,8 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
+  test('a picture on this computer is read from disk, decoded at the size '
+      "drawn; a file: URL that isn't one of ours is no picture", () {
+    final path = p.join('films', 'Paper Kites (2019)', 'poster.jpg');
+    final url = localArtworkUrl(path);
+    expect(url, startsWith('file://'));
+    final image = const NetworkArtworkImages().image(
+      url,
+      width: 100,
+      devicePixelRatio: 2,
+    );
+    expect(image, isA<ResizeImage>());
+    final file = (image! as ResizeImage).imageProvider as FileImage;
+    expect(file.file.path, p.absolute(path));
+    expect((image as ResizeImage).width, 200);
+    expect(fileArtwork('https://img.test/a.jpg', 100, 1), isNull);
+  });
+
   test('only http(s) URLs with a host are pictures', () {
     expect(isArtworkUrl('https://img.test/a.jpg'), isTrue);
     expect(isArtworkUrl('http://127.0.0.1:8899/art/movie/1.jpg'), isTrue);

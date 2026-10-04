@@ -24,6 +24,7 @@ import 'package:path/path.dart' as p;
 import 'package:watcher/watcher.dart';
 
 import '../../data/cast/relay/relay_rig.dart' show relayBinaries;
+import '../vod/vod_test_support.dart' show addSource;
 
 void main() {
   final log = AppLog(output: MemoryOutput(), secrets: SecretRegistry());
@@ -178,6 +179,217 @@ void main() {
     File make(String path) => File(path)
       ..createSync(recursive: true)
       ..writeAsStringSync('video ${path.hashCode}');
+
+    group('the lists', () {
+      late int hdd;
+      late int usb;
+      late int dl;
+
+      Future<int> add(
+        int folder,
+        String title, {
+        LibraryKind kind = LibraryKind.movie,
+        int size = 1,
+        String? show,
+        int? season,
+        int? episode,
+        String? remoteKey,
+        String? seriesKey,
+        bool hidden = false,
+      }) => db.libraryDao.insertItem(
+        LibraryItemsCompanion.insert(
+          folderId: folder,
+          relPath: '$title ${show ?? ''} $season $episode.mkv',
+          sizeBytes: size,
+          mtime: 0,
+          quickHash: 'h-$title-$show-$season-$episode',
+          kind: kind,
+          title: title,
+          addedAt: DateTime.utc(2026),
+          showTitle: Value(show),
+          season: Value(season),
+          episode: Value(episode),
+          isHidden: Value(hidden),
+          providerSourceId: Value(remoteKey == null ? null : 'src'),
+          providerItemType: Value(
+            remoteKey == null
+                ? null
+                : kind == LibraryKind.episode
+                ? VodType.episode
+                : VodType.movie,
+          ),
+          providerRemoteKey: Value(remoteKey),
+          providerSeriesKey: Value(seriesKey),
+        ),
+      );
+
+      setUp(() async {
+        await addSource(db, 'src');
+        hdd = await db.libraryDao.addFolder(
+          path: p.join(temp.path, 'hdd'),
+          label: 'Movies HDD',
+          at: DateTime.utc(2026),
+        );
+        usb = await db.libraryDao.addFolder(
+          path: p.join(temp.path, 'usb'),
+          label: 'USB drive',
+          at: DateTime.utc(2026),
+        );
+        dl = (await db.libraryDao.folderByPath(downloads))!.id;
+        await add(hdd, 'Paper Kites', size: 100);
+        await add(hdd, 'Night Bus', size: 50);
+        await add(hdd, 'Secret', size: 7, hidden: true);
+        await add(dl, 'Copper Hollow', size: 200, remoteKey: '100000');
+        await add(hdd, 'Birthday', kind: LibraryKind.unsorted);
+        for (final (season, episode) in [(1, 1), (1, 2), (2, 1)]) {
+          await add(
+            hdd,
+            'Episode $episode',
+            kind: LibraryKind.episode,
+            show: 'Kettle Bay',
+            season: season,
+            episode: episode,
+          );
+        }
+        await add(
+          usb,
+          'Episode 2',
+          kind: LibraryKind.episode,
+          show: 'kettle bay',
+          season: 2,
+          episode: 2,
+        );
+        for (final episode in [4, 5]) {
+          await add(
+            dl,
+            'Glass Tide $episode',
+            kind: LibraryKind.episode,
+            show: 'Glass Tide',
+            season: 2,
+            episode: episode,
+            remoteKey: '72$episode',
+            seriesKey: '77',
+          );
+        }
+      });
+
+      const movies = LibraryQuery(kind: LibraryKind.movie);
+
+      test("a list's count and size by origin, hidden ones left out; the "
+          'revision moves when only the history changes', () async {
+        Future<LibraryCount> count(LibraryQuery query) =>
+            library.watchCount(query).first;
+        final all = await count(movies);
+        expect((all.count, all.bytes), (3, 350));
+        final downloaded = await count(
+          const LibraryQuery(
+            kind: LibraryKind.movie,
+            origin: LibraryOrigin.downloaded,
+          ),
+        );
+        expect((downloaded.count, downloaded.bytes), (1, 200));
+        final own = await count(
+          const LibraryQuery(
+            kind: LibraryKind.movie,
+            origin: LibraryOrigin.localFolders,
+          ),
+        );
+        expect((own.count, own.bytes), (2, 150));
+        expect(
+          (await count(const LibraryQuery(kind: LibraryKind.unsorted))).count,
+          1,
+        );
+
+        final seen = <LibraryCount>[];
+        final watching = library.watchCount(movies).listen(seen.add);
+        await pumpEventQueue();
+        await db.watchHistoryDao.touchLocal(
+          'h-Paper Kites-null-null-null',
+          DateTime.utc(2026),
+          positionMs: 60000,
+        );
+        await pumpEventQueue();
+        await watching.cancel();
+        expect(seen.map((c) => c.count), [3, 3]);
+        expect(seen.last.revision, greaterThan(seen.first.revision));
+      });
+
+      test('a window of a list, in its order, with each file path', () async {
+        final page = (await library.range(movies, 0, 10)).valueOrNull!;
+        expect(page.map((i) => i.title), [
+          'Copper Hollow',
+          'Night Bus',
+          'Paper Kites',
+        ]);
+        expect(page.first.downloaded, isTrue);
+        expect(page.last.path, startsWith(p.join(temp.path, 'hdd')));
+        final middle = (await library.range(movies, 1, 1)).valueOrNull!;
+        expect(middle.single.title, 'Night Bus');
+        expect((await library.range(movies, 9, 5)).valueOrNull, isEmpty);
+      });
+
+      test("shows: the user's episodes by title across folders, a "
+          "provider series' downloads by series; one show's episodes in "
+          'order', () async {
+        final shows = await library.watchShows().first;
+        expect(shows.map((s) => s.title), ['Glass Tide', 'Kettle Bay']);
+        final glass = shows.first;
+        expect(glass.downloaded, isTrue);
+        expect((glass.episodes, glass.seasons), (2, 1));
+        expect(
+          (glass.providerSourceId, glass.providerSeriesKey),
+          ('src', '77'),
+        );
+        expect(glass.folderId, dl);
+        final kettle = shows.last;
+        expect(kettle.downloaded, isFalse);
+        expect((kettle.episodes, kettle.seasons), (4, 2));
+        expect(kettle.folderId, isNull, reason: 'in two folders');
+        expect(kettle.available, isTrue);
+
+        expect(
+          (await library.watchShows(origin: LibraryOrigin.localFolders).first)
+              .map((s) => s.title),
+          ['Kettle Bay'],
+        );
+        expect(
+          (await library.watchShows(origin: LibraryOrigin.downloaded).first)
+              .map((s) => s.title),
+          ['Glass Tide'],
+        );
+
+        final episodes = await library.watchShowEpisodes(kettle.key).first;
+        expect(episodes.map((e) => (e.season, e.episode)), [
+          (1, 1),
+          (1, 2),
+          (2, 1),
+          (2, 2),
+        ]);
+        expect(episodes.last.path, startsWith(p.join(temp.path, 'usb')));
+        expect((await library.watchShowEpisodes(glass.key).first).length, 2);
+
+        // Every episode on a drive that isn't connected: the show is too.
+        for (final e in episodes) {
+          await db.libraryDao.changeItem(
+            e.id,
+            LibraryItemsCompanion(unavailableSince: Value(DateTime.utc(2026))),
+          );
+        }
+        expect(
+          (await library.watchShows(origin: LibraryOrigin.localFolders).first)
+              .single
+              .available,
+          isFalse,
+        );
+      });
+
+      test("every folder's videos and size, hidden ones too", () async {
+        final totals = await library.watchFolderTotals().first;
+        expect(totals[hdd], (items: 7, bytes: 161));
+        expect(totals[usb], (items: 1, bytes: 1));
+        expect(totals[dl], (items: 3, bytes: 202));
+      });
+    });
 
     test('folders: added once, never one inside another, renamed; the '
         'download folder stays', () async {

@@ -39,6 +39,103 @@ final class LibraryQuery {
   int get hashCode => Object.hash(kind, origin, hidden, folderId);
 }
 
+/// How many items a Library list holds and their size on disk (the
+/// header's "42 movies · 186 GB on this computer"). [revision] moves with
+/// every change to the library or its history, so a grid reads its pages
+/// again even when the count stays.
+@immutable
+final class LibraryCount {
+  const new({required this.count, required this.bytes, this.revision = 0});
+
+  final int count;
+  final int bytes;
+  final int revision;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LibraryCount &&
+      other.count == count &&
+      other.bytes == bytes &&
+      other.revision == revision;
+
+  @override
+  int get hashCode => Object.hash(count, bytes, revision);
+}
+
+/// A show of the Library's Series tab (sketch B): the user's own episodes
+/// of one show, across folders, or the downloaded episodes of one of a
+/// provider's series.
+@immutable
+final class LibraryShow {
+  const new({
+    required this.key,
+    required this.title,
+    required this.episodes,
+    required this.seasons,
+    required this.bytes,
+    this.artworkPath,
+    this.folderId,
+    this.downloaded = false,
+    this.providerSourceId,
+    this.providerSeriesKey,
+    this.available = true,
+  });
+
+  /// The same show from one read to the next.
+  final String key;
+  final String title;
+  final int episodes;
+  final int seasons;
+  final int bytes;
+
+  /// A poster on disk (the show folder's, or a download's).
+  final String? artworkPath;
+
+  /// Its folder, when all its episodes are in one; null across several.
+  final int? folderId;
+  final bool downloaded;
+
+  /// The provider's series its downloads came from.
+  final String? providerSourceId;
+  final String? providerSeriesKey;
+
+  /// False when none of its episodes is on a drive that is connected.
+  final bool available;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LibraryShow &&
+      other.key == key &&
+      other.title == title &&
+      other.episodes == episodes &&
+      other.seasons == seasons &&
+      other.bytes == bytes &&
+      other.artworkPath == artworkPath &&
+      other.folderId == folderId &&
+      other.downloaded == downloaded &&
+      other.providerSourceId == providerSourceId &&
+      other.providerSeriesKey == providerSeriesKey &&
+      other.available == available;
+
+  @override
+  int get hashCode => Object.hash(
+    key,
+    title,
+    episodes,
+    seasons,
+    bytes,
+    artworkPath,
+    folderId,
+    downloaded,
+    providerSourceId,
+    providerSeriesKey,
+    available,
+  );
+}
+
+/// A folder's videos and their size (the folder rows: "1,204 videos").
+typedef LibraryFolderTotals = ({int items, int bytes});
+
 /// How a Delete file went (docs/09).
 enum DeleteOutcome {
   /// In the system's trash, from where the user can put it back.
@@ -59,6 +156,28 @@ abstract interface class LibraryRepository {
   Stream<List<LibraryFolder>> watchFolders();
 
   Stream<List<LibraryItem>> watch(LibraryQuery query);
+
+  /// [query]'s count and size now, then on every change.
+  Stream<LibraryCount> watchCount(LibraryQuery query);
+
+  /// [limit] of [query]'s items from [offset], in [watch]'s order: a grid
+  /// reads its window, never the whole list (hard rule 2).
+  Future<Result<List<LibraryItem>>> range(
+    LibraryQuery query,
+    int offset,
+    int limit,
+  );
+
+  /// The Series tab's shows, by title.
+  Stream<List<LibraryShow>> watchShows({
+    LibraryOrigin origin = LibraryOrigin.all,
+  });
+
+  /// The episodes of the show keyed [showKey], by season and episode.
+  Stream<List<LibraryItem>> watchShowEpisodes(String showKey);
+
+  /// Every folder's videos and their size.
+  Stream<Map<int, LibraryFolderTotals>> watchFolderTotals();
 
   /// One item; null when it isn't in the library.
   Future<LibraryItem?> item(int itemId);

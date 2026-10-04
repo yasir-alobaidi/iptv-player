@@ -8,6 +8,7 @@ import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/table_changes.dart';
 import 'package:iptv_player/data/library/library_scan.dart';
 import 'package:iptv_player/data/library/name_parser.dart';
 import 'package:iptv_player/data/library/system_trash.dart';
@@ -42,11 +43,7 @@ final class DbLibraryRepository implements LibraryRepository {
       kind: query.kind,
       hidden: query.hidden,
       folderId: query.folderId,
-      downloaded: switch (query.origin) {
-        LibraryOrigin.all => null,
-        LibraryOrigin.downloaded => true,
-        LibraryOrigin.localFolders => false,
-      },
+      downloaded: _downloaded(query.origin),
     );
     return Stream.multi((listener) {
       var folders = <int, LibraryFolderRow>{};
@@ -74,6 +71,115 @@ final class DbLibraryRepository implements LibraryRepository {
       };
     });
   }
+
+  @override
+  Stream<LibraryCount> watchCount(LibraryQuery query) {
+    var revision = 0;
+    return tableChanges(_db, {
+      _db.libraryItems,
+      _db.libraryFolders,
+      _db.watchHistory,
+      _db.favorites,
+    }).asyncMap((_) async {
+      final totals = await _db.libraryDao
+          .watchTotals(
+            kind: query.kind,
+            hidden: query.hidden,
+            folderId: query.folderId,
+            downloaded: _downloaded(query.origin),
+          )
+          .first;
+      return LibraryCount(
+        count: totals.items,
+        bytes: totals.bytes,
+        revision: revision++,
+      );
+    });
+  }
+
+  @override
+  Future<Result<List<LibraryItem>>> range(
+    LibraryQuery query,
+    int offset,
+    int limit,
+  ) => Result.guard(() async {
+    final rows = await _db.libraryDao.itemWindow(
+      offset: offset,
+      limit: limit,
+      kind: query.kind,
+      hidden: query.hidden,
+      folderId: query.folderId,
+      downloaded: _downloaded(query.origin),
+    );
+    final folders = {for (final f in await _db.libraryDao.folders()) f.id: f};
+    return [
+      for (final row in rows) libraryItemFromRow(row, folders[row.folderId]),
+    ];
+  });
+
+  @override
+  Stream<List<LibraryShow>> watchShows({
+    LibraryOrigin origin = LibraryOrigin.all,
+  }) => _db.libraryDao
+      .watchShows(downloaded: _downloaded(origin))
+      .map(
+        (rows) => [
+          for (final row in rows)
+            LibraryShow(
+              key: row.key,
+              title: row.title,
+              episodes: row.episodes,
+              seasons: row.seasons,
+              bytes: row.bytes,
+              artworkPath: row.artworkPath,
+              folderId: row.folders == 1 ? row.folderId : null,
+              downloaded: row.downloaded,
+              providerSourceId: row.downloaded ? row.sourceId : null,
+              providerSeriesKey: row.downloaded ? row.seriesKey : null,
+              available: row.available > 0,
+            ),
+        ],
+      );
+
+  @override
+  Stream<List<LibraryItem>> watchShowEpisodes(String showKey) => Stream.multi((
+    listener,
+  ) {
+    var folders = <int, LibraryFolderRow>{};
+    List<LibraryItemRow>? rows;
+    void emit() {
+      final list = rows;
+      if (list == null) return;
+      listener.add([
+        for (final row in list) libraryItemFromRow(row, folders[row.folderId]),
+      ]);
+    }
+
+    final watchingFolders = _db.libraryDao.watchFolders().listen((list) {
+      folders = {for (final f in list) f.id: f};
+      emit();
+    }, onError: listener.addError);
+    final watchingItems = _db.libraryDao.watchShowEpisodes(showKey).listen((
+      list,
+    ) {
+      rows = list;
+      emit();
+    }, onError: listener.addError);
+    listener.onCancel = () async {
+      await watchingFolders.cancel();
+      await watchingItems.cancel();
+    };
+  });
+
+  @override
+  Stream<Map<int, LibraryFolderTotals>> watchFolderTotals() =>
+      _db.libraryDao.watchFolderTotals();
+
+  static bool? _downloaded(LibraryOrigin origin) => switch (origin) {
+    LibraryOrigin.all => null,
+    LibraryOrigin.downloaded => true,
+    LibraryOrigin.localFolders => false,
+  };
 
   @override
   Future<LibraryItem?> item(int itemId) async {

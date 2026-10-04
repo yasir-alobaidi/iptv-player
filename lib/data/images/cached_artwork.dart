@@ -18,6 +18,9 @@ final class CachedArtworkImages implements ArtworkImages {
     double? width,
     double devicePixelRatio = 1,
   }) {
+    if (fileArtwork(url, width, devicePixelRatio) case final file?) {
+      return file;
+    }
     if (!isArtworkUrl(url)) return null;
     return decodedAt(CachedArtwork(url!, _cache), width, devicePixelRatio);
   }
