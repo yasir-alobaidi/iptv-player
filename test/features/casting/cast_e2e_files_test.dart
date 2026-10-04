@@ -34,13 +34,16 @@ void main() {
   test(
     'a Matroska movie from its place, a seek, Stop casting: its place kept',
     () async {
+      // Inside CI's 2-minute samples as well as this laptop's 10.
+      const from = Duration(seconds: 20);
+      const seekTo = Duration(seconds: 80);
       rig = await CastE2E.start();
       await rig.coordinator.connect(rig.device);
       await rig.phase(CastPhase.idle);
       unawaited(
         rig.playback.playVod(
           PlayableMovie(panelMovie(100001, 'mkv')),
-          from: const Duration(minutes: 1),
+          from: from,
         ),
       );
       await rig.tvPlaying(checks: 1);
@@ -49,14 +52,11 @@ void main() {
       expect(plan.delivery, CastDelivery.relayContinuous);
       expect(plan.audio, isA<CastAudioToAac>());
       expect(rig.tv.checks.last.audioCodec, 'aac');
-      expect(
-        rig.coordinator.timeline.position,
-        greaterThanOrEqualTo(const Duration(minutes: 1)),
-      );
+      expect(rig.coordinator.timeline.position, greaterThanOrEqualTo(from));
       expect(rig.coordinator.timeline.duration, isNotNull);
 
       final first = rig.tv.loaded!['contentId'];
-      await rig.playback.seek(const Duration(minutes: 5));
+      await rig.playback.seek(seekTo);
       await until(
         // Between FINISHED and the new LOAD the TV holds no media.
         () => (rig.tv.loaded?['contentId'] ?? first) != first,
@@ -65,16 +65,10 @@ void main() {
       final checked = rig.tv.checks.length;
       await rig.tvPlaying(after: checked, checks: 1);
       await rig.phase(CastPhase.playing);
-      expect(
-        rig.coordinator.timeline.position,
-        greaterThanOrEqualTo(const Duration(minutes: 5)),
-      );
+      expect(rig.coordinator.timeline.position, greaterThanOrEqualTo(seekTo));
 
       await rig.coordinator.disconnect();
-      expect(
-        rig.progress.lastPosition,
-        greaterThanOrEqualTo(const Duration(minutes: 5)),
-      );
+      expect(rig.progress.lastPosition, greaterThanOrEqualTo(seekTo));
       await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
     },
     skip:
