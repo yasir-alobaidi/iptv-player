@@ -47,6 +47,16 @@ Plex/Jellyfin-style, so other apps can read the folder too:
 ```
 Filenames: remove characters Windows rejects (`< > : " / \ | ? *`, control characters), trailing dots and spaces, and reserved names (CON, NUL, COM1 …); cap each path part at 120 characters and the full path at 240 on Windows; add ` (2)` on a name collision.
 
+### As built (Phase 8 step 3; ADR-015)
+- **Where things run:** the queue (`DownloadQueue`, `lib/features/downloads/domain/`) in the app's isolate; the bytes in the downloads isolate (`IsolateDownloadRunner`), which asks the app for the URL on every connection; the finisher (`FileDownloadFinisher`) and the store (`DbDownloadStore`) on the app's database.
+- **Connections:** downloads give way (`SourceConnections.giveWay`): the newest download on a source stops the moment the player or a cast asks for room there; downloads come back 10 s after the source is free again.
+- **The file is forced to disk every 64 MB** (and on pause and at the end), not 8: at 8 MB the syncs halved the speed. The row's progress is written every 8 MB; at launch the `.part`'s size wins.
+- **A 416 names the file's size:** when the `.part` has it, the download is whole.
+- **Cancel** deletes the `.part` and takes the download off the list.
+- **ffprobe that can't run** leaves the size check alone; only ffprobe reading nothing, or no length, makes a file damaged.
+- **HLS** goes through a loopback proxy in the downloads isolate (no credentials in FFmpeg's arguments) into Matroska.
+- **Measured:** 99.6 % of curl at 1 Gbps and 100 Mbps; memory over 4 GB at 1 Gbps +20–31 MB, flat across the file.
+
 ## Local library (lib/data/library/)
 | Component | Responsibility |
 |---|---|

@@ -235,14 +235,23 @@ void main() {
     },
   );
 
-  test('flushes every 8 MB: what is durable says so', () async {
-    final run = await attempt('$movie?size_mb=20');
-    final durable = {
-      for (final moved in run.news.whereType<DownloadMoved>()) moved.durable,
-    };
-    expect(durable, containsAll([0, greaterThanOrEqualTo(8 << 20)]));
-    expect(run.news.last, isA<DownloadDone>());
-  });
+  test(
+    'forced to the disk every flushEvery bytes: what is durable says so',
+    () async {
+      final run = await attempt(
+        '$movie?size_mb=20',
+        timings: const DownloadTimings(
+          report: Duration.zero,
+          flushEvery: 8 << 20,
+        ),
+      );
+      final durable = {
+        for (final moved in run.news.whereType<DownloadMoved>()) moved.durable,
+      };
+      expect(durable, containsAll([0, greaterThanOrEqualTo(8 << 20)]));
+      expect(run.news.last, isA<DownloadDone>());
+    },
+  );
 
   test('no URL: unresolved; no answer: network', () async {
     final news = <DownloadNews>[];

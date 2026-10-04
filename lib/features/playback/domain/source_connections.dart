@@ -83,7 +83,9 @@ final class SourceConnections {
       return await freed.future;
     } finally {
       timer.cancel();
-      await listening.cancel();
+      // Not awaited: a cancelled subscription's future belongs to the root
+      // zone, and awaiting it would leave a test's fake time.
+      unawaited(listening.cancel());
     }
   }
 

@@ -161,7 +161,8 @@ Future<void> bootstrap() async {
 }
 
 /// What quitting stops, of what ran: the cast (its TV goes home), the
-/// relay and its FFmpegs, every other supervised process (hard rule 8).
+/// relay and its FFmpegs, the downloads (flushed, to resume next time),
+/// every other supervised process (hard rule 8).
 Future<void> _quit(ProviderContainer container, AppLog log) async {
   final clock = Stopwatch()..start();
   if (container.exists(castCoordinatorProvider)) {
@@ -169,6 +170,10 @@ Future<void> _quit(ProviderContainer container, AppLog log) async {
   }
   if (container.exists(castRelayProvider)) {
     await container.read(castRelayProvider).close();
+  }
+  // Downloads pause and flush; the next launch resumes them (docs/09).
+  if (container.exists(downloadQueueProvider)) {
+    await container.read(downloadQueueProvider).shutdown();
   }
   if (container.exists(processSupervisorProvider)) {
     await container.read(processSupervisorProvider).stopAll();
@@ -192,8 +197,10 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
       Future<void>.delayed(_launchSyncDelay, () async {
         // In its own isolate: the picture cache's size cap (docs/06).
         unawaited(artwork?.sweep());
-        // The download folder is a library folder (docs/09).
+        // The download folder is a library folder (docs/09), and what
+        // was downloading when the app went picks up again.
         await _registerDownloadFolder(container);
+        await container.read(downloadQueueProvider).startUp();
         await container.read(epgRepositoryProvider).recoverInterrupted();
         // Before the syncs, which write names of their own (ADR-013).
         await container.read(channelNameFillProvider).run();

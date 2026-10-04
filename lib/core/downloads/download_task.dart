@@ -104,6 +104,10 @@ abstract class DownloadTask with _$DownloadTask {
 
     /// The whole file's size, once the provider said.
     int? totalBytes,
+
+    /// What a resume's `If-Range` sends: the copy the `.part` holds.
+    String? etag,
+    String? lastModified,
     DownloadProblem? problem,
 
     /// The problem's technical detail, redacted, for Details.

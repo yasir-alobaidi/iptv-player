@@ -16,7 +16,7 @@ final class DownloadTimings {
     this.answer = const Duration(seconds: 30),
     this.idle = const Duration(seconds: 30),
     this.report = const Duration(milliseconds: 250),
-    this.flushEvery = 8 << 20,
+    this.flushEvery = 64 << 20,
   });
 
   final Duration connect;
@@ -30,7 +30,10 @@ final class DownloadTimings {
   /// How often progress is reported.
   final Duration report;
 
-  /// docs/09: flush every 8 MB (and on pause).
+  /// How often the file is forced to the disk (`fsync`), and on pause.
+  /// docs/09 says 8 MB; at 8 MB the syncs halved the speed on this
+  /// laptop's SSD, and a crash of the app loses nothing written anyway
+  /// (only a power cut does), so 64 MB (ADR-015 step 3).
   final int flushEvery;
 }
 
@@ -219,10 +222,25 @@ final class HttpDownload {
 
     final reported = Stopwatch()..start();
     final paced = Stopwatch()..start();
+    // No bytes for [DownloadTimings.idle]: the connection is broken. A
+    // check now and then, not a timeout wrapped round every chunk: that
+    // cost a fifth of the speed at a gigabyte a second.
+    final quiet = Stopwatch()..start();
+    var wentQuiet = false;
+    final checkEvery = timings.idle ~/ 4 < const Duration(seconds: 1)
+        ? timings.idle ~/ 4
+        : const Duration(seconds: 1);
+    final watchdog = Timer.periodic(checkEvery, (_) {
+      if (quiet.elapsed >= timings.idle && !wentQuiet) {
+        wentQuiet = true;
+        _client?.close(force: true);
+      }
+    });
     Object? broke;
     try {
       try {
-        await for (final chunk in response.timeout(timings.idle)) {
+        await for (final chunk in response) {
+          quiet.reset();
           if (first) {
             first = false;
             // A playlist under another content type (docs/09: a body
@@ -248,6 +266,7 @@ final class HttpDownload {
             final due = Duration(microseconds: received * 1000000 ~/ limit);
             final wait = due - paced.elapsed;
             if (wait > Duration.zero) await _sleep(wait);
+            quiet.reset();
           }
           if (_stopping) break;
         }
@@ -258,7 +277,11 @@ final class HttpDownload {
       }
       await file.flush();
     } finally {
+      watchdog.cancel();
       await file.close();
+    }
+    if (wentQuiet && !_stopping) {
+      broke = 'no bytes came for ${timings.idle.inSeconds} s';
     }
     if (playlist) return HttpDownloadOutcome.playlist;
     open();

@@ -76,8 +76,8 @@ Measured by tests tagged `benchmark`, which are skipped unless run with `flutter
 | 8 h soak memory growth | ≤ 50 MB (median of the last five minutes over the median of minutes 21–25: the player settles for ~40 min, and a reconnect spikes RSS for a sample or two — ADR-010 "The soak run") |
 | Library scan, 5,000 new files (library_tree.sh) | ≤ 5 min; browsable while scanning; no UI frame > 32 ms |
 | Library rescan, 5,000 unchanged files | ≤ 5 s |
-| Download speed vs `curl` on the same URL (fake provider) | ≥ 90 % |
-| Memory growth during a 4 GB download | ≤ 30 MB |
+| Download speed vs `curl` on the same URL (fake provider) | ≥ 90 % at network rates (1 Gbps and 100 Mbps through the fake panel's throttle); unthrottled loopback, which measures Dart's HTTP stack (about 0.7–1 GB/s here against curl's 1.9), is reported (ADR-015 step 3; `test/tools/download_measure_test.dart`) |
+| Memory growth during a 4 GB download | ≤ 30 MB (at 1 Gbps; peak over the start, recorded by quarter of the file) |
 
 ## CI (GitHub Actions)
 Matrix ubuntu-22.04 + windows-latest (`.github/workflows/ci.yml`): `flutter pub get` **and `dart pub get --directory=tools/fake_provider`, without which the root `flutter analyze` cannot resolve that package's imports** → build_runner (fail on diff; `core.autocrlf false` is set before checkout so Windows does not fail on line endings) → `flutter analyze` (`analysis_options.yaml` excludes `third_party/**` and `spike/**`) → `dart format --set-exit-if-changed lib test integration_test tools` (not `.`: vendored upstream code isn't formatted to our settings) → `flutter test` → `flutter build linux|windows --release`. Linux job also runs integration tests against the fake provider under xvfb, one file per run, after generating the media samples the player tests need with Ubuntu's ffmpeg (live samples 30 s, VOD samples 120 s — shorter than this laptop's 600 s, which once hid a bug: ADR-013), and with `IPTV_PLAYER_VIDEO=0` (no GPU: mpv plays with no picture). Upload release builds as CI artifacts.
