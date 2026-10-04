@@ -1,0 +1,45 @@
+-- The library's search index and the keys of local files' user data
+-- (schema v9, docs/09; Phase 8).
+
+import 'library_tables.dart';
+import 'user_tables.dart';
+
+-- Library items are found by the title and the show the screens show
+-- (the user's edit, else the parsed name), as search.drift's indexes are
+-- by the names shown. External content, kept by triggers.
+CREATE VIRTUAL TABLE library_fts USING fts5(
+  title, show_title,
+  content='library_items', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2', prefix='2 3'
+);
+
+CREATE TRIGGER library_fts_insert AFTER INSERT ON library_items BEGIN
+  INSERT INTO library_fts(rowid, title, show_title)
+    VALUES (new.id, new.title, new.show_title);
+END;
+
+CREATE TRIGGER library_fts_delete AFTER DELETE ON library_items BEGIN
+  INSERT INTO library_fts(library_fts, rowid, title, show_title)
+    VALUES ('delete', old.id, old.title, old.show_title);
+END;
+
+CREATE TRIGGER library_fts_update
+  AFTER UPDATE OF title, show_title ON library_items
+  WHEN old.title IS NOT new.title
+    OR old.show_title IS NOT new.show_title
+BEGIN
+  INSERT INTO library_fts(library_fts, rowid, title, show_title)
+    VALUES ('delete', old.id, old.title, old.show_title);
+  INSERT INTO library_fts(rowid, title, show_title)
+    VALUES (new.id, new.title, new.show_title);
+END;
+
+-- A local file's history and favorite have no source, and SQLite counts
+-- NULLs as distinct in a unique key: `(item_type, source_id, remote_key)`
+-- alone would let one file get a second row. These keep it to one.
+CREATE UNIQUE INDEX favorites_local ON favorites (item_type, remote_key)
+  WHERE source_id IS NULL;
+
+CREATE UNIQUE INDEX watch_history_local
+  ON watch_history (item_type, remote_key)
+  WHERE source_id IS NULL;

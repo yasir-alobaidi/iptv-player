@@ -4333,6 +4333,1121 @@ i1.GeneratedColumn<String> _column_104(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: 'NULL',
     );
+
+final class Schema9 extends i0.VersionedSchema {
+  Schema9({required super.database}) : super(version: 9);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    libraryFolders,
+    sources,
+    libraryItems,
+    libraryFts,
+    favoriteGroups,
+    favorites,
+    favoritesLocal,
+    watchHistory,
+    watchHistoryLocal,
+    watchHistoryRecent,
+    settings,
+    downloads,
+    libraryItemsHash,
+    libraryItemsKindTitle,
+    libraryItemsProvider,
+    categories,
+    channels,
+    channelsFts,
+    movies,
+    moviesFts,
+    series,
+    seriesFts,
+    epgPrograms,
+    programsFts,
+    epgImports,
+    epgChannels,
+    epgChannelsStaging,
+    epgProgramsStaging,
+    epgMappings,
+    epgMatches,
+    epgProgramsChannelStart,
+    epgProgramsStagingRun,
+    epgMatchesSource,
+    syncRuns,
+    movieDetails,
+    episodes,
+    categoriesSourceKind,
+    channelsCategory,
+    moviesCategory,
+    moviesAdded,
+    moviesName,
+    moviesRating,
+    seriesCategory,
+    castDevices,
+  ];
+  late final Shape30 libraryFolders = Shape30(
+    source: i0.VersionedTable(
+      entityName: 'library_folders',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_22,
+        _column_105,
+        _column_106,
+        _column_107,
+        _column_108,
+        _column_109,
+        _column_68,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape0 sources = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'sources',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape31 libraryItems = Shape31(
+    source: i0.VersionedTable(
+      entityName: 'library_items',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(folder_id, rel_path)'],
+      columns: [
+        _column_22,
+        _column_110,
+        _column_111,
+        _column_112,
+        _column_113,
+        _column_114,
+        _column_23,
+        _column_59,
+        _column_39,
+        _column_115,
+        _column_116,
+        _column_117,
+        _column_118,
+        _column_70,
+        _column_119,
+        _column_120,
+        _column_121,
+        _column_122,
+        _column_123,
+        _column_124,
+        _column_125,
+        _column_126,
+        _column_127,
+        _column_128,
+        _column_25,
+        _column_129,
+        _column_68,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape32 libraryFts = Shape32(
+    source: i0.VersionedVirtualTable(
+      entityName: 'library_fts',
+      moduleAndArgs: 'fts5(title, show_title, content=\'library_items\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')',
+      columns: [_column_78, _column_130],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape27 favoriteGroups = Shape27(
+    source: i0.VersionedTable(
+      entityName: 'favorite_groups',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_22, _column_18, _column_2, _column_15, _column_95],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape28 favorites = Shape28(
+    source: i0.VersionedTable(
+      entityName: 'favorites',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(item_type, source_id, remote_key)'],
+      columns: [
+        _column_22,
+        _column_65,
+        _column_66,
+        _column_19,
+        _column_96,
+        _column_26,
+        _column_68,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index favoritesLocal = i1.Index(
+    'favorites_local',
+    'CREATE UNIQUE INDEX favorites_local ON favorites (item_type, remote_key) WHERE source_id IS NULL',
+  );
+  late final Shape24 watchHistory = Shape24(
+    source: i0.VersionedTable(
+      entityName: 'watch_history',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(item_type, source_id, remote_key)'],
+      columns: [
+        _column_22,
+        _column_65,
+        _column_66,
+        _column_19,
+        _column_69,
+        _column_70,
+        _column_71,
+        _column_90,
+        _column_91,
+        _column_17,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index watchHistoryLocal = i1.Index(
+    'watch_history_local',
+    'CREATE UNIQUE INDEX watch_history_local ON watch_history (item_type, remote_key) WHERE source_id IS NULL',
+  );
+  final i1.Index watchHistoryRecent = i1.Index(
+    'watch_history_recent',
+    'CREATE INDEX watch_history_recent ON watch_history (item_type, updated_at)',
+  );
+  late final Shape10 settings = Shape10(
+    source: i0.VersionedTable(
+      entityName: 'settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY("key")'],
+      columns: [_column_62, _column_63, _column_17],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape33 downloads = Shape33(
+    source: i0.VersionedTable(
+      entityName: 'downloads',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, item_type, remote_key)'],
+      columns: [
+        _column_22,
+        _column_18,
+        _column_65,
+        _column_19,
+        _column_131,
+        _column_116,
+        _column_117,
+        _column_59,
+        _column_115,
+        _column_39,
+        _column_132,
+        _column_133,
+        _column_134,
+        _column_135,
+        _column_136,
+        _column_137,
+        _column_138,
+        _column_139,
+        _column_140,
+        _column_141,
+        _column_142,
+        _column_143,
+        _column_16,
+        _column_144,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index libraryItemsHash = i1.Index(
+    'library_items_hash',
+    'CREATE INDEX library_items_hash ON library_items (quick_hash)',
+  );
+  final i1.Index libraryItemsKindTitle = i1.Index(
+    'library_items_kind_title',
+    'CREATE INDEX library_items_kind_title ON library_items (kind, title)',
+  );
+  final i1.Index libraryItemsProvider = i1.Index(
+    'library_items_provider',
+    'CREATE INDEX library_items_provider ON library_items (provider_source_id, provider_item_type, provider_remote_key)',
+  );
+  late final Shape1 categories = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'categories',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, kind, remote_key)'],
+      columns: [
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_2,
+        _column_24,
+        _column_25,
+        _column_26,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape25 channels = Shape25(
+    source: i0.VersionedTable(
+      entityName: 'channels',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, remote_key)'],
+      columns: [
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_27,
+        _column_28,
+        _column_2,
+        _column_24,
+        _column_92,
+        _column_93,
+        _column_29,
+        _column_30,
+        _column_31,
+        _column_32,
+        _column_33,
+        _column_25,
+        _column_34,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape26 channelsFts = Shape26(
+    source: i0.VersionedVirtualTable(
+      entityName: 'channels_fts',
+      moduleAndArgs: 'fts5(clean_name, display_name, content=\'channels\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')',
+      columns: [_column_94, _column_36],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 movies = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'movies',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, remote_key)'],
+      columns: [
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_27,
+        _column_2,
+        _column_37,
+        _column_38,
+        _column_39,
+        _column_40,
+        _column_32,
+        _column_33,
+        _column_34,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 moviesFts = Shape5(
+    source: i0.VersionedVirtualTable(
+      entityName: 'movies_fts',
+      moduleAndArgs: 'fts5(name, content=\'movies\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')',
+      columns: [_column_35],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape22 series = Shape22(
+    source: i0.VersionedTable(
+      entityName: 'series',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, remote_key)'],
+      columns: [
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_27,
+        _column_2,
+        _column_37,
+        _column_38,
+        _column_39,
+        _column_41,
+        _column_52,
+        _column_50,
+        _column_51,
+        _column_54,
+        _column_42,
+        _column_43,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 seriesFts = Shape5(
+    source: i0.VersionedVirtualTable(
+      entityName: 'series_fts',
+      moduleAndArgs: 'fts5(name, content=\'series\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')',
+      columns: [_column_35],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape14 epgPrograms = Shape14(
+    source: i0.VersionedTable(
+      entityName: 'epg_programs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_22,
+        _column_18,
+        _column_72,
+        _column_73,
+        _column_74,
+        _column_59,
+        _column_75,
+        _column_76,
+        _column_77,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape15 programsFts = Shape15(
+    source: i0.VersionedVirtualTable(
+      entityName: 'programs_fts',
+      moduleAndArgs: 'fts5(title, subtitle, description, content=\'epg_programs\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')',
+      columns: [_column_78, _column_79, _column_80],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 epgImports = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'epg_imports',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_22,
+        _column_18,
+        _column_44,
+        _column_45,
+        _column_46,
+        _column_47,
+        _column_64,
+        _column_48,
+        _column_81,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape17 epgChannels = Shape17(
+    source: i0.VersionedTable(
+      entityName: 'epg_channels',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(source_id, xmltv_id)'],
+      columns: [_column_22, _column_18, _column_82, _column_24, _column_83],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 epgChannelsStaging = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'epg_channels_staging',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(import_run, xmltv_id)'],
+      columns: [_column_22, _column_84, _column_82, _column_24, _column_83],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape19 epgProgramsStaging = Shape19(
+    source: i0.VersionedTable(
+      entityName: 'epg_programs_staging',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_22,
+        _column_84,
+        _column_72,
+        _column_73,
+        _column_74,
+        _column_59,
+        _column_75,
+        _column_76,
+        _column_77,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape20 epgMappings = Shape20(
+    source: i0.VersionedTable(
+      entityName: 'epg_mappings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(source_id, channel_remote_key)'],
+      columns: [_column_18, _column_85, _column_82, _column_17],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape21 epgMatches = Shape21(
+    source: i0.VersionedTable(
+      entityName: 'epg_matches',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(channel_id)'],
+      columns: [_column_86, _column_18, _column_82, _column_87],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index epgProgramsChannelStart = i1.Index(
+    'epg_programs_channel_start',
+    'CREATE INDEX epg_programs_channel_start ON epg_programs (source_id, epg_channel_id, start_utc)',
+  );
+  final i1.Index epgProgramsStagingRun = i1.Index(
+    'epg_programs_staging_run',
+    'CREATE INDEX epg_programs_staging_run ON epg_programs_staging (import_run)',
+  );
+  final i1.Index epgMatchesSource = i1.Index(
+    'epg_matches_source',
+    'CREATE INDEX epg_matches_source ON epg_matches (source_id, xmltv_id)',
+  );
+  late final Shape11 syncRuns = Shape11(
+    source: i0.VersionedTable(
+      entityName: 'sync_runs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_22,
+        _column_18,
+        _column_44,
+        _column_45,
+        _column_46,
+        _column_47,
+        _column_64,
+        _column_48,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape23 movieDetails = Shape23(
+    source: i0.VersionedTable(
+      entityName: 'movie_details',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(movie_id)'],
+      columns: [
+        _column_49,
+        _column_41,
+        _column_50,
+        _column_51,
+        _column_52,
+        _column_53,
+        _column_54,
+        _column_88,
+        _column_89,
+        _column_55,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 episodes = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'episodes',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(series_id, remote_key)'],
+      columns: [
+        _column_22,
+        _column_56,
+        _column_19,
+        _column_57,
+        _column_58,
+        _column_59,
+        _column_40,
+        _column_60,
+        _column_41,
+        _column_61,
+        _column_32,
+        _column_33,
+        _column_21,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index categoriesSourceKind = i1.Index(
+    'categories_source_kind',
+    'CREATE INDEX categories_source_kind ON categories (source_id, kind)',
+  );
+  final i1.Index channelsCategory = i1.Index(
+    'channels_category',
+    'CREATE INDEX channels_category ON channels (category_id)',
+  );
+  final i1.Index moviesCategory = i1.Index(
+    'movies_category',
+    'CREATE INDEX movies_category ON movies (category_id)',
+  );
+  final i1.Index moviesAdded = i1.Index(
+    'movies_added',
+    'CREATE INDEX movies_added ON movies (source_id, added_at, id)',
+  );
+  final i1.Index moviesName = i1.Index(
+    'movies_name',
+    'CREATE INDEX movies_name ON movies (source_id, name COLLATE NOCASE, id)',
+  );
+  final i1.Index moviesRating = i1.Index(
+    'movies_rating',
+    'CREATE INDEX movies_rating ON movies (source_id, rating DESC, name COLLATE NOCASE, id)',
+  );
+  final i1.Index seriesCategory = i1.Index(
+    'series_category',
+    'CREATE INDEX series_category ON series (category_id)',
+  );
+  late final Shape29 castDevices = Shape29(
+    source: i0.VersionedTable(
+      entityName: 'cast_devices',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(device_id)'],
+      columns: [
+        _column_97,
+        _column_2,
+        _column_98,
+        _column_99,
+        _column_100,
+        _column_101,
+        _column_102,
+        _column_103,
+        _column_104,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+}
+
+class Shape30 extends i0.VersionedTable {
+  Shape30({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get path =>
+      columnsByName['path']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get label =>
+      columnsByName['label']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isDownloadFolder =>
+      columnsByName['is_download_folder']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isAvailable =>
+      columnsByName['is_available']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get lastScanAt =>
+      columnsByName['last_scan_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get addedAt =>
+      columnsByName['added_at']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_105(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'path',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL UNIQUE',
+    );
+i1.GeneratedColumn<String> _column_106(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'label',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_107(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_download_folder',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints:
+          'NOT NULL DEFAULT 0 CHECK (is_download_folder IN (0, 1))',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<int> _column_108(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_available',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 1 CHECK (is_available IN (0, 1))',
+      defaultValue: const i1.CustomExpression('1'),
+    );
+i1.GeneratedColumn<String> _column_109(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'last_scan_at',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+class Shape31 extends i0.VersionedTable {
+  Shape31({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get folderId =>
+      columnsByName['folder_id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get relPath =>
+      columnsByName['rel_path']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get sizeBytes =>
+      columnsByName['size_bytes']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get mtime =>
+      columnsByName['mtime']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get quickHash =>
+      columnsByName['quick_hash']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get kind =>
+      columnsByName['kind']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get title =>
+      columnsByName['title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get year =>
+      columnsByName['year']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get showTitle =>
+      columnsByName['show_title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get season =>
+      columnsByName['season']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get episode =>
+      columnsByName['episode']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get episodeEnd =>
+      columnsByName['episode_end']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get durationMs =>
+      columnsByName['duration_ms']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get probeJson =>
+      columnsByName['probe_json']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get thumbnailPath =>
+      columnsByName['thumbnail_path']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get artworkPath =>
+      columnsByName['artwork_path']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get subtitlesJson =>
+      columnsByName['subtitles_json']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get userEditsJson =>
+      columnsByName['user_edits_json']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get detailsJson =>
+      columnsByName['details_json']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get providerSourceId =>
+      columnsByName['provider_source_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get providerItemType =>
+      columnsByName['provider_item_type']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get providerRemoteKey =>
+      columnsByName['provider_remote_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get providerSeriesKey =>
+      columnsByName['provider_series_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isHidden =>
+      columnsByName['is_hidden']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get unavailableSince =>
+      columnsByName['unavailable_since']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get addedAt =>
+      columnsByName['added_at']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<int> _column_110(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'folder_id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints:
+          'NOT NULL REFERENCES library_folders(id)ON DELETE CASCADE',
+    );
+i1.GeneratedColumn<String> _column_111(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'rel_path',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_112(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'size_bytes',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_113(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'mtime',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_114(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'quick_hash',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_115(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'show_title',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_116(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'season',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_117(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'episode',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_118(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'episode_end',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_119(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'probe_json',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_120(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'thumbnail_path',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_121(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'artwork_path',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_122(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'subtitles_json',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_123(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'user_edits_json',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_124(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'details_json',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_125(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'provider_source_id',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL REFERENCES sources(id)ON DELETE SET NULL',
+    );
+i1.GeneratedColumn<String> _column_126(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'provider_item_type',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_127(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'provider_remote_key',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_128(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'provider_series_key',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_129(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'unavailable_since',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+class Shape32 extends i0.VersionedVirtualTable {
+  Shape32({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get title =>
+      columnsByName['title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get showTitle =>
+      columnsByName['show_title']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_130(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'show_title',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: '',
+    );
+
+class Shape33 extends i0.VersionedTable {
+  Shape33({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get sourceId =>
+      columnsByName['source_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get itemType =>
+      columnsByName['item_type']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get remoteKey =>
+      columnsByName['remote_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get seriesRemoteKey =>
+      columnsByName['series_remote_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get season =>
+      columnsByName['season']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get episode =>
+      columnsByName['episode']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get title =>
+      columnsByName['title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get showTitle =>
+      columnsByName['show_title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get year =>
+      columnsByName['year']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get artworkUrl =>
+      columnsByName['artwork_url']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get targetPath =>
+      columnsByName['target_path']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get totalBytes =>
+      columnsByName['total_bytes']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get downloadedBytes =>
+      columnsByName['downloaded_bytes']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get etag =>
+      columnsByName['etag']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get lastModified =>
+      columnsByName['last_modified']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get state =>
+      columnsByName['state']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get errorClass =>
+      columnsByName['error_class']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get errorDetail =>
+      columnsByName['error_detail']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get attempts =>
+      columnsByName['attempts']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get libraryItemId =>
+      columnsByName['library_item_id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get sortOrder =>
+      columnsByName['sort_order']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get completedAt =>
+      columnsByName['completed_at']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_131(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'series_remote_key',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_132(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'artwork_url',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_133(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'target_path',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_134(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'total_bytes',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_135(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'downloaded_bytes',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<String> _column_136(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'etag',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_137(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'last_modified',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_138(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'state',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_139(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'error_class',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_140(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'error_detail',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_141(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'attempts',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<int> _column_142(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'library_item_id',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL REFERENCES library_items(id)ON DELETE SET NULL',
+    );
+i1.GeneratedColumn<int> _column_143(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'sort_order',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_144(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'completed_at',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
@@ -4341,6 +5456,7 @@ i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema6 schema) from5To6,
   required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
+  required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -4379,6 +5495,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from7To8(migrator, schema);
         return 8;
+      case 8:
+        final schema = Schema9(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from8To9(migrator, schema);
+        return 9;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -4393,6 +5514,7 @@ i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema6 schema) from5To6,
   required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
+  required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
 }) => i0.VersionedSchema.stepByStepHelper(
   step: migrationSteps(
     from1To2: from1To2,
@@ -4402,5 +5524,6 @@ i1.OnUpgrade stepByStep({
     from5To6: from5To6,
     from6To7: from6To7,
     from7To8: from7To8,
+    from8To9: from8To9,
   ),
 );

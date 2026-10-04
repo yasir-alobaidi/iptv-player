@@ -7,7 +7,9 @@ import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
+import 'package:iptv_player/data/db/library_tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
+import 'package:sqlite3/sqlite3.dart' show SqliteException;
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
@@ -18,6 +20,7 @@ import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
+import 'generated/schema_v9.dart' as v9;
 
 /// Every schema change adds a version, a migration, and a dump in
 /// `drift_schemas/app/` (docs/02). `dart run drift_dev make-migrations`
@@ -684,6 +687,141 @@ void main() {
       expect(row.hevcSupport, HevcSupport.auto);
       expect(row.learnedJson, isNull);
       expect(row.lastUsedAt, isNull);
+    });
+  });
+
+  group('v8 → v9', () {
+    const created = '2026-10-04T08:00:00.000Z';
+    const source = v8.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const favorite = v8.FavoritesData(
+      id: 1,
+      itemType: 'movie',
+      sourceId: 'src-1',
+      remoteKey: '100000',
+      addedAt: created,
+    );
+    const watched = v8.WatchHistoryData(
+      id: 1,
+      itemType: 'movie',
+      sourceId: 'src-1',
+      remoteKey: '100000',
+      positionMs: 42000,
+      completed: 0,
+      dismissed: 0,
+      updatedAt: created,
+    );
+
+    test('keeps sources, favorites and history; adds an empty library and '
+        'queue', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 8,
+        newVersion: 9,
+        createOld: v8.DatabaseAtV8.new,
+        createNew: v9.DatabaseAtV9.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch
+            ..insert(oldDb.sources, source)
+            ..insert(oldDb.favorites, favorite)
+            ..insert(oldDb.watchHistory, watched);
+        },
+        validateItems: (newDb) async {
+          expect((await newDb.select(newDb.sources).get()).single.id, 'src-1');
+          expect(
+            (await newDb.select(newDb.favorites).get()).single.remoteKey,
+            '100000',
+          );
+          expect(
+            (await newDb.select(newDb.watchHistory).get()).single.positionMs,
+            42000,
+          );
+          expect(await newDb.select(newDb.libraryFolders).get(), isEmpty);
+          expect(await newDb.select(newDb.libraryItems).get(), isEmpty);
+          expect(await newDb.select(newDb.downloads).get(), isEmpty);
+        },
+      );
+    });
+
+    test('a local file left with two history rows keeps the newest, and '
+        'gets no third', () async {
+      final schema = await verifier.schemaAt(8);
+      final old = v8.DatabaseAtV8(schema.newConnection());
+      for (final (id, position) in [(1, 1000), (2, 2000)]) {
+        await old
+            .into(old.watchHistory)
+            .insert(
+              v8.WatchHistoryData(
+                id: id,
+                itemType: 'local',
+                remoteKey: 'hash-1',
+                positionMs: position,
+                completed: 0,
+                dismissed: 0,
+                updatedAt: created,
+              ),
+            );
+      }
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+      final rows = await database.select(database.watchHistory).get();
+      expect([for (final row in rows) row.positionMs], [2000]);
+      await expectLater(
+        database
+            .into(database.watchHistory)
+            .insert(
+              WatchHistoryCompanion.insert(
+                itemType: UserItemType.local,
+                remoteKey: 'hash-1',
+                updatedAt: DateTime.utc(2026, 10, 4),
+              ),
+            ),
+        throwsA(isA<SqliteException>()),
+      );
+    });
+
+    test('a migrated database indexes library items for search', () async {
+      final schema = await verifier.schemaAt(8);
+      final old = v8.DatabaseAtV8(schema.newConnection());
+      await old.into(old.sources).insert(source);
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+      final dao = database.libraryDao;
+      final folder = await dao.makeDownloadFolder(
+        '/home/me/Videos/IPTV Player',
+        label: 'IPTV Player',
+        at: DateTime.utc(2026, 10, 4),
+      );
+      await dao.insertItem(
+        LibraryItemsCompanion.insert(
+          folderId: folder.id,
+          relPath: 'Movies/Paper Kites (2019)/Paper Kites (2019).mkv',
+          sizeBytes: 2100000000,
+          mtime: 1759564800000,
+          quickHash: 'hash-1',
+          kind: LibraryKind.movie,
+          title: 'Paper Kites',
+          addedAt: DateTime.utc(2026, 10, 4),
+        ),
+      );
+      expect(
+        [for (final row in await dao.search('kit*')) row.title],
+        ['Paper Kites'],
+      );
     });
   });
 }

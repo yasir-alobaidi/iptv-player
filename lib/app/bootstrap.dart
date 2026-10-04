@@ -27,6 +27,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
 import 'package:iptv_player/data/images/cached_artwork.dart';
+import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
@@ -37,6 +38,7 @@ import 'package:iptv_player/design/fonts.dart';
 import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
@@ -190,6 +192,8 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
       Future<void>.delayed(_launchSyncDelay, () async {
         // In its own isolate: the picture cache's size cap (docs/06).
         unawaited(artwork?.sweep());
+        // The download folder is a library folder (docs/09).
+        await _registerDownloadFolder(container);
         await container.read(epgRepositoryProvider).recoverInterrupted();
         // Before the syncs, which write names of their own (ADR-013).
         await container.read(channelNameFillProvider).run();
@@ -202,6 +206,23 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
 }
 
 const _launchSyncDelay = Duration(seconds: 2);
+
+Future<void> _registerDownloadFolder(ProviderContainer container) async {
+  final log = container.read(appLogProvider);
+  try {
+    final path = await container.read(downloadFolderProvider.future);
+    final registered = await registerDownloadFolder(
+      container.read(appDatabaseProvider).libraryDao,
+      path,
+      now: DateTime.now().toUtc(),
+    );
+    if (registered.failureOrNull case final failure?) {
+      log.warning('bootstrap', 'Download folder not registered: $failure');
+    }
+  } on Object catch (error) {
+    log.warning('bootstrap', 'No download folder', error: error);
+  }
+}
 
 /// The one player (docs/03). A libmpv that won't start leaves the app
 /// running without playback rather than not running (hard rule 1).

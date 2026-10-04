@@ -17,6 +17,9 @@ abstract final class SettingsKeys {
   /// Windows' firewall prompt was explained before the first relay start
   /// (Phase 7 step 7).
   static const castFirewallExplained = 'cast.firewall_explained';
+
+  /// Settings → Downloads & library's download half (Phase 8).
+  static const downloads = 'downloads.settings';
 }
 
 /// Reads and writes the `settings` table.

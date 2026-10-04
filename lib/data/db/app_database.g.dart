@@ -3,6 +3,480 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
+class $LibraryFoldersTable extends LibraryFolders
+    with TableInfo<$LibraryFoldersTable, LibraryFolderRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LibraryFoldersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isDownloadFolderMeta = const VerificationMeta(
+    'isDownloadFolder',
+  );
+  @override
+  late final GeneratedColumn<bool> isDownloadFolder = GeneratedColumn<bool>(
+    'is_download_folder',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_download_folder" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isAvailableMeta = const VerificationMeta(
+    'isAvailable',
+  );
+  @override
+  late final GeneratedColumn<bool> isAvailable = GeneratedColumn<bool>(
+    'is_available',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_available" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _lastScanAtMeta = const VerificationMeta(
+    'lastScanAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastScanAt = GeneratedColumn<DateTime>(
+    'last_scan_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    path,
+    label,
+    isDownloadFolder,
+    isAvailable,
+    lastScanAt,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'library_folders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LibraryFolderRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('is_download_folder')) {
+      context.handle(
+        _isDownloadFolderMeta,
+        isDownloadFolder.isAcceptableOrUnknown(
+          data['is_download_folder']!,
+          _isDownloadFolderMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_available')) {
+      context.handle(
+        _isAvailableMeta,
+        isAvailable.isAcceptableOrUnknown(
+          data['is_available']!,
+          _isAvailableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_scan_at')) {
+      context.handle(
+        _lastScanAtMeta,
+        lastScanAt.isAcceptableOrUnknown(
+          data['last_scan_at']!,
+          _lastScanAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LibraryFolderRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LibraryFolderRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      isDownloadFolder: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_download_folder'],
+      )!,
+      isAvailable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_available'],
+      )!,
+      lastScanAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_scan_at'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LibraryFoldersTable createAlias(String alias) {
+    return $LibraryFoldersTable(attachedDatabase, alias);
+  }
+}
+
+class LibraryFolderRow extends DataClass
+    implements Insertable<LibraryFolderRow> {
+  final int id;
+
+  /// Absolute, as the system gave it.
+  final String path;
+
+  /// What the screens call it ("Movies HDD"; the canvas's, v9).
+  final String label;
+  final bool isDownloadFolder;
+  final bool isAvailable;
+  final DateTime? lastScanAt;
+  final DateTime addedAt;
+  const LibraryFolderRow({
+    required this.id,
+    required this.path,
+    required this.label,
+    required this.isDownloadFolder,
+    required this.isAvailable,
+    this.lastScanAt,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['path'] = Variable<String>(path);
+    map['label'] = Variable<String>(label);
+    map['is_download_folder'] = Variable<bool>(isDownloadFolder);
+    map['is_available'] = Variable<bool>(isAvailable);
+    if (!nullToAbsent || lastScanAt != null) {
+      map['last_scan_at'] = Variable<DateTime>(lastScanAt);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    return map;
+  }
+
+  LibraryFoldersCompanion toCompanion(bool nullToAbsent) {
+    return LibraryFoldersCompanion(
+      id: Value(id),
+      path: Value(path),
+      label: Value(label),
+      isDownloadFolder: Value(isDownloadFolder),
+      isAvailable: Value(isAvailable),
+      lastScanAt: lastScanAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastScanAt),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory LibraryFolderRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LibraryFolderRow(
+      id: serializer.fromJson<int>(json['id']),
+      path: serializer.fromJson<String>(json['path']),
+      label: serializer.fromJson<String>(json['label']),
+      isDownloadFolder: serializer.fromJson<bool>(json['isDownloadFolder']),
+      isAvailable: serializer.fromJson<bool>(json['isAvailable']),
+      lastScanAt: serializer.fromJson<DateTime?>(json['lastScanAt']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'path': serializer.toJson<String>(path),
+      'label': serializer.toJson<String>(label),
+      'isDownloadFolder': serializer.toJson<bool>(isDownloadFolder),
+      'isAvailable': serializer.toJson<bool>(isAvailable),
+      'lastScanAt': serializer.toJson<DateTime?>(lastScanAt),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+    };
+  }
+
+  LibraryFolderRow copyWith({
+    int? id,
+    String? path,
+    String? label,
+    bool? isDownloadFolder,
+    bool? isAvailable,
+    Value<DateTime?> lastScanAt = const Value.absent(),
+    DateTime? addedAt,
+  }) => LibraryFolderRow(
+    id: id ?? this.id,
+    path: path ?? this.path,
+    label: label ?? this.label,
+    isDownloadFolder: isDownloadFolder ?? this.isDownloadFolder,
+    isAvailable: isAvailable ?? this.isAvailable,
+    lastScanAt: lastScanAt.present ? lastScanAt.value : this.lastScanAt,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  LibraryFolderRow copyWithCompanion(LibraryFoldersCompanion data) {
+    return LibraryFolderRow(
+      id: data.id.present ? data.id.value : this.id,
+      path: data.path.present ? data.path.value : this.path,
+      label: data.label.present ? data.label.value : this.label,
+      isDownloadFolder: data.isDownloadFolder.present
+          ? data.isDownloadFolder.value
+          : this.isDownloadFolder,
+      isAvailable: data.isAvailable.present
+          ? data.isAvailable.value
+          : this.isAvailable,
+      lastScanAt: data.lastScanAt.present
+          ? data.lastScanAt.value
+          : this.lastScanAt,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryFolderRow(')
+          ..write('id: $id, ')
+          ..write('path: $path, ')
+          ..write('label: $label, ')
+          ..write('isDownloadFolder: $isDownloadFolder, ')
+          ..write('isAvailable: $isAvailable, ')
+          ..write('lastScanAt: $lastScanAt, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    path,
+    label,
+    isDownloadFolder,
+    isAvailable,
+    lastScanAt,
+    addedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LibraryFolderRow &&
+          other.id == this.id &&
+          other.path == this.path &&
+          other.label == this.label &&
+          other.isDownloadFolder == this.isDownloadFolder &&
+          other.isAvailable == this.isAvailable &&
+          other.lastScanAt == this.lastScanAt &&
+          other.addedAt == this.addedAt);
+}
+
+class LibraryFoldersCompanion extends UpdateCompanion<LibraryFolderRow> {
+  final Value<int> id;
+  final Value<String> path;
+  final Value<String> label;
+  final Value<bool> isDownloadFolder;
+  final Value<bool> isAvailable;
+  final Value<DateTime?> lastScanAt;
+  final Value<DateTime> addedAt;
+  const LibraryFoldersCompanion({
+    this.id = const Value.absent(),
+    this.path = const Value.absent(),
+    this.label = const Value.absent(),
+    this.isDownloadFolder = const Value.absent(),
+    this.isAvailable = const Value.absent(),
+    this.lastScanAt = const Value.absent(),
+    this.addedAt = const Value.absent(),
+  });
+  LibraryFoldersCompanion.insert({
+    this.id = const Value.absent(),
+    required String path,
+    required String label,
+    this.isDownloadFolder = const Value.absent(),
+    this.isAvailable = const Value.absent(),
+    this.lastScanAt = const Value.absent(),
+    required DateTime addedAt,
+  }) : path = Value(path),
+       label = Value(label),
+       addedAt = Value(addedAt);
+  static Insertable<LibraryFolderRow> custom({
+    Expression<int>? id,
+    Expression<String>? path,
+    Expression<String>? label,
+    Expression<bool>? isDownloadFolder,
+    Expression<bool>? isAvailable,
+    Expression<DateTime>? lastScanAt,
+    Expression<DateTime>? addedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (path != null) 'path': path,
+      if (label != null) 'label': label,
+      if (isDownloadFolder != null) 'is_download_folder': isDownloadFolder,
+      if (isAvailable != null) 'is_available': isAvailable,
+      if (lastScanAt != null) 'last_scan_at': lastScanAt,
+      if (addedAt != null) 'added_at': addedAt,
+    });
+  }
+
+  LibraryFoldersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? path,
+    Value<String>? label,
+    Value<bool>? isDownloadFolder,
+    Value<bool>? isAvailable,
+    Value<DateTime?>? lastScanAt,
+    Value<DateTime>? addedAt,
+  }) {
+    return LibraryFoldersCompanion(
+      id: id ?? this.id,
+      path: path ?? this.path,
+      label: label ?? this.label,
+      isDownloadFolder: isDownloadFolder ?? this.isDownloadFolder,
+      isAvailable: isAvailable ?? this.isAvailable,
+      lastScanAt: lastScanAt ?? this.lastScanAt,
+      addedAt: addedAt ?? this.addedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (isDownloadFolder.present) {
+      map['is_download_folder'] = Variable<bool>(isDownloadFolder.value);
+    }
+    if (isAvailable.present) {
+      map['is_available'] = Variable<bool>(isAvailable.value);
+    }
+    if (lastScanAt.present) {
+      map['last_scan_at'] = Variable<DateTime>(lastScanAt.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryFoldersCompanion(')
+          ..write('id: $id, ')
+          ..write('path: $path, ')
+          ..write('label: $label, ')
+          ..write('isDownloadFolder: $isDownloadFolder, ')
+          ..write('isAvailable: $isAvailable, ')
+          ..write('lastScanAt: $lastScanAt, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SourcesTable extends Sources with TableInfo<$SourcesTable, SourceRow> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -1060,6 +1534,4851 @@ class SourcesCompanion extends UpdateCompanion<SourceRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LibraryItemsTable extends LibraryItems
+    with TableInfo<$LibraryItemsTable, LibraryItemRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LibraryItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _folderIdMeta = const VerificationMeta(
+    'folderId',
+  );
+  @override
+  late final GeneratedColumn<int> folderId = GeneratedColumn<int>(
+    'folder_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES library_folders (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _relPathMeta = const VerificationMeta(
+    'relPath',
+  );
+  @override
+  late final GeneratedColumn<String> relPath = GeneratedColumn<String>(
+    'rel_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mtimeMeta = const VerificationMeta('mtime');
+  @override
+  late final GeneratedColumn<int> mtime = GeneratedColumn<int>(
+    'mtime',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quickHashMeta = const VerificationMeta(
+    'quickHash',
+  );
+  @override
+  late final GeneratedColumn<String> quickHash = GeneratedColumn<String>(
+    'quick_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<LibraryKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<LibraryKind>($LibraryItemsTable.$converterkind);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+    'year',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _showTitleMeta = const VerificationMeta(
+    'showTitle',
+  );
+  @override
+  late final GeneratedColumn<String> showTitle = GeneratedColumn<String>(
+    'show_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _seasonMeta = const VerificationMeta('season');
+  @override
+  late final GeneratedColumn<int> season = GeneratedColumn<int>(
+    'season',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _episodeMeta = const VerificationMeta(
+    'episode',
+  );
+  @override
+  late final GeneratedColumn<int> episode = GeneratedColumn<int>(
+    'episode',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _episodeEndMeta = const VerificationMeta(
+    'episodeEnd',
+  );
+  @override
+  late final GeneratedColumn<int> episodeEnd = GeneratedColumn<int>(
+    'episode_end',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _probeJsonMeta = const VerificationMeta(
+    'probeJson',
+  );
+  @override
+  late final GeneratedColumn<String> probeJson = GeneratedColumn<String>(
+    'probe_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _thumbnailPathMeta = const VerificationMeta(
+    'thumbnailPath',
+  );
+  @override
+  late final GeneratedColumn<String> thumbnailPath = GeneratedColumn<String>(
+    'thumbnail_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _artworkPathMeta = const VerificationMeta(
+    'artworkPath',
+  );
+  @override
+  late final GeneratedColumn<String> artworkPath = GeneratedColumn<String>(
+    'artwork_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subtitlesJsonMeta = const VerificationMeta(
+    'subtitlesJson',
+  );
+  @override
+  late final GeneratedColumn<String> subtitlesJson = GeneratedColumn<String>(
+    'subtitles_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _userEditsJsonMeta = const VerificationMeta(
+    'userEditsJson',
+  );
+  @override
+  late final GeneratedColumn<String> userEditsJson = GeneratedColumn<String>(
+    'user_edits_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _detailsJsonMeta = const VerificationMeta(
+    'detailsJson',
+  );
+  @override
+  late final GeneratedColumn<String> detailsJson = GeneratedColumn<String>(
+    'details_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _providerSourceIdMeta = const VerificationMeta(
+    'providerSourceId',
+  );
+  @override
+  late final GeneratedColumn<String> providerSourceId = GeneratedColumn<String>(
+    'provider_source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE SET NULL',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<VodType?, String>
+  providerItemType = GeneratedColumn<String>(
+    'provider_item_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<VodType?>($LibraryItemsTable.$converterproviderItemTypen);
+  static const VerificationMeta _providerRemoteKeyMeta = const VerificationMeta(
+    'providerRemoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> providerRemoteKey =
+      GeneratedColumn<String>(
+        'provider_remote_key',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _providerSeriesKeyMeta = const VerificationMeta(
+    'providerSeriesKey',
+  );
+  @override
+  late final GeneratedColumn<String> providerSeriesKey =
+      GeneratedColumn<String>(
+        'provider_series_key',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isHiddenMeta = const VerificationMeta(
+    'isHidden',
+  );
+  @override
+  late final GeneratedColumn<bool> isHidden = GeneratedColumn<bool>(
+    'is_hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _unavailableSinceMeta = const VerificationMeta(
+    'unavailableSince',
+  );
+  @override
+  late final GeneratedColumn<DateTime> unavailableSince =
+      GeneratedColumn<DateTime>(
+        'unavailable_since',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    folderId,
+    relPath,
+    sizeBytes,
+    mtime,
+    quickHash,
+    kind,
+    title,
+    year,
+    showTitle,
+    season,
+    episode,
+    episodeEnd,
+    durationMs,
+    probeJson,
+    thumbnailPath,
+    artworkPath,
+    subtitlesJson,
+    userEditsJson,
+    detailsJson,
+    providerSourceId,
+    providerItemType,
+    providerRemoteKey,
+    providerSeriesKey,
+    isHidden,
+    unavailableSince,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'library_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LibraryItemRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('folder_id')) {
+      context.handle(
+        _folderIdMeta,
+        folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_folderIdMeta);
+    }
+    if (data.containsKey('rel_path')) {
+      context.handle(
+        _relPathMeta,
+        relPath.isAcceptableOrUnknown(data['rel_path']!, _relPathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_relPathMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('mtime')) {
+      context.handle(
+        _mtimeMeta,
+        mtime.isAcceptableOrUnknown(data['mtime']!, _mtimeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mtimeMeta);
+    }
+    if (data.containsKey('quick_hash')) {
+      context.handle(
+        _quickHashMeta,
+        quickHash.isAcceptableOrUnknown(data['quick_hash']!, _quickHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quickHashMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+        _yearMeta,
+        year.isAcceptableOrUnknown(data['year']!, _yearMeta),
+      );
+    }
+    if (data.containsKey('show_title')) {
+      context.handle(
+        _showTitleMeta,
+        showTitle.isAcceptableOrUnknown(data['show_title']!, _showTitleMeta),
+      );
+    }
+    if (data.containsKey('season')) {
+      context.handle(
+        _seasonMeta,
+        season.isAcceptableOrUnknown(data['season']!, _seasonMeta),
+      );
+    }
+    if (data.containsKey('episode')) {
+      context.handle(
+        _episodeMeta,
+        episode.isAcceptableOrUnknown(data['episode']!, _episodeMeta),
+      );
+    }
+    if (data.containsKey('episode_end')) {
+      context.handle(
+        _episodeEndMeta,
+        episodeEnd.isAcceptableOrUnknown(data['episode_end']!, _episodeEndMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('probe_json')) {
+      context.handle(
+        _probeJsonMeta,
+        probeJson.isAcceptableOrUnknown(data['probe_json']!, _probeJsonMeta),
+      );
+    }
+    if (data.containsKey('thumbnail_path')) {
+      context.handle(
+        _thumbnailPathMeta,
+        thumbnailPath.isAcceptableOrUnknown(
+          data['thumbnail_path']!,
+          _thumbnailPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('artwork_path')) {
+      context.handle(
+        _artworkPathMeta,
+        artworkPath.isAcceptableOrUnknown(
+          data['artwork_path']!,
+          _artworkPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('subtitles_json')) {
+      context.handle(
+        _subtitlesJsonMeta,
+        subtitlesJson.isAcceptableOrUnknown(
+          data['subtitles_json']!,
+          _subtitlesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('user_edits_json')) {
+      context.handle(
+        _userEditsJsonMeta,
+        userEditsJson.isAcceptableOrUnknown(
+          data['user_edits_json']!,
+          _userEditsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('details_json')) {
+      context.handle(
+        _detailsJsonMeta,
+        detailsJson.isAcceptableOrUnknown(
+          data['details_json']!,
+          _detailsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider_source_id')) {
+      context.handle(
+        _providerSourceIdMeta,
+        providerSourceId.isAcceptableOrUnknown(
+          data['provider_source_id']!,
+          _providerSourceIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider_remote_key')) {
+      context.handle(
+        _providerRemoteKeyMeta,
+        providerRemoteKey.isAcceptableOrUnknown(
+          data['provider_remote_key']!,
+          _providerRemoteKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider_series_key')) {
+      context.handle(
+        _providerSeriesKeyMeta,
+        providerSeriesKey.isAcceptableOrUnknown(
+          data['provider_series_key']!,
+          _providerSeriesKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
+      );
+    }
+    if (data.containsKey('unavailable_since')) {
+      context.handle(
+        _unavailableSinceMeta,
+        unavailableSince.isAcceptableOrUnknown(
+          data['unavailable_since']!,
+          _unavailableSinceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {folderId, relPath},
+  ];
+  @override
+  LibraryItemRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LibraryItemRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      folderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}folder_id'],
+      )!,
+      relPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rel_path'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      mtime: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mtime'],
+      )!,
+      quickHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quick_hash'],
+      )!,
+      kind: $LibraryItemsTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      year: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}year'],
+      ),
+      showTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}show_title'],
+      ),
+      season: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}season'],
+      ),
+      episode: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode'],
+      ),
+      episodeEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode_end'],
+      ),
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      ),
+      probeJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}probe_json'],
+      ),
+      thumbnailPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumbnail_path'],
+      ),
+      artworkPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}artwork_path'],
+      ),
+      subtitlesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subtitles_json'],
+      ),
+      userEditsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_edits_json'],
+      ),
+      detailsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}details_json'],
+      ),
+      providerSourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_source_id'],
+      ),
+      providerItemType: $LibraryItemsTable.$converterproviderItemTypen.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}provider_item_type'],
+        ),
+      ),
+      providerRemoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_remote_key'],
+      ),
+      providerSeriesKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_series_key'],
+      ),
+      isHidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_hidden'],
+      )!,
+      unavailableSince: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}unavailable_since'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LibraryItemsTable createAlias(String alias) {
+    return $LibraryItemsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<LibraryKind, String, String> $converterkind =
+      const EnumNameConverter<LibraryKind>(LibraryKind.values);
+  static JsonTypeConverter2<VodType, String, String>
+  $converterproviderItemType = const EnumNameConverter<VodType>(VodType.values);
+  static JsonTypeConverter2<VodType?, String?, String?>
+  $converterproviderItemTypen = JsonTypeConverter2.asNullable(
+    $converterproviderItemType,
+  );
+}
+
+class LibraryItemRow extends DataClass implements Insertable<LibraryItemRow> {
+  final int id;
+  final int folderId;
+
+  /// Inside its folder, with `/` between parts on every system.
+  final String relPath;
+  final int sizeBytes;
+
+  /// The file's modification time, in milliseconds since the epoch: a
+  /// file with the same path, size and time is never read again.
+  final int mtime;
+
+  /// Size + the first and last 64 KB (docs/09).
+  final String quickHash;
+  final LibraryKind kind;
+  final String title;
+  final int? year;
+  final String? showTitle;
+  final int? season;
+  final int? episode;
+  final int? episodeEnd;
+  final int? durationMs;
+
+  /// What ffprobe said of it (step 4); null until it was probed.
+  final String? probeJson;
+  final String? thumbnailPath;
+  final String? artworkPath;
+
+  /// The subtitle files beside it (`ExternalSubtitle`s), as JSON.
+  final String? subtitlesJson;
+
+  /// What the user set in Edit details (`LibraryItemEdit`), as JSON.
+  final String? userEditsJson;
+
+  /// A download's copy of its title's details (plot, rating, genres,
+  /// cast; an episode's title and still), so its page works offline and
+  /// after the provider drops the title (v9, Phase 8 decision 5).
+  final String? detailsJson;
+
+  /// A download's title at its source. Removing the source leaves the
+  /// file in the library, unlinked.
+  final String? providerSourceId;
+  final VodType? providerItemType;
+  final String? providerRemoteKey;
+
+  /// An episode's series at its source (v9: its history key needs it).
+  final String? providerSeriesKey;
+  final bool isHidden;
+
+  /// When its folder stopped being readable (docs/09: 30 days, then it
+  /// goes).
+  final DateTime? unavailableSince;
+  final DateTime addedAt;
+  const LibraryItemRow({
+    required this.id,
+    required this.folderId,
+    required this.relPath,
+    required this.sizeBytes,
+    required this.mtime,
+    required this.quickHash,
+    required this.kind,
+    required this.title,
+    this.year,
+    this.showTitle,
+    this.season,
+    this.episode,
+    this.episodeEnd,
+    this.durationMs,
+    this.probeJson,
+    this.thumbnailPath,
+    this.artworkPath,
+    this.subtitlesJson,
+    this.userEditsJson,
+    this.detailsJson,
+    this.providerSourceId,
+    this.providerItemType,
+    this.providerRemoteKey,
+    this.providerSeriesKey,
+    required this.isHidden,
+    this.unavailableSince,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['folder_id'] = Variable<int>(folderId);
+    map['rel_path'] = Variable<String>(relPath);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['mtime'] = Variable<int>(mtime);
+    map['quick_hash'] = Variable<String>(quickHash);
+    {
+      map['kind'] = Variable<String>(
+        $LibraryItemsTable.$converterkind.toSql(kind),
+      );
+    }
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || year != null) {
+      map['year'] = Variable<int>(year);
+    }
+    if (!nullToAbsent || showTitle != null) {
+      map['show_title'] = Variable<String>(showTitle);
+    }
+    if (!nullToAbsent || season != null) {
+      map['season'] = Variable<int>(season);
+    }
+    if (!nullToAbsent || episode != null) {
+      map['episode'] = Variable<int>(episode);
+    }
+    if (!nullToAbsent || episodeEnd != null) {
+      map['episode_end'] = Variable<int>(episodeEnd);
+    }
+    if (!nullToAbsent || durationMs != null) {
+      map['duration_ms'] = Variable<int>(durationMs);
+    }
+    if (!nullToAbsent || probeJson != null) {
+      map['probe_json'] = Variable<String>(probeJson);
+    }
+    if (!nullToAbsent || thumbnailPath != null) {
+      map['thumbnail_path'] = Variable<String>(thumbnailPath);
+    }
+    if (!nullToAbsent || artworkPath != null) {
+      map['artwork_path'] = Variable<String>(artworkPath);
+    }
+    if (!nullToAbsent || subtitlesJson != null) {
+      map['subtitles_json'] = Variable<String>(subtitlesJson);
+    }
+    if (!nullToAbsent || userEditsJson != null) {
+      map['user_edits_json'] = Variable<String>(userEditsJson);
+    }
+    if (!nullToAbsent || detailsJson != null) {
+      map['details_json'] = Variable<String>(detailsJson);
+    }
+    if (!nullToAbsent || providerSourceId != null) {
+      map['provider_source_id'] = Variable<String>(providerSourceId);
+    }
+    if (!nullToAbsent || providerItemType != null) {
+      map['provider_item_type'] = Variable<String>(
+        $LibraryItemsTable.$converterproviderItemTypen.toSql(providerItemType),
+      );
+    }
+    if (!nullToAbsent || providerRemoteKey != null) {
+      map['provider_remote_key'] = Variable<String>(providerRemoteKey);
+    }
+    if (!nullToAbsent || providerSeriesKey != null) {
+      map['provider_series_key'] = Variable<String>(providerSeriesKey);
+    }
+    map['is_hidden'] = Variable<bool>(isHidden);
+    if (!nullToAbsent || unavailableSince != null) {
+      map['unavailable_since'] = Variable<DateTime>(unavailableSince);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    return map;
+  }
+
+  LibraryItemsCompanion toCompanion(bool nullToAbsent) {
+    return LibraryItemsCompanion(
+      id: Value(id),
+      folderId: Value(folderId),
+      relPath: Value(relPath),
+      sizeBytes: Value(sizeBytes),
+      mtime: Value(mtime),
+      quickHash: Value(quickHash),
+      kind: Value(kind),
+      title: Value(title),
+      year: year == null && nullToAbsent ? const Value.absent() : Value(year),
+      showTitle: showTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(showTitle),
+      season: season == null && nullToAbsent
+          ? const Value.absent()
+          : Value(season),
+      episode: episode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episode),
+      episodeEnd: episodeEnd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episodeEnd),
+      durationMs: durationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationMs),
+      probeJson: probeJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(probeJson),
+      thumbnailPath: thumbnailPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(thumbnailPath),
+      artworkPath: artworkPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(artworkPath),
+      subtitlesJson: subtitlesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subtitlesJson),
+      userEditsJson: userEditsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userEditsJson),
+      detailsJson: detailsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(detailsJson),
+      providerSourceId: providerSourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerSourceId),
+      providerItemType: providerItemType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerItemType),
+      providerRemoteKey: providerRemoteKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerRemoteKey),
+      providerSeriesKey: providerSeriesKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerSeriesKey),
+      isHidden: Value(isHidden),
+      unavailableSince: unavailableSince == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unavailableSince),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory LibraryItemRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LibraryItemRow(
+      id: serializer.fromJson<int>(json['id']),
+      folderId: serializer.fromJson<int>(json['folderId']),
+      relPath: serializer.fromJson<String>(json['relPath']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      mtime: serializer.fromJson<int>(json['mtime']),
+      quickHash: serializer.fromJson<String>(json['quickHash']),
+      kind: $LibraryItemsTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      title: serializer.fromJson<String>(json['title']),
+      year: serializer.fromJson<int?>(json['year']),
+      showTitle: serializer.fromJson<String?>(json['showTitle']),
+      season: serializer.fromJson<int?>(json['season']),
+      episode: serializer.fromJson<int?>(json['episode']),
+      episodeEnd: serializer.fromJson<int?>(json['episodeEnd']),
+      durationMs: serializer.fromJson<int?>(json['durationMs']),
+      probeJson: serializer.fromJson<String?>(json['probeJson']),
+      thumbnailPath: serializer.fromJson<String?>(json['thumbnailPath']),
+      artworkPath: serializer.fromJson<String?>(json['artworkPath']),
+      subtitlesJson: serializer.fromJson<String?>(json['subtitlesJson']),
+      userEditsJson: serializer.fromJson<String?>(json['userEditsJson']),
+      detailsJson: serializer.fromJson<String?>(json['detailsJson']),
+      providerSourceId: serializer.fromJson<String?>(json['providerSourceId']),
+      providerItemType: $LibraryItemsTable.$converterproviderItemTypen.fromJson(
+        serializer.fromJson<String?>(json['providerItemType']),
+      ),
+      providerRemoteKey: serializer.fromJson<String?>(
+        json['providerRemoteKey'],
+      ),
+      providerSeriesKey: serializer.fromJson<String?>(
+        json['providerSeriesKey'],
+      ),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
+      unavailableSince: serializer.fromJson<DateTime?>(
+        json['unavailableSince'],
+      ),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'folderId': serializer.toJson<int>(folderId),
+      'relPath': serializer.toJson<String>(relPath),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'mtime': serializer.toJson<int>(mtime),
+      'quickHash': serializer.toJson<String>(quickHash),
+      'kind': serializer.toJson<String>(
+        $LibraryItemsTable.$converterkind.toJson(kind),
+      ),
+      'title': serializer.toJson<String>(title),
+      'year': serializer.toJson<int?>(year),
+      'showTitle': serializer.toJson<String?>(showTitle),
+      'season': serializer.toJson<int?>(season),
+      'episode': serializer.toJson<int?>(episode),
+      'episodeEnd': serializer.toJson<int?>(episodeEnd),
+      'durationMs': serializer.toJson<int?>(durationMs),
+      'probeJson': serializer.toJson<String?>(probeJson),
+      'thumbnailPath': serializer.toJson<String?>(thumbnailPath),
+      'artworkPath': serializer.toJson<String?>(artworkPath),
+      'subtitlesJson': serializer.toJson<String?>(subtitlesJson),
+      'userEditsJson': serializer.toJson<String?>(userEditsJson),
+      'detailsJson': serializer.toJson<String?>(detailsJson),
+      'providerSourceId': serializer.toJson<String?>(providerSourceId),
+      'providerItemType': serializer.toJson<String?>(
+        $LibraryItemsTable.$converterproviderItemTypen.toJson(providerItemType),
+      ),
+      'providerRemoteKey': serializer.toJson<String?>(providerRemoteKey),
+      'providerSeriesKey': serializer.toJson<String?>(providerSeriesKey),
+      'isHidden': serializer.toJson<bool>(isHidden),
+      'unavailableSince': serializer.toJson<DateTime?>(unavailableSince),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+    };
+  }
+
+  LibraryItemRow copyWith({
+    int? id,
+    int? folderId,
+    String? relPath,
+    int? sizeBytes,
+    int? mtime,
+    String? quickHash,
+    LibraryKind? kind,
+    String? title,
+    Value<int?> year = const Value.absent(),
+    Value<String?> showTitle = const Value.absent(),
+    Value<int?> season = const Value.absent(),
+    Value<int?> episode = const Value.absent(),
+    Value<int?> episodeEnd = const Value.absent(),
+    Value<int?> durationMs = const Value.absent(),
+    Value<String?> probeJson = const Value.absent(),
+    Value<String?> thumbnailPath = const Value.absent(),
+    Value<String?> artworkPath = const Value.absent(),
+    Value<String?> subtitlesJson = const Value.absent(),
+    Value<String?> userEditsJson = const Value.absent(),
+    Value<String?> detailsJson = const Value.absent(),
+    Value<String?> providerSourceId = const Value.absent(),
+    Value<VodType?> providerItemType = const Value.absent(),
+    Value<String?> providerRemoteKey = const Value.absent(),
+    Value<String?> providerSeriesKey = const Value.absent(),
+    bool? isHidden,
+    Value<DateTime?> unavailableSince = const Value.absent(),
+    DateTime? addedAt,
+  }) => LibraryItemRow(
+    id: id ?? this.id,
+    folderId: folderId ?? this.folderId,
+    relPath: relPath ?? this.relPath,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    mtime: mtime ?? this.mtime,
+    quickHash: quickHash ?? this.quickHash,
+    kind: kind ?? this.kind,
+    title: title ?? this.title,
+    year: year.present ? year.value : this.year,
+    showTitle: showTitle.present ? showTitle.value : this.showTitle,
+    season: season.present ? season.value : this.season,
+    episode: episode.present ? episode.value : this.episode,
+    episodeEnd: episodeEnd.present ? episodeEnd.value : this.episodeEnd,
+    durationMs: durationMs.present ? durationMs.value : this.durationMs,
+    probeJson: probeJson.present ? probeJson.value : this.probeJson,
+    thumbnailPath: thumbnailPath.present
+        ? thumbnailPath.value
+        : this.thumbnailPath,
+    artworkPath: artworkPath.present ? artworkPath.value : this.artworkPath,
+    subtitlesJson: subtitlesJson.present
+        ? subtitlesJson.value
+        : this.subtitlesJson,
+    userEditsJson: userEditsJson.present
+        ? userEditsJson.value
+        : this.userEditsJson,
+    detailsJson: detailsJson.present ? detailsJson.value : this.detailsJson,
+    providerSourceId: providerSourceId.present
+        ? providerSourceId.value
+        : this.providerSourceId,
+    providerItemType: providerItemType.present
+        ? providerItemType.value
+        : this.providerItemType,
+    providerRemoteKey: providerRemoteKey.present
+        ? providerRemoteKey.value
+        : this.providerRemoteKey,
+    providerSeriesKey: providerSeriesKey.present
+        ? providerSeriesKey.value
+        : this.providerSeriesKey,
+    isHidden: isHidden ?? this.isHidden,
+    unavailableSince: unavailableSince.present
+        ? unavailableSince.value
+        : this.unavailableSince,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  LibraryItemRow copyWithCompanion(LibraryItemsCompanion data) {
+    return LibraryItemRow(
+      id: data.id.present ? data.id.value : this.id,
+      folderId: data.folderId.present ? data.folderId.value : this.folderId,
+      relPath: data.relPath.present ? data.relPath.value : this.relPath,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      mtime: data.mtime.present ? data.mtime.value : this.mtime,
+      quickHash: data.quickHash.present ? data.quickHash.value : this.quickHash,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      title: data.title.present ? data.title.value : this.title,
+      year: data.year.present ? data.year.value : this.year,
+      showTitle: data.showTitle.present ? data.showTitle.value : this.showTitle,
+      season: data.season.present ? data.season.value : this.season,
+      episode: data.episode.present ? data.episode.value : this.episode,
+      episodeEnd: data.episodeEnd.present
+          ? data.episodeEnd.value
+          : this.episodeEnd,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      probeJson: data.probeJson.present ? data.probeJson.value : this.probeJson,
+      thumbnailPath: data.thumbnailPath.present
+          ? data.thumbnailPath.value
+          : this.thumbnailPath,
+      artworkPath: data.artworkPath.present
+          ? data.artworkPath.value
+          : this.artworkPath,
+      subtitlesJson: data.subtitlesJson.present
+          ? data.subtitlesJson.value
+          : this.subtitlesJson,
+      userEditsJson: data.userEditsJson.present
+          ? data.userEditsJson.value
+          : this.userEditsJson,
+      detailsJson: data.detailsJson.present
+          ? data.detailsJson.value
+          : this.detailsJson,
+      providerSourceId: data.providerSourceId.present
+          ? data.providerSourceId.value
+          : this.providerSourceId,
+      providerItemType: data.providerItemType.present
+          ? data.providerItemType.value
+          : this.providerItemType,
+      providerRemoteKey: data.providerRemoteKey.present
+          ? data.providerRemoteKey.value
+          : this.providerRemoteKey,
+      providerSeriesKey: data.providerSeriesKey.present
+          ? data.providerSeriesKey.value
+          : this.providerSeriesKey,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      unavailableSince: data.unavailableSince.present
+          ? data.unavailableSince.value
+          : this.unavailableSince,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryItemRow(')
+          ..write('id: $id, ')
+          ..write('folderId: $folderId, ')
+          ..write('relPath: $relPath, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('mtime: $mtime, ')
+          ..write('quickHash: $quickHash, ')
+          ..write('kind: $kind, ')
+          ..write('title: $title, ')
+          ..write('year: $year, ')
+          ..write('showTitle: $showTitle, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('episodeEnd: $episodeEnd, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('probeJson: $probeJson, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('artworkPath: $artworkPath, ')
+          ..write('subtitlesJson: $subtitlesJson, ')
+          ..write('userEditsJson: $userEditsJson, ')
+          ..write('detailsJson: $detailsJson, ')
+          ..write('providerSourceId: $providerSourceId, ')
+          ..write('providerItemType: $providerItemType, ')
+          ..write('providerRemoteKey: $providerRemoteKey, ')
+          ..write('providerSeriesKey: $providerSeriesKey, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('unavailableSince: $unavailableSince, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    folderId,
+    relPath,
+    sizeBytes,
+    mtime,
+    quickHash,
+    kind,
+    title,
+    year,
+    showTitle,
+    season,
+    episode,
+    episodeEnd,
+    durationMs,
+    probeJson,
+    thumbnailPath,
+    artworkPath,
+    subtitlesJson,
+    userEditsJson,
+    detailsJson,
+    providerSourceId,
+    providerItemType,
+    providerRemoteKey,
+    providerSeriesKey,
+    isHidden,
+    unavailableSince,
+    addedAt,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LibraryItemRow &&
+          other.id == this.id &&
+          other.folderId == this.folderId &&
+          other.relPath == this.relPath &&
+          other.sizeBytes == this.sizeBytes &&
+          other.mtime == this.mtime &&
+          other.quickHash == this.quickHash &&
+          other.kind == this.kind &&
+          other.title == this.title &&
+          other.year == this.year &&
+          other.showTitle == this.showTitle &&
+          other.season == this.season &&
+          other.episode == this.episode &&
+          other.episodeEnd == this.episodeEnd &&
+          other.durationMs == this.durationMs &&
+          other.probeJson == this.probeJson &&
+          other.thumbnailPath == this.thumbnailPath &&
+          other.artworkPath == this.artworkPath &&
+          other.subtitlesJson == this.subtitlesJson &&
+          other.userEditsJson == this.userEditsJson &&
+          other.detailsJson == this.detailsJson &&
+          other.providerSourceId == this.providerSourceId &&
+          other.providerItemType == this.providerItemType &&
+          other.providerRemoteKey == this.providerRemoteKey &&
+          other.providerSeriesKey == this.providerSeriesKey &&
+          other.isHidden == this.isHidden &&
+          other.unavailableSince == this.unavailableSince &&
+          other.addedAt == this.addedAt);
+}
+
+class LibraryItemsCompanion extends UpdateCompanion<LibraryItemRow> {
+  final Value<int> id;
+  final Value<int> folderId;
+  final Value<String> relPath;
+  final Value<int> sizeBytes;
+  final Value<int> mtime;
+  final Value<String> quickHash;
+  final Value<LibraryKind> kind;
+  final Value<String> title;
+  final Value<int?> year;
+  final Value<String?> showTitle;
+  final Value<int?> season;
+  final Value<int?> episode;
+  final Value<int?> episodeEnd;
+  final Value<int?> durationMs;
+  final Value<String?> probeJson;
+  final Value<String?> thumbnailPath;
+  final Value<String?> artworkPath;
+  final Value<String?> subtitlesJson;
+  final Value<String?> userEditsJson;
+  final Value<String?> detailsJson;
+  final Value<String?> providerSourceId;
+  final Value<VodType?> providerItemType;
+  final Value<String?> providerRemoteKey;
+  final Value<String?> providerSeriesKey;
+  final Value<bool> isHidden;
+  final Value<DateTime?> unavailableSince;
+  final Value<DateTime> addedAt;
+  const LibraryItemsCompanion({
+    this.id = const Value.absent(),
+    this.folderId = const Value.absent(),
+    this.relPath = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.mtime = const Value.absent(),
+    this.quickHash = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.title = const Value.absent(),
+    this.year = const Value.absent(),
+    this.showTitle = const Value.absent(),
+    this.season = const Value.absent(),
+    this.episode = const Value.absent(),
+    this.episodeEnd = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.probeJson = const Value.absent(),
+    this.thumbnailPath = const Value.absent(),
+    this.artworkPath = const Value.absent(),
+    this.subtitlesJson = const Value.absent(),
+    this.userEditsJson = const Value.absent(),
+    this.detailsJson = const Value.absent(),
+    this.providerSourceId = const Value.absent(),
+    this.providerItemType = const Value.absent(),
+    this.providerRemoteKey = const Value.absent(),
+    this.providerSeriesKey = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.unavailableSince = const Value.absent(),
+    this.addedAt = const Value.absent(),
+  });
+  LibraryItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required int folderId,
+    required String relPath,
+    required int sizeBytes,
+    required int mtime,
+    required String quickHash,
+    required LibraryKind kind,
+    required String title,
+    this.year = const Value.absent(),
+    this.showTitle = const Value.absent(),
+    this.season = const Value.absent(),
+    this.episode = const Value.absent(),
+    this.episodeEnd = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.probeJson = const Value.absent(),
+    this.thumbnailPath = const Value.absent(),
+    this.artworkPath = const Value.absent(),
+    this.subtitlesJson = const Value.absent(),
+    this.userEditsJson = const Value.absent(),
+    this.detailsJson = const Value.absent(),
+    this.providerSourceId = const Value.absent(),
+    this.providerItemType = const Value.absent(),
+    this.providerRemoteKey = const Value.absent(),
+    this.providerSeriesKey = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.unavailableSince = const Value.absent(),
+    required DateTime addedAt,
+  }) : folderId = Value(folderId),
+       relPath = Value(relPath),
+       sizeBytes = Value(sizeBytes),
+       mtime = Value(mtime),
+       quickHash = Value(quickHash),
+       kind = Value(kind),
+       title = Value(title),
+       addedAt = Value(addedAt);
+  static Insertable<LibraryItemRow> custom({
+    Expression<int>? id,
+    Expression<int>? folderId,
+    Expression<String>? relPath,
+    Expression<int>? sizeBytes,
+    Expression<int>? mtime,
+    Expression<String>? quickHash,
+    Expression<String>? kind,
+    Expression<String>? title,
+    Expression<int>? year,
+    Expression<String>? showTitle,
+    Expression<int>? season,
+    Expression<int>? episode,
+    Expression<int>? episodeEnd,
+    Expression<int>? durationMs,
+    Expression<String>? probeJson,
+    Expression<String>? thumbnailPath,
+    Expression<String>? artworkPath,
+    Expression<String>? subtitlesJson,
+    Expression<String>? userEditsJson,
+    Expression<String>? detailsJson,
+    Expression<String>? providerSourceId,
+    Expression<String>? providerItemType,
+    Expression<String>? providerRemoteKey,
+    Expression<String>? providerSeriesKey,
+    Expression<bool>? isHidden,
+    Expression<DateTime>? unavailableSince,
+    Expression<DateTime>? addedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (folderId != null) 'folder_id': folderId,
+      if (relPath != null) 'rel_path': relPath,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (mtime != null) 'mtime': mtime,
+      if (quickHash != null) 'quick_hash': quickHash,
+      if (kind != null) 'kind': kind,
+      if (title != null) 'title': title,
+      if (year != null) 'year': year,
+      if (showTitle != null) 'show_title': showTitle,
+      if (season != null) 'season': season,
+      if (episode != null) 'episode': episode,
+      if (episodeEnd != null) 'episode_end': episodeEnd,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (probeJson != null) 'probe_json': probeJson,
+      if (thumbnailPath != null) 'thumbnail_path': thumbnailPath,
+      if (artworkPath != null) 'artwork_path': artworkPath,
+      if (subtitlesJson != null) 'subtitles_json': subtitlesJson,
+      if (userEditsJson != null) 'user_edits_json': userEditsJson,
+      if (detailsJson != null) 'details_json': detailsJson,
+      if (providerSourceId != null) 'provider_source_id': providerSourceId,
+      if (providerItemType != null) 'provider_item_type': providerItemType,
+      if (providerRemoteKey != null) 'provider_remote_key': providerRemoteKey,
+      if (providerSeriesKey != null) 'provider_series_key': providerSeriesKey,
+      if (isHidden != null) 'is_hidden': isHidden,
+      if (unavailableSince != null) 'unavailable_since': unavailableSince,
+      if (addedAt != null) 'added_at': addedAt,
+    });
+  }
+
+  LibraryItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? folderId,
+    Value<String>? relPath,
+    Value<int>? sizeBytes,
+    Value<int>? mtime,
+    Value<String>? quickHash,
+    Value<LibraryKind>? kind,
+    Value<String>? title,
+    Value<int?>? year,
+    Value<String?>? showTitle,
+    Value<int?>? season,
+    Value<int?>? episode,
+    Value<int?>? episodeEnd,
+    Value<int?>? durationMs,
+    Value<String?>? probeJson,
+    Value<String?>? thumbnailPath,
+    Value<String?>? artworkPath,
+    Value<String?>? subtitlesJson,
+    Value<String?>? userEditsJson,
+    Value<String?>? detailsJson,
+    Value<String?>? providerSourceId,
+    Value<VodType?>? providerItemType,
+    Value<String?>? providerRemoteKey,
+    Value<String?>? providerSeriesKey,
+    Value<bool>? isHidden,
+    Value<DateTime?>? unavailableSince,
+    Value<DateTime>? addedAt,
+  }) {
+    return LibraryItemsCompanion(
+      id: id ?? this.id,
+      folderId: folderId ?? this.folderId,
+      relPath: relPath ?? this.relPath,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      mtime: mtime ?? this.mtime,
+      quickHash: quickHash ?? this.quickHash,
+      kind: kind ?? this.kind,
+      title: title ?? this.title,
+      year: year ?? this.year,
+      showTitle: showTitle ?? this.showTitle,
+      season: season ?? this.season,
+      episode: episode ?? this.episode,
+      episodeEnd: episodeEnd ?? this.episodeEnd,
+      durationMs: durationMs ?? this.durationMs,
+      probeJson: probeJson ?? this.probeJson,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      artworkPath: artworkPath ?? this.artworkPath,
+      subtitlesJson: subtitlesJson ?? this.subtitlesJson,
+      userEditsJson: userEditsJson ?? this.userEditsJson,
+      detailsJson: detailsJson ?? this.detailsJson,
+      providerSourceId: providerSourceId ?? this.providerSourceId,
+      providerItemType: providerItemType ?? this.providerItemType,
+      providerRemoteKey: providerRemoteKey ?? this.providerRemoteKey,
+      providerSeriesKey: providerSeriesKey ?? this.providerSeriesKey,
+      isHidden: isHidden ?? this.isHidden,
+      unavailableSince: unavailableSince ?? this.unavailableSince,
+      addedAt: addedAt ?? this.addedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (folderId.present) {
+      map['folder_id'] = Variable<int>(folderId.value);
+    }
+    if (relPath.present) {
+      map['rel_path'] = Variable<String>(relPath.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (mtime.present) {
+      map['mtime'] = Variable<int>(mtime.value);
+    }
+    if (quickHash.present) {
+      map['quick_hash'] = Variable<String>(quickHash.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $LibraryItemsTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (showTitle.present) {
+      map['show_title'] = Variable<String>(showTitle.value);
+    }
+    if (season.present) {
+      map['season'] = Variable<int>(season.value);
+    }
+    if (episode.present) {
+      map['episode'] = Variable<int>(episode.value);
+    }
+    if (episodeEnd.present) {
+      map['episode_end'] = Variable<int>(episodeEnd.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (probeJson.present) {
+      map['probe_json'] = Variable<String>(probeJson.value);
+    }
+    if (thumbnailPath.present) {
+      map['thumbnail_path'] = Variable<String>(thumbnailPath.value);
+    }
+    if (artworkPath.present) {
+      map['artwork_path'] = Variable<String>(artworkPath.value);
+    }
+    if (subtitlesJson.present) {
+      map['subtitles_json'] = Variable<String>(subtitlesJson.value);
+    }
+    if (userEditsJson.present) {
+      map['user_edits_json'] = Variable<String>(userEditsJson.value);
+    }
+    if (detailsJson.present) {
+      map['details_json'] = Variable<String>(detailsJson.value);
+    }
+    if (providerSourceId.present) {
+      map['provider_source_id'] = Variable<String>(providerSourceId.value);
+    }
+    if (providerItemType.present) {
+      map['provider_item_type'] = Variable<String>(
+        $LibraryItemsTable.$converterproviderItemTypen.toSql(
+          providerItemType.value,
+        ),
+      );
+    }
+    if (providerRemoteKey.present) {
+      map['provider_remote_key'] = Variable<String>(providerRemoteKey.value);
+    }
+    if (providerSeriesKey.present) {
+      map['provider_series_key'] = Variable<String>(providerSeriesKey.value);
+    }
+    if (isHidden.present) {
+      map['is_hidden'] = Variable<bool>(isHidden.value);
+    }
+    if (unavailableSince.present) {
+      map['unavailable_since'] = Variable<DateTime>(unavailableSince.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('folderId: $folderId, ')
+          ..write('relPath: $relPath, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('mtime: $mtime, ')
+          ..write('quickHash: $quickHash, ')
+          ..write('kind: $kind, ')
+          ..write('title: $title, ')
+          ..write('year: $year, ')
+          ..write('showTitle: $showTitle, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('episodeEnd: $episodeEnd, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('probeJson: $probeJson, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('artworkPath: $artworkPath, ')
+          ..write('subtitlesJson: $subtitlesJson, ')
+          ..write('userEditsJson: $userEditsJson, ')
+          ..write('detailsJson: $detailsJson, ')
+          ..write('providerSourceId: $providerSourceId, ')
+          ..write('providerItemType: $providerItemType, ')
+          ..write('providerRemoteKey: $providerRemoteKey, ')
+          ..write('providerSeriesKey: $providerSeriesKey, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('unavailableSince: $unavailableSince, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class LibraryFts extends Table
+    with
+        TableInfo<LibraryFts, LibraryFt>,
+        VirtualTableInfo<LibraryFts, LibraryFt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  LibraryFts(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _showTitleMeta = const VerificationMeta(
+    'showTitle',
+  );
+  late final GeneratedColumn<String> showTitle = GeneratedColumn<String>(
+    'show_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [title, showTitle];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'library_fts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LibraryFt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('show_title')) {
+      context.handle(
+        _showTitleMeta,
+        showTitle.isAcceptableOrUnknown(data['show_title']!, _showTitleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_showTitleMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => const {};
+  @override
+  LibraryFt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LibraryFt(
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      showTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}show_title'],
+      )!,
+    );
+  }
+
+  @override
+  LibraryFts createAlias(String alias) {
+    return LibraryFts(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+  @override
+  String get moduleAndArgs =>
+      'fts5(title, show_title, content=\'library_items\', content_rowid=\'id\', tokenize=\'unicode61 remove_diacritics 2\', prefix=\'2 3\')';
+}
+
+class LibraryFt extends DataClass implements Insertable<LibraryFt> {
+  final String title;
+  final String showTitle;
+  const LibraryFt({required this.title, required this.showTitle});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['title'] = Variable<String>(title);
+    map['show_title'] = Variable<String>(showTitle);
+    return map;
+  }
+
+  LibraryFtsCompanion toCompanion(bool nullToAbsent) {
+    return LibraryFtsCompanion(
+      title: Value(title),
+      showTitle: Value(showTitle),
+    );
+  }
+
+  factory LibraryFt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LibraryFt(
+      title: serializer.fromJson<String>(json['title']),
+      showTitle: serializer.fromJson<String>(json['show_title']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'title': serializer.toJson<String>(title),
+      'show_title': serializer.toJson<String>(showTitle),
+    };
+  }
+
+  LibraryFt copyWith({String? title, String? showTitle}) => LibraryFt(
+    title: title ?? this.title,
+    showTitle: showTitle ?? this.showTitle,
+  );
+  LibraryFt copyWithCompanion(LibraryFtsCompanion data) {
+    return LibraryFt(
+      title: data.title.present ? data.title.value : this.title,
+      showTitle: data.showTitle.present ? data.showTitle.value : this.showTitle,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryFt(')
+          ..write('title: $title, ')
+          ..write('showTitle: $showTitle')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(title, showTitle);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LibraryFt &&
+          other.title == this.title &&
+          other.showTitle == this.showTitle);
+}
+
+class LibraryFtsCompanion extends UpdateCompanion<LibraryFt> {
+  final Value<String> title;
+  final Value<String> showTitle;
+  final Value<int> rowid;
+  const LibraryFtsCompanion({
+    this.title = const Value.absent(),
+    this.showTitle = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LibraryFtsCompanion.insert({
+    required String title,
+    required String showTitle,
+    this.rowid = const Value.absent(),
+  }) : title = Value(title),
+       showTitle = Value(showTitle);
+  static Insertable<LibraryFt> custom({
+    Expression<String>? title,
+    Expression<String>? showTitle,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (title != null) 'title': title,
+      if (showTitle != null) 'show_title': showTitle,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LibraryFtsCompanion copyWith({
+    Value<String>? title,
+    Value<String>? showTitle,
+    Value<int>? rowid,
+  }) {
+    return LibraryFtsCompanion(
+      title: title ?? this.title,
+      showTitle: showTitle ?? this.showTitle,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (showTitle.present) {
+      map['show_title'] = Variable<String>(showTitle.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LibraryFtsCompanion(')
+          ..write('title: $title, ')
+          ..write('showTitle: $showTitle, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FavoriteGroupsTable extends FavoriteGroups
+    with TableInfo<$FavoriteGroupsTable, FavoriteGroupRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FavoriteGroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _collapsedMeta = const VerificationMeta(
+    'collapsed',
+  );
+  @override
+  late final GeneratedColumn<bool> collapsed = GeneratedColumn<bool>(
+    'collapsed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("collapsed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceId,
+    name,
+    sortOrder,
+    collapsed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'favorite_groups';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FavoriteGroupRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('collapsed')) {
+      context.handle(
+        _collapsedMeta,
+        collapsed.isAcceptableOrUnknown(data['collapsed']!, _collapsedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FavoriteGroupRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FavoriteGroupRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      collapsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}collapsed'],
+      )!,
+    );
+  }
+
+  @override
+  $FavoriteGroupsTable createAlias(String alias) {
+    return $FavoriteGroupsTable(attachedDatabase, alias);
+  }
+}
+
+class FavoriteGroupRow extends DataClass
+    implements Insertable<FavoriteGroupRow> {
+  final int id;
+  final String sourceId;
+  final String name;
+  final int sortOrder;
+  final bool collapsed;
+  const FavoriteGroupRow({
+    required this.id,
+    required this.sourceId,
+    required this.name,
+    required this.sortOrder,
+    required this.collapsed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    map['name'] = Variable<String>(name);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['collapsed'] = Variable<bool>(collapsed);
+    return map;
+  }
+
+  FavoriteGroupsCompanion toCompanion(bool nullToAbsent) {
+    return FavoriteGroupsCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      collapsed: Value(collapsed),
+    );
+  }
+
+  factory FavoriteGroupRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FavoriteGroupRow(
+      id: serializer.fromJson<int>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      name: serializer.fromJson<String>(json['name']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      collapsed: serializer.fromJson<bool>(json['collapsed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'name': serializer.toJson<String>(name),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'collapsed': serializer.toJson<bool>(collapsed),
+    };
+  }
+
+  FavoriteGroupRow copyWith({
+    int? id,
+    String? sourceId,
+    String? name,
+    int? sortOrder,
+    bool? collapsed,
+  }) => FavoriteGroupRow(
+    id: id ?? this.id,
+    sourceId: sourceId ?? this.sourceId,
+    name: name ?? this.name,
+    sortOrder: sortOrder ?? this.sortOrder,
+    collapsed: collapsed ?? this.collapsed,
+  );
+  FavoriteGroupRow copyWithCompanion(FavoriteGroupsCompanion data) {
+    return FavoriteGroupRow(
+      id: data.id.present ? data.id.value : this.id,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      name: data.name.present ? data.name.value : this.name,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      collapsed: data.collapsed.present ? data.collapsed.value : this.collapsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteGroupRow(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('collapsed: $collapsed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, sourceId, name, sortOrder, collapsed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FavoriteGroupRow &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.name == this.name &&
+          other.sortOrder == this.sortOrder &&
+          other.collapsed == this.collapsed);
+}
+
+class FavoriteGroupsCompanion extends UpdateCompanion<FavoriteGroupRow> {
+  final Value<int> id;
+  final Value<String> sourceId;
+  final Value<String> name;
+  final Value<int> sortOrder;
+  final Value<bool> collapsed;
+  const FavoriteGroupsCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.collapsed = const Value.absent(),
+  });
+  FavoriteGroupsCompanion.insert({
+    this.id = const Value.absent(),
+    required String sourceId,
+    required String name,
+    this.sortOrder = const Value.absent(),
+    this.collapsed = const Value.absent(),
+  }) : sourceId = Value(sourceId),
+       name = Value(name);
+  static Insertable<FavoriteGroupRow> custom({
+    Expression<int>? id,
+    Expression<String>? sourceId,
+    Expression<String>? name,
+    Expression<int>? sortOrder,
+    Expression<bool>? collapsed,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (name != null) 'name': name,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (collapsed != null) 'collapsed': collapsed,
+    });
+  }
+
+  FavoriteGroupsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sourceId,
+    Value<String>? name,
+    Value<int>? sortOrder,
+    Value<bool>? collapsed,
+  }) {
+    return FavoriteGroupsCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      collapsed: collapsed ?? this.collapsed,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (collapsed.present) {
+      map['collapsed'] = Variable<bool>(collapsed.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteGroupsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('collapsed: $collapsed')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FavoritesTable extends Favorites
+    with TableInfo<$FavoritesTable, FavoriteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FavoritesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
+      GeneratedColumn<String>(
+        'item_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<UserItemType>($FavoritesTable.$converteritemType);
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
+    'remoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
+    'remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+    'group_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES favorite_groups (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    groupId,
+    sortOrder,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'favorites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FavoriteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('remote_key')) {
+      context.handle(
+        _remoteKeyMeta,
+        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteKeyMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {itemType, sourceId, remoteKey},
+  ];
+  @override
+  FavoriteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FavoriteRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      itemType: $FavoritesTable.$converteritemType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}item_type'],
+        )!,
+      ),
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      ),
+      remoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_key'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_id'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FavoritesTable createAlias(String alias) {
+    return $FavoritesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
+      const EnumNameConverter<UserItemType>(UserItemType.values);
+}
+
+class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
+  final int id;
+  final UserItemType itemType;
+
+  /// Null only for local library files (Phase 8).
+  final String? sourceId;
+  final String remoteKey;
+
+  /// The user's group of favorite channels it is in (v7); null is none.
+  /// Deleting the group leaves it a favorite, in no group.
+  final int? groupId;
+
+  /// Its place in the user's order; null sorts after every placed one,
+  /// by [addedAt].
+  final int? sortOrder;
+  final DateTime addedAt;
+  const FavoriteRow({
+    required this.id,
+    required this.itemType,
+    this.sourceId,
+    required this.remoteKey,
+    this.groupId,
+    this.sortOrder,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    {
+      map['item_type'] = Variable<String>(
+        $FavoritesTable.$converteritemType.toSql(itemType),
+      );
+    }
+    if (!nullToAbsent || sourceId != null) {
+      map['source_id'] = Variable<String>(sourceId);
+    }
+    map['remote_key'] = Variable<String>(remoteKey);
+    if (!nullToAbsent || groupId != null) {
+      map['group_id'] = Variable<int>(groupId);
+    }
+    if (!nullToAbsent || sortOrder != null) {
+      map['sort_order'] = Variable<int>(sortOrder);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    return map;
+  }
+
+  FavoritesCompanion toCompanion(bool nullToAbsent) {
+    return FavoritesCompanion(
+      id: Value(id),
+      itemType: Value(itemType),
+      sourceId: sourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceId),
+      remoteKey: Value(remoteKey),
+      groupId: groupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupId),
+      sortOrder: sortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sortOrder),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory FavoriteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FavoriteRow(
+      id: serializer.fromJson<int>(json['id']),
+      itemType: $FavoritesTable.$converteritemType.fromJson(
+        serializer.fromJson<String>(json['itemType']),
+      ),
+      sourceId: serializer.fromJson<String?>(json['sourceId']),
+      remoteKey: serializer.fromJson<String>(json['remoteKey']),
+      groupId: serializer.fromJson<int?>(json['groupId']),
+      sortOrder: serializer.fromJson<int?>(json['sortOrder']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'itemType': serializer.toJson<String>(
+        $FavoritesTable.$converteritemType.toJson(itemType),
+      ),
+      'sourceId': serializer.toJson<String?>(sourceId),
+      'remoteKey': serializer.toJson<String>(remoteKey),
+      'groupId': serializer.toJson<int?>(groupId),
+      'sortOrder': serializer.toJson<int?>(sortOrder),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+    };
+  }
+
+  FavoriteRow copyWith({
+    int? id,
+    UserItemType? itemType,
+    Value<String?> sourceId = const Value.absent(),
+    String? remoteKey,
+    Value<int?> groupId = const Value.absent(),
+    Value<int?> sortOrder = const Value.absent(),
+    DateTime? addedAt,
+  }) => FavoriteRow(
+    id: id ?? this.id,
+    itemType: itemType ?? this.itemType,
+    sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    remoteKey: remoteKey ?? this.remoteKey,
+    groupId: groupId.present ? groupId.value : this.groupId,
+    sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  FavoriteRow copyWithCompanion(FavoritesCompanion data) {
+    return FavoriteRow(
+      id: data.id.present ? data.id.value : this.id,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoriteRow(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('groupId: $groupId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    groupId,
+    sortOrder,
+    addedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FavoriteRow &&
+          other.id == this.id &&
+          other.itemType == this.itemType &&
+          other.sourceId == this.sourceId &&
+          other.remoteKey == this.remoteKey &&
+          other.groupId == this.groupId &&
+          other.sortOrder == this.sortOrder &&
+          other.addedAt == this.addedAt);
+}
+
+class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
+  final Value<int> id;
+  final Value<UserItemType> itemType;
+  final Value<String?> sourceId;
+  final Value<String> remoteKey;
+  final Value<int?> groupId;
+  final Value<int?> sortOrder;
+  final Value<DateTime> addedAt;
+  const FavoritesCompanion({
+    this.id = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.remoteKey = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.addedAt = const Value.absent(),
+  });
+  FavoritesCompanion.insert({
+    this.id = const Value.absent(),
+    required UserItemType itemType,
+    this.sourceId = const Value.absent(),
+    required String remoteKey,
+    this.groupId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    required DateTime addedAt,
+  }) : itemType = Value(itemType),
+       remoteKey = Value(remoteKey),
+       addedAt = Value(addedAt);
+  static Insertable<FavoriteRow> custom({
+    Expression<int>? id,
+    Expression<String>? itemType,
+    Expression<String>? sourceId,
+    Expression<String>? remoteKey,
+    Expression<int>? groupId,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? addedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (itemType != null) 'item_type': itemType,
+      if (sourceId != null) 'source_id': sourceId,
+      if (remoteKey != null) 'remote_key': remoteKey,
+      if (groupId != null) 'group_id': groupId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (addedAt != null) 'added_at': addedAt,
+    });
+  }
+
+  FavoritesCompanion copyWith({
+    Value<int>? id,
+    Value<UserItemType>? itemType,
+    Value<String?>? sourceId,
+    Value<String>? remoteKey,
+    Value<int?>? groupId,
+    Value<int?>? sortOrder,
+    Value<DateTime>? addedAt,
+  }) {
+    return FavoritesCompanion(
+      id: id ?? this.id,
+      itemType: itemType ?? this.itemType,
+      sourceId: sourceId ?? this.sourceId,
+      remoteKey: remoteKey ?? this.remoteKey,
+      groupId: groupId ?? this.groupId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      addedAt: addedAt ?? this.addedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(
+        $FavoritesTable.$converteritemType.toSql(itemType.value),
+      );
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (remoteKey.present) {
+      map['remote_key'] = Variable<String>(remoteKey.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoritesCompanion(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('groupId: $groupId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WatchHistoryTable extends WatchHistory
+    with TableInfo<$WatchHistoryTable, WatchHistoryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WatchHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
+      GeneratedColumn<String>(
+        'item_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<UserItemType>($WatchHistoryTable.$converteritemType);
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
+    'remoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
+    'remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completedMeta = const VerificationMeta(
+    'completed',
+  );
+  @override
+  late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
+    'completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _seriesKeyMeta = const VerificationMeta(
+    'seriesKey',
+  );
+  @override
+  late final GeneratedColumn<String> seriesKey = GeneratedColumn<String>(
+    'series_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dismissedMeta = const VerificationMeta(
+    'dismissed',
+  );
+  @override
+  late final GeneratedColumn<bool> dismissed = GeneratedColumn<bool>(
+    'dismissed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dismissed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    positionMs,
+    durationMs,
+    completed,
+    seriesKey,
+    dismissed,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'watch_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WatchHistoryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('remote_key')) {
+      context.handle(
+        _remoteKeyMeta,
+        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteKeyMeta);
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('completed')) {
+      context.handle(
+        _completedMeta,
+        completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
+      );
+    }
+    if (data.containsKey('series_key')) {
+      context.handle(
+        _seriesKeyMeta,
+        seriesKey.isAcceptableOrUnknown(data['series_key']!, _seriesKeyMeta),
+      );
+    }
+    if (data.containsKey('dismissed')) {
+      context.handle(
+        _dismissedMeta,
+        dismissed.isAcceptableOrUnknown(data['dismissed']!, _dismissedMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {itemType, sourceId, remoteKey},
+  ];
+  @override
+  WatchHistoryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WatchHistoryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      itemType: $WatchHistoryTable.$converteritemType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}item_type'],
+        )!,
+      ),
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      ),
+      remoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_key'],
+      )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      ),
+      completed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}completed'],
+      )!,
+      seriesKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}series_key'],
+      ),
+      dismissed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dismissed'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WatchHistoryTable createAlias(String alias) {
+    return $WatchHistoryTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
+      const EnumNameConverter<UserItemType>(UserItemType.values);
+}
+
+class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
+  final int id;
+  final UserItemType itemType;
+  final String? sourceId;
+  final String remoteKey;
+  final int positionMs;
+  final int? durationMs;
+  final bool completed;
+
+  /// An episode's series (its remote key), so Continue watching needs no
+  /// join through the episode cache, which a re-fetch replaces (v6).
+  final String? seriesKey;
+
+  /// Taken out of Continue watching by the user; watching it again clears
+  /// it (v6).
+  final bool dismissed;
+  final DateTime updatedAt;
+  const WatchHistoryRow({
+    required this.id,
+    required this.itemType,
+    this.sourceId,
+    required this.remoteKey,
+    required this.positionMs,
+    this.durationMs,
+    required this.completed,
+    this.seriesKey,
+    required this.dismissed,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    {
+      map['item_type'] = Variable<String>(
+        $WatchHistoryTable.$converteritemType.toSql(itemType),
+      );
+    }
+    if (!nullToAbsent || sourceId != null) {
+      map['source_id'] = Variable<String>(sourceId);
+    }
+    map['remote_key'] = Variable<String>(remoteKey);
+    map['position_ms'] = Variable<int>(positionMs);
+    if (!nullToAbsent || durationMs != null) {
+      map['duration_ms'] = Variable<int>(durationMs);
+    }
+    map['completed'] = Variable<bool>(completed);
+    if (!nullToAbsent || seriesKey != null) {
+      map['series_key'] = Variable<String>(seriesKey);
+    }
+    map['dismissed'] = Variable<bool>(dismissed);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  WatchHistoryCompanion toCompanion(bool nullToAbsent) {
+    return WatchHistoryCompanion(
+      id: Value(id),
+      itemType: Value(itemType),
+      sourceId: sourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceId),
+      remoteKey: Value(remoteKey),
+      positionMs: Value(positionMs),
+      durationMs: durationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationMs),
+      completed: Value(completed),
+      seriesKey: seriesKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seriesKey),
+      dismissed: Value(dismissed),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory WatchHistoryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WatchHistoryRow(
+      id: serializer.fromJson<int>(json['id']),
+      itemType: $WatchHistoryTable.$converteritemType.fromJson(
+        serializer.fromJson<String>(json['itemType']),
+      ),
+      sourceId: serializer.fromJson<String?>(json['sourceId']),
+      remoteKey: serializer.fromJson<String>(json['remoteKey']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      durationMs: serializer.fromJson<int?>(json['durationMs']),
+      completed: serializer.fromJson<bool>(json['completed']),
+      seriesKey: serializer.fromJson<String?>(json['seriesKey']),
+      dismissed: serializer.fromJson<bool>(json['dismissed']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'itemType': serializer.toJson<String>(
+        $WatchHistoryTable.$converteritemType.toJson(itemType),
+      ),
+      'sourceId': serializer.toJson<String?>(sourceId),
+      'remoteKey': serializer.toJson<String>(remoteKey),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'durationMs': serializer.toJson<int?>(durationMs),
+      'completed': serializer.toJson<bool>(completed),
+      'seriesKey': serializer.toJson<String?>(seriesKey),
+      'dismissed': serializer.toJson<bool>(dismissed),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  WatchHistoryRow copyWith({
+    int? id,
+    UserItemType? itemType,
+    Value<String?> sourceId = const Value.absent(),
+    String? remoteKey,
+    int? positionMs,
+    Value<int?> durationMs = const Value.absent(),
+    bool? completed,
+    Value<String?> seriesKey = const Value.absent(),
+    bool? dismissed,
+    DateTime? updatedAt,
+  }) => WatchHistoryRow(
+    id: id ?? this.id,
+    itemType: itemType ?? this.itemType,
+    sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    remoteKey: remoteKey ?? this.remoteKey,
+    positionMs: positionMs ?? this.positionMs,
+    durationMs: durationMs.present ? durationMs.value : this.durationMs,
+    completed: completed ?? this.completed,
+    seriesKey: seriesKey.present ? seriesKey.value : this.seriesKey,
+    dismissed: dismissed ?? this.dismissed,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  WatchHistoryRow copyWithCompanion(WatchHistoryCompanion data) {
+    return WatchHistoryRow(
+      id: data.id.present ? data.id.value : this.id,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      completed: data.completed.present ? data.completed.value : this.completed,
+      seriesKey: data.seriesKey.present ? data.seriesKey.value : this.seriesKey,
+      dismissed: data.dismissed.present ? data.dismissed.value : this.dismissed,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchHistoryRow(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('completed: $completed, ')
+          ..write('seriesKey: $seriesKey, ')
+          ..write('dismissed: $dismissed, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    itemType,
+    sourceId,
+    remoteKey,
+    positionMs,
+    durationMs,
+    completed,
+    seriesKey,
+    dismissed,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WatchHistoryRow &&
+          other.id == this.id &&
+          other.itemType == this.itemType &&
+          other.sourceId == this.sourceId &&
+          other.remoteKey == this.remoteKey &&
+          other.positionMs == this.positionMs &&
+          other.durationMs == this.durationMs &&
+          other.completed == this.completed &&
+          other.seriesKey == this.seriesKey &&
+          other.dismissed == this.dismissed &&
+          other.updatedAt == this.updatedAt);
+}
+
+class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
+  final Value<int> id;
+  final Value<UserItemType> itemType;
+  final Value<String?> sourceId;
+  final Value<String> remoteKey;
+  final Value<int> positionMs;
+  final Value<int?> durationMs;
+  final Value<bool> completed;
+  final Value<String?> seriesKey;
+  final Value<bool> dismissed;
+  final Value<DateTime> updatedAt;
+  const WatchHistoryCompanion({
+    this.id = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.remoteKey = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.completed = const Value.absent(),
+    this.seriesKey = const Value.absent(),
+    this.dismissed = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  WatchHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required UserItemType itemType,
+    this.sourceId = const Value.absent(),
+    required String remoteKey,
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.completed = const Value.absent(),
+    this.seriesKey = const Value.absent(),
+    this.dismissed = const Value.absent(),
+    required DateTime updatedAt,
+  }) : itemType = Value(itemType),
+       remoteKey = Value(remoteKey),
+       updatedAt = Value(updatedAt);
+  static Insertable<WatchHistoryRow> custom({
+    Expression<int>? id,
+    Expression<String>? itemType,
+    Expression<String>? sourceId,
+    Expression<String>? remoteKey,
+    Expression<int>? positionMs,
+    Expression<int>? durationMs,
+    Expression<bool>? completed,
+    Expression<String>? seriesKey,
+    Expression<bool>? dismissed,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (itemType != null) 'item_type': itemType,
+      if (sourceId != null) 'source_id': sourceId,
+      if (remoteKey != null) 'remote_key': remoteKey,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (completed != null) 'completed': completed,
+      if (seriesKey != null) 'series_key': seriesKey,
+      if (dismissed != null) 'dismissed': dismissed,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  WatchHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<UserItemType>? itemType,
+    Value<String?>? sourceId,
+    Value<String>? remoteKey,
+    Value<int>? positionMs,
+    Value<int?>? durationMs,
+    Value<bool>? completed,
+    Value<String?>? seriesKey,
+    Value<bool>? dismissed,
+    Value<DateTime>? updatedAt,
+  }) {
+    return WatchHistoryCompanion(
+      id: id ?? this.id,
+      itemType: itemType ?? this.itemType,
+      sourceId: sourceId ?? this.sourceId,
+      remoteKey: remoteKey ?? this.remoteKey,
+      positionMs: positionMs ?? this.positionMs,
+      durationMs: durationMs ?? this.durationMs,
+      completed: completed ?? this.completed,
+      seriesKey: seriesKey ?? this.seriesKey,
+      dismissed: dismissed ?? this.dismissed,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(
+        $WatchHistoryTable.$converteritemType.toSql(itemType.value),
+      );
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (remoteKey.present) {
+      map['remote_key'] = Variable<String>(remoteKey.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (completed.present) {
+      map['completed'] = Variable<bool>(completed.value);
+    }
+    if (seriesKey.present) {
+      map['series_key'] = Variable<String>(seriesKey.value);
+    }
+    if (dismissed.present) {
+      map['dismissed'] = Variable<bool>(dismissed.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('itemType: $itemType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('completed: $completed, ')
+          ..write('seriesKey: $seriesKey, ')
+          ..write('dismissed: $dismissed, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SettingsTable extends Settings
+    with TableInfo<$SettingsTable, SettingRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueJsonMeta = const VerificationMeta(
+    'valueJson',
+  );
+  @override
+  late final GeneratedColumn<String> valueJson = GeneratedColumn<String>(
+    'value_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, valueJson, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SettingRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value_json')) {
+      context.handle(
+        _valueJsonMeta,
+        valueJson.isAcceptableOrUnknown(data['value_json']!, _valueJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  SettingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SettingRow(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      valueJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SettingsTable createAlias(String alias) {
+    return $SettingsTable(attachedDatabase, alias);
+  }
+}
+
+class SettingRow extends DataClass implements Insertable<SettingRow> {
+  final String key;
+
+  /// Always valid JSON, so a reader can decode without guessing. Readers
+  /// still treat a bad value as missing (hard rule 1).
+  final String valueJson;
+  final DateTime updatedAt;
+  const SettingRow({
+    required this.key,
+    required this.valueJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value_json'] = Variable<String>(valueJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SettingsCompanion toCompanion(bool nullToAbsent) {
+    return SettingsCompanion(
+      key: Value(key),
+      valueJson: Value(valueJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SettingRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SettingRow(
+      key: serializer.fromJson<String>(json['key']),
+      valueJson: serializer.fromJson<String>(json['valueJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'valueJson': serializer.toJson<String>(valueJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SettingRow copyWith({String? key, String? valueJson, DateTime? updatedAt}) =>
+      SettingRow(
+        key: key ?? this.key,
+        valueJson: valueJson ?? this.valueJson,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  SettingRow copyWithCompanion(SettingsCompanion data) {
+    return SettingRow(
+      key: data.key.present ? data.key.value : this.key,
+      valueJson: data.valueJson.present ? data.valueJson.value : this.valueJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingRow(')
+          ..write('key: $key, ')
+          ..write('valueJson: $valueJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, valueJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SettingRow &&
+          other.key == this.key &&
+          other.valueJson == this.valueJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SettingsCompanion extends UpdateCompanion<SettingRow> {
+  final Value<String> key;
+  final Value<String> valueJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const SettingsCompanion({
+    this.key = const Value.absent(),
+    this.valueJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SettingsCompanion.insert({
+    required String key,
+    required String valueJson,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       valueJson = Value(valueJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<SettingRow> custom({
+    Expression<String>? key,
+    Expression<String>? valueJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (valueJson != null) 'value_json': valueJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SettingsCompanion copyWith({
+    Value<String>? key,
+    Value<String>? valueJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SettingsCompanion(
+      key: key ?? this.key,
+      valueJson: valueJson ?? this.valueJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (valueJson.present) {
+      map['value_json'] = Variable<String>(valueJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsCompanion(')
+          ..write('key: $key, ')
+          ..write('valueJson: $valueJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DownloadsTable extends Downloads
+    with TableInfo<$DownloadsTable, DownloadRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DownloadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<VodType, String> itemType =
+      GeneratedColumn<String>(
+        'item_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<VodType>($DownloadsTable.$converteritemType);
+  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
+    'remoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
+    'remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seriesRemoteKeyMeta = const VerificationMeta(
+    'seriesRemoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> seriesRemoteKey = GeneratedColumn<String>(
+    'series_remote_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _seasonMeta = const VerificationMeta('season');
+  @override
+  late final GeneratedColumn<int> season = GeneratedColumn<int>(
+    'season',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _episodeMeta = const VerificationMeta(
+    'episode',
+  );
+  @override
+  late final GeneratedColumn<int> episode = GeneratedColumn<int>(
+    'episode',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _showTitleMeta = const VerificationMeta(
+    'showTitle',
+  );
+  @override
+  late final GeneratedColumn<String> showTitle = GeneratedColumn<String>(
+    'show_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+    'year',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _artworkUrlMeta = const VerificationMeta(
+    'artworkUrl',
+  );
+  @override
+  late final GeneratedColumn<String> artworkUrl = GeneratedColumn<String>(
+    'artwork_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetPathMeta = const VerificationMeta(
+    'targetPath',
+  );
+  @override
+  late final GeneratedColumn<String> targetPath = GeneratedColumn<String>(
+    'target_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalBytesMeta = const VerificationMeta(
+    'totalBytes',
+  );
+  @override
+  late final GeneratedColumn<int> totalBytes = GeneratedColumn<int>(
+    'total_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _downloadedBytesMeta = const VerificationMeta(
+    'downloadedBytes',
+  );
+  @override
+  late final GeneratedColumn<int> downloadedBytes = GeneratedColumn<int>(
+    'downloaded_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastModifiedMeta = const VerificationMeta(
+    'lastModified',
+  );
+  @override
+  late final GeneratedColumn<String> lastModified = GeneratedColumn<String>(
+    'last_modified',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DownloadTaskState, String> state =
+      GeneratedColumn<String>(
+        'state',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<DownloadTaskState>($DownloadsTable.$converterstate);
+  @override
+  late final GeneratedColumnWithTypeConverter<DownloadProblem?, String>
+  errorClass = GeneratedColumn<String>(
+    'error_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<DownloadProblem?>($DownloadsTable.$convertererrorClassn);
+  static const VerificationMeta _errorDetailMeta = const VerificationMeta(
+    'errorDetail',
+  );
+  @override
+  late final GeneratedColumn<String> errorDetail = GeneratedColumn<String>(
+    'error_detail',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _libraryItemIdMeta = const VerificationMeta(
+    'libraryItemId',
+  );
+  @override
+  late final GeneratedColumn<int> libraryItemId = GeneratedColumn<int>(
+    'library_item_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES library_items (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceId,
+    itemType,
+    remoteKey,
+    seriesRemoteKey,
+    season,
+    episode,
+    title,
+    showTitle,
+    year,
+    artworkUrl,
+    targetPath,
+    totalBytes,
+    downloadedBytes,
+    etag,
+    lastModified,
+    state,
+    errorClass,
+    errorDetail,
+    attempts,
+    libraryItemId,
+    sortOrder,
+    createdAt,
+    completedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'downloads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DownloadRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('remote_key')) {
+      context.handle(
+        _remoteKeyMeta,
+        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteKeyMeta);
+    }
+    if (data.containsKey('series_remote_key')) {
+      context.handle(
+        _seriesRemoteKeyMeta,
+        seriesRemoteKey.isAcceptableOrUnknown(
+          data['series_remote_key']!,
+          _seriesRemoteKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('season')) {
+      context.handle(
+        _seasonMeta,
+        season.isAcceptableOrUnknown(data['season']!, _seasonMeta),
+      );
+    }
+    if (data.containsKey('episode')) {
+      context.handle(
+        _episodeMeta,
+        episode.isAcceptableOrUnknown(data['episode']!, _episodeMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('show_title')) {
+      context.handle(
+        _showTitleMeta,
+        showTitle.isAcceptableOrUnknown(data['show_title']!, _showTitleMeta),
+      );
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+        _yearMeta,
+        year.isAcceptableOrUnknown(data['year']!, _yearMeta),
+      );
+    }
+    if (data.containsKey('artwork_url')) {
+      context.handle(
+        _artworkUrlMeta,
+        artworkUrl.isAcceptableOrUnknown(data['artwork_url']!, _artworkUrlMeta),
+      );
+    }
+    if (data.containsKey('target_path')) {
+      context.handle(
+        _targetPathMeta,
+        targetPath.isAcceptableOrUnknown(data['target_path']!, _targetPathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetPathMeta);
+    }
+    if (data.containsKey('total_bytes')) {
+      context.handle(
+        _totalBytesMeta,
+        totalBytes.isAcceptableOrUnknown(data['total_bytes']!, _totalBytesMeta),
+      );
+    }
+    if (data.containsKey('downloaded_bytes')) {
+      context.handle(
+        _downloadedBytesMeta,
+        downloadedBytes.isAcceptableOrUnknown(
+          data['downloaded_bytes']!,
+          _downloadedBytesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('last_modified')) {
+      context.handle(
+        _lastModifiedMeta,
+        lastModified.isAcceptableOrUnknown(
+          data['last_modified']!,
+          _lastModifiedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('error_detail')) {
+      context.handle(
+        _errorDetailMeta,
+        errorDetail.isAcceptableOrUnknown(
+          data['error_detail']!,
+          _errorDetailMeta,
+        ),
+      );
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('library_item_id')) {
+      context.handle(
+        _libraryItemIdMeta,
+        libraryItemId.isAcceptableOrUnknown(
+          data['library_item_id']!,
+          _libraryItemIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sortOrderMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {sourceId, itemType, remoteKey},
+  ];
+  @override
+  DownloadRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DownloadRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      itemType: $DownloadsTable.$converteritemType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}item_type'],
+        )!,
+      ),
+      remoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_key'],
+      )!,
+      seriesRemoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}series_remote_key'],
+      ),
+      season: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}season'],
+      ),
+      episode: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode'],
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      showTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}show_title'],
+      ),
+      year: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}year'],
+      ),
+      artworkUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}artwork_url'],
+      ),
+      targetPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_path'],
+      )!,
+      totalBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_bytes'],
+      ),
+      downloadedBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}downloaded_bytes'],
+      )!,
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      lastModified: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_modified'],
+      ),
+      state: $DownloadsTable.$converterstate.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}state'],
+        )!,
+      ),
+      errorClass: $DownloadsTable.$convertererrorClassn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}error_class'],
+        ),
+      ),
+      errorDetail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_detail'],
+      ),
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      libraryItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}library_item_id'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
+    );
+  }
+
+  @override
+  $DownloadsTable createAlias(String alias) {
+    return $DownloadsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<VodType, String, String> $converteritemType =
+      const EnumNameConverter<VodType>(VodType.values);
+  static JsonTypeConverter2<DownloadTaskState, String, String> $converterstate =
+      const EnumNameConverter<DownloadTaskState>(DownloadTaskState.values);
+  static JsonTypeConverter2<DownloadProblem, String, String>
+  $convertererrorClass = const EnumNameConverter<DownloadProblem>(
+    DownloadProblem.values,
+  );
+  static JsonTypeConverter2<DownloadProblem?, String?, String?>
+  $convertererrorClassn = JsonTypeConverter2.asNullable($convertererrorClass);
+}
+
+class DownloadRow extends DataClass implements Insertable<DownloadRow> {
+  final int id;
+  final String sourceId;
+  final VodType itemType;
+  final String remoteKey;
+  final String? seriesRemoteKey;
+  final int? season;
+  final int? episode;
+
+  /// A movie's title, or an episode's own.
+  final String title;
+
+  /// An episode's series name (v9: the Downloads list shows it).
+  final String? showTitle;
+
+  /// A movie's year (v9: the Downloads list shows it).
+  final int? year;
+  final String? artworkUrl;
+
+  /// The file it becomes; `<target_path>.part` until it is verified.
+  final String targetPath;
+  final int? totalBytes;
+  final int downloadedBytes;
+
+  /// What a resume's `If-Range` sends: the ETag, else Last-Modified.
+  final String? etag;
+  final String? lastModified;
+  final DownloadTaskState state;
+  final DownloadProblem? errorClass;
+
+  /// Redacted before it is written (hard rule 3).
+  final String? errorDetail;
+  final int attempts;
+  final int? libraryItemId;
+
+  /// Its place in the queue, lower first (v9: docs/05's drag to
+  /// reorder).
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime? completedAt;
+  const DownloadRow({
+    required this.id,
+    required this.sourceId,
+    required this.itemType,
+    required this.remoteKey,
+    this.seriesRemoteKey,
+    this.season,
+    this.episode,
+    required this.title,
+    this.showTitle,
+    this.year,
+    this.artworkUrl,
+    required this.targetPath,
+    this.totalBytes,
+    required this.downloadedBytes,
+    this.etag,
+    this.lastModified,
+    required this.state,
+    this.errorClass,
+    this.errorDetail,
+    required this.attempts,
+    this.libraryItemId,
+    required this.sortOrder,
+    required this.createdAt,
+    this.completedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    {
+      map['item_type'] = Variable<String>(
+        $DownloadsTable.$converteritemType.toSql(itemType),
+      );
+    }
+    map['remote_key'] = Variable<String>(remoteKey);
+    if (!nullToAbsent || seriesRemoteKey != null) {
+      map['series_remote_key'] = Variable<String>(seriesRemoteKey);
+    }
+    if (!nullToAbsent || season != null) {
+      map['season'] = Variable<int>(season);
+    }
+    if (!nullToAbsent || episode != null) {
+      map['episode'] = Variable<int>(episode);
+    }
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || showTitle != null) {
+      map['show_title'] = Variable<String>(showTitle);
+    }
+    if (!nullToAbsent || year != null) {
+      map['year'] = Variable<int>(year);
+    }
+    if (!nullToAbsent || artworkUrl != null) {
+      map['artwork_url'] = Variable<String>(artworkUrl);
+    }
+    map['target_path'] = Variable<String>(targetPath);
+    if (!nullToAbsent || totalBytes != null) {
+      map['total_bytes'] = Variable<int>(totalBytes);
+    }
+    map['downloaded_bytes'] = Variable<int>(downloadedBytes);
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    if (!nullToAbsent || lastModified != null) {
+      map['last_modified'] = Variable<String>(lastModified);
+    }
+    {
+      map['state'] = Variable<String>(
+        $DownloadsTable.$converterstate.toSql(state),
+      );
+    }
+    if (!nullToAbsent || errorClass != null) {
+      map['error_class'] = Variable<String>(
+        $DownloadsTable.$convertererrorClassn.toSql(errorClass),
+      );
+    }
+    if (!nullToAbsent || errorDetail != null) {
+      map['error_detail'] = Variable<String>(errorDetail);
+    }
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || libraryItemId != null) {
+      map['library_item_id'] = Variable<int>(libraryItemId);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
+    return map;
+  }
+
+  DownloadsCompanion toCompanion(bool nullToAbsent) {
+    return DownloadsCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      itemType: Value(itemType),
+      remoteKey: Value(remoteKey),
+      seriesRemoteKey: seriesRemoteKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seriesRemoteKey),
+      season: season == null && nullToAbsent
+          ? const Value.absent()
+          : Value(season),
+      episode: episode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episode),
+      title: Value(title),
+      showTitle: showTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(showTitle),
+      year: year == null && nullToAbsent ? const Value.absent() : Value(year),
+      artworkUrl: artworkUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(artworkUrl),
+      targetPath: Value(targetPath),
+      totalBytes: totalBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalBytes),
+      downloadedBytes: Value(downloadedBytes),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      lastModified: lastModified == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModified),
+      state: Value(state),
+      errorClass: errorClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorClass),
+      errorDetail: errorDetail == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorDetail),
+      attempts: Value(attempts),
+      libraryItemId: libraryItemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(libraryItemId),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
+    );
+  }
+
+  factory DownloadRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DownloadRow(
+      id: serializer.fromJson<int>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      itemType: $DownloadsTable.$converteritemType.fromJson(
+        serializer.fromJson<String>(json['itemType']),
+      ),
+      remoteKey: serializer.fromJson<String>(json['remoteKey']),
+      seriesRemoteKey: serializer.fromJson<String?>(json['seriesRemoteKey']),
+      season: serializer.fromJson<int?>(json['season']),
+      episode: serializer.fromJson<int?>(json['episode']),
+      title: serializer.fromJson<String>(json['title']),
+      showTitle: serializer.fromJson<String?>(json['showTitle']),
+      year: serializer.fromJson<int?>(json['year']),
+      artworkUrl: serializer.fromJson<String?>(json['artworkUrl']),
+      targetPath: serializer.fromJson<String>(json['targetPath']),
+      totalBytes: serializer.fromJson<int?>(json['totalBytes']),
+      downloadedBytes: serializer.fromJson<int>(json['downloadedBytes']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      lastModified: serializer.fromJson<String?>(json['lastModified']),
+      state: $DownloadsTable.$converterstate.fromJson(
+        serializer.fromJson<String>(json['state']),
+      ),
+      errorClass: $DownloadsTable.$convertererrorClassn.fromJson(
+        serializer.fromJson<String?>(json['errorClass']),
+      ),
+      errorDetail: serializer.fromJson<String?>(json['errorDetail']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      libraryItemId: serializer.fromJson<int?>(json['libraryItemId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'itemType': serializer.toJson<String>(
+        $DownloadsTable.$converteritemType.toJson(itemType),
+      ),
+      'remoteKey': serializer.toJson<String>(remoteKey),
+      'seriesRemoteKey': serializer.toJson<String?>(seriesRemoteKey),
+      'season': serializer.toJson<int?>(season),
+      'episode': serializer.toJson<int?>(episode),
+      'title': serializer.toJson<String>(title),
+      'showTitle': serializer.toJson<String?>(showTitle),
+      'year': serializer.toJson<int?>(year),
+      'artworkUrl': serializer.toJson<String?>(artworkUrl),
+      'targetPath': serializer.toJson<String>(targetPath),
+      'totalBytes': serializer.toJson<int?>(totalBytes),
+      'downloadedBytes': serializer.toJson<int>(downloadedBytes),
+      'etag': serializer.toJson<String?>(etag),
+      'lastModified': serializer.toJson<String?>(lastModified),
+      'state': serializer.toJson<String>(
+        $DownloadsTable.$converterstate.toJson(state),
+      ),
+      'errorClass': serializer.toJson<String?>(
+        $DownloadsTable.$convertererrorClassn.toJson(errorClass),
+      ),
+      'errorDetail': serializer.toJson<String?>(errorDetail),
+      'attempts': serializer.toJson<int>(attempts),
+      'libraryItemId': serializer.toJson<int?>(libraryItemId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
+    };
+  }
+
+  DownloadRow copyWith({
+    int? id,
+    String? sourceId,
+    VodType? itemType,
+    String? remoteKey,
+    Value<String?> seriesRemoteKey = const Value.absent(),
+    Value<int?> season = const Value.absent(),
+    Value<int?> episode = const Value.absent(),
+    String? title,
+    Value<String?> showTitle = const Value.absent(),
+    Value<int?> year = const Value.absent(),
+    Value<String?> artworkUrl = const Value.absent(),
+    String? targetPath,
+    Value<int?> totalBytes = const Value.absent(),
+    int? downloadedBytes,
+    Value<String?> etag = const Value.absent(),
+    Value<String?> lastModified = const Value.absent(),
+    DownloadTaskState? state,
+    Value<DownloadProblem?> errorClass = const Value.absent(),
+    Value<String?> errorDetail = const Value.absent(),
+    int? attempts,
+    Value<int?> libraryItemId = const Value.absent(),
+    int? sortOrder,
+    DateTime? createdAt,
+    Value<DateTime?> completedAt = const Value.absent(),
+  }) => DownloadRow(
+    id: id ?? this.id,
+    sourceId: sourceId ?? this.sourceId,
+    itemType: itemType ?? this.itemType,
+    remoteKey: remoteKey ?? this.remoteKey,
+    seriesRemoteKey: seriesRemoteKey.present
+        ? seriesRemoteKey.value
+        : this.seriesRemoteKey,
+    season: season.present ? season.value : this.season,
+    episode: episode.present ? episode.value : this.episode,
+    title: title ?? this.title,
+    showTitle: showTitle.present ? showTitle.value : this.showTitle,
+    year: year.present ? year.value : this.year,
+    artworkUrl: artworkUrl.present ? artworkUrl.value : this.artworkUrl,
+    targetPath: targetPath ?? this.targetPath,
+    totalBytes: totalBytes.present ? totalBytes.value : this.totalBytes,
+    downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+    etag: etag.present ? etag.value : this.etag,
+    lastModified: lastModified.present ? lastModified.value : this.lastModified,
+    state: state ?? this.state,
+    errorClass: errorClass.present ? errorClass.value : this.errorClass,
+    errorDetail: errorDetail.present ? errorDetail.value : this.errorDetail,
+    attempts: attempts ?? this.attempts,
+    libraryItemId: libraryItemId.present
+        ? libraryItemId.value
+        : this.libraryItemId,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+  );
+  DownloadRow copyWithCompanion(DownloadsCompanion data) {
+    return DownloadRow(
+      id: data.id.present ? data.id.value : this.id,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
+      seriesRemoteKey: data.seriesRemoteKey.present
+          ? data.seriesRemoteKey.value
+          : this.seriesRemoteKey,
+      season: data.season.present ? data.season.value : this.season,
+      episode: data.episode.present ? data.episode.value : this.episode,
+      title: data.title.present ? data.title.value : this.title,
+      showTitle: data.showTitle.present ? data.showTitle.value : this.showTitle,
+      year: data.year.present ? data.year.value : this.year,
+      artworkUrl: data.artworkUrl.present
+          ? data.artworkUrl.value
+          : this.artworkUrl,
+      targetPath: data.targetPath.present
+          ? data.targetPath.value
+          : this.targetPath,
+      totalBytes: data.totalBytes.present
+          ? data.totalBytes.value
+          : this.totalBytes,
+      downloadedBytes: data.downloadedBytes.present
+          ? data.downloadedBytes.value
+          : this.downloadedBytes,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      lastModified: data.lastModified.present
+          ? data.lastModified.value
+          : this.lastModified,
+      state: data.state.present ? data.state.value : this.state,
+      errorClass: data.errorClass.present
+          ? data.errorClass.value
+          : this.errorClass,
+      errorDetail: data.errorDetail.present
+          ? data.errorDetail.value
+          : this.errorDetail,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      libraryItemId: data.libraryItemId.present
+          ? data.libraryItemId.value
+          : this.libraryItemId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadRow(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('itemType: $itemType, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('seriesRemoteKey: $seriesRemoteKey, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('title: $title, ')
+          ..write('showTitle: $showTitle, ')
+          ..write('year: $year, ')
+          ..write('artworkUrl: $artworkUrl, ')
+          ..write('targetPath: $targetPath, ')
+          ..write('totalBytes: $totalBytes, ')
+          ..write('downloadedBytes: $downloadedBytes, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('state: $state, ')
+          ..write('errorClass: $errorClass, ')
+          ..write('errorDetail: $errorDetail, ')
+          ..write('attempts: $attempts, ')
+          ..write('libraryItemId: $libraryItemId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('completedAt: $completedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    sourceId,
+    itemType,
+    remoteKey,
+    seriesRemoteKey,
+    season,
+    episode,
+    title,
+    showTitle,
+    year,
+    artworkUrl,
+    targetPath,
+    totalBytes,
+    downloadedBytes,
+    etag,
+    lastModified,
+    state,
+    errorClass,
+    errorDetail,
+    attempts,
+    libraryItemId,
+    sortOrder,
+    createdAt,
+    completedAt,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DownloadRow &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.itemType == this.itemType &&
+          other.remoteKey == this.remoteKey &&
+          other.seriesRemoteKey == this.seriesRemoteKey &&
+          other.season == this.season &&
+          other.episode == this.episode &&
+          other.title == this.title &&
+          other.showTitle == this.showTitle &&
+          other.year == this.year &&
+          other.artworkUrl == this.artworkUrl &&
+          other.targetPath == this.targetPath &&
+          other.totalBytes == this.totalBytes &&
+          other.downloadedBytes == this.downloadedBytes &&
+          other.etag == this.etag &&
+          other.lastModified == this.lastModified &&
+          other.state == this.state &&
+          other.errorClass == this.errorClass &&
+          other.errorDetail == this.errorDetail &&
+          other.attempts == this.attempts &&
+          other.libraryItemId == this.libraryItemId &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.completedAt == this.completedAt);
+}
+
+class DownloadsCompanion extends UpdateCompanion<DownloadRow> {
+  final Value<int> id;
+  final Value<String> sourceId;
+  final Value<VodType> itemType;
+  final Value<String> remoteKey;
+  final Value<String?> seriesRemoteKey;
+  final Value<int?> season;
+  final Value<int?> episode;
+  final Value<String> title;
+  final Value<String?> showTitle;
+  final Value<int?> year;
+  final Value<String?> artworkUrl;
+  final Value<String> targetPath;
+  final Value<int?> totalBytes;
+  final Value<int> downloadedBytes;
+  final Value<String?> etag;
+  final Value<String?> lastModified;
+  final Value<DownloadTaskState> state;
+  final Value<DownloadProblem?> errorClass;
+  final Value<String?> errorDetail;
+  final Value<int> attempts;
+  final Value<int?> libraryItemId;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> completedAt;
+  const DownloadsCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.remoteKey = const Value.absent(),
+    this.seriesRemoteKey = const Value.absent(),
+    this.season = const Value.absent(),
+    this.episode = const Value.absent(),
+    this.title = const Value.absent(),
+    this.showTitle = const Value.absent(),
+    this.year = const Value.absent(),
+    this.artworkUrl = const Value.absent(),
+    this.targetPath = const Value.absent(),
+    this.totalBytes = const Value.absent(),
+    this.downloadedBytes = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.state = const Value.absent(),
+    this.errorClass = const Value.absent(),
+    this.errorDetail = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.libraryItemId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.completedAt = const Value.absent(),
+  });
+  DownloadsCompanion.insert({
+    this.id = const Value.absent(),
+    required String sourceId,
+    required VodType itemType,
+    required String remoteKey,
+    this.seriesRemoteKey = const Value.absent(),
+    this.season = const Value.absent(),
+    this.episode = const Value.absent(),
+    required String title,
+    this.showTitle = const Value.absent(),
+    this.year = const Value.absent(),
+    this.artworkUrl = const Value.absent(),
+    required String targetPath,
+    this.totalBytes = const Value.absent(),
+    this.downloadedBytes = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    required DownloadTaskState state,
+    this.errorClass = const Value.absent(),
+    this.errorDetail = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.libraryItemId = const Value.absent(),
+    required int sortOrder,
+    required DateTime createdAt,
+    this.completedAt = const Value.absent(),
+  }) : sourceId = Value(sourceId),
+       itemType = Value(itemType),
+       remoteKey = Value(remoteKey),
+       title = Value(title),
+       targetPath = Value(targetPath),
+       state = Value(state),
+       sortOrder = Value(sortOrder),
+       createdAt = Value(createdAt);
+  static Insertable<DownloadRow> custom({
+    Expression<int>? id,
+    Expression<String>? sourceId,
+    Expression<String>? itemType,
+    Expression<String>? remoteKey,
+    Expression<String>? seriesRemoteKey,
+    Expression<int>? season,
+    Expression<int>? episode,
+    Expression<String>? title,
+    Expression<String>? showTitle,
+    Expression<int>? year,
+    Expression<String>? artworkUrl,
+    Expression<String>? targetPath,
+    Expression<int>? totalBytes,
+    Expression<int>? downloadedBytes,
+    Expression<String>? etag,
+    Expression<String>? lastModified,
+    Expression<String>? state,
+    Expression<String>? errorClass,
+    Expression<String>? errorDetail,
+    Expression<int>? attempts,
+    Expression<int>? libraryItemId,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? completedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (itemType != null) 'item_type': itemType,
+      if (remoteKey != null) 'remote_key': remoteKey,
+      if (seriesRemoteKey != null) 'series_remote_key': seriesRemoteKey,
+      if (season != null) 'season': season,
+      if (episode != null) 'episode': episode,
+      if (title != null) 'title': title,
+      if (showTitle != null) 'show_title': showTitle,
+      if (year != null) 'year': year,
+      if (artworkUrl != null) 'artwork_url': artworkUrl,
+      if (targetPath != null) 'target_path': targetPath,
+      if (totalBytes != null) 'total_bytes': totalBytes,
+      if (downloadedBytes != null) 'downloaded_bytes': downloadedBytes,
+      if (etag != null) 'etag': etag,
+      if (lastModified != null) 'last_modified': lastModified,
+      if (state != null) 'state': state,
+      if (errorClass != null) 'error_class': errorClass,
+      if (errorDetail != null) 'error_detail': errorDetail,
+      if (attempts != null) 'attempts': attempts,
+      if (libraryItemId != null) 'library_item_id': libraryItemId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (completedAt != null) 'completed_at': completedAt,
+    });
+  }
+
+  DownloadsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sourceId,
+    Value<VodType>? itemType,
+    Value<String>? remoteKey,
+    Value<String?>? seriesRemoteKey,
+    Value<int?>? season,
+    Value<int?>? episode,
+    Value<String>? title,
+    Value<String?>? showTitle,
+    Value<int?>? year,
+    Value<String?>? artworkUrl,
+    Value<String>? targetPath,
+    Value<int?>? totalBytes,
+    Value<int>? downloadedBytes,
+    Value<String?>? etag,
+    Value<String?>? lastModified,
+    Value<DownloadTaskState>? state,
+    Value<DownloadProblem?>? errorClass,
+    Value<String?>? errorDetail,
+    Value<int>? attempts,
+    Value<int?>? libraryItemId,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? completedAt,
+  }) {
+    return DownloadsCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      itemType: itemType ?? this.itemType,
+      remoteKey: remoteKey ?? this.remoteKey,
+      seriesRemoteKey: seriesRemoteKey ?? this.seriesRemoteKey,
+      season: season ?? this.season,
+      episode: episode ?? this.episode,
+      title: title ?? this.title,
+      showTitle: showTitle ?? this.showTitle,
+      year: year ?? this.year,
+      artworkUrl: artworkUrl ?? this.artworkUrl,
+      targetPath: targetPath ?? this.targetPath,
+      totalBytes: totalBytes ?? this.totalBytes,
+      downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+      etag: etag ?? this.etag,
+      lastModified: lastModified ?? this.lastModified,
+      state: state ?? this.state,
+      errorClass: errorClass ?? this.errorClass,
+      errorDetail: errorDetail ?? this.errorDetail,
+      attempts: attempts ?? this.attempts,
+      libraryItemId: libraryItemId ?? this.libraryItemId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(
+        $DownloadsTable.$converteritemType.toSql(itemType.value),
+      );
+    }
+    if (remoteKey.present) {
+      map['remote_key'] = Variable<String>(remoteKey.value);
+    }
+    if (seriesRemoteKey.present) {
+      map['series_remote_key'] = Variable<String>(seriesRemoteKey.value);
+    }
+    if (season.present) {
+      map['season'] = Variable<int>(season.value);
+    }
+    if (episode.present) {
+      map['episode'] = Variable<int>(episode.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (showTitle.present) {
+      map['show_title'] = Variable<String>(showTitle.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (artworkUrl.present) {
+      map['artwork_url'] = Variable<String>(artworkUrl.value);
+    }
+    if (targetPath.present) {
+      map['target_path'] = Variable<String>(targetPath.value);
+    }
+    if (totalBytes.present) {
+      map['total_bytes'] = Variable<int>(totalBytes.value);
+    }
+    if (downloadedBytes.present) {
+      map['downloaded_bytes'] = Variable<int>(downloadedBytes.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (lastModified.present) {
+      map['last_modified'] = Variable<String>(lastModified.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(
+        $DownloadsTable.$converterstate.toSql(state.value),
+      );
+    }
+    if (errorClass.present) {
+      map['error_class'] = Variable<String>(
+        $DownloadsTable.$convertererrorClassn.toSql(errorClass.value),
+      );
+    }
+    if (errorDetail.present) {
+      map['error_detail'] = Variable<String>(errorDetail.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (libraryItemId.present) {
+      map['library_item_id'] = Variable<int>(libraryItemId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('itemType: $itemType, ')
+          ..write('remoteKey: $remoteKey, ')
+          ..write('seriesRemoteKey: $seriesRemoteKey, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('title: $title, ')
+          ..write('showTitle: $showTitle, ')
+          ..write('year: $year, ')
+          ..write('artworkUrl: $artworkUrl, ')
+          ..write('targetPath: $targetPath, ')
+          ..write('totalBytes: $totalBytes, ')
+          ..write('downloadedBytes: $downloadedBytes, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('state: $state, ')
+          ..write('errorClass: $errorClass, ')
+          ..write('errorDetail: $errorDetail, ')
+          ..write('attempts: $attempts, ')
+          ..write('libraryItemId: $libraryItemId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
@@ -8420,273 +13739,6 @@ class EpgMatchesCompanion extends UpdateCompanion<EpgMatchRow> {
   }
 }
 
-class $SettingsTable extends Settings
-    with TableInfo<$SettingsTable, SettingRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $SettingsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _keyMeta = const VerificationMeta('key');
-  @override
-  late final GeneratedColumn<String> key = GeneratedColumn<String>(
-    'key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _valueJsonMeta = const VerificationMeta(
-    'valueJson',
-  );
-  @override
-  late final GeneratedColumn<String> valueJson = GeneratedColumn<String>(
-    'value_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [key, valueJson, updatedAt];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'settings';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<SettingRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('key')) {
-      context.handle(
-        _keyMeta,
-        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_keyMeta);
-    }
-    if (data.containsKey('value_json')) {
-      context.handle(
-        _valueJsonMeta,
-        valueJson.isAcceptableOrUnknown(data['value_json']!, _valueJsonMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_valueJsonMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {key};
-  @override
-  SettingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SettingRow(
-      key: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}key'],
-      )!,
-      valueJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}value_json'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-    );
-  }
-
-  @override
-  $SettingsTable createAlias(String alias) {
-    return $SettingsTable(attachedDatabase, alias);
-  }
-}
-
-class SettingRow extends DataClass implements Insertable<SettingRow> {
-  final String key;
-
-  /// Always valid JSON, so a reader can decode without guessing. Readers
-  /// still treat a bad value as missing (hard rule 1).
-  final String valueJson;
-  final DateTime updatedAt;
-  const SettingRow({
-    required this.key,
-    required this.valueJson,
-    required this.updatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['key'] = Variable<String>(key);
-    map['value_json'] = Variable<String>(valueJson);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    return map;
-  }
-
-  SettingsCompanion toCompanion(bool nullToAbsent) {
-    return SettingsCompanion(
-      key: Value(key),
-      valueJson: Value(valueJson),
-      updatedAt: Value(updatedAt),
-    );
-  }
-
-  factory SettingRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SettingRow(
-      key: serializer.fromJson<String>(json['key']),
-      valueJson: serializer.fromJson<String>(json['valueJson']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'key': serializer.toJson<String>(key),
-      'valueJson': serializer.toJson<String>(valueJson),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-    };
-  }
-
-  SettingRow copyWith({String? key, String? valueJson, DateTime? updatedAt}) =>
-      SettingRow(
-        key: key ?? this.key,
-        valueJson: valueJson ?? this.valueJson,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
-  SettingRow copyWithCompanion(SettingsCompanion data) {
-    return SettingRow(
-      key: data.key.present ? data.key.value : this.key,
-      valueJson: data.valueJson.present ? data.valueJson.value : this.valueJson,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SettingRow(')
-          ..write('key: $key, ')
-          ..write('valueJson: $valueJson, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(key, valueJson, updatedAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SettingRow &&
-          other.key == this.key &&
-          other.valueJson == this.valueJson &&
-          other.updatedAt == this.updatedAt);
-}
-
-class SettingsCompanion extends UpdateCompanion<SettingRow> {
-  final Value<String> key;
-  final Value<String> valueJson;
-  final Value<DateTime> updatedAt;
-  final Value<int> rowid;
-  const SettingsCompanion({
-    this.key = const Value.absent(),
-    this.valueJson = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  SettingsCompanion.insert({
-    required String key,
-    required String valueJson,
-    required DateTime updatedAt,
-    this.rowid = const Value.absent(),
-  }) : key = Value(key),
-       valueJson = Value(valueJson),
-       updatedAt = Value(updatedAt);
-  static Insertable<SettingRow> custom({
-    Expression<String>? key,
-    Expression<String>? valueJson,
-    Expression<DateTime>? updatedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (key != null) 'key': key,
-      if (valueJson != null) 'value_json': valueJson,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  SettingsCompanion copyWith({
-    Value<String>? key,
-    Value<String>? valueJson,
-    Value<DateTime>? updatedAt,
-    Value<int>? rowid,
-  }) {
-    return SettingsCompanion(
-      key: key ?? this.key,
-      valueJson: valueJson ?? this.valueJson,
-      updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (key.present) {
-      map['key'] = Variable<String>(key.value);
-    }
-    if (valueJson.present) {
-      map['value_json'] = Variable<String>(valueJson.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SettingsCompanion(')
-          ..write('key: $key, ')
-          ..write('valueJson: $valueJson, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $SyncRunsTable extends SyncRuns
     with TableInfo<$SyncRunsTable, SyncRunRow> {
   @override
@@ -10615,1462 +15667,6 @@ class EpisodesCompanion extends UpdateCompanion<EpisodeRow> {
   }
 }
 
-class $FavoriteGroupsTable extends FavoriteGroups
-    with TableInfo<$FavoriteGroupsTable, FavoriteGroupRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $FavoriteGroupsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
-    'sourceId',
-  );
-  @override
-  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
-    'source_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES sources (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-    'name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
-    'sortOrder',
-  );
-  @override
-  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
-    'sort_order',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _collapsedMeta = const VerificationMeta(
-    'collapsed',
-  );
-  @override
-  late final GeneratedColumn<bool> collapsed = GeneratedColumn<bool>(
-    'collapsed',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("collapsed" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    sourceId,
-    name,
-    sortOrder,
-    collapsed,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'favorite_groups';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<FavoriteGroupRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('source_id')) {
-      context.handle(
-        _sourceIdMeta,
-        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_sourceIdMeta);
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-        _nameMeta,
-        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('sort_order')) {
-      context.handle(
-        _sortOrderMeta,
-        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
-      );
-    }
-    if (data.containsKey('collapsed')) {
-      context.handle(
-        _collapsedMeta,
-        collapsed.isAcceptableOrUnknown(data['collapsed']!, _collapsedMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  FavoriteGroupRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return FavoriteGroupRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      sourceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source_id'],
-      )!,
-      name: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}name'],
-      )!,
-      sortOrder: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}sort_order'],
-      )!,
-      collapsed: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}collapsed'],
-      )!,
-    );
-  }
-
-  @override
-  $FavoriteGroupsTable createAlias(String alias) {
-    return $FavoriteGroupsTable(attachedDatabase, alias);
-  }
-}
-
-class FavoriteGroupRow extends DataClass
-    implements Insertable<FavoriteGroupRow> {
-  final int id;
-  final String sourceId;
-  final String name;
-  final int sortOrder;
-  final bool collapsed;
-  const FavoriteGroupRow({
-    required this.id,
-    required this.sourceId,
-    required this.name,
-    required this.sortOrder,
-    required this.collapsed,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['source_id'] = Variable<String>(sourceId);
-    map['name'] = Variable<String>(name);
-    map['sort_order'] = Variable<int>(sortOrder);
-    map['collapsed'] = Variable<bool>(collapsed);
-    return map;
-  }
-
-  FavoriteGroupsCompanion toCompanion(bool nullToAbsent) {
-    return FavoriteGroupsCompanion(
-      id: Value(id),
-      sourceId: Value(sourceId),
-      name: Value(name),
-      sortOrder: Value(sortOrder),
-      collapsed: Value(collapsed),
-    );
-  }
-
-  factory FavoriteGroupRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return FavoriteGroupRow(
-      id: serializer.fromJson<int>(json['id']),
-      sourceId: serializer.fromJson<String>(json['sourceId']),
-      name: serializer.fromJson<String>(json['name']),
-      sortOrder: serializer.fromJson<int>(json['sortOrder']),
-      collapsed: serializer.fromJson<bool>(json['collapsed']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'sourceId': serializer.toJson<String>(sourceId),
-      'name': serializer.toJson<String>(name),
-      'sortOrder': serializer.toJson<int>(sortOrder),
-      'collapsed': serializer.toJson<bool>(collapsed),
-    };
-  }
-
-  FavoriteGroupRow copyWith({
-    int? id,
-    String? sourceId,
-    String? name,
-    int? sortOrder,
-    bool? collapsed,
-  }) => FavoriteGroupRow(
-    id: id ?? this.id,
-    sourceId: sourceId ?? this.sourceId,
-    name: name ?? this.name,
-    sortOrder: sortOrder ?? this.sortOrder,
-    collapsed: collapsed ?? this.collapsed,
-  );
-  FavoriteGroupRow copyWithCompanion(FavoriteGroupsCompanion data) {
-    return FavoriteGroupRow(
-      id: data.id.present ? data.id.value : this.id,
-      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
-      name: data.name.present ? data.name.value : this.name,
-      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
-      collapsed: data.collapsed.present ? data.collapsed.value : this.collapsed,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('FavoriteGroupRow(')
-          ..write('id: $id, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('name: $name, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('collapsed: $collapsed')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, sourceId, name, sortOrder, collapsed);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is FavoriteGroupRow &&
-          other.id == this.id &&
-          other.sourceId == this.sourceId &&
-          other.name == this.name &&
-          other.sortOrder == this.sortOrder &&
-          other.collapsed == this.collapsed);
-}
-
-class FavoriteGroupsCompanion extends UpdateCompanion<FavoriteGroupRow> {
-  final Value<int> id;
-  final Value<String> sourceId;
-  final Value<String> name;
-  final Value<int> sortOrder;
-  final Value<bool> collapsed;
-  const FavoriteGroupsCompanion({
-    this.id = const Value.absent(),
-    this.sourceId = const Value.absent(),
-    this.name = const Value.absent(),
-    this.sortOrder = const Value.absent(),
-    this.collapsed = const Value.absent(),
-  });
-  FavoriteGroupsCompanion.insert({
-    this.id = const Value.absent(),
-    required String sourceId,
-    required String name,
-    this.sortOrder = const Value.absent(),
-    this.collapsed = const Value.absent(),
-  }) : sourceId = Value(sourceId),
-       name = Value(name);
-  static Insertable<FavoriteGroupRow> custom({
-    Expression<int>? id,
-    Expression<String>? sourceId,
-    Expression<String>? name,
-    Expression<int>? sortOrder,
-    Expression<bool>? collapsed,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (sourceId != null) 'source_id': sourceId,
-      if (name != null) 'name': name,
-      if (sortOrder != null) 'sort_order': sortOrder,
-      if (collapsed != null) 'collapsed': collapsed,
-    });
-  }
-
-  FavoriteGroupsCompanion copyWith({
-    Value<int>? id,
-    Value<String>? sourceId,
-    Value<String>? name,
-    Value<int>? sortOrder,
-    Value<bool>? collapsed,
-  }) {
-    return FavoriteGroupsCompanion(
-      id: id ?? this.id,
-      sourceId: sourceId ?? this.sourceId,
-      name: name ?? this.name,
-      sortOrder: sortOrder ?? this.sortOrder,
-      collapsed: collapsed ?? this.collapsed,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (sourceId.present) {
-      map['source_id'] = Variable<String>(sourceId.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (sortOrder.present) {
-      map['sort_order'] = Variable<int>(sortOrder.value);
-    }
-    if (collapsed.present) {
-      map['collapsed'] = Variable<bool>(collapsed.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('FavoriteGroupsCompanion(')
-          ..write('id: $id, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('name: $name, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('collapsed: $collapsed')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $FavoritesTable extends Favorites
-    with TableInfo<$FavoritesTable, FavoriteRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $FavoritesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
-      GeneratedColumn<String>(
-        'item_type',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<UserItemType>($FavoritesTable.$converteritemType);
-  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
-    'sourceId',
-  );
-  @override
-  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
-    'source_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES sources (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
-    'remoteKey',
-  );
-  @override
-  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
-    'remote_key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _groupIdMeta = const VerificationMeta(
-    'groupId',
-  );
-  @override
-  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
-    'group_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES favorite_groups (id) ON DELETE SET NULL',
-    ),
-  );
-  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
-    'sortOrder',
-  );
-  @override
-  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
-    'sort_order',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _addedAtMeta = const VerificationMeta(
-    'addedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
-    'added_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    itemType,
-    sourceId,
-    remoteKey,
-    groupId,
-    sortOrder,
-    addedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'favorites';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<FavoriteRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('source_id')) {
-      context.handle(
-        _sourceIdMeta,
-        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
-      );
-    }
-    if (data.containsKey('remote_key')) {
-      context.handle(
-        _remoteKeyMeta,
-        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_remoteKeyMeta);
-    }
-    if (data.containsKey('group_id')) {
-      context.handle(
-        _groupIdMeta,
-        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
-      );
-    }
-    if (data.containsKey('sort_order')) {
-      context.handle(
-        _sortOrderMeta,
-        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
-      );
-    }
-    if (data.containsKey('added_at')) {
-      context.handle(
-        _addedAtMeta,
-        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_addedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {itemType, sourceId, remoteKey},
-  ];
-  @override
-  FavoriteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return FavoriteRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      itemType: $FavoritesTable.$converteritemType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}item_type'],
-        )!,
-      ),
-      sourceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source_id'],
-      ),
-      remoteKey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}remote_key'],
-      )!,
-      groupId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}group_id'],
-      ),
-      sortOrder: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}sort_order'],
-      ),
-      addedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}added_at'],
-      )!,
-    );
-  }
-
-  @override
-  $FavoritesTable createAlias(String alias) {
-    return $FavoritesTable(attachedDatabase, alias);
-  }
-
-  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
-      const EnumNameConverter<UserItemType>(UserItemType.values);
-}
-
-class FavoriteRow extends DataClass implements Insertable<FavoriteRow> {
-  final int id;
-  final UserItemType itemType;
-
-  /// Null only for local library files (Phase 8).
-  final String? sourceId;
-  final String remoteKey;
-
-  /// The user's group of favorite channels it is in (v7); null is none.
-  /// Deleting the group leaves it a favorite, in no group.
-  final int? groupId;
-
-  /// Its place in the user's order; null sorts after every placed one,
-  /// by [addedAt].
-  final int? sortOrder;
-  final DateTime addedAt;
-  const FavoriteRow({
-    required this.id,
-    required this.itemType,
-    this.sourceId,
-    required this.remoteKey,
-    this.groupId,
-    this.sortOrder,
-    required this.addedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    {
-      map['item_type'] = Variable<String>(
-        $FavoritesTable.$converteritemType.toSql(itemType),
-      );
-    }
-    if (!nullToAbsent || sourceId != null) {
-      map['source_id'] = Variable<String>(sourceId);
-    }
-    map['remote_key'] = Variable<String>(remoteKey);
-    if (!nullToAbsent || groupId != null) {
-      map['group_id'] = Variable<int>(groupId);
-    }
-    if (!nullToAbsent || sortOrder != null) {
-      map['sort_order'] = Variable<int>(sortOrder);
-    }
-    map['added_at'] = Variable<DateTime>(addedAt);
-    return map;
-  }
-
-  FavoritesCompanion toCompanion(bool nullToAbsent) {
-    return FavoritesCompanion(
-      id: Value(id),
-      itemType: Value(itemType),
-      sourceId: sourceId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sourceId),
-      remoteKey: Value(remoteKey),
-      groupId: groupId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(groupId),
-      sortOrder: sortOrder == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sortOrder),
-      addedAt: Value(addedAt),
-    );
-  }
-
-  factory FavoriteRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return FavoriteRow(
-      id: serializer.fromJson<int>(json['id']),
-      itemType: $FavoritesTable.$converteritemType.fromJson(
-        serializer.fromJson<String>(json['itemType']),
-      ),
-      sourceId: serializer.fromJson<String?>(json['sourceId']),
-      remoteKey: serializer.fromJson<String>(json['remoteKey']),
-      groupId: serializer.fromJson<int?>(json['groupId']),
-      sortOrder: serializer.fromJson<int?>(json['sortOrder']),
-      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'itemType': serializer.toJson<String>(
-        $FavoritesTable.$converteritemType.toJson(itemType),
-      ),
-      'sourceId': serializer.toJson<String?>(sourceId),
-      'remoteKey': serializer.toJson<String>(remoteKey),
-      'groupId': serializer.toJson<int?>(groupId),
-      'sortOrder': serializer.toJson<int?>(sortOrder),
-      'addedAt': serializer.toJson<DateTime>(addedAt),
-    };
-  }
-
-  FavoriteRow copyWith({
-    int? id,
-    UserItemType? itemType,
-    Value<String?> sourceId = const Value.absent(),
-    String? remoteKey,
-    Value<int?> groupId = const Value.absent(),
-    Value<int?> sortOrder = const Value.absent(),
-    DateTime? addedAt,
-  }) => FavoriteRow(
-    id: id ?? this.id,
-    itemType: itemType ?? this.itemType,
-    sourceId: sourceId.present ? sourceId.value : this.sourceId,
-    remoteKey: remoteKey ?? this.remoteKey,
-    groupId: groupId.present ? groupId.value : this.groupId,
-    sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
-    addedAt: addedAt ?? this.addedAt,
-  );
-  FavoriteRow copyWithCompanion(FavoritesCompanion data) {
-    return FavoriteRow(
-      id: data.id.present ? data.id.value : this.id,
-      itemType: data.itemType.present ? data.itemType.value : this.itemType,
-      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
-      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
-      groupId: data.groupId.present ? data.groupId.value : this.groupId,
-      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
-      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('FavoriteRow(')
-          ..write('id: $id, ')
-          ..write('itemType: $itemType, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('remoteKey: $remoteKey, ')
-          ..write('groupId: $groupId, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('addedAt: $addedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    itemType,
-    sourceId,
-    remoteKey,
-    groupId,
-    sortOrder,
-    addedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is FavoriteRow &&
-          other.id == this.id &&
-          other.itemType == this.itemType &&
-          other.sourceId == this.sourceId &&
-          other.remoteKey == this.remoteKey &&
-          other.groupId == this.groupId &&
-          other.sortOrder == this.sortOrder &&
-          other.addedAt == this.addedAt);
-}
-
-class FavoritesCompanion extends UpdateCompanion<FavoriteRow> {
-  final Value<int> id;
-  final Value<UserItemType> itemType;
-  final Value<String?> sourceId;
-  final Value<String> remoteKey;
-  final Value<int?> groupId;
-  final Value<int?> sortOrder;
-  final Value<DateTime> addedAt;
-  const FavoritesCompanion({
-    this.id = const Value.absent(),
-    this.itemType = const Value.absent(),
-    this.sourceId = const Value.absent(),
-    this.remoteKey = const Value.absent(),
-    this.groupId = const Value.absent(),
-    this.sortOrder = const Value.absent(),
-    this.addedAt = const Value.absent(),
-  });
-  FavoritesCompanion.insert({
-    this.id = const Value.absent(),
-    required UserItemType itemType,
-    this.sourceId = const Value.absent(),
-    required String remoteKey,
-    this.groupId = const Value.absent(),
-    this.sortOrder = const Value.absent(),
-    required DateTime addedAt,
-  }) : itemType = Value(itemType),
-       remoteKey = Value(remoteKey),
-       addedAt = Value(addedAt);
-  static Insertable<FavoriteRow> custom({
-    Expression<int>? id,
-    Expression<String>? itemType,
-    Expression<String>? sourceId,
-    Expression<String>? remoteKey,
-    Expression<int>? groupId,
-    Expression<int>? sortOrder,
-    Expression<DateTime>? addedAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (itemType != null) 'item_type': itemType,
-      if (sourceId != null) 'source_id': sourceId,
-      if (remoteKey != null) 'remote_key': remoteKey,
-      if (groupId != null) 'group_id': groupId,
-      if (sortOrder != null) 'sort_order': sortOrder,
-      if (addedAt != null) 'added_at': addedAt,
-    });
-  }
-
-  FavoritesCompanion copyWith({
-    Value<int>? id,
-    Value<UserItemType>? itemType,
-    Value<String?>? sourceId,
-    Value<String>? remoteKey,
-    Value<int?>? groupId,
-    Value<int?>? sortOrder,
-    Value<DateTime>? addedAt,
-  }) {
-    return FavoritesCompanion(
-      id: id ?? this.id,
-      itemType: itemType ?? this.itemType,
-      sourceId: sourceId ?? this.sourceId,
-      remoteKey: remoteKey ?? this.remoteKey,
-      groupId: groupId ?? this.groupId,
-      sortOrder: sortOrder ?? this.sortOrder,
-      addedAt: addedAt ?? this.addedAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (itemType.present) {
-      map['item_type'] = Variable<String>(
-        $FavoritesTable.$converteritemType.toSql(itemType.value),
-      );
-    }
-    if (sourceId.present) {
-      map['source_id'] = Variable<String>(sourceId.value);
-    }
-    if (remoteKey.present) {
-      map['remote_key'] = Variable<String>(remoteKey.value);
-    }
-    if (groupId.present) {
-      map['group_id'] = Variable<int>(groupId.value);
-    }
-    if (sortOrder.present) {
-      map['sort_order'] = Variable<int>(sortOrder.value);
-    }
-    if (addedAt.present) {
-      map['added_at'] = Variable<DateTime>(addedAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('FavoritesCompanion(')
-          ..write('id: $id, ')
-          ..write('itemType: $itemType, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('remoteKey: $remoteKey, ')
-          ..write('groupId: $groupId, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('addedAt: $addedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $WatchHistoryTable extends WatchHistory
-    with TableInfo<$WatchHistoryTable, WatchHistoryRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $WatchHistoryTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<UserItemType, String> itemType =
-      GeneratedColumn<String>(
-        'item_type',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<UserItemType>($WatchHistoryTable.$converteritemType);
-  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
-    'sourceId',
-  );
-  @override
-  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
-    'source_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES sources (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _remoteKeyMeta = const VerificationMeta(
-    'remoteKey',
-  );
-  @override
-  late final GeneratedColumn<String> remoteKey = GeneratedColumn<String>(
-    'remote_key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _positionMsMeta = const VerificationMeta(
-    'positionMs',
-  );
-  @override
-  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
-    'position_ms',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _durationMsMeta = const VerificationMeta(
-    'durationMs',
-  );
-  @override
-  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
-    'duration_ms',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _completedMeta = const VerificationMeta(
-    'completed',
-  );
-  @override
-  late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
-    'completed',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("completed" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _seriesKeyMeta = const VerificationMeta(
-    'seriesKey',
-  );
-  @override
-  late final GeneratedColumn<String> seriesKey = GeneratedColumn<String>(
-    'series_key',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _dismissedMeta = const VerificationMeta(
-    'dismissed',
-  );
-  @override
-  late final GeneratedColumn<bool> dismissed = GeneratedColumn<bool>(
-    'dismissed',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("dismissed" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    itemType,
-    sourceId,
-    remoteKey,
-    positionMs,
-    durationMs,
-    completed,
-    seriesKey,
-    dismissed,
-    updatedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'watch_history';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<WatchHistoryRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('source_id')) {
-      context.handle(
-        _sourceIdMeta,
-        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
-      );
-    }
-    if (data.containsKey('remote_key')) {
-      context.handle(
-        _remoteKeyMeta,
-        remoteKey.isAcceptableOrUnknown(data['remote_key']!, _remoteKeyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_remoteKeyMeta);
-    }
-    if (data.containsKey('position_ms')) {
-      context.handle(
-        _positionMsMeta,
-        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
-      );
-    }
-    if (data.containsKey('duration_ms')) {
-      context.handle(
-        _durationMsMeta,
-        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
-      );
-    }
-    if (data.containsKey('completed')) {
-      context.handle(
-        _completedMeta,
-        completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
-      );
-    }
-    if (data.containsKey('series_key')) {
-      context.handle(
-        _seriesKeyMeta,
-        seriesKey.isAcceptableOrUnknown(data['series_key']!, _seriesKeyMeta),
-      );
-    }
-    if (data.containsKey('dismissed')) {
-      context.handle(
-        _dismissedMeta,
-        dismissed.isAcceptableOrUnknown(data['dismissed']!, _dismissedMeta),
-      );
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {itemType, sourceId, remoteKey},
-  ];
-  @override
-  WatchHistoryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return WatchHistoryRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      itemType: $WatchHistoryTable.$converteritemType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}item_type'],
-        )!,
-      ),
-      sourceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source_id'],
-      ),
-      remoteKey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}remote_key'],
-      )!,
-      positionMs: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}position_ms'],
-      )!,
-      durationMs: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}duration_ms'],
-      ),
-      completed: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}completed'],
-      )!,
-      seriesKey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}series_key'],
-      ),
-      dismissed: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}dismissed'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-    );
-  }
-
-  @override
-  $WatchHistoryTable createAlias(String alias) {
-    return $WatchHistoryTable(attachedDatabase, alias);
-  }
-
-  static JsonTypeConverter2<UserItemType, String, String> $converteritemType =
-      const EnumNameConverter<UserItemType>(UserItemType.values);
-}
-
-class WatchHistoryRow extends DataClass implements Insertable<WatchHistoryRow> {
-  final int id;
-  final UserItemType itemType;
-  final String? sourceId;
-  final String remoteKey;
-  final int positionMs;
-  final int? durationMs;
-  final bool completed;
-
-  /// An episode's series (its remote key), so Continue watching needs no
-  /// join through the episode cache, which a re-fetch replaces (v6).
-  final String? seriesKey;
-
-  /// Taken out of Continue watching by the user; watching it again clears
-  /// it (v6).
-  final bool dismissed;
-  final DateTime updatedAt;
-  const WatchHistoryRow({
-    required this.id,
-    required this.itemType,
-    this.sourceId,
-    required this.remoteKey,
-    required this.positionMs,
-    this.durationMs,
-    required this.completed,
-    this.seriesKey,
-    required this.dismissed,
-    required this.updatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    {
-      map['item_type'] = Variable<String>(
-        $WatchHistoryTable.$converteritemType.toSql(itemType),
-      );
-    }
-    if (!nullToAbsent || sourceId != null) {
-      map['source_id'] = Variable<String>(sourceId);
-    }
-    map['remote_key'] = Variable<String>(remoteKey);
-    map['position_ms'] = Variable<int>(positionMs);
-    if (!nullToAbsent || durationMs != null) {
-      map['duration_ms'] = Variable<int>(durationMs);
-    }
-    map['completed'] = Variable<bool>(completed);
-    if (!nullToAbsent || seriesKey != null) {
-      map['series_key'] = Variable<String>(seriesKey);
-    }
-    map['dismissed'] = Variable<bool>(dismissed);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    return map;
-  }
-
-  WatchHistoryCompanion toCompanion(bool nullToAbsent) {
-    return WatchHistoryCompanion(
-      id: Value(id),
-      itemType: Value(itemType),
-      sourceId: sourceId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sourceId),
-      remoteKey: Value(remoteKey),
-      positionMs: Value(positionMs),
-      durationMs: durationMs == null && nullToAbsent
-          ? const Value.absent()
-          : Value(durationMs),
-      completed: Value(completed),
-      seriesKey: seriesKey == null && nullToAbsent
-          ? const Value.absent()
-          : Value(seriesKey),
-      dismissed: Value(dismissed),
-      updatedAt: Value(updatedAt),
-    );
-  }
-
-  factory WatchHistoryRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return WatchHistoryRow(
-      id: serializer.fromJson<int>(json['id']),
-      itemType: $WatchHistoryTable.$converteritemType.fromJson(
-        serializer.fromJson<String>(json['itemType']),
-      ),
-      sourceId: serializer.fromJson<String?>(json['sourceId']),
-      remoteKey: serializer.fromJson<String>(json['remoteKey']),
-      positionMs: serializer.fromJson<int>(json['positionMs']),
-      durationMs: serializer.fromJson<int?>(json['durationMs']),
-      completed: serializer.fromJson<bool>(json['completed']),
-      seriesKey: serializer.fromJson<String?>(json['seriesKey']),
-      dismissed: serializer.fromJson<bool>(json['dismissed']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'itemType': serializer.toJson<String>(
-        $WatchHistoryTable.$converteritemType.toJson(itemType),
-      ),
-      'sourceId': serializer.toJson<String?>(sourceId),
-      'remoteKey': serializer.toJson<String>(remoteKey),
-      'positionMs': serializer.toJson<int>(positionMs),
-      'durationMs': serializer.toJson<int?>(durationMs),
-      'completed': serializer.toJson<bool>(completed),
-      'seriesKey': serializer.toJson<String?>(seriesKey),
-      'dismissed': serializer.toJson<bool>(dismissed),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-    };
-  }
-
-  WatchHistoryRow copyWith({
-    int? id,
-    UserItemType? itemType,
-    Value<String?> sourceId = const Value.absent(),
-    String? remoteKey,
-    int? positionMs,
-    Value<int?> durationMs = const Value.absent(),
-    bool? completed,
-    Value<String?> seriesKey = const Value.absent(),
-    bool? dismissed,
-    DateTime? updatedAt,
-  }) => WatchHistoryRow(
-    id: id ?? this.id,
-    itemType: itemType ?? this.itemType,
-    sourceId: sourceId.present ? sourceId.value : this.sourceId,
-    remoteKey: remoteKey ?? this.remoteKey,
-    positionMs: positionMs ?? this.positionMs,
-    durationMs: durationMs.present ? durationMs.value : this.durationMs,
-    completed: completed ?? this.completed,
-    seriesKey: seriesKey.present ? seriesKey.value : this.seriesKey,
-    dismissed: dismissed ?? this.dismissed,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
-  WatchHistoryRow copyWithCompanion(WatchHistoryCompanion data) {
-    return WatchHistoryRow(
-      id: data.id.present ? data.id.value : this.id,
-      itemType: data.itemType.present ? data.itemType.value : this.itemType,
-      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
-      remoteKey: data.remoteKey.present ? data.remoteKey.value : this.remoteKey,
-      positionMs: data.positionMs.present
-          ? data.positionMs.value
-          : this.positionMs,
-      durationMs: data.durationMs.present
-          ? data.durationMs.value
-          : this.durationMs,
-      completed: data.completed.present ? data.completed.value : this.completed,
-      seriesKey: data.seriesKey.present ? data.seriesKey.value : this.seriesKey,
-      dismissed: data.dismissed.present ? data.dismissed.value : this.dismissed,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('WatchHistoryRow(')
-          ..write('id: $id, ')
-          ..write('itemType: $itemType, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('remoteKey: $remoteKey, ')
-          ..write('positionMs: $positionMs, ')
-          ..write('durationMs: $durationMs, ')
-          ..write('completed: $completed, ')
-          ..write('seriesKey: $seriesKey, ')
-          ..write('dismissed: $dismissed, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    itemType,
-    sourceId,
-    remoteKey,
-    positionMs,
-    durationMs,
-    completed,
-    seriesKey,
-    dismissed,
-    updatedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is WatchHistoryRow &&
-          other.id == this.id &&
-          other.itemType == this.itemType &&
-          other.sourceId == this.sourceId &&
-          other.remoteKey == this.remoteKey &&
-          other.positionMs == this.positionMs &&
-          other.durationMs == this.durationMs &&
-          other.completed == this.completed &&
-          other.seriesKey == this.seriesKey &&
-          other.dismissed == this.dismissed &&
-          other.updatedAt == this.updatedAt);
-}
-
-class WatchHistoryCompanion extends UpdateCompanion<WatchHistoryRow> {
-  final Value<int> id;
-  final Value<UserItemType> itemType;
-  final Value<String?> sourceId;
-  final Value<String> remoteKey;
-  final Value<int> positionMs;
-  final Value<int?> durationMs;
-  final Value<bool> completed;
-  final Value<String?> seriesKey;
-  final Value<bool> dismissed;
-  final Value<DateTime> updatedAt;
-  const WatchHistoryCompanion({
-    this.id = const Value.absent(),
-    this.itemType = const Value.absent(),
-    this.sourceId = const Value.absent(),
-    this.remoteKey = const Value.absent(),
-    this.positionMs = const Value.absent(),
-    this.durationMs = const Value.absent(),
-    this.completed = const Value.absent(),
-    this.seriesKey = const Value.absent(),
-    this.dismissed = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-  });
-  WatchHistoryCompanion.insert({
-    this.id = const Value.absent(),
-    required UserItemType itemType,
-    this.sourceId = const Value.absent(),
-    required String remoteKey,
-    this.positionMs = const Value.absent(),
-    this.durationMs = const Value.absent(),
-    this.completed = const Value.absent(),
-    this.seriesKey = const Value.absent(),
-    this.dismissed = const Value.absent(),
-    required DateTime updatedAt,
-  }) : itemType = Value(itemType),
-       remoteKey = Value(remoteKey),
-       updatedAt = Value(updatedAt);
-  static Insertable<WatchHistoryRow> custom({
-    Expression<int>? id,
-    Expression<String>? itemType,
-    Expression<String>? sourceId,
-    Expression<String>? remoteKey,
-    Expression<int>? positionMs,
-    Expression<int>? durationMs,
-    Expression<bool>? completed,
-    Expression<String>? seriesKey,
-    Expression<bool>? dismissed,
-    Expression<DateTime>? updatedAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (itemType != null) 'item_type': itemType,
-      if (sourceId != null) 'source_id': sourceId,
-      if (remoteKey != null) 'remote_key': remoteKey,
-      if (positionMs != null) 'position_ms': positionMs,
-      if (durationMs != null) 'duration_ms': durationMs,
-      if (completed != null) 'completed': completed,
-      if (seriesKey != null) 'series_key': seriesKey,
-      if (dismissed != null) 'dismissed': dismissed,
-      if (updatedAt != null) 'updated_at': updatedAt,
-    });
-  }
-
-  WatchHistoryCompanion copyWith({
-    Value<int>? id,
-    Value<UserItemType>? itemType,
-    Value<String?>? sourceId,
-    Value<String>? remoteKey,
-    Value<int>? positionMs,
-    Value<int?>? durationMs,
-    Value<bool>? completed,
-    Value<String?>? seriesKey,
-    Value<bool>? dismissed,
-    Value<DateTime>? updatedAt,
-  }) {
-    return WatchHistoryCompanion(
-      id: id ?? this.id,
-      itemType: itemType ?? this.itemType,
-      sourceId: sourceId ?? this.sourceId,
-      remoteKey: remoteKey ?? this.remoteKey,
-      positionMs: positionMs ?? this.positionMs,
-      durationMs: durationMs ?? this.durationMs,
-      completed: completed ?? this.completed,
-      seriesKey: seriesKey ?? this.seriesKey,
-      dismissed: dismissed ?? this.dismissed,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (itemType.present) {
-      map['item_type'] = Variable<String>(
-        $WatchHistoryTable.$converteritemType.toSql(itemType.value),
-      );
-    }
-    if (sourceId.present) {
-      map['source_id'] = Variable<String>(sourceId.value);
-    }
-    if (remoteKey.present) {
-      map['remote_key'] = Variable<String>(remoteKey.value);
-    }
-    if (positionMs.present) {
-      map['position_ms'] = Variable<int>(positionMs.value);
-    }
-    if (durationMs.present) {
-      map['duration_ms'] = Variable<int>(durationMs.value);
-    }
-    if (completed.present) {
-      map['completed'] = Variable<bool>(completed.value);
-    }
-    if (seriesKey.present) {
-      map['series_key'] = Variable<String>(seriesKey.value);
-    }
-    if (dismissed.present) {
-      map['dismissed'] = Variable<bool>(dismissed.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('WatchHistoryCompanion(')
-          ..write('id: $id, ')
-          ..write('itemType: $itemType, ')
-          ..write('sourceId: $sourceId, ')
-          ..write('remoteKey: $remoteKey, ')
-          ..write('positionMs: $positionMs, ')
-          ..write('durationMs: $durationMs, ')
-          ..write('completed: $completed, ')
-          ..write('seriesKey: $seriesKey, ')
-          ..write('dismissed: $dismissed, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $CastDevicesTable extends CastDevices
     with TableInfo<$CastDevicesTable, CastDeviceRow> {
   @override
@@ -12664,7 +16260,51 @@ class CastDevicesCompanion extends UpdateCompanion<CastDeviceRow> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $LibraryFoldersTable libraryFolders = $LibraryFoldersTable(this);
   late final $SourcesTable sources = $SourcesTable(this);
+  late final $LibraryItemsTable libraryItems = $LibraryItemsTable(this);
+  late final LibraryFts libraryFts = LibraryFts(this);
+  late final Trigger libraryFtsInsert = Trigger(
+    'CREATE TRIGGER library_fts_insert AFTER INSERT ON library_items BEGIN INSERT INTO library_fts ("rowid", title, show_title) VALUES (new.id, new.title, new.show_title);END',
+    'library_fts_insert',
+  );
+  late final Trigger libraryFtsDelete = Trigger(
+    'CREATE TRIGGER library_fts_delete AFTER DELETE ON library_items BEGIN INSERT INTO library_fts (library_fts, "rowid", title, show_title) VALUES (\'delete\', old.id, old.title, old.show_title);END',
+    'library_fts_delete',
+  );
+  late final Trigger libraryFtsUpdate = Trigger(
+    'CREATE TRIGGER library_fts_update AFTER UPDATE OF title, show_title ON library_items WHEN old.title IS NOT new.title OR old.show_title IS NOT new.show_title BEGIN INSERT INTO library_fts (library_fts, "rowid", title, show_title) VALUES (\'delete\', old.id, old.title, old.show_title);INSERT INTO library_fts ("rowid", title, show_title) VALUES (new.id, new.title, new.show_title);END',
+    'library_fts_update',
+  );
+  late final $FavoriteGroupsTable favoriteGroups = $FavoriteGroupsTable(this);
+  late final $FavoritesTable favorites = $FavoritesTable(this);
+  late final Index favoritesLocal = Index(
+    'favorites_local',
+    'CREATE UNIQUE INDEX favorites_local ON favorites (item_type, remote_key) WHERE source_id IS NULL',
+  );
+  late final $WatchHistoryTable watchHistory = $WatchHistoryTable(this);
+  late final Index watchHistoryLocal = Index(
+    'watch_history_local',
+    'CREATE UNIQUE INDEX watch_history_local ON watch_history (item_type, remote_key) WHERE source_id IS NULL',
+  );
+  late final Index watchHistoryRecent = Index(
+    'watch_history_recent',
+    'CREATE INDEX watch_history_recent ON watch_history (item_type, updated_at)',
+  );
+  late final $SettingsTable settings = $SettingsTable(this);
+  late final $DownloadsTable downloads = $DownloadsTable(this);
+  late final Index libraryItemsHash = Index(
+    'library_items_hash',
+    'CREATE INDEX library_items_hash ON library_items (quick_hash)',
+  );
+  late final Index libraryItemsKindTitle = Index(
+    'library_items_kind_title',
+    'CREATE INDEX library_items_kind_title ON library_items (kind, title)',
+  );
+  late final Index libraryItemsProvider = Index(
+    'library_items_provider',
+    'CREATE INDEX library_items_provider ON library_items (provider_source_id, provider_item_type, provider_remote_key)',
+  );
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $ChannelsTable channels = $ChannelsTable(this);
   late final ChannelsFts channelsFts = ChannelsFts(this);
@@ -12742,7 +16382,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'epg_matches_source',
     'CREATE INDEX epg_matches_source ON epg_matches (source_id, xmltv_id)',
   );
-  late final $SettingsTable settings = $SettingsTable(this);
   late final $SyncRunsTable syncRuns = $SyncRunsTable(this);
   late final $MovieDetailsTable movieDetails = $MovieDetailsTable(this);
   late final $EpisodesTable episodes = $EpisodesTable(this);
@@ -12774,14 +16413,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'series_category',
     'CREATE INDEX series_category ON series (category_id)',
   );
-  late final $FavoriteGroupsTable favoriteGroups = $FavoriteGroupsTable(this);
-  late final $FavoritesTable favorites = $FavoritesTable(this);
-  late final $WatchHistoryTable watchHistory = $WatchHistoryTable(this);
   late final $CastDevicesTable castDevices = $CastDevicesTable(this);
-  late final Index watchHistoryRecent = Index(
-    'watch_history_recent',
-    'CREATE INDEX watch_history_recent ON watch_history (item_type, updated_at)',
-  );
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final SourcesDao sourcesDao = SourcesDao(this as AppDatabase);
   late final SyncRunsDao syncRunsDao = SyncRunsDao(this as AppDatabase);
@@ -12797,12 +16429,31 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CastDevicesDao castDevicesDao = CastDevicesDao(
     this as AppDatabase,
   );
+  late final LibraryDao libraryDao = LibraryDao(this as AppDatabase);
+  late final DownloadsDao downloadsDao = DownloadsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+    libraryFolders,
     sources,
+    libraryItems,
+    libraryFts,
+    libraryFtsInsert,
+    libraryFtsDelete,
+    libraryFtsUpdate,
+    favoriteGroups,
+    favorites,
+    favoritesLocal,
+    watchHistory,
+    watchHistoryLocal,
+    watchHistoryRecent,
+    settings,
+    downloads,
+    libraryItemsHash,
+    libraryItemsKindTitle,
+    libraryItemsProvider,
     categories,
     channels,
     channelsFts,
@@ -12833,7 +16484,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     epgProgramsChannelStart,
     epgProgramsStagingRun,
     epgMatchesSource,
-    settings,
     syncRuns,
     movieDetails,
     episodes,
@@ -12844,14 +16494,87 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     moviesName,
     moviesRating,
     seriesCategory,
-    favoriteGroups,
-    favorites,
-    watchHistory,
     castDevices,
-    watchHistoryRecent,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'library_folders',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('library_items', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('library_items', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'library_items',
+        limitUpdateKind: UpdateKind.insert,
+      ),
+      result: [TableUpdate('library_fts', kind: UpdateKind.insert)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'library_items',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('library_fts', kind: UpdateKind.insert)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'library_items',
+        limitUpdateKind: UpdateKind.update,
+      ),
+      result: [TableUpdate('library_fts', kind: UpdateKind.insert)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('favorite_groups', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('favorites', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'favorite_groups',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('favorites', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('watch_history', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('downloads', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'library_items',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('downloads', kind: UpdateKind.update)],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'sources',
@@ -13062,40 +16785,358 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('episodes', kind: UpdateKind.delete)],
     ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'sources',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('favorite_groups', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'sources',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('favorites', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'favorite_groups',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('favorites', kind: UpdateKind.update)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'sources',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('watch_history', kind: UpdateKind.delete)],
-    ),
   ]);
   @override
   DriftDatabaseOptions get options =>
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 }
 
+typedef $$LibraryFoldersTableCreateCompanionBuilder =
+    LibraryFoldersCompanion Function({
+      Value<int> id,
+      required String path,
+      required String label,
+      Value<bool> isDownloadFolder,
+      Value<bool> isAvailable,
+      Value<DateTime?> lastScanAt,
+      required DateTime addedAt,
+    });
+typedef $$LibraryFoldersTableUpdateCompanionBuilder =
+    LibraryFoldersCompanion Function({
+      Value<int> id,
+      Value<String> path,
+      Value<String> label,
+      Value<bool> isDownloadFolder,
+      Value<bool> isAvailable,
+      Value<DateTime?> lastScanAt,
+      Value<DateTime> addedAt,
+    });
+
+final class $$LibraryFoldersTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $LibraryFoldersTable, LibraryFolderRow> {
+  $$LibraryFoldersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$LibraryItemsTable, List<LibraryItemRow>>
+  _libraryItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.libraryItems,
+    aliasName: 'library_folders__id__library_items__folder_id',
+  );
+
+  $$LibraryItemsTableProcessedTableManager get libraryItemsRefs {
+    final manager = $$LibraryItemsTableTableManager(
+      $_db,
+      $_db.libraryItems,
+    ).filter((f) => f.folderId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_libraryItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$LibraryFoldersTableFilterComposer
+    extends Composer<_$AppDatabase, $LibraryFoldersTable> {
+  $$LibraryFoldersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDownloadFolder => $composableBuilder(
+    column: $table.isDownloadFolder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastScanAt => $composableBuilder(
+    column: $table.lastScanAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> libraryItemsRefs(
+    Expression<bool> Function($$LibraryItemsTableFilterComposer f) f,
+  ) {
+    final $$LibraryItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.folderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LibraryFoldersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LibraryFoldersTable> {
+  $$LibraryFoldersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDownloadFolder => $composableBuilder(
+    column: $table.isDownloadFolder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastScanAt => $composableBuilder(
+    column: $table.lastScanAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LibraryFoldersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LibraryFoldersTable> {
+  $$LibraryFoldersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDownloadFolder => $composableBuilder(
+    column: $table.isDownloadFolder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastScanAt => $composableBuilder(
+    column: $table.lastScanAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  Expression<T> libraryItemsRefs<T extends Object>(
+    Expression<T> Function($$LibraryItemsTableAnnotationComposer a) f,
+  ) {
+    final $$LibraryItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.folderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LibraryFoldersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LibraryFoldersTable,
+          LibraryFolderRow,
+          $$LibraryFoldersTableFilterComposer,
+          $$LibraryFoldersTableOrderingComposer,
+          $$LibraryFoldersTableAnnotationComposer,
+          $$LibraryFoldersTableCreateCompanionBuilder,
+          $$LibraryFoldersTableUpdateCompanionBuilder,
+          (LibraryFolderRow, $$LibraryFoldersTableReferences),
+          LibraryFolderRow,
+          PrefetchHooks Function({bool libraryItemsRefs})
+        > {
+  $$LibraryFoldersTableTableManager(
+    _$AppDatabase db,
+    $LibraryFoldersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LibraryFoldersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LibraryFoldersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LibraryFoldersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<bool> isDownloadFolder = const Value.absent(),
+                Value<bool> isAvailable = const Value.absent(),
+                Value<DateTime?> lastScanAt = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+              }) => LibraryFoldersCompanion(
+                id: id,
+                path: path,
+                label: label,
+                isDownloadFolder: isDownloadFolder,
+                isAvailable: isAvailable,
+                lastScanAt: lastScanAt,
+                addedAt: addedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String path,
+                required String label,
+                Value<bool> isDownloadFolder = const Value.absent(),
+                Value<bool> isAvailable = const Value.absent(),
+                Value<DateTime?> lastScanAt = const Value.absent(),
+                required DateTime addedAt,
+              }) => LibraryFoldersCompanion.insert(
+                id: id,
+                path: path,
+                label: label,
+                isDownloadFolder: isDownloadFolder,
+                isAvailable: isAvailable,
+                lastScanAt: lastScanAt,
+                addedAt: addedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LibraryFoldersTable, LibraryFolderRow>(table),
+                  $$LibraryFoldersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({libraryItemsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (libraryItemsRefs) db.libraryItems],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (libraryItemsRefs)
+                    await $_getPrefetchedData<
+                      LibraryFolderRow,
+                      $LibraryFoldersTable,
+                      LibraryItemRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$LibraryFoldersTableReferences
+                          ._libraryItemsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$LibraryFoldersTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).libraryItemsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.folderId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$LibraryFoldersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LibraryFoldersTable,
+      LibraryFolderRow,
+      $$LibraryFoldersTableFilterComposer,
+      $$LibraryFoldersTableOrderingComposer,
+      $$LibraryFoldersTableAnnotationComposer,
+      $$LibraryFoldersTableCreateCompanionBuilder,
+      $$LibraryFoldersTableUpdateCompanionBuilder,
+      (LibraryFolderRow, $$LibraryFoldersTableReferences),
+      LibraryFolderRow,
+      PrefetchHooks Function({bool libraryItemsRefs})
+    >;
 typedef $$SourcesTableCreateCompanionBuilder = SourcesCompanion Function({
   required String id,
   required SourceType type,
@@ -13142,6 +17183,96 @@ typedef $$SourcesTableUpdateCompanionBuilder = SourcesCompanion Function({
 final class $$SourcesTableReferences
     extends BaseReferences<_$AppDatabase, $SourcesTable, SourceRow> {
   $$SourcesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$LibraryItemsTable, List<LibraryItemRow>>
+  _libraryItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.libraryItems,
+    aliasName: 'sources__id__library_items__provider_source_id',
+  );
+
+  $$LibraryItemsTableProcessedTableManager get libraryItemsRefs {
+    final manager = $$LibraryItemsTableTableManager($_db, $_db.libraryItems)
+        .filter(
+          (f) => f.providerSourceId.id.sqlEquals($_itemColumn<String>('id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(_libraryItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoriteGroupsTable, List<FavoriteGroupRow>>
+  _favoriteGroupsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favoriteGroups,
+    aliasName: 'sources__id__favorite_groups__source_id',
+  );
+
+  $$FavoriteGroupsTableProcessedTableManager get favoriteGroupsRefs {
+    final manager = $$FavoriteGroupsTableTableManager(
+      $_db,
+      $_db.favoriteGroups,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoriteGroupsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
+  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favorites,
+    aliasName: 'sources__id__favorites__source_id',
+  );
+
+  $$FavoritesTableProcessedTableManager get favoritesRefs {
+    final manager = $$FavoritesTableTableManager(
+      $_db,
+      $_db.favorites,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$WatchHistoryTable, List<WatchHistoryRow>>
+  _watchHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.watchHistory,
+    aliasName: 'sources__id__watch_history__source_id',
+  );
+
+  $$WatchHistoryTableProcessedTableManager get watchHistoryRefs {
+    final manager = $$WatchHistoryTableTableManager(
+      $_db,
+      $_db.watchHistory,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_watchHistoryRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$DownloadsTable, List<DownloadRow>>
+  _downloadsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.downloads,
+    aliasName: 'sources__id__downloads__source_id',
+  );
+
+  $$DownloadsTableProcessedTableManager get downloadsRefs {
+    final manager = $$DownloadsTableTableManager(
+      $_db,
+      $_db.downloads,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_downloadsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 
   static MultiTypedResultKey<$CategoriesTable, List<CategoryRow>>
   _categoriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -13324,60 +17455,6 @@ final class $$SourcesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
-
-  static MultiTypedResultKey<$FavoriteGroupsTable, List<FavoriteGroupRow>>
-  _favoriteGroupsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.favoriteGroups,
-    aliasName: 'sources__id__favorite_groups__source_id',
-  );
-
-  $$FavoriteGroupsTableProcessedTableManager get favoriteGroupsRefs {
-    final manager = $$FavoriteGroupsTableTableManager(
-      $_db,
-      $_db.favoriteGroups,
-    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_favoriteGroupsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
-  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.favorites,
-    aliasName: 'sources__id__favorites__source_id',
-  );
-
-  $$FavoritesTableProcessedTableManager get favoritesRefs {
-    final manager = $$FavoritesTableTableManager(
-      $_db,
-      $_db.favorites,
-    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$WatchHistoryTable, List<WatchHistoryRow>>
-  _watchHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.watchHistory,
-    aliasName: 'sources__id__watch_history__source_id',
-  );
-
-  $$WatchHistoryTableProcessedTableManager get watchHistoryRefs {
-    final manager = $$WatchHistoryTableTableManager(
-      $_db,
-      $_db.watchHistory,
-    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_watchHistoryRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
 }
 
 class $$SourcesTableFilterComposer
@@ -13480,6 +17557,131 @@ class $$SourcesTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> libraryItemsRefs(
+    Expression<bool> Function($$LibraryItemsTableFilterComposer f) f,
+  ) {
+    final $$LibraryItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.providerSourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> favoriteGroupsRefs(
+    Expression<bool> Function($$FavoriteGroupsTableFilterComposer f) f,
+  ) {
+    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> favoritesRefs(
+    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
+  ) {
+    final $$FavoritesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableFilterComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> watchHistoryRefs(
+    Expression<bool> Function($$WatchHistoryTableFilterComposer f) f,
+  ) {
+    final $$WatchHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchHistory,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.watchHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> downloadsRefs(
+    Expression<bool> Function($$DownloadsTableFilterComposer f) f,
+  ) {
+    final $$DownloadsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloads,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DownloadsTableFilterComposer(
+            $db: $db,
+            $table: $db.downloads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> categoriesRefs(
     Expression<bool> Function($$CategoriesTableFilterComposer f) f,
@@ -13730,81 +17932,6 @@ class $$SourcesTableFilterComposer
     );
     return f(composer);
   }
-
-  Expression<bool> favoriteGroupsRefs(
-    Expression<bool> Function($$FavoriteGroupsTableFilterComposer f) f,
-  ) {
-    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favoriteGroups,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoriteGroupsTableFilterComposer(
-            $db: $db,
-            $table: $db.favoriteGroups,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> favoritesRefs(
-    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
-  ) {
-    final $$FavoritesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favorites,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoritesTableFilterComposer(
-            $db: $db,
-            $table: $db.favorites,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> watchHistoryRefs(
-    Expression<bool> Function($$WatchHistoryTableFilterComposer f) f,
-  ) {
-    final $$WatchHistoryTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.watchHistory,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$WatchHistoryTableFilterComposer(
-            $db: $db,
-            $table: $db.watchHistory,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$SourcesTableOrderingComposer
@@ -13984,6 +18111,131 @@ class $$SourcesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> libraryItemsRefs<T extends Object>(
+    Expression<T> Function($$LibraryItemsTableAnnotationComposer a) f,
+  ) {
+    final $$LibraryItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.providerSourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> favoriteGroupsRefs<T extends Object>(
+    Expression<T> Function($$FavoriteGroupsTableAnnotationComposer a) f,
+  ) {
+    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> favoritesRefs<T extends Object>(
+    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
+  ) {
+    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> watchHistoryRefs<T extends Object>(
+    Expression<T> Function($$WatchHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$WatchHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchHistory,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.watchHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> downloadsRefs<T extends Object>(
+    Expression<T> Function($$DownloadsTableAnnotationComposer a) f,
+  ) {
+    final $$DownloadsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloads,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DownloadsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.downloads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<T> categoriesRefs<T extends Object>(
     Expression<T> Function($$CategoriesTableAnnotationComposer a) f,
@@ -14234,81 +18486,6 @@ class $$SourcesTableAnnotationComposer
     );
     return f(composer);
   }
-
-  Expression<T> favoriteGroupsRefs<T extends Object>(
-    Expression<T> Function($$FavoriteGroupsTableAnnotationComposer a) f,
-  ) {
-    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favoriteGroups,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoriteGroupsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.favoriteGroups,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> favoritesRefs<T extends Object>(
-    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
-  ) {
-    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favorites,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoritesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.favorites,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> watchHistoryRefs<T extends Object>(
-    Expression<T> Function($$WatchHistoryTableAnnotationComposer a) f,
-  ) {
-    final $$WatchHistoryTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.watchHistory,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$WatchHistoryTableAnnotationComposer(
-            $db: $db,
-            $table: $db.watchHistory,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$SourcesTableTableManager
@@ -14325,6 +18502,11 @@ class $$SourcesTableTableManager
           (SourceRow, $$SourcesTableReferences),
           SourceRow,
           PrefetchHooks Function({
+            bool libraryItemsRefs,
+            bool favoriteGroupsRefs,
+            bool favoritesRefs,
+            bool watchHistoryRefs,
+            bool downloadsRefs,
             bool categoriesRefs,
             bool channelsRefs,
             bool moviesRefs,
@@ -14335,9 +18517,6 @@ class $$SourcesTableTableManager
             bool epgMappingsRefs,
             bool epgMatchesRefs,
             bool syncRunsRefs,
-            bool favoriteGroupsRefs,
-            bool favoritesRefs,
-            bool watchHistoryRefs,
           })
         > {
   $$SourcesTableTableManager(_$AppDatabase db, $SourcesTable table)
@@ -14445,6 +18624,11 @@ class $$SourcesTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
+                libraryItemsRefs = false,
+                favoriteGroupsRefs = false,
+                favoritesRefs = false,
+                watchHistoryRefs = false,
+                downloadsRefs = false,
                 categoriesRefs = false,
                 channelsRefs = false,
                 moviesRefs = false,
@@ -14455,13 +18639,15 @@ class $$SourcesTableTableManager
                 epgMappingsRefs = false,
                 epgMatchesRefs = false,
                 syncRunsRefs = false,
-                favoriteGroupsRefs = false,
-                favoritesRefs = false,
-                watchHistoryRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (libraryItemsRefs) db.libraryItems,
+                    if (favoriteGroupsRefs) db.favoriteGroups,
+                    if (favoritesRefs) db.favorites,
+                    if (watchHistoryRefs) db.watchHistory,
+                    if (downloadsRefs) db.downloads,
                     if (categoriesRefs) db.categories,
                     if (channelsRefs) db.channels,
                     if (moviesRefs) db.movies,
@@ -14472,13 +18658,115 @@ class $$SourcesTableTableManager
                     if (epgMappingsRefs) db.epgMappings,
                     if (epgMatchesRefs) db.epgMatches,
                     if (syncRunsRefs) db.syncRuns,
-                    if (favoriteGroupsRefs) db.favoriteGroups,
-                    if (favoritesRefs) db.favorites,
-                    if (watchHistoryRefs) db.watchHistory,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (libraryItemsRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          LibraryItemRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._libraryItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).libraryItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.providerSourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (favoriteGroupsRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          FavoriteGroupRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._favoriteGroupsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).favoriteGroupsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (favoritesRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          FavoriteRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._favoritesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).favoritesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (watchHistoryRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          WatchHistoryRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._watchHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).watchHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (downloadsRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          DownloadRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._downloadsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).downloadsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (categoriesRefs)
                         await $_getPrefetchedData<
                           SourceRow,
@@ -14689,69 +18977,6 @@ class $$SourcesTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (favoriteGroupsRefs)
-                        await $_getPrefetchedData<
-                          SourceRow,
-                          $SourcesTable,
-                          FavoriteGroupRow
-                        >(
-                          currentTable: table,
-                          referencedTable: $$SourcesTableReferences
-                              ._favoriteGroupsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$SourcesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).favoriteGroupsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.sourceId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (favoritesRefs)
-                        await $_getPrefetchedData<
-                          SourceRow,
-                          $SourcesTable,
-                          FavoriteRow
-                        >(
-                          currentTable: table,
-                          referencedTable: $$SourcesTableReferences
-                              ._favoritesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$SourcesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).favoritesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.sourceId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (watchHistoryRefs)
-                        await $_getPrefetchedData<
-                          SourceRow,
-                          $SourcesTable,
-                          WatchHistoryRow
-                        >(
-                          currentTable: table,
-                          referencedTable: $$SourcesTableReferences
-                              ._watchHistoryRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$SourcesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).watchHistoryRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.sourceId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                     ];
                   },
                 );
@@ -14773,6 +18998,11 @@ typedef $$SourcesTableProcessedTableManager =
       (SourceRow, $$SourcesTableReferences),
       SourceRow,
       PrefetchHooks Function({
+        bool libraryItemsRefs,
+        bool favoriteGroupsRefs,
+        bool favoritesRefs,
+        bool watchHistoryRefs,
+        bool downloadsRefs,
         bool categoriesRefs,
         bool channelsRefs,
         bool moviesRefs,
@@ -14783,10 +19013,3273 @@ typedef $$SourcesTableProcessedTableManager =
         bool epgMappingsRefs,
         bool epgMatchesRefs,
         bool syncRunsRefs,
-        bool favoriteGroupsRefs,
-        bool favoritesRefs,
-        bool watchHistoryRefs,
       })
+    >;
+typedef $$LibraryItemsTableCreateCompanionBuilder =
+    LibraryItemsCompanion Function({
+      Value<int> id,
+      required int folderId,
+      required String relPath,
+      required int sizeBytes,
+      required int mtime,
+      required String quickHash,
+      required LibraryKind kind,
+      required String title,
+      Value<int?> year,
+      Value<String?> showTitle,
+      Value<int?> season,
+      Value<int?> episode,
+      Value<int?> episodeEnd,
+      Value<int?> durationMs,
+      Value<String?> probeJson,
+      Value<String?> thumbnailPath,
+      Value<String?> artworkPath,
+      Value<String?> subtitlesJson,
+      Value<String?> userEditsJson,
+      Value<String?> detailsJson,
+      Value<String?> providerSourceId,
+      Value<VodType?> providerItemType,
+      Value<String?> providerRemoteKey,
+      Value<String?> providerSeriesKey,
+      Value<bool> isHidden,
+      Value<DateTime?> unavailableSince,
+      required DateTime addedAt,
+    });
+typedef $$LibraryItemsTableUpdateCompanionBuilder =
+    LibraryItemsCompanion Function({
+      Value<int> id,
+      Value<int> folderId,
+      Value<String> relPath,
+      Value<int> sizeBytes,
+      Value<int> mtime,
+      Value<String> quickHash,
+      Value<LibraryKind> kind,
+      Value<String> title,
+      Value<int?> year,
+      Value<String?> showTitle,
+      Value<int?> season,
+      Value<int?> episode,
+      Value<int?> episodeEnd,
+      Value<int?> durationMs,
+      Value<String?> probeJson,
+      Value<String?> thumbnailPath,
+      Value<String?> artworkPath,
+      Value<String?> subtitlesJson,
+      Value<String?> userEditsJson,
+      Value<String?> detailsJson,
+      Value<String?> providerSourceId,
+      Value<VodType?> providerItemType,
+      Value<String?> providerRemoteKey,
+      Value<String?> providerSeriesKey,
+      Value<bool> isHidden,
+      Value<DateTime?> unavailableSince,
+      Value<DateTime> addedAt,
+    });
+
+final class $$LibraryItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $LibraryItemsTable, LibraryItemRow> {
+  $$LibraryItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LibraryFoldersTable _folderIdTable(_$AppDatabase db) => db
+      .libraryFolders
+      .createAlias('library_items__folder_id__library_folders__id');
+
+  $$LibraryFoldersTableProcessedTableManager get folderId {
+    final $_column = $_itemColumn<int>('folder_id')!;
+
+    final manager = $$LibraryFoldersTableTableManager(
+      $_db,
+      $_db.libraryFolders,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_folderIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SourcesTable _providerSourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('library_items__provider_source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager? get providerSourceId {
+    final $_column = $_itemColumn<String>('provider_source_id');
+    if ($_column == null) return null;
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_providerSourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$DownloadsTable, List<DownloadRow>>
+  _downloadsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.downloads,
+    aliasName: 'library_items__id__downloads__library_item_id',
+  );
+
+  $$DownloadsTableProcessedTableManager get downloadsRefs {
+    final manager = $$DownloadsTableTableManager(
+      $_db,
+      $_db.downloads,
+    ).filter((f) => f.libraryItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_downloadsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$LibraryItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $LibraryItemsTable> {
+  $$LibraryItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relPath => $composableBuilder(
+    column: $table.relPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mtime => $composableBuilder(
+    column: $table.mtime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quickHash => $composableBuilder(
+    column: $table.quickHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<LibraryKind, LibraryKind, String> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episodeEnd => $composableBuilder(
+    column: $table.episodeEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get probeJson => $composableBuilder(
+    column: $table.probeJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get artworkPath => $composableBuilder(
+    column: $table.artworkPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subtitlesJson => $composableBuilder(
+    column: $table.subtitlesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userEditsJson => $composableBuilder(
+    column: $table.userEditsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get detailsJson => $composableBuilder(
+    column: $table.detailsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<VodType?, VodType, String>
+  get providerItemType => $composableBuilder(
+    column: $table.providerItemType,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get providerRemoteKey => $composableBuilder(
+    column: $table.providerRemoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerSeriesKey => $composableBuilder(
+    column: $table.providerSeriesKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get unavailableSince => $composableBuilder(
+    column: $table.unavailableSince,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LibraryFoldersTableFilterComposer get folderId {
+    final $$LibraryFoldersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.libraryFolders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryFoldersTableFilterComposer(
+            $db: $db,
+            $table: $db.libraryFolders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourcesTableFilterComposer get providerSourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.providerSourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> downloadsRefs(
+    Expression<bool> Function($$DownloadsTableFilterComposer f) f,
+  ) {
+    final $$DownloadsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloads,
+      getReferencedColumn: (t) => t.libraryItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DownloadsTableFilterComposer(
+            $db: $db,
+            $table: $db.downloads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LibraryItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LibraryItemsTable> {
+  $$LibraryItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relPath => $composableBuilder(
+    column: $table.relPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mtime => $composableBuilder(
+    column: $table.mtime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quickHash => $composableBuilder(
+    column: $table.quickHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get episodeEnd => $composableBuilder(
+    column: $table.episodeEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get probeJson => $composableBuilder(
+    column: $table.probeJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get artworkPath => $composableBuilder(
+    column: $table.artworkPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subtitlesJson => $composableBuilder(
+    column: $table.subtitlesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userEditsJson => $composableBuilder(
+    column: $table.userEditsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get detailsJson => $composableBuilder(
+    column: $table.detailsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerItemType => $composableBuilder(
+    column: $table.providerItemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerRemoteKey => $composableBuilder(
+    column: $table.providerRemoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerSeriesKey => $composableBuilder(
+    column: $table.providerSeriesKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get unavailableSince => $composableBuilder(
+    column: $table.unavailableSince,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LibraryFoldersTableOrderingComposer get folderId {
+    final $$LibraryFoldersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.libraryFolders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryFoldersTableOrderingComposer(
+            $db: $db,
+            $table: $db.libraryFolders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourcesTableOrderingComposer get providerSourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.providerSourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LibraryItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LibraryItemsTable> {
+  $$LibraryItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get relPath =>
+      $composableBuilder(column: $table.relPath, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<int> get mtime =>
+      $composableBuilder(column: $table.mtime, builder: (column) => column);
+
+  GeneratedColumn<String> get quickHash =>
+      $composableBuilder(column: $table.quickHash, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<LibraryKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<String> get showTitle =>
+      $composableBuilder(column: $table.showTitle, builder: (column) => column);
+
+  GeneratedColumn<int> get season =>
+      $composableBuilder(column: $table.season, builder: (column) => column);
+
+  GeneratedColumn<int> get episode =>
+      $composableBuilder(column: $table.episode, builder: (column) => column);
+
+  GeneratedColumn<int> get episodeEnd => $composableBuilder(
+    column: $table.episodeEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get probeJson =>
+      $composableBuilder(column: $table.probeJson, builder: (column) => column);
+
+  GeneratedColumn<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get artworkPath => $composableBuilder(
+    column: $table.artworkPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subtitlesJson => $composableBuilder(
+    column: $table.subtitlesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userEditsJson => $composableBuilder(
+    column: $table.userEditsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get detailsJson => $composableBuilder(
+    column: $table.detailsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<VodType?, String> get providerItemType =>
+      $composableBuilder(
+        column: $table.providerItemType,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get providerRemoteKey => $composableBuilder(
+    column: $table.providerRemoteKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get providerSeriesKey => $composableBuilder(
+    column: $table.providerSeriesKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isHidden =>
+      $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get unavailableSince => $composableBuilder(
+    column: $table.unavailableSince,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  $$LibraryFoldersTableAnnotationComposer get folderId {
+    final $$LibraryFoldersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.libraryFolders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryFoldersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.libraryFolders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourcesTableAnnotationComposer get providerSourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.providerSourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> downloadsRefs<T extends Object>(
+    Expression<T> Function($$DownloadsTableAnnotationComposer a) f,
+  ) {
+    final $$DownloadsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloads,
+      getReferencedColumn: (t) => t.libraryItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DownloadsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.downloads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LibraryItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LibraryItemsTable,
+          LibraryItemRow,
+          $$LibraryItemsTableFilterComposer,
+          $$LibraryItemsTableOrderingComposer,
+          $$LibraryItemsTableAnnotationComposer,
+          $$LibraryItemsTableCreateCompanionBuilder,
+          $$LibraryItemsTableUpdateCompanionBuilder,
+          (LibraryItemRow, $$LibraryItemsTableReferences),
+          LibraryItemRow,
+          PrefetchHooks Function({
+            bool folderId,
+            bool providerSourceId,
+            bool downloadsRefs,
+          })
+        > {
+  $$LibraryItemsTableTableManager(_$AppDatabase db, $LibraryItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LibraryItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LibraryItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LibraryItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> folderId = const Value.absent(),
+                Value<String> relPath = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<int> mtime = const Value.absent(),
+                Value<String> quickHash = const Value.absent(),
+                Value<LibraryKind> kind = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int?> year = const Value.absent(),
+                Value<String?> showTitle = const Value.absent(),
+                Value<int?> season = const Value.absent(),
+                Value<int?> episode = const Value.absent(),
+                Value<int?> episodeEnd = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<String?> probeJson = const Value.absent(),
+                Value<String?> thumbnailPath = const Value.absent(),
+                Value<String?> artworkPath = const Value.absent(),
+                Value<String?> subtitlesJson = const Value.absent(),
+                Value<String?> userEditsJson = const Value.absent(),
+                Value<String?> detailsJson = const Value.absent(),
+                Value<String?> providerSourceId = const Value.absent(),
+                Value<VodType?> providerItemType = const Value.absent(),
+                Value<String?> providerRemoteKey = const Value.absent(),
+                Value<String?> providerSeriesKey = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<DateTime?> unavailableSince = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+              }) => LibraryItemsCompanion(
+                id: id,
+                folderId: folderId,
+                relPath: relPath,
+                sizeBytes: sizeBytes,
+                mtime: mtime,
+                quickHash: quickHash,
+                kind: kind,
+                title: title,
+                year: year,
+                showTitle: showTitle,
+                season: season,
+                episode: episode,
+                episodeEnd: episodeEnd,
+                durationMs: durationMs,
+                probeJson: probeJson,
+                thumbnailPath: thumbnailPath,
+                artworkPath: artworkPath,
+                subtitlesJson: subtitlesJson,
+                userEditsJson: userEditsJson,
+                detailsJson: detailsJson,
+                providerSourceId: providerSourceId,
+                providerItemType: providerItemType,
+                providerRemoteKey: providerRemoteKey,
+                providerSeriesKey: providerSeriesKey,
+                isHidden: isHidden,
+                unavailableSince: unavailableSince,
+                addedAt: addedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int folderId,
+                required String relPath,
+                required int sizeBytes,
+                required int mtime,
+                required String quickHash,
+                required LibraryKind kind,
+                required String title,
+                Value<int?> year = const Value.absent(),
+                Value<String?> showTitle = const Value.absent(),
+                Value<int?> season = const Value.absent(),
+                Value<int?> episode = const Value.absent(),
+                Value<int?> episodeEnd = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<String?> probeJson = const Value.absent(),
+                Value<String?> thumbnailPath = const Value.absent(),
+                Value<String?> artworkPath = const Value.absent(),
+                Value<String?> subtitlesJson = const Value.absent(),
+                Value<String?> userEditsJson = const Value.absent(),
+                Value<String?> detailsJson = const Value.absent(),
+                Value<String?> providerSourceId = const Value.absent(),
+                Value<VodType?> providerItemType = const Value.absent(),
+                Value<String?> providerRemoteKey = const Value.absent(),
+                Value<String?> providerSeriesKey = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<DateTime?> unavailableSince = const Value.absent(),
+                required DateTime addedAt,
+              }) => LibraryItemsCompanion.insert(
+                id: id,
+                folderId: folderId,
+                relPath: relPath,
+                sizeBytes: sizeBytes,
+                mtime: mtime,
+                quickHash: quickHash,
+                kind: kind,
+                title: title,
+                year: year,
+                showTitle: showTitle,
+                season: season,
+                episode: episode,
+                episodeEnd: episodeEnd,
+                durationMs: durationMs,
+                probeJson: probeJson,
+                thumbnailPath: thumbnailPath,
+                artworkPath: artworkPath,
+                subtitlesJson: subtitlesJson,
+                userEditsJson: userEditsJson,
+                detailsJson: detailsJson,
+                providerSourceId: providerSourceId,
+                providerItemType: providerItemType,
+                providerRemoteKey: providerRemoteKey,
+                providerSeriesKey: providerSeriesKey,
+                isHidden: isHidden,
+                unavailableSince: unavailableSince,
+                addedAt: addedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LibraryItemsTable, LibraryItemRow>(table),
+                  $$LibraryItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                folderId = false,
+                providerSourceId = false,
+                downloadsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (downloadsRefs) db.downloads],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (folderId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.folderId,
+                            referencedTable: $$LibraryItemsTableReferences
+                                ._folderIdTable(db),
+                            referencedColumn: $$LibraryItemsTableReferences
+                                ._folderIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+                        if (providerSourceId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.providerSourceId,
+                            referencedTable: $$LibraryItemsTableReferences
+                                ._providerSourceIdTable(db),
+                            referencedColumn: $$LibraryItemsTableReferences
+                                ._providerSourceIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (downloadsRefs)
+                        await $_getPrefetchedData<
+                          LibraryItemRow,
+                          $LibraryItemsTable,
+                          DownloadRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LibraryItemsTableReferences
+                              ._downloadsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LibraryItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).downloadsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.libraryItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$LibraryItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LibraryItemsTable,
+      LibraryItemRow,
+      $$LibraryItemsTableFilterComposer,
+      $$LibraryItemsTableOrderingComposer,
+      $$LibraryItemsTableAnnotationComposer,
+      $$LibraryItemsTableCreateCompanionBuilder,
+      $$LibraryItemsTableUpdateCompanionBuilder,
+      (LibraryItemRow, $$LibraryItemsTableReferences),
+      LibraryItemRow,
+      PrefetchHooks Function({
+        bool folderId,
+        bool providerSourceId,
+        bool downloadsRefs,
+      })
+    >;
+typedef $LibraryFtsCreateCompanionBuilder = LibraryFtsCompanion Function({
+  required String title,
+  required String showTitle,
+  Value<int> rowid,
+});
+typedef $LibraryFtsUpdateCompanionBuilder = LibraryFtsCompanion Function({
+  Value<String> title,
+  Value<String> showTitle,
+  Value<int> rowid,
+});
+
+class $LibraryFtsFilterComposer extends Composer<_$AppDatabase, LibraryFts> {
+  $LibraryFtsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $LibraryFtsOrderingComposer extends Composer<_$AppDatabase, LibraryFts> {
+  $LibraryFtsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $LibraryFtsAnnotationComposer
+    extends Composer<_$AppDatabase, LibraryFts> {
+  $LibraryFtsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get showTitle =>
+      $composableBuilder(column: $table.showTitle, builder: (column) => column);
+}
+
+class $LibraryFtsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          LibraryFts,
+          LibraryFt,
+          $LibraryFtsFilterComposer,
+          $LibraryFtsOrderingComposer,
+          $LibraryFtsAnnotationComposer,
+          $LibraryFtsCreateCompanionBuilder,
+          $LibraryFtsUpdateCompanionBuilder,
+          (LibraryFt, BaseReferences<_$AppDatabase, LibraryFts, LibraryFt>),
+          LibraryFt,
+          PrefetchHooks Function()
+        > {
+  $LibraryFtsTableManager(_$AppDatabase db, LibraryFts table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $LibraryFtsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $LibraryFtsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $LibraryFtsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> title = const Value.absent(),
+                Value<String> showTitle = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LibraryFtsCompanion(
+                title: title,
+                showTitle: showTitle,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String title,
+                required String showTitle,
+                Value<int> rowid = const Value.absent(),
+              }) => LibraryFtsCompanion.insert(
+                title: title,
+                showTitle: showTitle,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<LibraryFts, LibraryFt>(table),
+                  BaseReferences<_$AppDatabase, LibraryFts, LibraryFt>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $LibraryFtsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      LibraryFts,
+      LibraryFt,
+      $LibraryFtsFilterComposer,
+      $LibraryFtsOrderingComposer,
+      $LibraryFtsAnnotationComposer,
+      $LibraryFtsCreateCompanionBuilder,
+      $LibraryFtsUpdateCompanionBuilder,
+      (LibraryFt, BaseReferences<_$AppDatabase, LibraryFts, LibraryFt>),
+      LibraryFt,
+      PrefetchHooks Function()
+    >;
+typedef $$FavoriteGroupsTableCreateCompanionBuilder =
+    FavoriteGroupsCompanion Function({
+      Value<int> id,
+      required String sourceId,
+      required String name,
+      Value<int> sortOrder,
+      Value<bool> collapsed,
+    });
+typedef $$FavoriteGroupsTableUpdateCompanionBuilder =
+    FavoriteGroupsCompanion Function({
+      Value<int> id,
+      Value<String> sourceId,
+      Value<String> name,
+      Value<int> sortOrder,
+      Value<bool> collapsed,
+    });
+
+final class $$FavoriteGroupsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $FavoriteGroupsTable, FavoriteGroupRow> {
+  $$FavoriteGroupsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('favorite_groups__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<String>('source_id')!;
+
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
+  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.favorites,
+    aliasName: 'favorite_groups__id__favorites__group_id',
+  );
+
+  $$FavoritesTableProcessedTableManager get favoritesRefs {
+    final manager = $$FavoritesTableTableManager(
+      $_db,
+      $_db.favorites,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$FavoriteGroupsTableFilterComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> favoritesRefs(
+    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
+  ) {
+    final $$FavoritesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableFilterComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FavoriteGroupsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoriteGroupsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
+  $$FavoriteGroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get collapsed =>
+      $composableBuilder(column: $table.collapsed, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> favoritesRefs<T extends Object>(
+    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
+  ) {
+    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.favorites,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoritesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favorites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FavoriteGroupsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FavoriteGroupsTable,
+          FavoriteGroupRow,
+          $$FavoriteGroupsTableFilterComposer,
+          $$FavoriteGroupsTableOrderingComposer,
+          $$FavoriteGroupsTableAnnotationComposer,
+          $$FavoriteGroupsTableCreateCompanionBuilder,
+          $$FavoriteGroupsTableUpdateCompanionBuilder,
+          (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
+          FavoriteGroupRow,
+          PrefetchHooks Function({bool sourceId, bool favoritesRefs})
+        > {
+  $$FavoriteGroupsTableTableManager(
+    _$AppDatabase db,
+    $FavoriteGroupsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FavoriteGroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FavoriteGroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FavoriteGroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> collapsed = const Value.absent(),
+              }) => FavoriteGroupsCompanion(
+                id: id,
+                sourceId: sourceId,
+                name: name,
+                sortOrder: sortOrder,
+                collapsed: collapsed,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sourceId,
+                required String name,
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> collapsed = const Value.absent(),
+              }) => FavoriteGroupsCompanion.insert(
+                id: id,
+                sourceId: sourceId,
+                name: name,
+                sortOrder: sortOrder,
+                collapsed: collapsed,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FavoriteGroupsTable, FavoriteGroupRow>(table),
+                  $$FavoriteGroupsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false, favoritesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (favoritesRefs) db.favorites],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$FavoriteGroupsTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$FavoriteGroupsTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (favoritesRefs)
+                    await $_getPrefetchedData<
+                      FavoriteGroupRow,
+                      $FavoriteGroupsTable,
+                      FavoriteRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$FavoriteGroupsTableReferences
+                          ._favoritesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$FavoriteGroupsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).favoritesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.groupId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FavoriteGroupsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FavoriteGroupsTable,
+      FavoriteGroupRow,
+      $$FavoriteGroupsTableFilterComposer,
+      $$FavoriteGroupsTableOrderingComposer,
+      $$FavoriteGroupsTableAnnotationComposer,
+      $$FavoriteGroupsTableCreateCompanionBuilder,
+      $$FavoriteGroupsTableUpdateCompanionBuilder,
+      (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
+      FavoriteGroupRow,
+      PrefetchHooks Function({bool sourceId, bool favoritesRefs})
+    >;
+typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
+  Value<int> id,
+  required UserItemType itemType,
+  Value<String?> sourceId,
+  required String remoteKey,
+  Value<int?> groupId,
+  Value<int?> sortOrder,
+  required DateTime addedAt,
+});
+typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
+  Value<int> id,
+  Value<UserItemType> itemType,
+  Value<String?> sourceId,
+  Value<String> remoteKey,
+  Value<int?> groupId,
+  Value<int?> sortOrder,
+  Value<DateTime> addedAt,
+});
+
+final class $$FavoritesTableReferences
+    extends BaseReferences<_$AppDatabase, $FavoritesTable, FavoriteRow> {
+  $$FavoritesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('favorites__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager? get sourceId {
+    final $_column = $_itemColumn<String>('source_id');
+    if ($_column == null) return null;
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FavoriteGroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.favoriteGroups.createAlias('favorites__group_id__favorite_groups__id');
+
+  $$FavoriteGroupsTableProcessedTableManager? get groupId {
+    final $_column = $_itemColumn<int>('group_id');
+    if ($_column == null) return null;
+    final manager = $$FavoriteGroupsTableTableManager(
+      $_db,
+      $_db.favoriteGroups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FavoritesTableFilterComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
+  get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FavoriteGroupsTableFilterComposer get groupId {
+    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FavoriteGroupsTableOrderingComposer get groupId {
+    final $$FavoriteGroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FavoritesTable> {
+  $$FavoritesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteKey =>
+      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FavoriteGroupsTableAnnotationComposer get groupId {
+    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.favoriteGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FavoriteGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.favoriteGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FavoritesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FavoritesTable,
+          FavoriteRow,
+          $$FavoritesTableFilterComposer,
+          $$FavoritesTableOrderingComposer,
+          $$FavoritesTableAnnotationComposer,
+          $$FavoritesTableCreateCompanionBuilder,
+          $$FavoritesTableUpdateCompanionBuilder,
+          (FavoriteRow, $$FavoritesTableReferences),
+          FavoriteRow,
+          PrefetchHooks Function({bool sourceId, bool groupId})
+        > {
+  $$FavoritesTableTableManager(_$AppDatabase db, $FavoritesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FavoritesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FavoritesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FavoritesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<UserItemType> itemType = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String> remoteKey = const Value.absent(),
+                Value<int?> groupId = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+              }) => FavoritesCompanion(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                groupId: groupId,
+                sortOrder: sortOrder,
+                addedAt: addedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required UserItemType itemType,
+                Value<String?> sourceId = const Value.absent(),
+                required String remoteKey,
+                Value<int?> groupId = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                required DateTime addedAt,
+              }) => FavoritesCompanion.insert(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                groupId: groupId,
+                sortOrder: sortOrder,
+                addedAt: addedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FavoritesTable, FavoriteRow>(table),
+                  $$FavoritesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false, groupId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$FavoritesTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$FavoritesTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (groupId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.groupId,
+                        referencedTable: $$FavoritesTableReferences
+                            ._groupIdTable(db),
+                        referencedColumn: $$FavoritesTableReferences
+                            ._groupIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FavoritesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FavoritesTable,
+      FavoriteRow,
+      $$FavoritesTableFilterComposer,
+      $$FavoritesTableOrderingComposer,
+      $$FavoritesTableAnnotationComposer,
+      $$FavoritesTableCreateCompanionBuilder,
+      $$FavoritesTableUpdateCompanionBuilder,
+      (FavoriteRow, $$FavoritesTableReferences),
+      FavoriteRow,
+      PrefetchHooks Function({bool sourceId, bool groupId})
+    >;
+typedef $$WatchHistoryTableCreateCompanionBuilder =
+    WatchHistoryCompanion Function({
+      Value<int> id,
+      required UserItemType itemType,
+      Value<String?> sourceId,
+      required String remoteKey,
+      Value<int> positionMs,
+      Value<int?> durationMs,
+      Value<bool> completed,
+      Value<String?> seriesKey,
+      Value<bool> dismissed,
+      required DateTime updatedAt,
+    });
+typedef $$WatchHistoryTableUpdateCompanionBuilder =
+    WatchHistoryCompanion Function({
+      Value<int> id,
+      Value<UserItemType> itemType,
+      Value<String?> sourceId,
+      Value<String> remoteKey,
+      Value<int> positionMs,
+      Value<int?> durationMs,
+      Value<bool> completed,
+      Value<String?> seriesKey,
+      Value<bool> dismissed,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$WatchHistoryTableReferences
+    extends BaseReferences<_$AppDatabase, $WatchHistoryTable, WatchHistoryRow> {
+  $$WatchHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('watch_history__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager? get sourceId {
+    final $_column = $_itemColumn<String>('source_id');
+    if ($_column == null) return null;
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$WatchHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
+  get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seriesKey => $composableBuilder(
+    column: $table.seriesKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dismissed => $composableBuilder(
+    column: $table.dismissed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get seriesKey => $composableBuilder(
+    column: $table.seriesKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dismissed => $composableBuilder(
+    column: $table.dismissed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WatchHistoryTable> {
+  $$WatchHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteKey =>
+      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get completed =>
+      $composableBuilder(column: $table.completed, builder: (column) => column);
+
+  GeneratedColumn<String> get seriesKey =>
+      $composableBuilder(column: $table.seriesKey, builder: (column) => column);
+
+  GeneratedColumn<bool> get dismissed =>
+      $composableBuilder(column: $table.dismissed, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WatchHistoryTable,
+          WatchHistoryRow,
+          $$WatchHistoryTableFilterComposer,
+          $$WatchHistoryTableOrderingComposer,
+          $$WatchHistoryTableAnnotationComposer,
+          $$WatchHistoryTableCreateCompanionBuilder,
+          $$WatchHistoryTableUpdateCompanionBuilder,
+          (WatchHistoryRow, $$WatchHistoryTableReferences),
+          WatchHistoryRow,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$WatchHistoryTableTableManager(_$AppDatabase db, $WatchHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WatchHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WatchHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WatchHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<UserItemType> itemType = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String> remoteKey = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
+                Value<String?> seriesKey = const Value.absent(),
+                Value<bool> dismissed = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => WatchHistoryCompanion(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                completed: completed,
+                seriesKey: seriesKey,
+                dismissed: dismissed,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required UserItemType itemType,
+                Value<String?> sourceId = const Value.absent(),
+                required String remoteKey,
+                Value<int> positionMs = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
+                Value<String?> seriesKey = const Value.absent(),
+                Value<bool> dismissed = const Value.absent(),
+                required DateTime updatedAt,
+              }) => WatchHistoryCompanion.insert(
+                id: id,
+                itemType: itemType,
+                sourceId: sourceId,
+                remoteKey: remoteKey,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                completed: completed,
+                seriesKey: seriesKey,
+                dismissed: dismissed,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$WatchHistoryTable, WatchHistoryRow>(table),
+                  $$WatchHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$WatchHistoryTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$WatchHistoryTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WatchHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WatchHistoryTable,
+      WatchHistoryRow,
+      $$WatchHistoryTableFilterComposer,
+      $$WatchHistoryTableOrderingComposer,
+      $$WatchHistoryTableAnnotationComposer,
+      $$WatchHistoryTableCreateCompanionBuilder,
+      $$WatchHistoryTableUpdateCompanionBuilder,
+      (WatchHistoryRow, $$WatchHistoryTableReferences),
+      WatchHistoryRow,
+      PrefetchHooks Function({bool sourceId})
+    >;
+typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
+  required String key,
+  required String valueJson,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
+  Value<String> key,
+  Value<String> valueJson,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$SettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get valueJson => $composableBuilder(
+    column: $table.valueJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get valueJson => $composableBuilder(
+    column: $table.valueJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get valueJson =>
+      $composableBuilder(column: $table.valueJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SettingsTable,
+          SettingRow,
+          $$SettingsTableFilterComposer,
+          $$SettingsTableOrderingComposer,
+          $$SettingsTableAnnotationComposer,
+          $$SettingsTableCreateCompanionBuilder,
+          $$SettingsTableUpdateCompanionBuilder,
+          (
+            SettingRow,
+            BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>,
+          ),
+          SettingRow,
+          PrefetchHooks Function()
+        > {
+  $$SettingsTableTableManager(_$AppDatabase db, $SettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String> valueJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SettingsCompanion(
+                key: key,
+                valueJson: valueJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String valueJson,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SettingsCompanion.insert(
+                key: key,
+                valueJson: valueJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SettingsTable, SettingRow>(table),
+                  BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SettingsTable,
+      SettingRow,
+      $$SettingsTableFilterComposer,
+      $$SettingsTableOrderingComposer,
+      $$SettingsTableAnnotationComposer,
+      $$SettingsTableCreateCompanionBuilder,
+      $$SettingsTableUpdateCompanionBuilder,
+      (SettingRow, BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>),
+      SettingRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DownloadsTableCreateCompanionBuilder = DownloadsCompanion Function({
+  Value<int> id,
+  required String sourceId,
+  required VodType itemType,
+  required String remoteKey,
+  Value<String?> seriesRemoteKey,
+  Value<int?> season,
+  Value<int?> episode,
+  required String title,
+  Value<String?> showTitle,
+  Value<int?> year,
+  Value<String?> artworkUrl,
+  required String targetPath,
+  Value<int?> totalBytes,
+  Value<int> downloadedBytes,
+  Value<String?> etag,
+  Value<String?> lastModified,
+  required DownloadTaskState state,
+  Value<DownloadProblem?> errorClass,
+  Value<String?> errorDetail,
+  Value<int> attempts,
+  Value<int?> libraryItemId,
+  required int sortOrder,
+  required DateTime createdAt,
+  Value<DateTime?> completedAt,
+});
+typedef $$DownloadsTableUpdateCompanionBuilder = DownloadsCompanion Function({
+  Value<int> id,
+  Value<String> sourceId,
+  Value<VodType> itemType,
+  Value<String> remoteKey,
+  Value<String?> seriesRemoteKey,
+  Value<int?> season,
+  Value<int?> episode,
+  Value<String> title,
+  Value<String?> showTitle,
+  Value<int?> year,
+  Value<String?> artworkUrl,
+  Value<String> targetPath,
+  Value<int?> totalBytes,
+  Value<int> downloadedBytes,
+  Value<String?> etag,
+  Value<String?> lastModified,
+  Value<DownloadTaskState> state,
+  Value<DownloadProblem?> errorClass,
+  Value<String?> errorDetail,
+  Value<int> attempts,
+  Value<int?> libraryItemId,
+  Value<int> sortOrder,
+  Value<DateTime> createdAt,
+  Value<DateTime?> completedAt,
+});
+
+final class $$DownloadsTableReferences
+    extends BaseReferences<_$AppDatabase, $DownloadsTable, DownloadRow> {
+  $$DownloadsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('downloads__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<String>('source_id')!;
+
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LibraryItemsTable _libraryItemIdTable(_$AppDatabase db) => db
+      .libraryItems
+      .createAlias('downloads__library_item_id__library_items__id');
+
+  $$LibraryItemsTableProcessedTableManager? get libraryItemId {
+    final $_column = $_itemColumn<int>('library_item_id');
+    if ($_column == null) return null;
+    final manager = $$LibraryItemsTableTableManager(
+      $_db,
+      $_db.libraryItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_libraryItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DownloadsTableFilterComposer
+    extends Composer<_$AppDatabase, $DownloadsTable> {
+  $$DownloadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<VodType, VodType, String> get itemType =>
+      $composableBuilder(
+        column: $table.itemType,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seriesRemoteKey => $composableBuilder(
+    column: $table.seriesRemoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get artworkUrl => $composableBuilder(
+    column: $table.artworkUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetPath => $composableBuilder(
+    column: $table.targetPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get downloadedBytes => $composableBuilder(
+    column: $table.downloadedBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DownloadTaskState, DownloadTaskState, String>
+  get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DownloadProblem?, DownloadProblem, String>
+  get errorClass => $composableBuilder(
+    column: $table.errorClass,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get errorDetail => $composableBuilder(
+    column: $table.errorDetail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LibraryItemsTableFilterComposer get libraryItemId {
+    final $$LibraryItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.libraryItemId,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DownloadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DownloadsTable> {
+  $$DownloadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteKey => $composableBuilder(
+    column: $table.remoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get seriesRemoteKey => $composableBuilder(
+    column: $table.seriesRemoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get showTitle => $composableBuilder(
+    column: $table.showTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get artworkUrl => $composableBuilder(
+    column: $table.artworkUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetPath => $composableBuilder(
+    column: $table.targetPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get downloadedBytes => $composableBuilder(
+    column: $table.downloadedBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorClass => $composableBuilder(
+    column: $table.errorClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorDetail => $composableBuilder(
+    column: $table.errorDetail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LibraryItemsTableOrderingComposer get libraryItemId {
+    final $$LibraryItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.libraryItemId,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DownloadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DownloadsTable> {
+  $$DownloadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<VodType, String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteKey =>
+      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
+
+  GeneratedColumn<String> get seriesRemoteKey => $composableBuilder(
+    column: $table.seriesRemoteKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get season =>
+      $composableBuilder(column: $table.season, builder: (column) => column);
+
+  GeneratedColumn<int> get episode =>
+      $composableBuilder(column: $table.episode, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get showTitle =>
+      $composableBuilder(column: $table.showTitle, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<String> get artworkUrl => $composableBuilder(
+    column: $table.artworkUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get targetPath => $composableBuilder(
+    column: $table.targetPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get downloadedBytes => $composableBuilder(
+    column: $table.downloadedBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<DownloadTaskState, String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DownloadProblem?, String> get errorClass =>
+      $composableBuilder(
+        column: $table.errorClass,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get errorDetail => $composableBuilder(
+    column: $table.errorDetail,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LibraryItemsTableAnnotationComposer get libraryItemId {
+    final $$LibraryItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.libraryItemId,
+      referencedTable: $db.libraryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LibraryItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.libraryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DownloadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DownloadsTable,
+          DownloadRow,
+          $$DownloadsTableFilterComposer,
+          $$DownloadsTableOrderingComposer,
+          $$DownloadsTableAnnotationComposer,
+          $$DownloadsTableCreateCompanionBuilder,
+          $$DownloadsTableUpdateCompanionBuilder,
+          (DownloadRow, $$DownloadsTableReferences),
+          DownloadRow,
+          PrefetchHooks Function({bool sourceId, bool libraryItemId})
+        > {
+  $$DownloadsTableTableManager(_$AppDatabase db, $DownloadsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DownloadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DownloadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DownloadsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<VodType> itemType = const Value.absent(),
+                Value<String> remoteKey = const Value.absent(),
+                Value<String?> seriesRemoteKey = const Value.absent(),
+                Value<int?> season = const Value.absent(),
+                Value<int?> episode = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> showTitle = const Value.absent(),
+                Value<int?> year = const Value.absent(),
+                Value<String?> artworkUrl = const Value.absent(),
+                Value<String> targetPath = const Value.absent(),
+                Value<int?> totalBytes = const Value.absent(),
+                Value<int> downloadedBytes = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                Value<DownloadTaskState> state = const Value.absent(),
+                Value<DownloadProblem?> errorClass = const Value.absent(),
+                Value<String?> errorDetail = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<int?> libraryItemId = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
+              }) => DownloadsCompanion(
+                id: id,
+                sourceId: sourceId,
+                itemType: itemType,
+                remoteKey: remoteKey,
+                seriesRemoteKey: seriesRemoteKey,
+                season: season,
+                episode: episode,
+                title: title,
+                showTitle: showTitle,
+                year: year,
+                artworkUrl: artworkUrl,
+                targetPath: targetPath,
+                totalBytes: totalBytes,
+                downloadedBytes: downloadedBytes,
+                etag: etag,
+                lastModified: lastModified,
+                state: state,
+                errorClass: errorClass,
+                errorDetail: errorDetail,
+                attempts: attempts,
+                libraryItemId: libraryItemId,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                completedAt: completedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sourceId,
+                required VodType itemType,
+                required String remoteKey,
+                Value<String?> seriesRemoteKey = const Value.absent(),
+                Value<int?> season = const Value.absent(),
+                Value<int?> episode = const Value.absent(),
+                required String title,
+                Value<String?> showTitle = const Value.absent(),
+                Value<int?> year = const Value.absent(),
+                Value<String?> artworkUrl = const Value.absent(),
+                required String targetPath,
+                Value<int?> totalBytes = const Value.absent(),
+                Value<int> downloadedBytes = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                required DownloadTaskState state,
+                Value<DownloadProblem?> errorClass = const Value.absent(),
+                Value<String?> errorDetail = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<int?> libraryItemId = const Value.absent(),
+                required int sortOrder,
+                required DateTime createdAt,
+                Value<DateTime?> completedAt = const Value.absent(),
+              }) => DownloadsCompanion.insert(
+                id: id,
+                sourceId: sourceId,
+                itemType: itemType,
+                remoteKey: remoteKey,
+                seriesRemoteKey: seriesRemoteKey,
+                season: season,
+                episode: episode,
+                title: title,
+                showTitle: showTitle,
+                year: year,
+                artworkUrl: artworkUrl,
+                targetPath: targetPath,
+                totalBytes: totalBytes,
+                downloadedBytes: downloadedBytes,
+                etag: etag,
+                lastModified: lastModified,
+                state: state,
+                errorClass: errorClass,
+                errorDetail: errorDetail,
+                attempts: attempts,
+                libraryItemId: libraryItemId,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                completedAt: completedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DownloadsTable, DownloadRow>(table),
+                  $$DownloadsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false, libraryItemId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$DownloadsTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$DownloadsTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (libraryItemId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.libraryItemId,
+                        referencedTable: $$DownloadsTableReferences
+                            ._libraryItemIdTable(db),
+                        referencedColumn: $$DownloadsTableReferences
+                            ._libraryItemIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DownloadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DownloadsTable,
+      DownloadRow,
+      $$DownloadsTableFilterComposer,
+      $$DownloadsTableOrderingComposer,
+      $$DownloadsTableAnnotationComposer,
+      $$DownloadsTableCreateCompanionBuilder,
+      $$DownloadsTableUpdateCompanionBuilder,
+      (DownloadRow, $$DownloadsTableReferences),
+      DownloadRow,
+      PrefetchHooks Function({bool sourceId, bool libraryItemId})
     >;
 typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
   required String sourceId,
@@ -20856,172 +28349,6 @@ typedef $$EpgMatchesTableProcessedTableManager =
       EpgMatchRow,
       PrefetchHooks Function({bool channelId, bool sourceId})
     >;
-typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
-  required String key,
-  required String valueJson,
-  required DateTime updatedAt,
-  Value<int> rowid,
-});
-typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
-  Value<String> key,
-  Value<String> valueJson,
-  Value<DateTime> updatedAt,
-  Value<int> rowid,
-});
-
-class $$SettingsTableFilterComposer
-    extends Composer<_$AppDatabase, $SettingsTable> {
-  $$SettingsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get key => $composableBuilder(
-    column: $table.key,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get valueJson => $composableBuilder(
-    column: $table.valueJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$SettingsTableOrderingComposer
-    extends Composer<_$AppDatabase, $SettingsTable> {
-  $$SettingsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get key => $composableBuilder(
-    column: $table.key,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get valueJson => $composableBuilder(
-    column: $table.valueJson,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$SettingsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SettingsTable> {
-  $$SettingsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get key =>
-      $composableBuilder(column: $table.key, builder: (column) => column);
-
-  GeneratedColumn<String> get valueJson =>
-      $composableBuilder(column: $table.valueJson, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-}
-
-class $$SettingsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $SettingsTable,
-          SettingRow,
-          $$SettingsTableFilterComposer,
-          $$SettingsTableOrderingComposer,
-          $$SettingsTableAnnotationComposer,
-          $$SettingsTableCreateCompanionBuilder,
-          $$SettingsTableUpdateCompanionBuilder,
-          (
-            SettingRow,
-            BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>,
-          ),
-          SettingRow,
-          PrefetchHooks Function()
-        > {
-  $$SettingsTableTableManager(_$AppDatabase db, $SettingsTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SettingsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SettingsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SettingsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> key = const Value.absent(),
-                Value<String> valueJson = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => SettingsCompanion(
-                key: key,
-                valueJson: valueJson,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String key,
-                required String valueJson,
-                required DateTime updatedAt,
-                Value<int> rowid = const Value.absent(),
-              }) => SettingsCompanion.insert(
-                key: key,
-                valueJson: valueJson,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$SettingsTable, SettingRow>(table),
-                  BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>(
-                    db,
-                    table,
-                    e,
-                  ),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$SettingsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $SettingsTable,
-      SettingRow,
-      $$SettingsTableFilterComposer,
-      $$SettingsTableOrderingComposer,
-      $$SettingsTableAnnotationComposer,
-      $$SettingsTableCreateCompanionBuilder,
-      $$SettingsTableUpdateCompanionBuilder,
-      (SettingRow, BaseReferences<_$AppDatabase, $SettingsTable, SettingRow>),
-      SettingRow,
-      PrefetchHooks Function()
-    >;
 typedef $$SyncRunsTableCreateCompanionBuilder = SyncRunsCompanion Function({
   Value<int> id,
   required String sourceId,
@@ -22268,1249 +29595,6 @@ typedef $$EpisodesTableProcessedTableManager =
       EpisodeRow,
       PrefetchHooks Function({bool seriesId})
     >;
-typedef $$FavoriteGroupsTableCreateCompanionBuilder =
-    FavoriteGroupsCompanion Function({
-      Value<int> id,
-      required String sourceId,
-      required String name,
-      Value<int> sortOrder,
-      Value<bool> collapsed,
-    });
-typedef $$FavoriteGroupsTableUpdateCompanionBuilder =
-    FavoriteGroupsCompanion Function({
-      Value<int> id,
-      Value<String> sourceId,
-      Value<String> name,
-      Value<int> sortOrder,
-      Value<bool> collapsed,
-    });
-
-final class $$FavoriteGroupsTableReferences
-    extends
-        BaseReferences<_$AppDatabase, $FavoriteGroupsTable, FavoriteGroupRow> {
-  $$FavoriteGroupsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
-      db.sources.createAlias('favorite_groups__source_id__sources__id');
-
-  $$SourcesTableProcessedTableManager get sourceId {
-    final $_column = $_itemColumn<String>('source_id')!;
-
-    final manager = $$SourcesTableTableManager(
-      $_db,
-      $_db.sources,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static MultiTypedResultKey<$FavoritesTable, List<FavoriteRow>>
-  _favoritesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.favorites,
-    aliasName: 'favorite_groups__id__favorites__group_id',
-  );
-
-  $$FavoritesTableProcessedTableManager get favoritesRefs {
-    final manager = $$FavoritesTableTableManager(
-      $_db,
-      $_db.favorites,
-    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
-class $$FavoriteGroupsTableFilterComposer
-    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
-  $$FavoriteGroupsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get collapsed => $composableBuilder(
-    column: $table.collapsed,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$SourcesTableFilterComposer get sourceId {
-    final $$SourcesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableFilterComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<bool> favoritesRefs(
-    Expression<bool> Function($$FavoritesTableFilterComposer f) f,
-  ) {
-    final $$FavoritesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favorites,
-      getReferencedColumn: (t) => t.groupId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoritesTableFilterComposer(
-            $db: $db,
-            $table: $db.favorites,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$FavoriteGroupsTableOrderingComposer
-    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
-  $$FavoriteGroupsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get collapsed => $composableBuilder(
-    column: $table.collapsed,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$SourcesTableOrderingComposer get sourceId {
-    final $$SourcesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableOrderingComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$FavoriteGroupsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $FavoriteGroupsTable> {
-  $$FavoriteGroupsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<int> get sortOrder =>
-      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
-
-  GeneratedColumn<bool> get collapsed =>
-      $composableBuilder(column: $table.collapsed, builder: (column) => column);
-
-  $$SourcesTableAnnotationComposer get sourceId {
-    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<T> favoritesRefs<T extends Object>(
-    Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
-  ) {
-    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.favorites,
-      getReferencedColumn: (t) => t.groupId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoritesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.favorites,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$FavoriteGroupsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $FavoriteGroupsTable,
-          FavoriteGroupRow,
-          $$FavoriteGroupsTableFilterComposer,
-          $$FavoriteGroupsTableOrderingComposer,
-          $$FavoriteGroupsTableAnnotationComposer,
-          $$FavoriteGroupsTableCreateCompanionBuilder,
-          $$FavoriteGroupsTableUpdateCompanionBuilder,
-          (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
-          FavoriteGroupRow,
-          PrefetchHooks Function({bool sourceId, bool favoritesRefs})
-        > {
-  $$FavoriteGroupsTableTableManager(
-    _$AppDatabase db,
-    $FavoriteGroupsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$FavoriteGroupsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$FavoriteGroupsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$FavoriteGroupsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> sourceId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<int> sortOrder = const Value.absent(),
-                Value<bool> collapsed = const Value.absent(),
-              }) => FavoriteGroupsCompanion(
-                id: id,
-                sourceId: sourceId,
-                name: name,
-                sortOrder: sortOrder,
-                collapsed: collapsed,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String sourceId,
-                required String name,
-                Value<int> sortOrder = const Value.absent(),
-                Value<bool> collapsed = const Value.absent(),
-              }) => FavoriteGroupsCompanion.insert(
-                id: id,
-                sourceId: sourceId,
-                name: name,
-                sortOrder: sortOrder,
-                collapsed: collapsed,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$FavoriteGroupsTable, FavoriteGroupRow>(table),
-                  $$FavoriteGroupsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({sourceId = false, favoritesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (favoritesRefs) db.favorites],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (sourceId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.sourceId,
-                        referencedTable: $$FavoriteGroupsTableReferences
-                            ._sourceIdTable(db),
-                        referencedColumn: $$FavoriteGroupsTableReferences
-                            ._sourceIdTable(db)
-                            .id,
-                      ) as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (favoritesRefs)
-                    await $_getPrefetchedData<
-                      FavoriteGroupRow,
-                      $FavoriteGroupsTable,
-                      FavoriteRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$FavoriteGroupsTableReferences
-                          ._favoritesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$FavoriteGroupsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).favoritesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.groupId == item.id),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$FavoriteGroupsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $FavoriteGroupsTable,
-      FavoriteGroupRow,
-      $$FavoriteGroupsTableFilterComposer,
-      $$FavoriteGroupsTableOrderingComposer,
-      $$FavoriteGroupsTableAnnotationComposer,
-      $$FavoriteGroupsTableCreateCompanionBuilder,
-      $$FavoriteGroupsTableUpdateCompanionBuilder,
-      (FavoriteGroupRow, $$FavoriteGroupsTableReferences),
-      FavoriteGroupRow,
-      PrefetchHooks Function({bool sourceId, bool favoritesRefs})
-    >;
-typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
-  Value<int> id,
-  required UserItemType itemType,
-  Value<String?> sourceId,
-  required String remoteKey,
-  Value<int?> groupId,
-  Value<int?> sortOrder,
-  required DateTime addedAt,
-});
-typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
-  Value<int> id,
-  Value<UserItemType> itemType,
-  Value<String?> sourceId,
-  Value<String> remoteKey,
-  Value<int?> groupId,
-  Value<int?> sortOrder,
-  Value<DateTime> addedAt,
-});
-
-final class $$FavoritesTableReferences
-    extends BaseReferences<_$AppDatabase, $FavoritesTable, FavoriteRow> {
-  $$FavoritesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
-      db.sources.createAlias('favorites__source_id__sources__id');
-
-  $$SourcesTableProcessedTableManager? get sourceId {
-    final $_column = $_itemColumn<String>('source_id');
-    if ($_column == null) return null;
-    final manager = $$SourcesTableTableManager(
-      $_db,
-      $_db.sources,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $FavoriteGroupsTable _groupIdTable(_$AppDatabase db) =>
-      db.favoriteGroups.createAlias('favorites__group_id__favorite_groups__id');
-
-  $$FavoriteGroupsTableProcessedTableManager? get groupId {
-    final $_column = $_itemColumn<int>('group_id');
-    if ($_column == null) return null;
-    final manager = $$FavoriteGroupsTableTableManager(
-      $_db,
-      $_db.favoriteGroups,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$FavoritesTableFilterComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
-  get itemType => $composableBuilder(
-    column: $table.itemType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
-  );
-
-  ColumnFilters<String> get remoteKey => $composableBuilder(
-    column: $table.remoteKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get addedAt => $composableBuilder(
-    column: $table.addedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$SourcesTableFilterComposer get sourceId {
-    final $$SourcesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableFilterComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$FavoriteGroupsTableFilterComposer get groupId {
-    final $$FavoriteGroupsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.groupId,
-      referencedTable: $db.favoriteGroups,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoriteGroupsTableFilterComposer(
-            $db: $db,
-            $table: $db.favoriteGroups,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$FavoritesTableOrderingComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get itemType => $composableBuilder(
-    column: $table.itemType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get remoteKey => $composableBuilder(
-    column: $table.remoteKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
-    column: $table.addedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$SourcesTableOrderingComposer get sourceId {
-    final $$SourcesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableOrderingComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$FavoriteGroupsTableOrderingComposer get groupId {
-    final $$FavoriteGroupsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.groupId,
-      referencedTable: $db.favoriteGroups,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoriteGroupsTableOrderingComposer(
-            $db: $db,
-            $table: $db.favoriteGroups,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$FavoritesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
-      $composableBuilder(column: $table.itemType, builder: (column) => column);
-
-  GeneratedColumn<String> get remoteKey =>
-      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
-
-  GeneratedColumn<int> get sortOrder =>
-      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get addedAt =>
-      $composableBuilder(column: $table.addedAt, builder: (column) => column);
-
-  $$SourcesTableAnnotationComposer get sourceId {
-    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$FavoriteGroupsTableAnnotationComposer get groupId {
-    final $$FavoriteGroupsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.groupId,
-      referencedTable: $db.favoriteGroups,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$FavoriteGroupsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.favoriteGroups,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$FavoritesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $FavoritesTable,
-          FavoriteRow,
-          $$FavoritesTableFilterComposer,
-          $$FavoritesTableOrderingComposer,
-          $$FavoritesTableAnnotationComposer,
-          $$FavoritesTableCreateCompanionBuilder,
-          $$FavoritesTableUpdateCompanionBuilder,
-          (FavoriteRow, $$FavoritesTableReferences),
-          FavoriteRow,
-          PrefetchHooks Function({bool sourceId, bool groupId})
-        > {
-  $$FavoritesTableTableManager(_$AppDatabase db, $FavoritesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$FavoritesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$FavoritesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$FavoritesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<UserItemType> itemType = const Value.absent(),
-                Value<String?> sourceId = const Value.absent(),
-                Value<String> remoteKey = const Value.absent(),
-                Value<int?> groupId = const Value.absent(),
-                Value<int?> sortOrder = const Value.absent(),
-                Value<DateTime> addedAt = const Value.absent(),
-              }) => FavoritesCompanion(
-                id: id,
-                itemType: itemType,
-                sourceId: sourceId,
-                remoteKey: remoteKey,
-                groupId: groupId,
-                sortOrder: sortOrder,
-                addedAt: addedAt,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required UserItemType itemType,
-                Value<String?> sourceId = const Value.absent(),
-                required String remoteKey,
-                Value<int?> groupId = const Value.absent(),
-                Value<int?> sortOrder = const Value.absent(),
-                required DateTime addedAt,
-              }) => FavoritesCompanion.insert(
-                id: id,
-                itemType: itemType,
-                sourceId: sourceId,
-                remoteKey: remoteKey,
-                groupId: groupId,
-                sortOrder: sortOrder,
-                addedAt: addedAt,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$FavoritesTable, FavoriteRow>(table),
-                  $$FavoritesTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({sourceId = false, groupId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (sourceId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.sourceId,
-                        referencedTable: $$FavoritesTableReferences
-                            ._sourceIdTable(db),
-                        referencedColumn: $$FavoritesTableReferences
-                            ._sourceIdTable(db)
-                            .id,
-                      ) as T;
-                    }
-                    if (groupId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.groupId,
-                        referencedTable: $$FavoritesTableReferences
-                            ._groupIdTable(db),
-                        referencedColumn: $$FavoritesTableReferences
-                            ._groupIdTable(db)
-                            .id,
-                      ) as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$FavoritesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $FavoritesTable,
-      FavoriteRow,
-      $$FavoritesTableFilterComposer,
-      $$FavoritesTableOrderingComposer,
-      $$FavoritesTableAnnotationComposer,
-      $$FavoritesTableCreateCompanionBuilder,
-      $$FavoritesTableUpdateCompanionBuilder,
-      (FavoriteRow, $$FavoritesTableReferences),
-      FavoriteRow,
-      PrefetchHooks Function({bool sourceId, bool groupId})
-    >;
-typedef $$WatchHistoryTableCreateCompanionBuilder =
-    WatchHistoryCompanion Function({
-      Value<int> id,
-      required UserItemType itemType,
-      Value<String?> sourceId,
-      required String remoteKey,
-      Value<int> positionMs,
-      Value<int?> durationMs,
-      Value<bool> completed,
-      Value<String?> seriesKey,
-      Value<bool> dismissed,
-      required DateTime updatedAt,
-    });
-typedef $$WatchHistoryTableUpdateCompanionBuilder =
-    WatchHistoryCompanion Function({
-      Value<int> id,
-      Value<UserItemType> itemType,
-      Value<String?> sourceId,
-      Value<String> remoteKey,
-      Value<int> positionMs,
-      Value<int?> durationMs,
-      Value<bool> completed,
-      Value<String?> seriesKey,
-      Value<bool> dismissed,
-      Value<DateTime> updatedAt,
-    });
-
-final class $$WatchHistoryTableReferences
-    extends BaseReferences<_$AppDatabase, $WatchHistoryTable, WatchHistoryRow> {
-  $$WatchHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
-      db.sources.createAlias('watch_history__source_id__sources__id');
-
-  $$SourcesTableProcessedTableManager? get sourceId {
-    final $_column = $_itemColumn<String>('source_id');
-    if ($_column == null) return null;
-    final manager = $$SourcesTableTableManager(
-      $_db,
-      $_db.sources,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$WatchHistoryTableFilterComposer
-    extends Composer<_$AppDatabase, $WatchHistoryTable> {
-  $$WatchHistoryTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnWithTypeConverterFilters<UserItemType, UserItemType, String>
-  get itemType => $composableBuilder(
-    column: $table.itemType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
-  );
-
-  ColumnFilters<String> get remoteKey => $composableBuilder(
-    column: $table.remoteKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get durationMs => $composableBuilder(
-    column: $table.durationMs,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get completed => $composableBuilder(
-    column: $table.completed,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get seriesKey => $composableBuilder(
-    column: $table.seriesKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get dismissed => $composableBuilder(
-    column: $table.dismissed,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$SourcesTableFilterComposer get sourceId {
-    final $$SourcesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableFilterComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$WatchHistoryTableOrderingComposer
-    extends Composer<_$AppDatabase, $WatchHistoryTable> {
-  $$WatchHistoryTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get itemType => $composableBuilder(
-    column: $table.itemType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get remoteKey => $composableBuilder(
-    column: $table.remoteKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get durationMs => $composableBuilder(
-    column: $table.durationMs,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get completed => $composableBuilder(
-    column: $table.completed,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get seriesKey => $composableBuilder(
-    column: $table.seriesKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get dismissed => $composableBuilder(
-    column: $table.dismissed,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$SourcesTableOrderingComposer get sourceId {
-    final $$SourcesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableOrderingComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$WatchHistoryTableAnnotationComposer
-    extends Composer<_$AppDatabase, $WatchHistoryTable> {
-  $$WatchHistoryTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<UserItemType, String> get itemType =>
-      $composableBuilder(column: $table.itemType, builder: (column) => column);
-
-  GeneratedColumn<String> get remoteKey =>
-      $composableBuilder(column: $table.remoteKey, builder: (column) => column);
-
-  GeneratedColumn<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get durationMs => $composableBuilder(
-    column: $table.durationMs,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<bool> get completed =>
-      $composableBuilder(column: $table.completed, builder: (column) => column);
-
-  GeneratedColumn<String> get seriesKey =>
-      $composableBuilder(column: $table.seriesKey, builder: (column) => column);
-
-  GeneratedColumn<bool> get dismissed =>
-      $composableBuilder(column: $table.dismissed, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$SourcesTableAnnotationComposer get sourceId {
-    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.sources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SourcesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.sources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$WatchHistoryTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $WatchHistoryTable,
-          WatchHistoryRow,
-          $$WatchHistoryTableFilterComposer,
-          $$WatchHistoryTableOrderingComposer,
-          $$WatchHistoryTableAnnotationComposer,
-          $$WatchHistoryTableCreateCompanionBuilder,
-          $$WatchHistoryTableUpdateCompanionBuilder,
-          (WatchHistoryRow, $$WatchHistoryTableReferences),
-          WatchHistoryRow,
-          PrefetchHooks Function({bool sourceId})
-        > {
-  $$WatchHistoryTableTableManager(_$AppDatabase db, $WatchHistoryTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$WatchHistoryTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$WatchHistoryTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$WatchHistoryTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<UserItemType> itemType = const Value.absent(),
-                Value<String?> sourceId = const Value.absent(),
-                Value<String> remoteKey = const Value.absent(),
-                Value<int> positionMs = const Value.absent(),
-                Value<int?> durationMs = const Value.absent(),
-                Value<bool> completed = const Value.absent(),
-                Value<String?> seriesKey = const Value.absent(),
-                Value<bool> dismissed = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-              }) => WatchHistoryCompanion(
-                id: id,
-                itemType: itemType,
-                sourceId: sourceId,
-                remoteKey: remoteKey,
-                positionMs: positionMs,
-                durationMs: durationMs,
-                completed: completed,
-                seriesKey: seriesKey,
-                dismissed: dismissed,
-                updatedAt: updatedAt,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required UserItemType itemType,
-                Value<String?> sourceId = const Value.absent(),
-                required String remoteKey,
-                Value<int> positionMs = const Value.absent(),
-                Value<int?> durationMs = const Value.absent(),
-                Value<bool> completed = const Value.absent(),
-                Value<String?> seriesKey = const Value.absent(),
-                Value<bool> dismissed = const Value.absent(),
-                required DateTime updatedAt,
-              }) => WatchHistoryCompanion.insert(
-                id: id,
-                itemType: itemType,
-                sourceId: sourceId,
-                remoteKey: remoteKey,
-                positionMs: positionMs,
-                durationMs: durationMs,
-                completed: completed,
-                seriesKey: seriesKey,
-                dismissed: dismissed,
-                updatedAt: updatedAt,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$WatchHistoryTable, WatchHistoryRow>(table),
-                  $$WatchHistoryTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({sourceId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (sourceId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.sourceId,
-                        referencedTable: $$WatchHistoryTableReferences
-                            ._sourceIdTable(db),
-                        referencedColumn: $$WatchHistoryTableReferences
-                            ._sourceIdTable(db)
-                            .id,
-                      ) as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$WatchHistoryTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $WatchHistoryTable,
-      WatchHistoryRow,
-      $$WatchHistoryTableFilterComposer,
-      $$WatchHistoryTableOrderingComposer,
-      $$WatchHistoryTableAnnotationComposer,
-      $$WatchHistoryTableCreateCompanionBuilder,
-      $$WatchHistoryTableUpdateCompanionBuilder,
-      (WatchHistoryRow, $$WatchHistoryTableReferences),
-      WatchHistoryRow,
-      PrefetchHooks Function({bool sourceId})
-    >;
 typedef $$CastDevicesTableCreateCompanionBuilder =
     CastDevicesCompanion Function({
       required String deviceId,
@@ -23808,8 +29892,24 @@ typedef $$CastDevicesTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
+  $$LibraryFoldersTableTableManager get libraryFolders =>
+      $$LibraryFoldersTableTableManager(_db, _db.libraryFolders);
   $$SourcesTableTableManager get sources =>
       $$SourcesTableTableManager(_db, _db.sources);
+  $$LibraryItemsTableTableManager get libraryItems =>
+      $$LibraryItemsTableTableManager(_db, _db.libraryItems);
+  $LibraryFtsTableManager get libraryFts =>
+      $LibraryFtsTableManager(_db, _db.libraryFts);
+  $$FavoriteGroupsTableTableManager get favoriteGroups =>
+      $$FavoriteGroupsTableTableManager(_db, _db.favoriteGroups);
+  $$FavoritesTableTableManager get favorites =>
+      $$FavoritesTableTableManager(_db, _db.favorites);
+  $$WatchHistoryTableTableManager get watchHistory =>
+      $$WatchHistoryTableTableManager(_db, _db.watchHistory);
+  $$SettingsTableTableManager get settings =>
+      $$SettingsTableTableManager(_db, _db.settings);
+  $$DownloadsTableTableManager get downloads =>
+      $$DownloadsTableTableManager(_db, _db.downloads);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
   $$ChannelsTableTableManager get channels =>
@@ -23840,20 +29940,12 @@ class $AppDatabaseManager {
       $$EpgMappingsTableTableManager(_db, _db.epgMappings);
   $$EpgMatchesTableTableManager get epgMatches =>
       $$EpgMatchesTableTableManager(_db, _db.epgMatches);
-  $$SettingsTableTableManager get settings =>
-      $$SettingsTableTableManager(_db, _db.settings);
   $$SyncRunsTableTableManager get syncRuns =>
       $$SyncRunsTableTableManager(_db, _db.syncRuns);
   $$MovieDetailsTableTableManager get movieDetails =>
       $$MovieDetailsTableTableManager(_db, _db.movieDetails);
   $$EpisodesTableTableManager get episodes =>
       $$EpisodesTableTableManager(_db, _db.episodes);
-  $$FavoriteGroupsTableTableManager get favoriteGroups =>
-      $$FavoriteGroupsTableTableManager(_db, _db.favoriteGroups);
-  $$FavoritesTableTableManager get favorites =>
-      $$FavoritesTableTableManager(_db, _db.favorites);
-  $$WatchHistoryTableTableManager get watchHistory =>
-      $$WatchHistoryTableTableManager(_db, _db.watchHistory);
   $$CastDevicesTableTableManager get castDevices =>
       $$CastDevicesTableTableManager(_db, _db.castDevices);
 }

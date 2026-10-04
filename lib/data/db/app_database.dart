@@ -8,8 +8,10 @@ import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/daos/cast_devices_dao.dart';
 import 'package:iptv_player/data/db/daos/categories_dao.dart';
 import 'package:iptv_player/data/db/daos/channels_dao.dart';
+import 'package:iptv_player/data/db/daos/downloads_dao.dart';
 import 'package:iptv_player/data/db/daos/epg_dao.dart';
 import 'package:iptv_player/data/db/daos/favorites_dao.dart';
+import 'package:iptv_player/data/db/daos/library_dao.dart';
 import 'package:iptv_player/data/db/daos/movies_dao.dart';
 import 'package:iptv_player/data/db/daos/series_dao.dart';
 import 'package:iptv_player/data/db/daos/settings_dao.dart';
@@ -17,6 +19,7 @@ import 'package:iptv_player/data/db/daos/sources_dao.dart';
 import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
 import 'package:iptv_player/data/db/daos/watch_history_dao.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
+import 'package:iptv_player/data/db/library_tables.dart';
 import 'package:iptv_player/data/db/tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:path/path.dart' as p;
@@ -49,8 +52,11 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     EpgMappings,
     EpgMatches,
     CastDevices,
+    LibraryFolders,
+    LibraryItems,
+    Downloads,
   ],
-  include: {'search.drift'},
+  include: {'search.drift', 'library.drift'},
   daos: [
     SettingsDao,
     SourcesDao,
@@ -63,6 +69,8 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     SeriesDao,
     EpgDao,
     CastDevicesDao,
+    LibraryDao,
+    DownloadsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -72,7 +80,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -187,6 +195,29 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
   from7To8: (m, schema) async {
     // Phase 7: the Cast devices the app keeps.
     await m.createTable(schema.castDevices);
+  },
+  from8To9: (m, schema) async {
+    // Phase 8: the library, the download queue, the library's search
+    // index, and one history row and one favorite per local file (NULL
+    // sources are distinct in the old key). Parents before children.
+    await m.createTable(schema.libraryFolders);
+    await m.createTable(schema.libraryItems);
+    await m.createTable(schema.downloads);
+    await m.createIndex(schema.libraryItemsHash);
+    await m.createIndex(schema.libraryItemsKindTitle);
+    await m.createIndex(schema.libraryItemsProvider);
+    // Nothing wrote a local row before v9; should one have, the newest of
+    // each file stays, so the unique index can be made.
+    for (final table in ['favorites', 'watch_history']) {
+      await m.database.customStatement(
+        'DELETE FROM $table WHERE source_id IS NULL AND id NOT IN '
+        '(SELECT MAX(id) FROM $table WHERE source_id IS NULL '
+        'GROUP BY item_type, remote_key)',
+      );
+    }
+    await m.createIndex(schema.favoritesLocal);
+    await m.createIndex(schema.watchHistoryLocal);
+    await m.create(schema.libraryFts);
   },
 );
 

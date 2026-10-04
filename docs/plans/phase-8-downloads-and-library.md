@@ -1,6 +1,6 @@
 # Phase 8 — Downloads and the local library: plan
 
-**Status: proposed 2026-10-04, for your approval.** What is built and every departure from this plan will go into ADR-015 (docs/decisions.md) as the steps land.
+**Status: approved 2026-10-04, every recommendation and the eight sketches (the user: "all approved based on ur recommendations").** What is built and every departure from this plan goes into ADR-015 (docs/decisions.md) as the steps land.
 
 ## Context
 Phase 7 is built. Only its TV sitting is left: step 2's 30-second check, then the casting matrix, about 25 minutes. Phase 8 adds the second half of ADR-005:
