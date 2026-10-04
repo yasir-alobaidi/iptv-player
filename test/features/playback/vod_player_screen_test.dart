@@ -1,19 +1,26 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/library/data/db_library_repository.dart'
+    show libraryItemFromRow;
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
+import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
 import 'package:iptv_player/features/vod/data/db_watch_progress.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
@@ -50,6 +57,17 @@ const _series = XtreamSeriesInfo(
 
 const _hour = Duration(hours: 1);
 
+/// Show in folder, recorded.
+final class _Reveal implements FileReveal {
+  final shown = <String>[];
+
+  @override
+  Future<bool> showInFolder(String path) async {
+    shown.add(path);
+    return true;
+  }
+}
+
 /// The details pages, the real launcher and the full-screen player, on the
 /// fake engine; where a file was left goes to the real database.
 final class _Vod {
@@ -60,6 +78,7 @@ final class _Vod {
   final VodFakes vod;
   late final Rig rig;
   final window = FakeWindow();
+  final reveal = _Reveal();
   late final progress = DbWatchProgress(vod.db, clock: () => vod.now);
   late AppUnderTest app;
 
@@ -68,7 +87,40 @@ final class _Vod {
     playerEngineProvider.overrideWithValue(rig.engine),
     playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
     windowControlsProvider.overrideWithValue(window),
+    fileRevealProvider.overrideWithValue(reveal),
   ];
+
+  /// A library item in a folder at /videos: the user's own file, or
+  /// [download] of the provider's movie 501. Written in [open]'s `before`:
+  /// once a page watches the database, a write from `runAsync` waits on
+  /// it for good.
+  Future<LibraryItem> addLibraryItem({bool download = false}) async {
+    final db = vod.db;
+    final folder = await db.libraryDao.addFolder(
+      path: '/videos',
+      label: 'Videos',
+      at: vod.now,
+    );
+    final id = await db.libraryDao.insertItem(
+      LibraryItemsCompanion.insert(
+        folderId: folder,
+        relPath: 'Paper Kites (2019).mkv',
+        sizeBytes: 1,
+        mtime: 0,
+        quickHash: 'hash-kites',
+        kind: LibraryKind.movie,
+        title: 'Paper Kites',
+        addedAt: vod.now,
+        providerSourceId: Value(download ? 'src-1' : null),
+        providerItemType: Value(download ? VodType.movie : null),
+        providerRemoteKey: Value(download ? '501' : null),
+      ),
+    );
+    return libraryItemFromRow(
+      (await db.libraryDao.itemById(id))!,
+      await db.libraryDao.folderById(folder),
+    );
+  }
 
   Future<void> open(
     WidgetTester tester,
@@ -454,6 +506,91 @@ void main() {
       await tester.tap(find.text('Next episode'));
       await settle(tester);
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
+    });
+  });
+
+  group("a file on this computer that can't be read (Phase 8 decision 8)", () {
+    _vodTest('a library file offers Show in folder, which leaves full '
+        'screen first, and Remove from library, which leaves the player', (
+      tester,
+      t,
+    ) async {
+      late final LibraryItem file;
+      await t.open(
+        tester,
+        '/',
+        before: () async => file = await t.addLibraryItem(),
+      );
+      t.rig.resolver.missingFiles.add(file.id);
+      unawaited(
+        PlayerVodLauncher(
+          t.rig.coordinator,
+          () => t.app.router,
+        ).playLibraryItem(file),
+      );
+      await settle(tester);
+
+      expect(t.app.location, playerRoutePath);
+      expect(find.text('This file is missing or damaged'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Show in folder'));
+      await settle(tester);
+      expect(t.reveal.shown, [file.path]);
+      expect(t.window.changes.last, isFalse);
+
+      await tester.tap(find.text('Remove from library'));
+      await settle(tester);
+      expect(
+        await tester.runAsync(() => t.vod.db.libraryDao.itemById(file.id)),
+        isNull,
+      );
+      expect(t.app.location, isNot(playerRoutePath));
+      expect(
+        find.text('Removed from the library. The file stays where it is.'),
+        findsOneWidget,
+      );
+    });
+
+    _vodTest("a downloaded movie's damaged file offers them too; Remove "
+        'goes back to its page', (tester, t) async {
+      late final LibraryItem file;
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        before: () async => file = await t.addLibraryItem(download: true),
+      );
+      t.rig.resolver.downloads['501'] = file.path!;
+      await _key(tester, LogicalKeyboardKey.enter);
+      t.rig.engine.fail('Failed to recognize file format.');
+      await settle(tester);
+
+      expect(find.text('This file is missing or damaged'), findsOneWidget);
+      expect(find.text('Show in folder'), findsOneWidget);
+      await tester.tap(find.text('Remove from library'));
+      await settle(tester);
+
+      expect(t.app.location, '/movies/src-1/501');
+      expect(
+        find.text('Removed from the library. Play uses your provider again.'),
+        findsOneWidget,
+      );
+    });
+
+    _vodTest("a provider's movie that fails offers neither", (tester, t) async {
+      t.rig.prober.next = const PlaybackProblem(PlaybackProblemKind.offline);
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        before: () => t.addLibraryItem(download: true),
+      );
+      await _key(tester, LogicalKeyboardKey.enter);
+      t.rig.engine.fail();
+      await settle(tester);
+
+      expect(find.text('No longer available'), findsOneWidget);
+      expect(find.text('Show in folder'), findsNothing);
+      expect(find.text('Remove from library'), findsNothing);
     });
   });
 }

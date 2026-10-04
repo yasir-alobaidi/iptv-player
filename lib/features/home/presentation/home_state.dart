@@ -1,4 +1,5 @@
 import 'package:iptv_player/core/catalogue_kind.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/features/home/data/home_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -12,6 +13,11 @@ part 'home_state.g.dart';
 
 /// How many a Home row shows at most (decision 5).
 const homeRowLimit = 20;
+
+/// Whether Home says "You're offline — downloads and local files still
+/// play" (docs/05; Phase 8 decision 11). Phase 8 step 6 draws the banner.
+@riverpod
+Stream<bool> homeOffline(Ref ref) => ref.watch(networkStatusProvider).watch();
 
 /// Continue watching, across every source (decision 5).
 @riverpod

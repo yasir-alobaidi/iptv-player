@@ -664,6 +664,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                         ? _vod.playNext
                         : null,
                     nextLabel: vod ? 'Next episode' : 'Next channel',
+                    beforeShowInFolder: () =>
+                        _window?.setFullScreen(on: false) ?? Future.value(),
+                    onFileRemoved: () {
+                      if (mounted) _exit();
+                    },
                   ),
                   if (vod)
                     osd(

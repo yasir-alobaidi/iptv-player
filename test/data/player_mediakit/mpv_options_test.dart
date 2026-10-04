@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   test("each preset sets docs/03's buffer options", () {
@@ -66,5 +69,21 @@ void main() {
     const request = PlayRequest(url: 'http://h/live/user/secret/1.ts');
 
     expect('$request', isNot(contains('secret')));
+  });
+
+  test("a library file's subtitle files become its tracks; a path holding "
+      "the list's separator is left out, and none clears the last file's", () {
+    final separator = Platform.isWindows ? ';' : ':';
+    final english = p.join('films', 'Paper Kites (2019).en.srt');
+    final forced = p.join('films', 'Paper Kites (2019).en.forced.srt');
+    final options = mpvOptionsFor(
+      PlayRequest(
+        url: p.join('films', 'Paper Kites (2019).mkv'),
+        live: false,
+        subtitleFiles: [english, 'odd${separator}name.srt', forced],
+      ),
+    );
+    expect(options['sub-files'], '$english$separator$forced');
+    expect(mpvOptionsFor(const PlayRequest(url: 'u'))['sub-files'], '');
   });
 }

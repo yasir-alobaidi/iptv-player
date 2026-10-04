@@ -398,3 +398,53 @@ final class PlayerTracksProvider
 }
 
 String _$playerTracksHash() => r'0d9141746c47513f32acaf4fd77d8c523708ddcb';
+
+/// Tells the network status what each play says (Phase 8 decision 11).
+/// `bootstrap()` reads it once.
+
+@ProviderFor(playbackReachability)
+final playbackReachabilityProvider = PlaybackReachabilityProvider._();
+
+/// Tells the network status what each play says (Phase 8 decision 11).
+/// `bootstrap()` reads it once.
+
+final class PlaybackReachabilityProvider
+    extends $FunctionalProvider<void, void, void>
+    with $Provider<void> {
+  /// Tells the network status what each play says (Phase 8 decision 11).
+  /// `bootstrap()` reads it once.
+  PlaybackReachabilityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'playbackReachabilityProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$playbackReachabilityHash();
+
+  @$internal
+  @override
+  $ProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  void create(Ref ref) {
+    return playbackReachability(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$playbackReachabilityHash() =>
+    r'88e77bfca2afd877ead9f70a5a02cc04a4eb7764';

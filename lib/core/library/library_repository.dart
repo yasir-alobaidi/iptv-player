@@ -60,6 +60,16 @@ abstract interface class LibraryRepository {
 
   Stream<List<LibraryItem>> watch(LibraryQuery query);
 
+  /// One item; null when it isn't in the library.
+  Future<LibraryItem?> item(int itemId);
+
+  /// The downloaded file of a provider's title, when there is one.
+  Future<LibraryItem?> downloadOf(
+    VodType type,
+    String sourceId,
+    String remoteKey,
+  );
+
   Future<Result<LibraryFolder>> addFolder(String path);
 
   /// Takes the folder and its items out of the library; the files stay.

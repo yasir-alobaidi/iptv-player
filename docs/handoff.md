@@ -1,4 +1,4 @@
-# Handoff — 2026-10-04 (Phase 8 steps 1–4 done, step 5 part-way; the TV runs wait)
+# Handoff — 2026-10-04 (Phase 8 steps 1–5 done; step 6, the UI, next; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
@@ -7,22 +7,20 @@ docs/09-downloads-and-library.md, and the Phase 8 part of
 docs/08-phases-and-prompts.md.
 
 ## Before you start the next session (user)
-1. **Nothing to review first.** You approved Phase 7's steps 6 and 7 and the
-   whole Phase 8 plan ("all approved based on ur recommendations") and asked
-   for the steps one by one; the session went on that way and stopped
-   part-way through step 5 when you asked for a handoff.
-2. **One budget to look at** (ADR-015 step 3): docs/06's "download speed ≥ 90 %
-   of curl" is now checked at network rates (1 Gbps and 100 Mbps through the
-   fake panel's throttle: 99.6 %), because over unthrottled loopback it
+1. **Nothing to review first.** You approved the whole Phase 8 plan and
+   asked for the steps one by one; step 5 is finished.
+2. **Push** the 4 local commits when you like: 2024e14 (the CI cast test
+   fix), a13ac82 (step 5 part 1), 72f8be6 (CI names the analyzer's
+   findings), and step 5 part 2.
+3. **CI on step 4's push (9f20223) failed on both systems:** Linux on the
+   cast test 2024e14 fixes; **Windows at the Analyze step**, with nothing
+   local reproducing it and the log behind your rights. The next push
+   names the finding as an annotation; or paste that job's Analyze log
+   (run 37187899890, job "Windows").
+4. **One budget to look at** (ADR-015 step 3): docs/06's "download speed
+   ≥ 90 % of curl" is checked at network rates (99.6 %); over loopback it
    measures Dart's HTTP stack (35 %). Say if you want it otherwise.
-3. **Push** when you like: you pushed through step 4 (9f20223). **CI on the
-   plan's push (6d03959) failed on Linux**: one test (a relayed movie's cast)
-   sought to 5:00 in CI's 2-minute sample. Fixed in 2024e14 (local, checked
-   against a 120 s sample), with step 5 part 1 after it: 2 commits to push.
-   CI on step 4's push was still running at the handoff — check it first
-   (`curl` as below).
-4. **The TV runs still wait** until you say Living Room TV is back (Phase 7's
-   matrix, about 25 minutes, then Phase 8's library matrix at its step 8).
+5. **The TV runs still wait** until you say Living Room TV is back.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -30,62 +28,44 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md and
-docs/09-downloads-and-library.md first. Finish Phase 8 step 5 (part 2), then go on
-with the steps one by one. <The TV runs wait | The TV is on the network: ask first>.
+docs/09-downloads-and-library.md first. Check CI on the last push, then go on
+with Phase 8 step 6 (the UI), step by step. <The TV runs wait | The TV is on the network: ask first>.
 ```
 
 ## Where things stand
 - **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
-  exit) waits for the TV.** The laptop was on 192.168.26.x all session.
-- **Phase 8 (downloads and the library):** steps 1–4 committed; **step 5
-  part 1 committed** (playback of library items and downloads through the
-  one coordinator); **step 5 part 2 is next** — its list is at the end of
-  ADR-015 "step 5, part 1":
-  - unit tests: `DbStreamResolver`'s download-first rule and `libraryFile`
-    (file there / gone / folder unavailable / `downloaded: false`);
-    `DbWatchProgress` with a `LocalRef` (save, watch, setWatched, dismiss,
-    Continue watching's local rows, hidden and unavailable ones left out);
-    `LibraryFavorites.toggle` (local, a downloaded movie, a downloaded
-    episode → its series); the controller's next local episode
-    (`NextEpisode.local`, then `playNext` plays a `PlayableLibraryItem`);
-    `mpvOptionsFor` writes `sub-files` (and leaves out a path with the
-    separator);
-  - **the integration test with the real player** (`integration_test/`,
-    one file, under `xvfb-run` with X11 as below): a library file plays with
-    the fake panel stopped, its external subtitle listed among the tracks,
-    and resumes where it was left; a downloaded movie plays from its file
-    and its progress shows on the provider's page.
-  - Then ADR-015's step 5 section is finished, progress updated, committed.
-- **Then steps 6 (the UI), 7 (casting library items), 8 (integration, the
-  library matrix on the TV, the exit)** as the plan says.
+  exit) waits for the TV.**
+- **Phase 8 (downloads and the library): steps 1–5 committed.** Step 6, the
+  UI, is next: read the canvas with the Artifact tool first (Library,
+  Library · Downloads, Settings · Downloads and library), then the plan's
+  step 6 list and sketches A–H.
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,144 app tests** (18 skipped) under `TZ=UTC`; the fake panel's 146.
-- **CI:** run 37180099991 (6d03959) Windows green, Linux 1 failure (fixed in
-  2024e14, not pushed); run 37187899890 (9f20223) in progress at the
-  handoff.
-  Integration tests weren't run this session (nothing they cover changed
-  before step 5; step 5's own comes in part 2).
+  diff, **3,184 app tests** (18 skipped) under `TZ=UTC`; the integration
+  tests `library_playback_test`, `vod_player_test`, `playback_faults_test`
+  and `home_continue_test` under Xvfb (X11).
+- **CI:** run 37187899890 (9f20223) failed: Linux on the cast test fixed in
+  2024e14, Windows at Analyze (unknown; see above). Nothing pushed since.
 
 ## Done this session (2026-10-04)
 - The Phase 8 plan, approved; ADR-015 started; Phase 7 steps 6–7 approved.
-- **Step 1** — schema v9 (library, queue, search index, one history row and
-  one favorite per local file), the domain types, the DAOs, the download
-  folder.
-- **Step 2** — the fake panel's download faults (`change_etag`,
-  `wrong_content_length`, `size_mb`, `vod_as_hls`; `If-Range` checked before
-  the range) and `tools/media_samples/library_tree.sh` with its manifest.
-- **Step 3** — the download engine: the queue, the downloads isolate (HTTP and
-  HLS), the finisher, downloads that give way to the player and the cast,
-  the SIGKILL tests, the measurements (99.6 % of curl at network rates; +20–31
-  MB over 4 GB).
-- **Step 4** — the name parser (50-name corpus), the guarded scan job, folder
-  watching, thumbnails, our own freedesktop trash, the library repository;
-  5,000 new files scanned and probed in about 45 s, 5,000 unchanged in 3 s.
-- **Step 5, part 1** — library files and downloads through the coordinator.
+- **Step 1** — schema v9, the domain types, the DAOs, the download folder.
+- **Step 2** — the fake panel's download faults and `library_tree.sh`.
+- **Step 3** — the download engine (99.6 % of curl at network rates; +20–31
+  MB over 4 GB; the SIGKILL tests).
+- **Step 4** — the name parser, the scanner, folder watching, thumbnails,
+  our own freedesktop trash, the library repository (5,000 new files in
+  about 45 s, 5,000 unchanged in 3 s).
+- **Step 5** — library files and downloads through the one coordinator;
+  the failure card's Show in folder and Remove from library; offline from
+  the system with the sources' answers as the fallback; the real-player
+  integration test.
+- **CI** — analyzer findings as annotations (`tools/ci/analyze_findings.dart`).
 
 ## What's next
-1. **Phase 8 step 5, part 2** (above), then steps 6, 7 and 8, stopping only
-   where the user asks or a step needs the TV.
+1. **Phase 8 step 6 (the UI)**, then steps 7 and 8, stopping only where the
+   user asks or a step needs the TV. Step 6 draws Home's offline banner
+   from `homeOfflineProvider`, and uses `fileRevealProvider` for the item
+   menu's Show in folder.
 2. **The TV runs, only when the user says the TV is back, after asking and
    with the user watching:** Phase 7's (check `ip -4 addr` shows 192.168.1.x;
    `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
@@ -221,7 +201,39 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 8 steps 1–5):
+New this session (Phase 8 step 5, part 2):
+- **Show in folder:** `fileRevealProvider` (`lib/core/platform/file_reveal.dart`,
+  default `NoFileReveal`; `bootstrap()` gives it `platformFileReveal(log)`
+  from `lib/data/platform/file_reveals.dart`). Linux calls
+  `org.freedesktop.FileManager1` (`ShowItems` / `ShowFolders`, file URIs),
+  then `xdg-open`; Windows `explorer.exe /select,<path>`. Tests stand a fake
+  file manager on an in-process `DBusServer` (`file_reveals_test.dart`).
+- **The failure card's file actions:** `PlayerSurface` watches
+  `failedFileProvider(item)` (`lib/features/playback/presentation/failed_file.dart`)
+  when the problem is `fileUnreadable`; `beforeShowInFolder` (the player
+  leaves full screen) and `onFileRemoved` (the player leaves) come from
+  `PlayerScreen`. `LibraryRepository.item(id)` / `downloadOf(type, source,
+  key)` give the item with its `path`.
+- **Offline:** `networkStatusProvider` / `systemNetworkProvider`
+  (`lib/core/platform/network_status.dart`; the system's from
+  `lib/data/platform/system_networks.dart` via `bootstrap()`), fed by
+  `playbackReachabilityProvider` (read in `bootstrap()`; `sourceAnswered`
+  is the rule) and read by `homeOfflineProvider` (Home's banner, step 6).
+  `PlaybackCoordinator.local` says whether what plays is a file.
+- **Presentation may not import `lib/data/`** (`test/app/layering_test.dart`):
+  a provider screens need goes in `lib/core/` (with a default `bootstrap()`
+  overrides) or in a feature's `data/*_providers.dart`.
+- **Widget tests that write library rows:** write them in `_Vod.open`'s
+  `before:` (after the seed, before the app is pumped). A write from
+  `runAsync` once a page watches drift waits for good (the first draft hung
+  for minutes); a library row with a provider link needs its source row
+  first (`provider_source_id` is a foreign key).
+- **`integration_test/library_playback_test.dart`** copies the MP4 sample
+  into a temporary download folder and a library folder and writes their
+  rows itself; Esc from the player goes back to the page it was opened from
+  (the Library only when there is nothing to go back to).
+
+From earlier this session (Phase 8 steps 1–5):
 - **Where things are:** `lib/core/library/` (`LibraryItem`, `LibraryFolder`,
   `LibraryMedia`, `LibraryRepository`), `lib/core/downloads/` (`DownloadTask`,
   `DownloadRequest`, `DownloadService`, `DownloadSettings`, `download_paths.dart`,

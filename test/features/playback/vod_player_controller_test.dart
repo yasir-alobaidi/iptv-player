@@ -3,6 +3,8 @@
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -48,6 +50,23 @@ final class _Episodes implements SeriesRepository {
       throw UnimplementedError();
 }
 
+/// A show's files in the library, in order: only what the player asks
+/// for.
+final class _ShowFiles implements LibraryRepository {
+  new(this.files);
+
+  final List<LibraryItem> files;
+
+  @override
+  Future<LibraryItem?> episodeAfter(LibraryItem episode) async {
+    final i = files.indexWhere((f) => f.id == episode.id);
+    return i < 0 || i + 1 >= files.length ? null : files[i + 1];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 void main() {
   const length = Duration(minutes: 45);
   final e1 = episode(1, 1, duration: length);
@@ -62,6 +81,7 @@ void main() {
     Playable item, {
     Duration? from,
     Map<VodRef, WatchMark> marks = const {},
+    LibraryRepository? library,
   }) {
     rig = Rig();
     rig.progress.marks.addAll(marks);
@@ -71,6 +91,7 @@ void main() {
       series: _Episodes([e1, e2]),
       progress: rig.progress,
       onFinished: finished.add,
+      library: library,
     );
     rig.coordinator.playVod(item, from: from);
     async.flushMicrotasks();
@@ -372,6 +393,102 @@ void main() {
       async.flushMicrotasks();
       expect(finished, [PlayableMovie(movie(1))]);
       expect(vod.next, isNull);
+    });
+  });
+
+  group("the next file of the user's own show", () {
+    LibraryItem file(int id, int episode, {LibraryKind? kind}) => LibraryItem(
+      id: id,
+      folderId: 1,
+      relPath: 'Kettle Bay/Season 2/Kettle Bay - S02E0$episode.mkv',
+      sizeBytes: 1,
+      modifiedAt: DateTime.utc(2026),
+      quickHash: 'hash-$id',
+      kind: kind ?? LibraryKind.episode,
+      title: 'Episode $episode',
+      showTitle: 'Kettle Bay',
+      season: 2,
+      episode: episode,
+      duration: length,
+      addedAt: DateTime.utc(2026),
+    );
+
+    final f3 = file(3, 3);
+    final f4 = file(4, 4);
+    final show = _ShowFiles([f3, f4]);
+
+    test('the card offers it, counts down, and plays it from its own '
+        'place; the file left is saved as watched', () {
+      fakeAsync((async) {
+        start(
+          async,
+          PlayableLibraryItem(f3),
+          library: show,
+          marks: {
+            const LocalRef('hash-4'): WatchMark(
+              position: const Duration(minutes: 2),
+              updatedAt: DateTime.utc(2026),
+              duration: length,
+            ),
+          },
+        );
+        async.flushMicrotasks();
+        final next = vod.next!;
+        expect(next.item, PlayableLibraryItem(f4));
+        expect(next.title, 'Episode 4');
+        expect((next.season, next.episode), (2, 4));
+        expect(next.from, const Duration(minutes: 2));
+        expect(next.stillUrl, isNull);
+
+        final end = length.inSeconds;
+        rig.coordinator.seek(length - const Duration(seconds: 20));
+        async.flushMicrotasks();
+        expect(vod.countdown, 10);
+        play(async, from: end - 20, seconds: 10);
+
+        expect(rig.state.item, PlayableLibraryItem(f4));
+        expect(rig.engine.opened.last.start, const Duration(minutes: 2));
+        expect(rig.resolver.resolvedFiles, ['hash-3', 'hash-4']);
+        final left = rig.progress.saves.lastWhere(
+          (s) => s.ref == const LocalRef('hash-3'),
+        );
+        expect(isComplete(left.position, left.duration), isTrue);
+      });
+    });
+
+    test('Play now plays it at once', () {
+      fakeAsync((async) {
+        start(async, PlayableLibraryItem(f3), library: show);
+        async.flushMicrotasks();
+        vod.playNext();
+        async.flushMicrotasks();
+        expect(rig.state.item, PlayableLibraryItem(f4));
+        expect(rig.engine.opened.last.start, isNull);
+      });
+    });
+
+    test('the last file, and a movie, have no card; the end goes back '
+        'to the Library', () {
+      fakeAsync((async) {
+        start(async, PlayableLibraryItem(f4), library: show);
+        async.flushMicrotasks();
+        expect(vod.next, isNull);
+        rig.coordinator.seek(length);
+        async.flushMicrotasks();
+        rig.engine.end();
+        async.flushMicrotasks();
+        expect(finished, [PlayableLibraryItem(f4)]);
+      });
+      fakeAsync((async) {
+        final film = file(5, 5, kind: LibraryKind.movie);
+        start(
+          async,
+          PlayableLibraryItem(film),
+          library: _ShowFiles([film, f4]),
+        );
+        async.flushMicrotasks();
+        expect(vod.next, isNull);
+      });
     });
   });
 }

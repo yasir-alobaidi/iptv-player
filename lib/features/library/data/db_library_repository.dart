@@ -76,6 +76,25 @@ final class DbLibraryRepository implements LibraryRepository {
   }
 
   @override
+  Future<LibraryItem?> item(int itemId) async {
+    final row = await _db.libraryDao.itemById(itemId);
+    return row == null ? null : await _withFolder(row);
+  }
+
+  @override
+  Future<LibraryItem?> downloadOf(
+    VodType type,
+    String sourceId,
+    String remoteKey,
+  ) async {
+    final row = await _db.libraryDao.itemForTitle(sourceId, type, remoteKey);
+    return row == null ? null : await _withFolder(row);
+  }
+
+  Future<LibraryItem> _withFolder(LibraryItemRow row) async =>
+      libraryItemFromRow(row, await _db.libraryDao.folderById(row.folderId));
+
+  @override
   Future<Result<LibraryFolder>> addFolder(String path) => Result.guard(
     () async {
       final folder = p.normalize(p.absolute(path));

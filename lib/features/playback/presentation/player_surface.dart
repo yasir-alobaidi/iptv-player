@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/playback/presentation/failed_file.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
 
 /// The picture and what the playback state lays over it: a spinner while
@@ -16,10 +24,19 @@ class PlayerSurface extends ConsumerWidget {
     this.onNext,
     this.nextLabel = 'Next channel',
     this.badges = true,
+    this.beforeShowInFolder,
+    this.onFileRemoved,
     super.key,
   });
 
   final bool compact;
+
+  /// A file that can't be read (Phase 8 decision 8): what happens before
+  /// its folder opens (the full-screen player leaves full screen, so the
+  /// file manager isn't hidden behind it), and once Remove from library
+  /// took it out (the player leaves).
+  final Future<void> Function()? beforeShowInFolder;
+  final VoidCallback? onFileRemoved;
 
   /// Shown on the failure card when there is something to go on to: the
   /// next channel, or an episode's next.
@@ -40,6 +57,11 @@ class PlayerSurface extends ConsumerWidget {
     final size = ref.watch(videoSizeProvider).value;
     final showPicture =
         state is PlaybackPlaying || state is PlaybackReconnecting;
+    final file =
+        state is PlaybackFailed &&
+            state.problem.kind == PlaybackProblemKind.fileUnreadable
+        ? ref.watch(failedFileProvider(state.item)).value
+        : null;
 
     return ColoredBox(
       color: colors.video,
@@ -83,12 +105,53 @@ class PlayerSurface extends ConsumerWidget {
                   onRetry: ref.read(playbackCoordinatorProvider).retry,
                   onNext: onNext,
                   nextLabel: nextLabel,
+                  onShowInFolder: file?.path == null
+                      ? null
+                      : () => unawaited(_showInFolder(ref, file!.path!)),
+                  onRemoveFromLibrary: file == null
+                      ? null
+                      : () => unawaited(_remove(ref, file)),
                 ),
               ),
             ),
         ],
       ),
     );
+  }
+
+  Future<void> _showInFolder(WidgetRef ref, String path) async {
+    final reveal = ref.read(fileRevealProvider);
+    final notices = ref.read(appNoticesProvider);
+    await beforeShowInFolder?.call();
+    if (!await reveal.showInFolder(path)) {
+      notices.show(
+        AppNotice("Couldn't open the folder", tone: NoticeTone.error),
+      );
+    }
+  }
+
+  Future<void> _remove(WidgetRef ref, LibraryItem file) async {
+    final notices = ref.read(appNoticesProvider);
+    final removed = await ref
+        .read(libraryRepositoryProvider)
+        .removeItem(file.id);
+    if (!removed.isOk) {
+      notices.show(
+        AppNotice(
+          "Couldn't remove it from the library",
+          tone: NoticeTone.error,
+        ),
+      );
+      return;
+    }
+    notices.show(
+      AppNotice(
+        file.isDownload
+            ? 'Removed from the library. Play uses your provider again.'
+            : 'Removed from the library. The file stays where it is.',
+      ),
+    );
+    onFileRemoved?.call();
   }
 }
 
@@ -133,7 +196,9 @@ class _VideoChip extends StatelessWidget {
 }
 
 /// The failure card (approved sketch): what went wrong in our words and
-/// the server's, then Retry, Next channel (or Next episode) and Details.
+/// the server's, then Retry, Next channel (or Next episode) and Details;
+/// for a file on this computer, Show in folder and Remove from library
+/// too (Phase 8 decision 8).
 class PlaybackFailureCard extends StatefulWidget {
   const new({
     required this.state,
@@ -141,6 +206,8 @@ class PlaybackFailureCard extends StatefulWidget {
     this.onNext,
     this.nextLabel = 'Next channel',
     this.compact = false,
+    this.onShowInFolder,
+    this.onRemoveFromLibrary,
     super.key,
   });
 
@@ -149,6 +216,10 @@ class PlaybackFailureCard extends StatefulWidget {
   final VoidCallback? onNext;
   final String nextLabel;
   final bool compact;
+
+  /// A file on this computer that can't be read (docs/09).
+  final VoidCallback? onShowInFolder;
+  final VoidCallback? onRemoveFromLibrary;
 
   @override
   State<PlaybackFailureCard> createState() => _PlaybackFailureCardState();
@@ -235,6 +306,21 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.s,
                     onPressed: widget.onNext,
+                  ),
+                if (widget.onShowInFolder != null)
+                  AppButton(
+                    label: 'Show in folder',
+                    icon: AppIcons.folder,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    onPressed: widget.onShowInFolder,
+                  ),
+                if (widget.onRemoveFromLibrary != null)
+                  AppButton(
+                    label: 'Remove from library',
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    onPressed: widget.onRemoveFromLibrary,
                   ),
                 if (detail.isNotEmpty)
                   AppButton(

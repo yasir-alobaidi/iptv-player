@@ -1,17 +1,22 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/features/library/data/db_library_repository.dart'
+    show libraryItemFromRow;
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:logger/logger.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   late AppDatabase db;
@@ -273,6 +278,180 @@ void main() {
       // Gone from the playlist: a failure, not a throw.
       expect((await resolver.episode(episode(source.id, 'x'))).isOk, isFalse);
       expect((await resolver.movie(movie('gone', 'film'))).isOk, isFalse);
+    });
+  });
+
+  group('a downloaded file, and a file of the library', () {
+    late Directory temp;
+    late int folderId;
+    late Source source;
+
+    setUp(() async {
+      temp = Directory.systemTemp.createTempSync('resolver_');
+      folderId = await db.libraryDao.addFolder(
+        path: temp.path,
+        label: 'T',
+        at: DateTime.utc(2026),
+      );
+      source = await add(
+        const SourceDraft(
+          type: SourceType.xtream,
+          name: 'N',
+          url: 'http://line.test',
+          username: 'viewer',
+          password: 'secret',
+        ),
+      );
+    });
+    tearDown(() => temp.deleteSync(recursive: true));
+
+    /// A file of [rel] (forward slashes) in the folder; its path.
+    String make(String rel) {
+      final file = File(p.joinAll([temp.path, ...rel.split('/')]))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('x');
+      return file.path;
+    }
+
+    Future<int> item(
+      String rel, {
+      VodType? type,
+      String? remoteKey,
+      List<String> subtitles = const [],
+    }) => db.libraryDao.insertItem(
+      LibraryItemsCompanion.insert(
+        folderId: folderId,
+        relPath: rel,
+        sizeBytes: 1,
+        mtime: 0,
+        quickHash: 'h$rel',
+        kind: type == VodType.episode ? LibraryKind.episode : LibraryKind.movie,
+        title: 'T',
+        addedAt: DateTime.utc(2026),
+        providerSourceId: Value(remoteKey == null ? null : source.id),
+        providerItemType: Value(type),
+        providerRemoteKey: Value(remoteKey),
+        subtitlesJson: Value(
+          subtitles.isEmpty
+              ? null
+              : jsonEncode([
+                  for (final s in subtitles) {'file': s, 'format': 'srt'},
+                ]),
+        ),
+      ),
+    );
+
+    Future<LibraryItem> libraryItem(int id) async {
+      final row = (await db.libraryDao.itemById(id))!;
+      return libraryItemFromRow(row, await db.libraryDao.folderById(folderId));
+    }
+
+    MovieItem movie(String key) =>
+        MovieItem(id: 1, sourceId: source.id, remoteKey: key, name: 'm');
+
+    EpisodeItem episode(String key) => EpisodeItem(
+      id: 1,
+      sourceId: source.id,
+      seriesKey: 's9',
+      remoteKey: key,
+      season: 1,
+      episode: 1,
+      title: 'e',
+    );
+
+    test('a downloaded movie and episode play from their files, with no '
+        "connection; downloaded: false asks for the provider's", () async {
+      final film = make('Movies/Film (2025)/Film (2025).mkv');
+      final show = make('Shows/S/Season 01/S - S01E01 - e.mp4');
+      await item(
+        'Movies/Film (2025)/Film (2025).mkv',
+        type: VodType.movie,
+        remoteKey: '501',
+      );
+      await item(
+        'Shows/S/Season 01/S - S01E01 - e.mp4',
+        type: VodType.episode,
+        remoteKey: '7201',
+      );
+
+      final fromFile = (await resolver.movie(movie('501'))).valueOrNull!;
+      expect(fromFile.url, film);
+      expect(fromFile.local, isTrue);
+      expect(fromFile.maxConnections, 1);
+      expect(fromFile.userAgent, isNull);
+      final episodeFile = (await resolver.episode(episode('7201')))
+          .valueOrNull!;
+      expect(episodeFile.url, show);
+      expect(episodeFile.local, isTrue);
+
+      final provider = (await resolver.movie(
+        movie('501'),
+        downloaded: false,
+      )).valueOrNull!;
+      expect(provider.local, isFalse);
+      expect(provider.url, startsWith('http://line.test/movie/viewer/'));
+      expect(
+        (await resolver.episode(
+          episode('7201'),
+          downloaded: false,
+        )).valueOrNull!.url,
+        startsWith('http://line.test/series/viewer/'),
+      );
+      // A title with no download: the provider's, as always.
+      expect((await resolver.movie(movie('502'))).valueOrNull!.local, isFalse);
+    });
+
+    test("a download whose file is gone, or whose folder isn't available, "
+        'plays from the provider', () async {
+      await item('Movies/Gone.mkv', type: VodType.movie, remoteKey: '501');
+      expect((await resolver.movie(movie('501'))).valueOrNull!.local, isFalse);
+
+      make('Movies/There.mkv');
+      await item('Movies/There.mkv', type: VodType.movie, remoteKey: '502');
+      expect((await resolver.movie(movie('502'))).valueOrNull!.local, isTrue);
+      await db.libraryDao.changeFolder(
+        folderId,
+        const LibraryFoldersCompanion(isAvailable: Value(false)),
+      );
+      expect((await resolver.movie(movie('502'))).valueOrNull!.local, isFalse);
+    });
+
+    test('a library file: its path and the subtitle files still beside it; '
+        'gone, or its folder unavailable, a failure and not a throw', () async {
+      final video = make('Paper Kites (2019)/Paper Kites (2019).mkv');
+      final english = make('Paper Kites (2019)/Paper Kites (2019).en.srt');
+      final id = await item(
+        'Paper Kites (2019)/Paper Kites (2019).mkv',
+        subtitles: [
+          'Paper Kites (2019).en.srt',
+          'Paper Kites (2019).fr.srt', // listed, then deleted
+        ],
+      );
+
+      final stream = (await resolver.libraryFile(await libraryItem(id)))
+          .valueOrNull!;
+      expect(stream.url, video);
+      expect(stream.local, isTrue);
+      expect(stream.subtitleFiles, [english]);
+
+      await db.libraryDao.changeFolder(
+        folderId,
+        const LibraryFoldersCompanion(isAvailable: Value(false)),
+      );
+      expect((await resolver.libraryFile(await libraryItem(id))).isOk, isFalse);
+      await db.libraryDao.changeFolder(
+        folderId,
+        const LibraryFoldersCompanion(isAvailable: Value(true)),
+      );
+      File(video).deleteSync();
+      final gone = await resolver.libraryFile(await libraryItem(id));
+      expect(gone.isOk, isFalse);
+      expect('${gone.failureOrNull}', isNot(contains(temp.path)));
+
+      // An item removed meanwhile.
+      final removed = await libraryItem(id);
+      await db.libraryDao.removeItem(id);
+      expect((await resolver.libraryFile(removed)).isOk, isFalse);
     });
   });
 }

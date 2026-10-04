@@ -8,6 +8,47 @@ part of 'home_state.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Whether Home says "You're offline — downloads and local files still
+/// play" (docs/05; Phase 8 decision 11). Phase 8 step 6 draws the banner.
+
+@ProviderFor(homeOffline)
+final homeOfflineProvider = HomeOfflineProvider._();
+
+/// Whether Home says "You're offline — downloads and local files still
+/// play" (docs/05; Phase 8 decision 11). Phase 8 step 6 draws the banner.
+
+final class HomeOfflineProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
+    with $FutureModifier<bool>, $StreamProvider<bool> {
+  /// Whether Home says "You're offline — downloads and local files still
+  /// play" (docs/05; Phase 8 decision 11). Phase 8 step 6 draws the banner.
+  HomeOfflineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'homeOfflineProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$homeOfflineHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<bool> create(Ref ref) {
+    return homeOffline(ref);
+  }
+}
+
+String _$homeOfflineHash() => r'2ffb21b5c96eddd2a8ddd9613e30530980b2863f';
+
 /// Continue watching, across every source (decision 5).
 
 @ProviderFor(continueWatching)

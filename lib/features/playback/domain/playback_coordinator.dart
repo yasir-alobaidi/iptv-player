@@ -195,6 +195,10 @@ final class PlaybackCoordinator {
   /// null when it started from the beginning, or for live.
   Duration? get startedFrom => _startedFrom;
 
+  /// Whether what plays (or last failed) is a file on this computer: a
+  /// library file, or a title's download (Phase 8 decision 8).
+  bool get local => _stream?.local ?? false;
+
   /// The stream's address with its credentials masked, for the
   /// stream-info overlay.
   String? get redactedUrl => switch (_stream?.url) {

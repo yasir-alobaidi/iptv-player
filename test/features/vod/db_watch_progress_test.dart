@@ -1,7 +1,10 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/features/vod/data/db_watch_progress.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
+import 'package:path/path.dart' as p;
 
 import 'vod_test_support.dart';
 
@@ -174,6 +177,122 @@ void main() {
       await save(ember, hour);
       await save(elsewhere, hour);
       expect(await progress.continueWatching(limit: 2).first, hasLength(2));
+    });
+  });
+
+  group('files of the library (a LocalRef, by quick hash)', () {
+    late int folder;
+
+    setUp(() async {
+      folder = await db.libraryDao.addFolder(
+        path: '/videos',
+        label: 'Videos',
+        at: t0,
+      );
+    });
+
+    Future<int> file(String hash, String title, {bool hidden = false}) =>
+        db.libraryDao.insertItem(
+          LibraryItemsCompanion.insert(
+            folderId: folder,
+            relPath: '$title.mkv',
+            sizeBytes: 1,
+            mtime: 0,
+            quickHash: hash,
+            kind: LibraryKind.unsorted,
+            title: title,
+            addedAt: t0,
+            isHidden: Value(hidden),
+          ),
+        );
+
+    const lake = LocalRef('hash-lake');
+    const garden = LocalRef('hash-garden');
+
+    test('saved and watched like a movie: resumable, then watched at '
+        '95 %; one history row per file', () async {
+      await file('hash-lake', 'Birthday at the lake');
+      await save(lake, const Duration(minutes: 30));
+      var mark = (await progress.watch(lake).first)!;
+      expect(mark.resumable, isTrue);
+      expect(mark.position, const Duration(minutes: 30));
+
+      await save(lake, const Duration(minutes: 96));
+      mark = (await progress.watch(lake).first)!;
+      expect(mark.completed, isTrue);
+
+      final rows = await db.select(db.watchHistory).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.sourceId, isNull);
+      expect(rows.single.remoteKey, 'hash-lake');
+      // A provider's movie with the same key is another row.
+      await save(const MovieRef('src', 'hash-lake'), hour);
+      expect(await db.select(db.watchHistory).get(), hasLength(2));
+      expect((await progress.watch(lake).first)!.completed, isTrue);
+    });
+
+    test('mark as watched, and forget it again', () async {
+      await progress.setWatched(garden, watched: true);
+      expect((await progress.watch(garden).first)!.completed, isTrue);
+      await progress.setWatched(garden, watched: false);
+      expect(await progress.watch(garden).first, isNull);
+    });
+
+    test("Continue watching lists the user's own files among the "
+        "provider's titles, newest first", () async {
+      await file('hash-lake', 'Birthday at the lake');
+      await file('hash-garden', 'Garden timelapse');
+      await save(harbor, const Duration(minutes: 30));
+      await save(lake, const Duration(minutes: 20));
+      await save(garden, const Duration(seconds: 40)); // under a minute
+
+      expect((await cards()).map(describe), [
+        'file Birthday at the lake',
+        'The Quiet Harbor',
+      ]);
+      final card = (await cards()).first as ContinueLibraryFile;
+      expect(card.item.path, p.join('/videos', 'Birthday at the lake.mkv'));
+      expect(card.mark.position, const Duration(minutes: 20));
+
+      // Watched to the end: off the row.
+      await save(lake, const Duration(minutes: 99));
+      expect((await cards()).map(describe), ['The Quiet Harbor']);
+    });
+
+    test('hidden, not connected or removed files are left out; a file '
+        'moved elsewhere keeps its card', () async {
+      final lakeId = await file('hash-lake', 'Birthday at the lake');
+      await file('hash-garden', 'Garden timelapse', hidden: true);
+      await save(lake, const Duration(minutes: 20));
+      await save(garden, const Duration(minutes: 20));
+      expect((await cards()).map(describe), ['file Birthday at the lake']);
+
+      await db.libraryDao.changeItem(
+        lakeId,
+        LibraryItemsCompanion(unavailableSince: Value(t0)),
+      );
+      expect(await cards(), isEmpty);
+
+      // Moved: the same contents under another name.
+      await db.libraryDao.removeItem(lakeId);
+      expect(await cards(), isEmpty);
+      await file('hash-lake', 'Lake (moved)');
+      expect((await cards()).map(describe), ['file Lake (moved)']);
+    });
+
+    test('dismissed, it leaves the row until it is watched again', () async {
+      await file('hash-lake', 'Birthday at the lake');
+      await save(lake, const Duration(minutes: 20));
+      await progress.dismiss((await cards()).single);
+      expect(await cards(), isEmpty);
+      // The place is kept.
+      expect(
+        (await progress.watch(lake).first)!.position,
+        const Duration(minutes: 20),
+      );
+
+      await save(lake, const Duration(minutes: 25));
+      expect((await cards()).map(describe), ['file Birthday at the lake']);
     });
   });
 }

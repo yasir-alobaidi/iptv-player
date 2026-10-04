@@ -17,6 +17,8 @@ import 'package:iptv_player/core/logging/launch_mark.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
+import 'package:iptv_player/core/platform/file_reveal.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
@@ -28,6 +30,8 @@ import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
 import 'package:iptv_player/data/images/cached_artwork.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
+import 'package:iptv_player/data/platform/file_reveals.dart';
+import 'package:iptv_player/data/platform/system_networks.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
@@ -41,6 +45,7 @@ import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart'
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:logger/logger.dart';
@@ -102,6 +107,8 @@ Future<void> bootstrap() async {
     overrides: [
       playerEngineProvider.overrideWithValue(player),
       windowControlsProvider.overrideWithValue(const WindowManagerControls()),
+      fileRevealProvider.overrideWithValue(platformFileReveal(log)),
+      systemNetworkProvider.overrideWithValue(platformSystemNetwork(log)),
       appLogProvider.overrideWithValue(log),
       secretRegistryProvider.overrideWithValue(secrets),
       errorReporterProvider.overrideWithValue(errors),
@@ -151,8 +158,11 @@ Future<void> bootstrap() async {
         ),
   );
   window.beforeClose = () => _quit(container, log);
-  // The cast's quiet fallbacks and unexpected ends, as toasts.
-  container.read(castNoticeToastsProvider);
+  container
+    // The cast's quiet fallbacks and unexpected ends, as toasts.
+    ..read(castNoticeToastsProvider)
+    // What each play says about the network, for "You're offline".
+    ..read(playbackReachabilityProvider);
   runApp(
     UncontrolledProviderScope(
       container: container,
