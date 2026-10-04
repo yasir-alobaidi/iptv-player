@@ -45,6 +45,7 @@ void main() {
     ContinueMovie(:final movie) => movie.name,
     ContinueEpisode(:final episode, :final upNext) =>
       '${episode.remoteKey}${upNext ? ' next' : ''}',
+    ContinueLibraryFile(:final item) => 'file ${item.title}',
   };
 
   group('saving', () {

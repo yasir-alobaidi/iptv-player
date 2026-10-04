@@ -3,6 +3,8 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/table_changes.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
+import 'package:iptv_player/features/library/data/db_library_repository.dart'
+    show libraryItemFromRow;
 import 'package:iptv_player/features/vod/data/vod_rows.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
@@ -17,6 +19,7 @@ final class DbWatchProgress implements WatchProgress {
   static UserItemType _type(VodRef ref) => switch (ref) {
     MovieRef() => UserItemType.movie,
     EpisodeRef() => UserItemType.episode,
+    LocalRef() => UserItemType.local,
   };
 
   @override
@@ -25,25 +28,45 @@ final class DbWatchProgress implements WatchProgress {
     required Duration position,
     Duration? duration,
   }) => Result.guard(
-    () => _db.watchHistoryDao.touch(
-      _type(ref),
-      ref.sourceId,
-      ref.remoteKey,
-      _clock(),
-      positionMs: position.inMilliseconds,
-      durationMs: duration?.inMilliseconds,
-      completed: isComplete(position, duration),
-      seriesKey: switch (ref) {
-        EpisodeRef(:final seriesKey) => seriesKey,
-        MovieRef() => null,
-      },
-      dismissed: false,
-    ),
+    () => ref is LocalRef
+        ? _db.watchHistoryDao.touchLocal(
+            ref.quickHash,
+            _clock(),
+            positionMs: position.inMilliseconds,
+            durationMs: duration?.inMilliseconds,
+            completed: isComplete(position, duration),
+            dismissed: false,
+          )
+        : _db.watchHistoryDao.touch(
+            _type(ref),
+            ref.sourceId,
+            ref.remoteKey,
+            _clock(),
+            positionMs: position.inMilliseconds,
+            durationMs: duration?.inMilliseconds,
+            completed: isComplete(position, duration),
+            seriesKey: switch (ref) {
+              EpisodeRef(:final seriesKey) => seriesKey,
+              MovieRef() || LocalRef() => null,
+            },
+            dismissed: false,
+          ),
   );
 
   @override
   Future<Result<void>> setWatched(VodRef ref, {required bool watched}) =>
       Result.guard(() async {
+        if (ref is LocalRef) {
+          watched
+              ? await _db.watchHistoryDao.touchLocal(
+                  ref.quickHash,
+                  _clock(),
+                  completed: true,
+                  dismissed: false,
+                )
+              : await _db.watchHistoryDao.forgetLocal(ref.quickHash);
+          return;
+        }
         if (!watched) {
           await _db.watchHistoryDao.forget(
             _type(ref),
@@ -60,16 +83,22 @@ final class DbWatchProgress implements WatchProgress {
           completed: true,
           seriesKey: switch (ref) {
             EpisodeRef(:final seriesKey) => seriesKey,
-            MovieRef() => null,
+            MovieRef() || LocalRef() => null,
           },
           dismissed: false,
         );
       });
 
   @override
-  Stream<WatchMark?> watch(VodRef ref) => _db.watchHistoryDao
-      .watchOne(_type(ref), ref.sourceId, ref.remoteKey)
-      .map((row) => row == null ? null : markFromHistory(row));
+  Stream<WatchMark?> watch(VodRef ref) =>
+      (ref is LocalRef
+              ? _db.watchHistoryDao.watchLocal(ref.quickHash)
+              : _db.watchHistoryDao.watchOne(
+                  _type(ref),
+                  ref.sourceId,
+                  ref.remoteKey,
+                ))
+          .map((row) => row == null ? null : markFromHistory(row));
 
   @override
   Stream<Map<String, WatchMark>> watchSeries(
@@ -93,6 +122,9 @@ final class DbWatchProgress implements WatchProgress {
         series.sourceId,
         series.remoteKey,
       ),
+      ContinueLibraryFile(:final item) => _db.watchHistoryDao.dismissLocal(
+        item.quickHash,
+      ),
     },
   );
 
@@ -107,15 +139,42 @@ final class DbWatchProgress implements WatchProgress {
         _db.series,
         _db.episodes,
         _db.favorites,
+        _db.libraryItems,
+        _db.libraryFolders,
       }).asyncMap((_) => _continueWatching(limit));
 
   Future<List<ContinueItem>> _continueWatching(int limit) async {
     final movies = await _movies(limit);
     final episodes = await _episodes(limit);
+    final files = await _libraryFiles(limit);
     return ([
       ...movies,
       ...episodes,
+      ...files,
     ]..sort((a, b) => b.at.compareTo(a.at))).take(limit).toList();
+  }
+
+  /// The user's own videos past a minute and short of 95 %, while they
+  /// are in the library and shown.
+  Future<List<ContinueItem>> _libraryFiles(int limit) async {
+    final out = <ContinueItem>[];
+    final folders = {for (final f in await _db.libraryDao.folders()) f.id: f};
+    for (final row in await _db.watchHistoryDao.recentLocal(limit: limit)) {
+      final mark = markFromHistory(row);
+      if (!mark.resumable) continue;
+      final file = (await _db.libraryDao.itemsWithHash(row.remoteKey))
+          .where((i) => !i.isHidden && i.unavailableSince == null)
+          .firstOrNull;
+      if (file == null) continue;
+      out.add(
+        ContinueLibraryFile(
+          item: libraryItemFromRow(file, folders[file.folderId]),
+          mark: mark,
+          at: row.updatedAt,
+        ),
+      );
+    }
+    return out;
   }
 
   /// Movies past a minute and short of 95 % (decision 5).

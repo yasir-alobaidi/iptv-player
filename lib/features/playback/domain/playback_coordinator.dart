@@ -412,6 +412,7 @@ final class PlaybackCoordinator {
       PlayableChannel(:final channel) => _resolver.live(channel),
       PlayableMovie(:final movie) => _resolver.movie(movie),
       PlayableEpisode(:final episode) => _resolver.episode(episode),
+      PlayableLibraryItem(:final item) => _resolver.libraryFile(item),
     };
     if (token != _token) return;
     final stream = resolved.valueOrNull;
@@ -420,39 +421,20 @@ final class PlaybackCoordinator {
         PlaybackFailed(
           item,
           PlaybackProblem(
-            PlaybackProblemKind.unavailable,
+            item is PlayableLibraryItem
+                ? PlaybackProblemKind.fileUnreadable
+                : PlaybackProblemKind.unavailable,
             failure: resolved.failureOrNull,
           ),
         ),
       );
       return;
     }
-    // A one-connection source: the old stream has to be closed before the
-    // panel lets a new one in (docs/03). Others just replace it.
-    if (_openSource == item.sourceId && stream.maxConnections <= 1) {
-      final watch = Stopwatch()..start();
-      await engine.stop();
-      _openSource = null;
-      _log.debug(
-        _tag,
-        'Closed the old stream in ${watch.elapsedMilliseconds} ms',
-      );
-      if (token != _token) return;
-    }
-    // Another holder's stream on the source (a cast just ended, Phase 8's
-    // downloads): the panel lets this one in only once that one closes.
-    // After the wait it opens anyway; a refusal is the watchdog's.
-    final room = await connections.room(
-      item.sourceId,
-      limit: stream.maxConnections,
-      holder: StreamHolder.player,
-    );
-    if (!room) {
-      _log.info(_tag, 'Opening while the source has every connection in use');
-    }
+    if (!stream.local) await _makeRoom(item, stream, token);
     if (token != _token) return;
     _stream = stream;
-    _openSource = item.sourceId;
+    // A file on this computer holds no connection (Phase 8 decision 8).
+    _openSource = stream.local ? null : item.sourceId;
     _generation = null;
     _awaitingOpenFor = token;
     _position = _openAt ?? Duration.zero;
@@ -482,6 +464,37 @@ final class PlaybackCoordinator {
         );
       },
     );
+  }
+
+  /// The source's connection rules, before a provider's stream opens.
+  Future<void> _makeRoom(
+    Playable item,
+    ResolvedStream stream,
+    int token,
+  ) async {
+    // A one-connection source: the old stream has to be closed before the
+    // panel lets a new one in (docs/03). Others just replace it.
+    if (_openSource == item.sourceId && stream.maxConnections <= 1) {
+      final watch = Stopwatch()..start();
+      await engine.stop();
+      _openSource = null;
+      _log.debug(
+        _tag,
+        'Closed the old stream in ${watch.elapsedMilliseconds} ms',
+      );
+      if (token != _token) return;
+    }
+    // Another holder's stream on the source (a cast just ended, Phase 8's
+    // downloads): the panel lets this one in only once that one closes.
+    // After the wait it opens anyway; a refusal is the watchdog's.
+    final room = await connections.room(
+      item.sourceId,
+      limit: stream.maxConnections,
+      holder: StreamHolder.player,
+    );
+    if (!room) {
+      _log.info(_tag, 'Opening while the source has every connection in use');
+    }
   }
 
   void _onEvent(PlayerEvent event) {
@@ -569,7 +582,9 @@ final class PlaybackCoordinator {
   /// length, which is a drop to come back from.
   void _fileEnded(Playable item, int token) {
     final length = _duration;
-    if (length != null && _position + timings.earlyEnd < length) {
+    // A file on this computer can't drop: what ends, ends.
+    final local = _stream?.local ?? false;
+    if (!local && length != null && _position + timings.earlyEnd < length) {
       _lost(
         item,
         token,
@@ -595,7 +610,7 @@ final class PlaybackCoordinator {
     _cancelTimers();
     _generation = null;
     final stream = _stream;
-    final problem = stream == null
+    final problem = stream == null || stream.local
         ? PlaybackProblem(PlaybackProblemKind.network, detail: detail)
         : await _prober.diagnose(item.sourceId, stream, detail: detail);
     if (token != _token) return;
@@ -654,8 +669,17 @@ final class PlaybackCoordinator {
     });
   }
 
-  void _lost(Playable item, int token, PlaybackProblem problem) {
+  void _lost(Playable item, int token, PlaybackProblem lost) {
     if (token != _token) return;
+    // docs/09: no reconnects for a file on this computer; it is missing
+    // or damaged.
+    final problem = _stream?.local ?? false
+        ? PlaybackProblem(
+            PlaybackProblemKind.fileUnreadable,
+            detail: lost.detail,
+            failure: lost.failure,
+          )
+        : lost;
     _cancelTimers();
     _generation = null;
     // A file comes back where it was, with a URL built again.
@@ -741,6 +765,7 @@ final class PlaybackCoordinator {
   static Duration? _knownLength(Playable item) => switch (item) {
     PlayableMovie(:final movie) => movie.runtime,
     PlayableEpisode(:final episode) => episode.duration,
+    PlayableLibraryItem(:final item) => item.duration,
     PlayableChannel() => null,
   };
 

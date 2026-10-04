@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:iptv_player/core/catalogue_kind.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -32,6 +33,10 @@ final class RecordingLauncher implements VodLauncher {
     EpisodeItem episode, {
     Duration? from,
   }) async => played.add('${episode.remoteKey} from ${from?.inMinutes ?? 0}');
+
+  @override
+  Future<void> playLibraryItem(LibraryItem item, {Duration? from}) async =>
+      played.add('${item.quickHash} from ${from?.inMinutes ?? 0}');
 }
 
 /// Home on one database: [VodFakes]' movies and series, three channels

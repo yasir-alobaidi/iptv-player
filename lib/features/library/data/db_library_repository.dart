@@ -201,6 +201,38 @@ final class DbLibraryRepository implements LibraryRepository {
   });
 
   @override
+  Future<LibraryItem?> episodeAfter(LibraryItem episode) async {
+    final show = episode.showTitle?.toLowerCase();
+    if (show == null || episode.kind != LibraryKind.episode) return null;
+    final rows = await _db.libraryDao
+        .watchItems(kind: LibraryKind.episode)
+        .first;
+    final folders = {for (final f in await _db.libraryDao.folders()) f.id: f};
+    final season = episode.season ?? 1;
+    final number = episode.episodeEnd ?? episode.episode ?? 0;
+    LibraryItemRow? best;
+    for (final row in rows) {
+      if (row.showTitle?.toLowerCase() != show || row.id == episode.id) {
+        continue;
+      }
+      if (row.unavailableSince != null) continue;
+      final s = row.season ?? 1;
+      final e = row.episode ?? 0;
+      final after = s > season || (s == season && e > number);
+      if (!after) continue;
+      final b = best;
+      if (b == null ||
+          s < (b.season ?? 1) ||
+          (s == (b.season ?? 1) && e < (b.episode ?? 0))) {
+        best = row;
+      }
+    }
+    return best == null
+        ? null
+        : libraryItemFromRow(best, folders[best.folderId]);
+  }
+
+  @override
   Future<Result<DeleteOutcome>> deleteFile(
     int itemId, {
     bool permanently = false,
@@ -353,29 +385,4 @@ LibraryItem libraryItemFromRow(LibraryItemRow row, LibraryFolderRow? folder) {
     details: details is Map<String, Object?> ? details : null,
     downloaded: row.providerRemoteKey != null,
   );
-}
-
-/// The scanner's `subtitles_json`, read tolerantly.
-List<ExternalSubtitle> subtitlesFromJson(String? text) {
-  if (text == null) return const [];
-  try {
-    final json = jsonDecode(text);
-    if (json is! List) return const [];
-    return [
-      for (final entry in json)
-        if (entry is Map &&
-            entry['file'] is String &&
-            entry['format'] is String)
-          ExternalSubtitle(
-            fileName: entry['file'] as String,
-            format: entry['format'] as String,
-            language: entry['language'] is String
-                ? entry['language'] as String
-                : null,
-            forced: entry['forced'] == true,
-          ),
-    ];
-  } on FormatException {
-    return const [];
-  }
 }

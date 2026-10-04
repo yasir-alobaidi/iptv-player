@@ -19,6 +19,7 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
   final what = switch (item) {
     PlayableMovie() => 'movie',
     PlayableEpisode() => 'episode',
+    PlayableLibraryItem() => 'video',
     PlayableChannel() || null => 'channel',
   };
   return switch (problem.kind) {
@@ -57,6 +58,12 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
     PlaybackProblemKind.unsupported => (
       title: "This $what can't be played",
       message: "It uses a format this player can't decode.",
+    ),
+    PlaybackProblemKind.fileUnreadable => (
+      title: 'This file is missing or damaged',
+      message:
+          "It isn't where the library found it, or it can't be read. "
+          'Show it in its folder, or remove it from the library.',
     ),
     PlaybackProblemKind.unavailable => (
       title: "This $what can't start",

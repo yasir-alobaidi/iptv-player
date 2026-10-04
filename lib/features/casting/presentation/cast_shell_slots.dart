@@ -47,6 +47,7 @@ ShellCastSession? _session(Ref ref) {
     PlayableMovie(:final movie) => movie.name,
     PlayableEpisode(:final series, :final episode) =>
       '${series.name} · S${episode.season} E${episode.episode}',
+    PlayableLibraryItem(:final item) => item.title,
   };
   final imageUrl = switch (item) {
     null => null,
@@ -54,6 +55,7 @@ ShellCastSession? _session(Ref ref) {
     PlayableMovie(:final movie) => movie.posterUrl,
     PlayableEpisode(:final series, :final episode) =>
       episode.stillUrl ?? series.posterUrl,
+    PlayableLibraryItem() => null,
   };
   final playing = state.phase == CastPhase.playing;
   final plan = state.plan;
@@ -62,6 +64,7 @@ ShellCastSession? _session(Ref ref) {
     PlayableChannel(:final channel) => channel.name,
     PlayableMovie(:final movie) => movie.name,
     PlayableEpisode(:final series) => series.name,
+    PlayableLibraryItem(:final item) => item.showTitle ?? item.title,
   };
   return ShellCastSession(
     title: title,

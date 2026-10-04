@@ -1,11 +1,65 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
+
+/// The episode after the one playing: a provider's, or the next file of
+/// a show of the user's own (Phase 8).
+@immutable
+final class NextEpisode {
+  const new({
+    required this.item,
+    required this.title,
+    this.season,
+    this.episode,
+    this.duration,
+    this.stillUrl,
+    this.from,
+  });
+
+  factory provider(SeriesItem series, EpisodeItem episode, {Duration? from}) =>
+      NextEpisode(
+        item: PlayableEpisode(series, episode),
+        title: episode.title,
+        season: episode.season,
+        episode: episode.episode,
+        duration: episode.duration,
+        stillUrl: episode.stillUrl,
+        from: from,
+      );
+
+  factory local(LibraryItem file, {Duration? from}) => NextEpisode(
+    item: PlayableLibraryItem(file),
+    title: file.title,
+    season: file.season,
+    episode: file.episode,
+    duration: file.duration,
+    from: from,
+  );
+
+  final Playable item;
+  final String title;
+  final int? season;
+  final int? episode;
+  final Duration? duration;
+  final String? stillUrl;
+
+  /// Where it was left, when it was started and not finished.
+  final Duration? from;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NextEpisode && other.item == item && other.from == from;
+
+  @override
+  int get hashCode => Object.hash(item, from);
+}
 
 /// What the full-screen player does around a movie or an episode (Phase 5
 /// step 6), apart from the widgets: the seek bar that moves at once while
@@ -17,6 +71,7 @@ final class VodPlayerController extends ChangeNotifier {
     required this._series,
     required this._progress,
     required this._onFinished,
+    this._library,
   }) {
     _states = _coordinator.states.listen(_onState);
     _timelines = _coordinator.timelines.listen(_onTimeline);
@@ -37,6 +92,9 @@ final class VodPlayerController extends ChangeNotifier {
   final SeriesRepository _series;
   final WatchProgress _progress;
 
+  /// A show of the user's own: its next file (Phase 8).
+  final LibraryRepository? _library;
+
   /// A movie ended, or an episode with nothing after it: the player goes
   /// back to where it was opened from.
   final void Function(Playable item) _onFinished;
@@ -49,8 +107,7 @@ final class VodPlayerController extends ChangeNotifier {
   Timer? _seekTimer;
   Duration? _resumedFrom;
   Timer? _resumedTimer;
-  EpisodeItem? _next;
-  Duration? _nextFrom;
+  NextEpisode? _next;
   int? _countdown;
   Timer? _countdownTimer;
   bool _cancelled = false;
@@ -81,7 +138,7 @@ final class VodPlayerController extends ChangeNotifier {
   Duration? get resumedFrom => _resumedFrom;
 
   /// The episode after this one; null for a movie or the last episode.
-  EpisodeItem? get next => _next;
+  NextEpisode? get next => _next;
 
   /// 10 … 1 while the card counts down.
   int? get countdown => _countdown;
@@ -134,16 +191,11 @@ final class VodPlayerController extends ChangeNotifier {
   /// the credits, so the episode left counts as watched, however short it
   /// is (a 2-minute episode is left at 92 %, under [completeAt]).
   void playNext() {
-    final item = _item;
     final next = _next;
-    if (item is! PlayableEpisode || next == null) return;
+    if (next == null) return;
     _stopCountdown();
     unawaited(
-      _coordinator.playVod(
-        PlayableEpisode(item.series, next),
-        from: _nextFrom,
-        finishedLeaving: true,
-      ),
+      _coordinator.playVod(next.item, from: next.from, finishedLeaving: true),
     );
   }
 
@@ -199,24 +251,44 @@ final class VodPlayerController extends ChangeNotifier {
     _cancelled = false;
     _ended = false;
     _next = null;
-    _nextFrom = null;
     _resumedTimer?.cancel();
     _resumedFrom = item == null ? null : _coordinator.startedFrom;
     if (_resumedFrom != null) {
       _resumedTimer = Timer(resumedFor, _hideResumed);
     }
-    if (item is PlayableEpisode) unawaited(_findNext(item));
+    switch (item) {
+      case PlayableEpisode():
+        unawaited(_findNext(item));
+      case PlayableLibraryItem(item: final file)
+          when file.kind == LibraryKind.episode:
+        unawaited(_findNextFile(item, file));
+      case _:
+        break;
+    }
     notifyListeners();
   }
 
   Future<void> _findNext(PlayableEpisode item) async {
     final found = (await _series.episodeAfter(item.episode)).valueOrNull;
     if (_disposed || _item != item || found == null) return;
-    final mark = await _progress.watch(found.ref).first;
+    final from = await _resumeAt(found.ref);
     if (_disposed || _item != item) return;
-    _next = found;
-    _nextFrom = mark != null && mark.resumable ? mark.position : null;
+    _next = NextEpisode.provider(item.series, found, from: from);
     notifyListeners();
+  }
+
+  Future<void> _findNextFile(Playable item, LibraryItem file) async {
+    final found = await _library?.episodeAfter(file);
+    if (_disposed || _item != item || found == null) return;
+    final from = await _resumeAt(LocalRef(found.quickHash));
+    if (_disposed || _item != item) return;
+    _next = NextEpisode.local(found, from: from);
+    notifyListeners();
+  }
+
+  Future<Duration?> _resumeAt(VodRef ref) async {
+    final mark = await _progress.watch(ref).first;
+    return mark != null && mark.resumable ? mark.position : null;
   }
 
   void _onTimeline(VodTimeline timeline) {
@@ -253,7 +325,7 @@ final class VodPlayerController extends ChangeNotifier {
   }
 
   void _onEnded(Playable item) {
-    if (item is PlayableEpisode && _next != null) {
+    if (_next != null) {
       if (_cancelled) {
         _ended = true;
         notifyListeners();

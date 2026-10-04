@@ -12,6 +12,7 @@ import 'package:iptv_player/data/library/system_trash.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/library/data/db_library_repository.dart';
+import 'package:iptv_player/features/library/data/library_favorites.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -88,3 +89,8 @@ Stream<LibraryScanState> libraryScanState(Ref ref) async* {
   yield scans.state;
   yield* scans.states;
 }
+
+/// F on a library item.
+@Riverpod(keepAlive: true)
+LibraryFavorites libraryFavorites(Ref ref) =>
+    LibraryFavorites(ref.watch(appDatabaseProvider));

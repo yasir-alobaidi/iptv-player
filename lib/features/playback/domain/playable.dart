@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 /// What the coordinator plays (docs/01's `PlayableSource`): a live channel,
-/// a movie or an episode. Phase 8 adds a file from the library.
+/// a movie, an episode, or a file of the user's own from the library
+/// (Phase 8). A downloaded movie or episode plays as itself, from its
+/// file (Phase 8 decision 8).
 @immutable
 sealed class Playable {
   const new();
@@ -99,4 +102,33 @@ final class PlayableEpisode extends Playable {
 
   @override
   int get hashCode => Object.hash(series, episode);
+}
+
+/// A video of the user's own from the library (Phase 8 decision 8): no
+/// source, no connection, no reconnects. History keys it by its quick
+/// hash ([LocalRef]).
+final class PlayableLibraryItem extends Playable {
+  const new(this.item);
+
+  final LibraryItem item;
+
+  /// No source: nothing on the network.
+  @override
+  String get sourceId => '';
+
+  @override
+  String get remoteKey => item.quickHash;
+
+  @override
+  bool get live => false;
+
+  @override
+  VodRef get vodRef => LocalRef(item.quickHash);
+
+  @override
+  bool operator ==(Object other) =>
+      other is PlayableLibraryItem && other.item.id == item.id;
+
+  @override
+  int get hashCode => Object.hash('library', item.id);
 }

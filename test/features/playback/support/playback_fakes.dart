@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
@@ -87,16 +88,53 @@ final class FakeResolver implements StreamResolver {
     );
   }
 
+  /// Downloaded titles' files, by remote key: played from the file unless
+  /// asked for the provider's.
+  final Map<String, String> downloads = {};
+
   @override
-  Future<Result<ResolvedStream>> movie(MovieItem movie) {
+  Future<Result<ResolvedStream>> movie(
+    MovieItem movie, {
+    bool downloaded = true,
+  }) {
     resolvedFiles.add(movie.remoteKey);
+    final path = downloaded ? downloads[movie.remoteKey] : null;
+    if (path != null) {
+      return Future.value(
+        Ok(ResolvedStream(url: path, maxConnections: 1, local: true)),
+      );
+    }
     return _answer('movie/u/p/${movie.remoteKey}.${movie.ext}');
   }
 
   @override
-  Future<Result<ResolvedStream>> episode(EpisodeItem episode) {
+  Future<Result<ResolvedStream>> episode(
+    EpisodeItem episode, {
+    bool downloaded = true,
+  }) {
     resolvedFiles.add(episode.remoteKey);
     return _answer('series/u/p/${episode.remoteKey}.${episode.ext}');
+  }
+
+  /// Library files: played from their path, or missing.
+  final Set<int> missingFiles = {};
+
+  @override
+  Future<Result<ResolvedStream>> libraryFile(LibraryItem item) async {
+    resolvedFiles.add(item.quickHash);
+    if (missingFiles.contains(item.id)) {
+      return Err(NotFoundFailure('${item.relPath} is not there'));
+    }
+    return Ok(
+      ResolvedStream(
+        url: item.path ?? '/library/${item.relPath}',
+        maxConnections: 1,
+        local: true,
+        subtitleFiles: [
+          for (final s in item.subtitles) '/library/${s.fileName}',
+        ],
+      ),
+    );
   }
 }
 

@@ -332,3 +332,54 @@ final class LibraryScanStateProvider
 }
 
 String _$libraryScanStateHash() => r'9d51a84867c986423752fd3dfa823a3782818a70';
+
+/// F on a library item.
+
+@ProviderFor(libraryFavorites)
+final libraryFavoritesProvider = LibraryFavoritesProvider._();
+
+/// F on a library item.
+
+final class LibraryFavoritesProvider
+    extends
+        $FunctionalProvider<
+          LibraryFavorites,
+          LibraryFavorites,
+          LibraryFavorites
+        >
+    with $Provider<LibraryFavorites> {
+  /// F on a library item.
+  LibraryFavoritesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'libraryFavoritesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$libraryFavoritesHash();
+
+  @$internal
+  @override
+  $ProviderElement<LibraryFavorites> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LibraryFavorites create(Ref ref) {
+    return libraryFavorites(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LibraryFavorites value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LibraryFavorites>(value),
+    );
+  }
+}
+
+String _$libraryFavoritesHash() => r'14570b8f73ae6f7021aabbaaeab28f2e2d2a63ed';

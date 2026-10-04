@@ -1,117 +1,98 @@
-# Handoff — 2026-10-04 (Phase 8 plan written, for approval; Phase 7 steps 6 and 7 still for review; the TV runs wait)
+# Handoff — 2026-10-04 (Phase 8 steps 1–4 done, step 5 part-way; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/plans/phase-8-downloads-and-library.md, docs/09-downloads-and-library.md,
-the Phase 8 part of docs/08-phases-and-prompts.md, and the docs that plan
-names (docs/03, docs/04 "Local files and downloads", docs/05 Library, docs/06,
-ADR-005, ADR-014).
+it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
+docs/decisions.md (Phase 8, step by step), docs/plans/phase-8-downloads-and-library.md,
+docs/09-downloads-and-library.md, and the Phase 8 part of
+docs/08-phases-and-prompts.md.
 
 ## Before you start the next session (user)
-1. **Review Phase 7 steps 6 and 7** (ADR-014 "The cast coordinator" and "The
-   casting UI"; step 7's UX decisions are listed there). The 2026-10-04
-   session read "continue the work" as the go-ahead to move on, but recorded
-   no approval: say "approved" (or what to change) in the start prompt.
-2. **Review the Phase 8 plan** (`docs/plans/phase-8-downloads-and-library.md`):
-   twelve decisions with a recommendation each, eight steps, eight sketches.
-   **Decision 1 asks to start Phase 8 before Phase 7's TV sitting**, against
-   docs/08's "a phase waits for the one before", because that sitting waits
-   only on the TV. The others in short:
-   - **2:** downloads in their own isolate (dart:io); the queue's rules in
-     the app's isolate;
-   - **3:** downloads yield through `SourceConnections` at once, and come back
-     10 s after the source is free;
-   - **4:** HLS items through the relay's proxy into FFmpeg, no resume;
-   - **5:** a download keeps a copy of its details (`details_json`);
-   - **6:** a two-pass scanner (fast walk and hash, then ffprobe);
-   - **7:** watched folders, with "Updates when rescanned" as the fallback;
-   - **8:** every Play of a downloaded title uses the file;
-   - **9:** Enter opens pages for movies and shows, plays videos;
-   - **10:** our own freedesktop trash;
-   - **11:** offline from NetworkManager;
-   - **12:** library casting direct, else the continuous relay plus an MP4
-     made beside it so later seeks are native.
-3. **Push** the five local commits (6ebff8e the Windows CI fixes; step 6;
-   step 7; the matrix runner; the Phase 8 plan).
-4. **The TV runs wait** until you say Living Room TV is back. Then step 2's
-   script and step 8's matrix go in one sitting, about 25 minutes (asked
-   first, with you watching); have the TV's remote at hand, and be ready to
-   switch Input Signal Plus off for one row.
+1. **Nothing to review first.** You approved Phase 7's steps 6 and 7 and the
+   whole Phase 8 plan ("all approved based on ur recommendations") and asked
+   for the steps one by one; the session went on that way and stopped
+   part-way through step 5 when you asked for a handoff.
+2. **One budget to look at** (ADR-015 step 3): docs/06's "download speed ≥ 90 %
+   of curl" is now checked at network rates (1 Gbps and 100 Mbps through the
+   fake panel's throttle: 99.6 %), because over unthrottled loopback it
+   measures Dart's HTTP stack (35 %). Say if you want it otherwise.
+3. **Push** when you like: you pushed through step 4 (9f20223). **CI on the
+   plan's push (6d03959) failed on Linux**: one test (a relayed movie's cast)
+   sought to 5:00 in CI's 2-minute sample. Fixed in 2024e14 (local, checked
+   against a 120 s sample), with step 5 part 1 after it: 2 commits to push.
+   CI on step 4's push was still running at the handoff — check it first
+   (`curl` as below).
+4. **The TV runs still wait** until you say Living Room TV is back (Phase 7's
+   matrix, about 25 minutes, then Phase 8's library matrix at its step 8).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-8-downloads-and-library.md and the docs it names first.
-Phase 7 steps 6 and 7 are <approved | approved with these changes: …>.
-The Phase 8 plan is <approved: do the recommended | approved with these changes: …>.
-<The TV runs wait | The TV is on the network: run Phase 7 step 8's matrix after you ask>.
+ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md and
+docs/09-downloads-and-library.md first. Finish Phase 8 step 5 (part 2), then go on
+with the steps one by one. <The TV runs wait | The TV is on the network: ask first>.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done and waiting for
-  review; step 8's matrix runner written and checked 16 of 16 on the fake
-  TV; the TV runs wait.** On 2026-10-04 the laptop was on 192.168.26.x
-  again, so the TV was out of reach. Step 8 itself (the matrix on the TV and
-  the phase exit) needs the TV.
-- **Phase 8: the plan is written and waiting for approval.** Nothing of it is
-  built.
-- **Checks at the last code commit (7f1230c, the runner):** analyze, format,
-  **2,953 app tests** (16 skipped: the runner is one) under `TZ=UTC`; the
-  runner with `CAST_HOST=fake` 16 of 16. The plan commit changes docs only.
-- **CI:** not run since the step 5 push (red on Windows; fixed in 6ebff8e,
-  not yet pushed). Check the first run after the push. The new
-  `cast_walk_test.dart` runs in CI's integration loop (system FFmpeg 4.4,
-  no picture); it skips itself without FFmpeg or the samples.
+- **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
+  exit) waits for the TV.** The laptop was on 192.168.26.x all session.
+- **Phase 8 (downloads and the library):** steps 1–4 committed; **step 5
+  part 1 committed** (playback of library items and downloads through the
+  one coordinator); **step 5 part 2 is next** — its list is at the end of
+  ADR-015 "step 5, part 1":
+  - unit tests: `DbStreamResolver`'s download-first rule and `libraryFile`
+    (file there / gone / folder unavailable / `downloaded: false`);
+    `DbWatchProgress` with a `LocalRef` (save, watch, setWatched, dismiss,
+    Continue watching's local rows, hidden and unavailable ones left out);
+    `LibraryFavorites.toggle` (local, a downloaded movie, a downloaded
+    episode → its series); the controller's next local episode
+    (`NextEpisode.local`, then `playNext` plays a `PlayableLibraryItem`);
+    `mpvOptionsFor` writes `sub-files` (and leaves out a path with the
+    separator);
+  - **the integration test with the real player** (`integration_test/`,
+    one file, under `xvfb-run` with X11 as below): a library file plays with
+    the fake panel stopped, its external subtitle listed among the tracks,
+    and resumes where it was left; a downloaded movie plays from its file
+    and its progress shows on the provider's page.
+  - Then ADR-015's step 5 section is finished, progress updated, committed.
+- **Then steps 6 (the UI), 7 (casting library items), 8 (integration, the
+  library matrix on the TV, the exit)** as the plan says.
+- **Checks at the last commit:** analyze, format, `build_runner` leaves no
+  diff, **3,144 app tests** (18 skipped) under `TZ=UTC`; the fake panel's 146.
+- **CI:** run 37180099991 (6d03959) Windows green, Linux 1 failure (fixed in
+  2024e14, not pushed); run 37187899890 (9f20223) in progress at the
+  handoff.
+  Integration tests weren't run this session (nothing they cover changed
+  before step 5; step 5's own comes in part 2).
 
 ## Done this session (2026-10-04)
-- **The Phase 8 plan** (`docs/plans/phase-8-downloads-and-library.md`), read
-  against docs/09, docs/03, docs/04, docs/05, docs/06, ADR-005, the canvas's
-  Library, Downloads and Settings artboards (from the local
-  `design/*.dc.html`; step 6 reads the canvas with the Artifact tool first),
-  and the code Phase 8 builds on. Found while reading:
-  - SQLite counts NULLs as distinct in a unique key, so the existing
-    `(item_type, source_id, remote_key)` key in `favorites` and
-    `watch_history` would let a local file (no source) get two rows. Step 1
-    adds a unique index for local rows.
-  - The fake panel parses `change_etag` and `wrong_content_length` but does
-    nothing with them; `size_mb` and `vod_as_hls` aren't there (step 2).
-  - `SleepInhibitor` has one holder (`hold`/`release`); with casting and
-    downloads both holding it, step 3 puts a shared hold in front of it.
-  - The canvas names folders ("Movies HDD", "USB drive"), which docs/09's
-    table has no column for (`library_folders.label`), and docs/05's drag to
-    reorder downloads needs `downloads.sort_order`.
-- progress.md updated. No ADR-015 yet: it starts when the plan is approved,
-  as ADR-014 did.
+- The Phase 8 plan, approved; ADR-015 started; Phase 7 steps 6–7 approved.
+- **Step 1** — schema v9 (library, queue, search index, one history row and
+  one favorite per local file), the domain types, the DAOs, the download
+  folder.
+- **Step 2** — the fake panel's download faults (`change_etag`,
+  `wrong_content_length`, `size_mb`, `vod_as_hls`; `If-Range` checked before
+  the range) and `tools/media_samples/library_tree.sh` with its manifest.
+- **Step 3** — the download engine: the queue, the downloads isolate (HTTP and
+  HLS), the finisher, downloads that give way to the player and the cast,
+  the SIGKILL tests, the measurements (99.6 % of curl at network rates; +20–31
+  MB over 4 GB).
+- **Step 4** — the name parser (50-name corpus), the guarded scan job, folder
+  watching, thumbnails, our own freedesktop trash, the library repository;
+  5,000 new files scanned and probed in about 45 s, 5,000 unchanged in 3 s.
+- **Step 5, part 1** — library files and downloads through the coordinator.
 
 ## What's next
-1. **With the plan approved: Phase 8 step 1** (schema v9 with the plan's
-   three extra columns and the local-rows index, the migration test, the
-   domain types and interfaces, the DAOs, the download folder). Start
-   ADR-015 with the approval, as ADR-014 did.
+1. **Phase 8 step 5, part 2** (above), then steps 6, 7 and 8, stopping only
+   where the user asks or a step needs the TV.
 2. **The TV runs, only when the user says the TV is back, after asking and
-   with the user watching** (announce each; one cast at a time):
-   - check the laptop is on 192.168.1.x (`ip -4 addr`; it was on
-     192.168.26.x on 2026-10-04);
-   - step 2's `CAST_HOST=192.168.1.155 flutter test --tags real_cast
-     --run-skipped test/tools/cast_tv_test.dart` (about 30 s; also says
-     whether MULTIZONE_STATUS's id equals the TXT id);
-   - **the matrix:** `CAST_HOST=192.168.1.155 flutter test --tags real_cast
-     --run-skipped test/tools/cast_matrix_tv_test.dart` (rows 1–5 and 7–15,
-     about 20 minutes; each row prints what to watch for — ask the user
-     what they saw after each, or note it as it plays), then `CAST_ROWS=6`
-     with Input Signal Plus off (and back on after), and `CAST_ROWS=16`
-     with the remote in hand (the run says when to press);
-   - by hand on the TV: a relayed movie paused for a minute (the
-     backpressure fix); what the TV's screen shows of the time for a movie
-     started at a place; whether it heeds mute (fixed volume); whether the
-     panel's MP4 plays directly without CORS (row 14 says which).
-3. **Then Phase 7's exit:** the results and budgets in ADR-014 (cast start
-   ≤ 8 s launched / ≤ 5 s running — the zaps stand in — and zapping ≤ 6 s
-   proposed for docs/06), ADR-014 Accepted, docs/04 "As built", docs/06's
-   budgets, progress and this file. The plan offers one channel from the
-   user's provider afterwards, only with its own pop-up.
+   with the user watching:** Phase 7's (check `ip -4 addr` shows 192.168.1.x;
+   `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
+   test/tools/cast_tv_test.dart`, then `…cast_matrix_tv_test.dart` rows 1–5
+   and 7–15, then `CAST_ROWS=6` with Input Signal Plus off and `CAST_ROWS=16`
+   with the remote in hand), then Phase 7's exit (ADR-014 Accepted). Phase 8's
+   library matrix belongs to its step 8.
 
 **Loose ends, small:**
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -240,7 +221,60 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 7 step 8, before the TV):
+New this session (Phase 8 steps 1–5):
+- **Where things are:** `lib/core/library/` (`LibraryItem`, `LibraryFolder`,
+  `LibraryMedia`, `LibraryRepository`), `lib/core/downloads/` (`DownloadTask`,
+  `DownloadRequest`, `DownloadService`, `DownloadSettings`, `download_paths.dart`,
+  `download_runner.dart` — the runner's interface and sendable messages);
+  `lib/data/downloads/` (`HttpDownload`, `HlsDownload`, `download_isolate.dart`,
+  `IsolateDownloadRunner`, `DbDownloadStore`, `FileDownloadFinisher`);
+  `lib/data/library/` (`name_parser.dart`, `library_scan.dart`,
+  `library_probe.dart`, `library_thumbnails.dart`, `system_trash.dart`,
+  `quick_hash.dart`, `download_folder.dart`); `lib/features/downloads/`
+  (`DownloadQueue` in domain, `download_ports.dart`, `CatalogueDownloadTitles`,
+  providers); `lib/features/library/data/` (`DbLibraryRepository`,
+  `LibraryScans`, `LibraryFavorites`, providers). `bootstrap()` registers the
+  download folder, starts the queue, then the scans, after the first frame;
+  the quit tasks shut the queue down.
+- **Downloads give way** through `SourceConnections.giveWay`: `room()` asks
+  the download holder to let go before it waits. The queue comes back 10 s
+  after other holders leave a source. **Don't await a `StreamSubscription
+  .cancel()` in code tests drive with fake time** — its future is the root
+  zone's and the rest escapes fake time (the first queue tests hung on it).
+- **The downloads isolate's code is plain Dart** (the SIGKILL victim runs
+  under `dart run`): never import Flutter there; `stream_facts.dart` and
+  anything importing it (the finisher's probe) bring Flutter in, so the
+  victim uses a stand-in finisher.
+- **The library's shown columns hold the user's edit** (`title`, `kind`, …);
+  `user_edits_json` says what was set; a rescan writes only the rest. Remove
+  from library is a settings list (`library.removed`), read by the scanner.
+- **A file on this computer:** `ResolvedStream.local`; the coordinator skips
+  the connection rules, holds none, and fails at once as `fileUnreadable`.
+  `PlayableLibraryItem` (sourceId '', `LocalRef(quickHash)`); local history
+  and favorites have their own DAO methods (no source: `source_id IS NULL`,
+  one row each by the `*_local` indexes). The cast still asks for a
+  download's provider stream (`downloaded: false`) until step 7.
+- **Tests and tools:** `test/features/downloads/support/download_e2e_rig.dart`
+  (`DownloadE2E`: the fake panel, the isolate, ffprobe, a database);
+  `download_kill_test.dart` (the `dart run` victim); `library_tree.sh <dir>
+  <count>` (+ `.manifest.tsv`; tests lower the 20 MB minimum); the benchmarks
+  `test/tools/download_measure_test.dart` and
+  `test/tools/library_scan_measure_test.dart` (`--tags benchmark
+  --run-skipped`). **A measurement must not count the test's own work**: the
+  scan's "35 ms" pause was the test reading 5,000 rows on its isolate.
+- **For step 6:** mapping 5,000 library rows on the UI isolate takes about
+  30 ms — the Library's grids need windowed queries like the Movies grid's.
+  Local pictures (thumbnails, posters on disk) need a file image path through
+  the design system (`artworkFor` takes URLs). The canvas has Library,
+  Library · Downloads and Settings · Downloads and library; read it with the
+  Artifact tool first. `NextEpisode.stillUrl` is null for local files for now.
+- **Traps met:** `Result.guard` used to wrap a thrown `AppFailure` as
+  "unexpected" (fixed in `AppFailure.fromError`); a guarded job's result is a
+  `Result` inside a `Result`; Dart's `RandomAccessFile.flush()` is an `fsync`
+  (why downloads sync every 64 MB); `xdg_directories.getUserDirectory` runs a
+  process synchronously (read `user-dirs.dirs` instead).
+
+From the session before (Phase 7 step 8, before the TV):
 - **`test/tools/cast_matrix_tv_test.dart`** (`real_cast`): `_rows()` holds
   the matrix (number, name, what to watch, `asks` for a row that needs the
   user, `fakeDevice` for the fake run); `_Matrix` is the stack (built like

@@ -64,6 +64,7 @@ String castWhatLine(Playable? item, {String? programme}) => switch (item) {
   PlayableEpisode(:final series, :final episode) =>
     '${series.name} · S${episode.season} E${episode.episode} · '
         '${episode.title}',
+  PlayableLibraryItem(:final item) => item.title,
 };
 
 /// The casting view's and the bar's word for where a cast is, when it

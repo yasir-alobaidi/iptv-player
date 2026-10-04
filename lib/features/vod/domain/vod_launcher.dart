@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 
 /// Starts a movie or an episode in the full-screen player (Phase 5 step
@@ -11,4 +12,7 @@ abstract interface class VodLauncher {
     EpisodeItem episode, {
     Duration? from,
   });
+
+  /// A video of the user's own from the library (Phase 8).
+  Future<void> playLibraryItem(LibraryItem item, {Duration? from});
 }

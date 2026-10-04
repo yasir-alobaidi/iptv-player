@@ -250,4 +250,46 @@ class FavoritesDao extends DatabaseAccessor<AppDatabase>
     (t) => OrderingTerm(expression: t.addedAt),
     (t) => OrderingTerm(expression: t.id),
   ];
+
+  // ---- A file of the user's own (Phase 8): no source, keyed by its
+  // quick hash; one row each (the `favorites_local` index).
+
+  Future<void> addLocal(String remoteKey, DateTime at) => transaction(() async {
+    final held =
+        await (select(favorites)..where(
+              (t) =>
+                  t.itemType.equalsValue(UserItemType.local) &
+                  t.sourceId.isNull() &
+                  t.remoteKey.equals(remoteKey),
+            ))
+            .getSingleOrNull();
+    if (held != null) return;
+    await into(favorites).insert(
+      FavoritesCompanion.insert(
+        itemType: UserItemType.local,
+        remoteKey: remoteKey,
+        addedAt: at,
+      ),
+    );
+  });
+
+  Future<void> removeLocal(String remoteKey) =>
+      (delete(favorites)..where(
+            (t) =>
+                t.itemType.equalsValue(UserItemType.local) &
+                t.sourceId.isNull() &
+                t.remoteKey.equals(remoteKey),
+          ))
+          .go();
+
+  /// The quick hashes of the local files that are favorites.
+  Stream<Set<String>> watchLocalKeys() =>
+      (select(favorites)..where(
+            (t) =>
+                t.itemType.equalsValue(UserItemType.local) &
+                t.sourceId.isNull(),
+          ))
+          .map((row) => row.remoteKey)
+          .watch()
+          .map((keys) => keys.toSet());
 }

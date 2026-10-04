@@ -729,3 +729,28 @@ final class _Quiet extends LogOutput {
   @override
   void output(OutputEvent event) {}
 }
+
+/// The scanner's `subtitles_json`, read tolerantly.
+List<ExternalSubtitle> subtitlesFromJson(String? text) {
+  if (text == null) return const [];
+  try {
+    final json = jsonDecode(text);
+    if (json is! List) return const [];
+    return [
+      for (final entry in json)
+        if (entry is Map &&
+            entry['file'] is String &&
+            entry['format'] is String)
+          ExternalSubtitle(
+            fileName: entry['file'] as String,
+            format: entry['format'] as String,
+            language: entry['language'] is String
+                ? entry['language'] as String
+                : null,
+            forced: entry['forced'] == true,
+          ),
+    ];
+  } on FormatException {
+    return const [];
+  }
+}

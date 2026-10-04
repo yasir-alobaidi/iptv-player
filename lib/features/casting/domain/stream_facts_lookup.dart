@@ -31,7 +31,7 @@ final class CastStreamKey {
   String toString() => 'CastStreamKey($sourceId, ${kind.name}, $id)';
 }
 
-enum CastStreamKind { live, movie, episode }
+enum CastStreamKind { live, movie, episode, libraryFile }
 
 /// The facts a cast's plan starts from, cheapest first (Phase 7 decision
 /// 4): the laptop's player when it is playing this very stream, then

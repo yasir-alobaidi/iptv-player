@@ -209,7 +209,7 @@ void main() {
           },
         );
         async.flushMicrotasks();
-        expect(vod.next, e2);
+        expect(vod.next?.item, PlayableEpisode(series, e2));
 
         final end = length.inSeconds;
         rig.coordinator.seek(length - const Duration(seconds: 30));

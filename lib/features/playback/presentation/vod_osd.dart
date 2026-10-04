@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -38,6 +39,7 @@ class VodOsdTop extends ConsumerWidget {
         series.name,
         episodeLine(episode),
       ),
+      PlayableLibraryItem(item: final file) => libraryTitleLines(file),
       PlayableChannel(:final channel) => (channel.name, null),
     };
     return DecoratedBox(
@@ -96,6 +98,20 @@ class VodOsdTop extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// A library file's title and line: a show's name over "S2 · E4 ·
+/// Undertow", else its own title and year.
+(String, String?) libraryTitleLines(LibraryItem file) {
+  if (file.kind == LibraryKind.episode && file.showTitle != null) {
+    final title = file.title.trim();
+    return (
+      file.showTitle!,
+      'S${file.season ?? 1} · E${file.episode ?? 1}'
+          '${title.isEmpty ? '' : ' · $title'}',
+    );
+  }
+  return (file.title, file.year?.toString());
 }
 
 /// "S2 · E4 · Undertow".
@@ -258,14 +274,14 @@ class VodOsdBottom extends StatelessWidget {
 /// ([countdown] null): Play next episode and Back to series.
 class NextEpisodeCard extends StatefulWidget {
   const new({
-    required this.episode,
+    required this.next,
     required this.countdown,
     required this.onPlay,
     required this.onSecondary,
     super.key,
   });
 
-  final EpisodeItem episode;
+  final NextEpisode next;
   final int? countdown;
   final VoidCallback onPlay;
 
@@ -301,7 +317,7 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final episode = widget.episode;
+    final episode = widget.next;
     final countdown = widget.countdown;
     const still = Size(144, 81);
     return Container(
@@ -344,14 +360,17 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'S${episode.season} · E${episode.episode}',
-                        style: tokens.text.caption.copyWith(
-                          color: colors.textSecondary,
+                      if (episode.season != null && episode.episode != null)
+                        Text(
+                          'S${episode.season} · E${episode.episode}',
+                          style: tokens.text.caption.copyWith(
+                            color: colors.textSecondary,
+                          ),
                         ),
-                      ),
                       Text(
-                        episode.title,
+                        episode.title.isEmpty
+                            ? 'Episode ${episode.episode ?? ''}'.trim()
+                            : episode.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: tokens.text.bodyStrong.copyWith(

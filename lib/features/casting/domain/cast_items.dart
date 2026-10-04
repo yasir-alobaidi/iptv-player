@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
@@ -72,6 +73,7 @@ final class CastItems {
           fileExtension: switch (item) {
             PlayableMovie(:final movie) => movie.ext,
             PlayableEpisode(:final episode) => episode.ext,
+            PlayableLibraryItem(:final item) => _extension(item.relPath),
             PlayableChannel() => null,
           },
         ),
@@ -94,11 +96,24 @@ final class CastItems {
     );
   }
 
+  /// The provider's stream, also for a title that was downloaded: the
+  /// TV reads URLs, and sending it the file comes with Phase 8 step 7.
   Future<Result<ResolvedStream>> _resolve(Playable item) => switch (item) {
     PlayableChannel(:final channel) => _resolver.live(channel),
-    PlayableMovie(:final movie) => _resolver.movie(movie),
-    PlayableEpisode(:final episode) => _resolver.episode(episode),
+    PlayableMovie(:final movie) => _resolver.movie(movie, downloaded: false),
+    PlayableEpisode(:final episode) => _resolver.episode(
+      episode,
+      downloaded: false,
+    ),
+    PlayableLibraryItem() => Future.value(
+      Err(InvalidInputFailure("A file from the library can't be cast yet.")),
+    ),
   };
+
+  static String? _extension(String relPath) {
+    final dot = relPath.lastIndexOf('.');
+    return dot < 0 ? null : relPath.substring(dot + 1).toLowerCase();
+  }
 
   /// "201 · Arena Sports 1" and its programme; a movie and its year; an
   /// episode and its series. Never fails: the guide is optional.
@@ -131,6 +146,13 @@ final class CastItems {
           subtitle: '${series.name} · S${episode.season} E${episode.episode}',
           imageUrl: episode.stillUrl ?? series.posterUrl,
         );
+      case PlayableLibraryItem(:final item):
+        return CastMetadata(
+          title: item.title,
+          subtitle: item.kind == LibraryKind.episode
+              ? '${item.showTitle ?? ''} · S${item.season} E${item.episode}'
+              : item.year?.toString(),
+        );
     }
   }
 }
@@ -151,6 +173,11 @@ CastStreamKey keyOf(Playable item) => switch (item) {
     sourceId: episode.sourceId,
     kind: CastStreamKind.episode,
     id: episode.remoteKey,
+  ),
+  PlayableLibraryItem(:final item) => CastStreamKey(
+    sourceId: '',
+    kind: CastStreamKind.libraryFile,
+    id: item.quickHash,
   ),
 };
 

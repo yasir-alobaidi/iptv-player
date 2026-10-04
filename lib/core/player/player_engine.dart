@@ -79,6 +79,7 @@ final class PlayRequest {
     this.subtitleLanguages = const [],
     this.deinterlace,
     this.start,
+    this.subtitleFiles = const [],
   });
 
   /// Carries credentials: never log it without `redact()`.
@@ -100,6 +101,9 @@ final class PlayRequest {
   /// Where a file starts (a resume): one open that begins there, rather
   /// than an open and then a seek. Null or zero is the start.
   final Duration? start;
+
+  /// Subtitle files to add as tracks (a library file's, docs/09).
+  final List<String> subtitleFiles;
 
   @override
   String toString() =>

@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/library/library_scan.dart'
+    show subtitlesFromJson;
 import 'package:iptv_player/data/providers/m3u/m3u_credentials.dart';
 import 'package:iptv_player/data/providers/provider_http.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -11,10 +15,13 @@ import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/sources/data/db_source_overview_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
+import 'package:path/path.dart' as p;
 
 /// Builds stream URLs from the source and its secrets at play time: the
 /// Xtream path from the server and credentials, an M3U line's template
-/// filled in from the playlist URL's secrets (docs/02).
+/// filled in from the playlist URL's secrets (docs/02). A movie or an
+/// episode that was downloaded plays from its file (Phase 8 decision 8),
+/// with no connection to the provider.
 final class DbStreamResolver implements StreamResolver {
   new(this._db, this._sources);
 
@@ -47,7 +54,73 @@ final class DbStreamResolver implements StreamResolver {
   );
 
   @override
-  Future<Result<ResolvedStream>> movie(MovieItem movie) => _resolve(
+  Future<Result<ResolvedStream>> movie(
+    MovieItem movie, {
+    bool downloaded = true,
+  }) async =>
+      (downloaded
+          ? await _downloaded(VodType.movie, movie.sourceId, movie.remoteKey)
+          : null) ??
+      await _movie(movie);
+
+  @override
+  Future<Result<ResolvedStream>> episode(
+    EpisodeItem episode, {
+    bool downloaded = true,
+  }) async =>
+      (downloaded
+          ? await _downloaded(
+              VodType.episode,
+              episode.sourceId,
+              episode.remoteKey,
+            )
+          : null) ??
+      await _episode(episode);
+
+  @override
+  Future<Result<ResolvedStream>> libraryFile(LibraryItem item) async {
+    final file = await _file(await _db.libraryDao.itemById(item.id));
+    return file == null
+        ? Err(NotFoundFailure('${item.relPath} is not there'))
+        : Ok(file);
+  }
+
+  /// The downloaded file of a title, when it is there.
+  Future<Ok<ResolvedStream>?> _downloaded(
+    VodType type,
+    String sourceId,
+    String remoteKey,
+  ) async {
+    try {
+      final row = await _db.libraryDao.itemForTitle(sourceId, type, remoteKey);
+      final file = await _file(row);
+      return file == null ? null : Ok(file);
+    } on Object {
+      // The provider, then.
+      return null;
+    }
+  }
+
+  Future<ResolvedStream?> _file(LibraryItemRow? row) async {
+    if (row == null) return null;
+    final folder = await _db.libraryDao.folderById(row.folderId);
+    if (folder == null || !folder.isAvailable) return null;
+    final path = p.joinAll([folder.path, ...row.relPath.split('/')]);
+    if (!File(path).existsSync()) return null;
+    final beside = p.dirname(path);
+    return ResolvedStream(
+      url: path,
+      maxConnections: 1,
+      local: true,
+      subtitleFiles: [
+        for (final subtitle in subtitlesFromJson(row.subtitlesJson))
+          if (File(p.join(beside, subtitle.fileName)).existsSync())
+            p.join(beside, subtitle.fileName),
+      ],
+    );
+  }
+
+  Future<Result<ResolvedStream>> _movie(MovieItem movie) => _resolve(
     movie.sourceId,
     line: () async {
       final row = await _db.moviesDao.byRemoteKey(
@@ -68,8 +141,7 @@ final class DbStreamResolver implements StreamResolver {
     ),
   );
 
-  @override
-  Future<Result<ResolvedStream>> episode(EpisodeItem episode) => _resolve(
+  Future<Result<ResolvedStream>> _episode(EpisodeItem episode) => _resolve(
     episode.sourceId,
     line: () async {
       final row = await _episodeRow(episode);

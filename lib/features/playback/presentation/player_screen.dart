@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
@@ -11,6 +12,7 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
 import 'package:iptv_player/features/casting/presentation/casting_view_state.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
@@ -95,6 +97,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       series: ref.read(seriesRepositoryProvider),
       progress: ref.read(watchProgressProvider),
       onFinished: _finished,
+      library: ref.read(libraryRepositoryProvider),
     )..addListener(_onVod);
     // The file was asked for before the player came up: its state so far.
     final (pinned, card, hasNext) = _vodFlags();
@@ -183,6 +186,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         router.go(movieDetailsPath(movie));
       case PlayableEpisode(:final series):
         router.go(seriesDetailsPath(series));
+      case PlayableLibraryItem():
+        router.go(AppDestination.library.path);
       case PlayableChannel():
         _exit();
     }
@@ -321,14 +326,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     router.go(switch (_coordinator.item) {
       PlayableMovie(:final movie) => movieDetailsPath(movie),
       PlayableEpisode(:final series) => seriesDetailsPath(series),
+      PlayableLibraryItem() => AppDestination.library.path,
       _ => '/live',
     });
   }
 
   /// The end card's Back to series.
   void _backToSeries() {
-    if (_vod.item case PlayableEpisode(:final series)) {
-      GoRouter.of(context).go(seriesDetailsPath(series));
+    switch (_vod.item) {
+      case PlayableEpisode(:final series):
+        GoRouter.of(context).go(seriesDetailsPath(series));
+      case PlayableLibraryItem():
+        GoRouter.of(context).go(AppDestination.library.path);
+      case _:
+        break;
     }
   }
 
@@ -742,8 +753,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             child: Padding(
               padding: EdgeInsets.only(right: tokens.spacing.s32),
               child: NextEpisodeCard(
-                key: ValueKey(next.remoteKey),
-                episode: next,
+                key: ValueKey(next.item.remoteKey),
+                next: next,
                 countdown: countdown,
                 onPlay: _vod.playNext,
                 onSecondary: countdown != null

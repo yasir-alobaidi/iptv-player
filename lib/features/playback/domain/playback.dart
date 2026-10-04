@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -14,6 +15,8 @@ final class ResolvedStream {
     this.userAgent,
     this.hls = false,
     this.customUserAgent = false,
+    this.local = false,
+    this.subtitleFiles = const [],
   });
 
   /// Carries the credentials.
@@ -29,9 +32,17 @@ final class ResolvedStream {
   /// `max_connections`, or 1 when neither says.
   final int maxConnections;
 
+  /// A file on this computer (a download, a library file): [url] is its
+  /// path; it holds no connection and is never reconnected (docs/09).
+  final bool local;
+
+  /// Subtitle files beside it, added as tracks (docs/09).
+  final List<String> subtitleFiles;
+
   @override
   String toString() =>
-      'ResolvedStream(hls: $hls, maxConnections: $maxConnections)';
+      'ResolvedStream(hls: $hls, maxConnections: $maxConnections'
+      '${local ? ', local' : ''})';
 }
 
 /// Builds the URL to play, from the source, every time (docs/02: a
@@ -39,9 +50,18 @@ final class ResolvedStream {
 abstract interface class StreamResolver {
   Future<Result<ResolvedStream>> live(ChannelItem channel);
 
-  Future<Result<ResolvedStream>> movie(MovieItem movie);
+  /// A movie's stream: its downloaded file when there is one (Phase 8
+  /// decision 8), unless [downloaded] is false (the provider's, for a
+  /// cast, until the cast sends files itself).
+  Future<Result<ResolvedStream>> movie(MovieItem movie, {bool downloaded});
 
-  Future<Result<ResolvedStream>> episode(EpisodeItem episode);
+  Future<Result<ResolvedStream>> episode(
+    EpisodeItem episode, {
+    bool downloaded,
+  });
+
+  /// A library file of the user's own (Phase 8).
+  Future<Result<ResolvedStream>> libraryFile(LibraryItem item);
 }
 
 /// What was watched, for the last-channel key and "recently watched".
@@ -138,6 +158,7 @@ final class PlaybackSettings {
     subtitleLanguages: subtitleLanguages,
     deinterlace: deinterlace,
     start: start,
+    subtitleFiles: stream.subtitleFiles,
   );
 
   @override

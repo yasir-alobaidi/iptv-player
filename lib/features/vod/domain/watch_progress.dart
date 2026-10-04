@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 
@@ -89,6 +90,22 @@ final class MovieRef extends VodRef {
   int get hashCode => Object.hash('movie', sourceId, remoteKey);
 }
 
+/// A file of the user's own in the library (Phase 8): no source, keyed
+/// by its quick hash, so its history follows it across renames and moves
+/// (docs/09).
+final class LocalRef extends VodRef {
+  const new(String quickHash) : super('', quickHash);
+
+  String get quickHash => remoteKey;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LocalRef && other.remoteKey == remoteKey;
+
+  @override
+  int get hashCode => Object.hash('local', remoteKey);
+}
+
 final class EpisodeRef extends VodRef {
   const new(super.sourceId, super.remoteKey, {required this.seriesKey});
 
@@ -177,6 +194,28 @@ final class ContinueEpisode extends ContinueItem {
 
   @override
   int get hashCode => Object.hash(series, episode, mark, at);
+}
+
+/// A video of the user's own from the library, between a minute and 95 %
+/// (Phase 8).
+final class ContinueLibraryFile extends ContinueItem {
+  const new({required this.item, required this.mark, required super.at});
+
+  final LibraryItem item;
+  final WatchMark mark;
+
+  @override
+  String get sourceId => '';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ContinueLibraryFile &&
+      other.item == item &&
+      other.mark == mark &&
+      other.at == at;
+
+  @override
+  int get hashCode => Object.hash(item, mark, at);
 }
 
 /// What was watched and where it stopped (docs/03: VOD positions every

@@ -78,6 +78,10 @@ abstract interface class LibraryRepository {
   /// Takes the item out of the library; the file stays.
   Future<Result<void>> removeItem(int itemId);
 
+  /// The next file of [episode]'s show (by season and episode), across
+  /// the library's folders; null after the last.
+  Future<LibraryItem?> episodeAfter(LibraryItem episode);
+
   /// Moves the video and its subtitle files to the trash, or, with
   /// [permanently], deletes them.
   Future<Result<DeleteOutcome>> deleteFile(

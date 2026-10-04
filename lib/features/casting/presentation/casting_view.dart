@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -520,6 +521,7 @@ class _Artwork extends StatelessWidget {
         episode.stillUrl == null,
       ),
       null => ('', null, false),
+      PlayableLibraryItem(:final item) => (item.title, null, true),
     };
     final width = poster ? size * 2 / 3 : size;
     return Container(
@@ -588,6 +590,12 @@ class _Titles extends ConsumerWidget {
       PlayableEpisode(:final series, :final episode) => (
         '${series.name} · S${episode.season} E${episode.episode}',
         episode.title,
+      ),
+      PlayableLibraryItem(:final item) => (
+        item.kind == LibraryKind.episode
+            ? '${item.showTitle ?? ''} · S${item.season} E${item.episode}'
+            : item.year?.toString(),
+        item.title,
       ),
     };
     return Column(

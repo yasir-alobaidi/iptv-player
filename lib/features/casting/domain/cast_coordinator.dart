@@ -1328,6 +1328,7 @@ final class CastCoordinator implements RemotePlayback {
       switch (cast.item) {
         PlayableMovie(:final movie) => movie.runtime,
         PlayableEpisode(:final episode) => episode.duration,
+        PlayableLibraryItem(:final item) => item.duration,
         PlayableChannel() => null,
       };
 

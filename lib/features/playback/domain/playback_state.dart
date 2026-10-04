@@ -184,7 +184,11 @@ enum PlaybackProblemKind {
   unsupported(retryable: false),
 
   /// The app couldn't build the stream (keyring locked, source gone).
-  unavailable(retryable: false);
+  unavailable(retryable: false),
+
+  /// A file on this computer that is gone or can't be read (docs/09: no
+  /// reconnects; Show in folder, Remove from library).
+  fileUnreadable(retryable: false);
 
   new({required this.retryable});
 

@@ -132,4 +132,85 @@ class WatchHistoryDao extends DatabaseAccessor<AppDatabase>
                 t.seriesKey.equals(seriesKey),
           ))
           .write(const WatchHistoryCompanion(dismissed: Value(true)));
+
+  // ---- A file of the user's own (Phase 8): no source, keyed by its
+  // quick hash; one row each (the `watch_history_local` index).
+
+  SimpleSelectStatement<$WatchHistoryTable, WatchHistoryRow> _local(
+    String remoteKey,
+  ) => select(watchHistory)
+    ..where(
+      (t) =>
+          t.itemType.equalsValue(UserItemType.local) &
+          t.sourceId.isNull() &
+          t.remoteKey.equals(remoteKey),
+    );
+
+  /// [touch] for a local file.
+  Future<void> touchLocal(
+    String remoteKey,
+    DateTime at, {
+    int? positionMs,
+    int? durationMs,
+    bool? completed,
+    bool? dismissed,
+  }) => transaction(() async {
+    final values = WatchHistoryCompanion(
+      updatedAt: Value(at),
+      positionMs: Value.absentIfNull(positionMs),
+      durationMs: Value.absentIfNull(durationMs),
+      completed: Value.absentIfNull(completed),
+      dismissed: Value.absentIfNull(dismissed),
+    );
+    final row = await _local(remoteKey).getSingleOrNull();
+    if (row == null) {
+      await into(watchHistory).insert(
+        values.copyWith(
+          itemType: const Value(UserItemType.local),
+          remoteKey: Value(remoteKey),
+        ),
+      );
+    } else {
+      await (update(
+        watchHistory,
+      )..where((t) => t.id.equals(row.id))).write(values);
+    }
+  });
+
+  Stream<WatchHistoryRow?> watchLocal(String remoteKey) =>
+      _local(remoteKey).watchSingleOrNull();
+
+  Future<WatchHistoryRow?> findLocal(String remoteKey) =>
+      _local(remoteKey).getSingleOrNull();
+
+  Future<int> forgetLocal(String remoteKey) =>
+      (delete(watchHistory)..where(
+            (t) =>
+                t.itemType.equalsValue(UserItemType.local) &
+                t.sourceId.isNull() &
+                t.remoteKey.equals(remoteKey),
+          ))
+          .go();
+
+  Future<int> dismissLocal(String remoteKey) =>
+      (update(watchHistory)..where(
+            (t) =>
+                t.itemType.equalsValue(UserItemType.local) &
+                t.sourceId.isNull() &
+                t.remoteKey.equals(remoteKey),
+          ))
+          .write(const WatchHistoryCompanion(dismissed: Value(true)));
+
+  /// Local files watched and not dismissed, newest first.
+  Future<List<WatchHistoryRow>> recentLocal({int limit = 20}) =>
+      (select(watchHistory)
+            ..where(
+              (t) =>
+                  t.itemType.equalsValue(UserItemType.local) &
+                  t.sourceId.isNull() &
+                  t.dismissed.equals(false),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])
+            ..limit(limit))
+          .get();
 }

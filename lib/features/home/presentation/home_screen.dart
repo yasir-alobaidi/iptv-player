@@ -9,11 +9,13 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/catalogue_kind.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/home/presentation/home_rows.dart';
 import 'package:iptv_player/features/home/presentation/home_state.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
@@ -90,6 +92,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         unawaited(launcher.playMovie(movie, from: mark.position));
       case ContinueEpisode(:final series, :final episode, :final mark):
         unawaited(launcher.playEpisode(series, episode, from: mark?.position));
+      case ContinueLibraryFile(:final item, :final mark):
+        unawaited(launcher.playLibraryItem(item, from: mark.position));
     }
   }
 
@@ -501,6 +505,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ].nonNulls.join(' · '),
         mark?.fraction,
         () => _toggleSeries(series),
+      ),
+      ContinueLibraryFile(:final item, :final mark) => (
+        item.showTitle ?? item.title,
+        null,
+        [
+          switch (item.kind) {
+            LibraryKind.episode =>
+              'S${item.season ?? 1} · E${item.episode ?? 1}',
+            LibraryKind.movie => 'Movie',
+            LibraryKind.unsorted => 'Video',
+          },
+          if (mark.remaining case final left? when left > Duration.zero)
+            formatTimeLeft(left),
+        ].join(' · '),
+        mark.fraction,
+        () => ref.read(libraryFavoritesProvider).toggle(item),
       ),
     };
     return _favoriteKey(

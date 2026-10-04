@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -59,7 +60,15 @@ Map<String, String> mpvOptionsFor(PlayRequest request) => {
   'slang': request.subtitleLanguages.join(','),
   if (request.deinterlace != null)
     'deinterlace': request.deinterlace! ? 'yes' : 'no',
+  // A library file's subtitle files (docs/09), as tracks; empty clears the
+  // last file's. mpv's list option parts paths at ':' (';' on Windows),
+  // so a path holding one is left out.
+  'sub-files': request.subtitleFiles
+      .where((path) => !path.contains(_listSeparator))
+      .join(_listSeparator),
 };
+
+final _listSeparator = Platform.isWindows ? ';' : ':';
 
 /// [PlayerEngine] on media_kit (libmpv) with our patched media_kit_video
 /// (ADR-003). One instance for the app's lifetime; every channel is an

@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
@@ -76,12 +77,20 @@ final class PanelResolver implements StreamResolver {
   );
 
   @override
-  Future<Result<ResolvedStream>> movie(MovieItem movie) =>
-      _answer('movie/test/test/${movie.remoteKey}.${movie.ext}');
+  Future<Result<ResolvedStream>> movie(
+    MovieItem movie, {
+    bool downloaded = true,
+  }) => _answer('movie/test/test/${movie.remoteKey}.${movie.ext}');
 
   @override
-  Future<Result<ResolvedStream>> episode(EpisodeItem episode) =>
-      _answer('series/test/test/${episode.remoteKey}.${episode.ext}');
+  Future<Result<ResolvedStream>> episode(
+    EpisodeItem episode, {
+    bool downloaded = true,
+  }) => _answer('series/test/test/${episode.remoteKey}.${episode.ext}');
+
+  @override
+  Future<Result<ResolvedStream>> libraryFile(LibraryItem item) async =>
+      Err(NotFoundFailure('no library here'));
 }
 
 /// A cast through the app, real except the screens and the TV: the fake

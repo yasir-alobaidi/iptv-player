@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
@@ -38,6 +39,10 @@ final class PlayerVodLauncher implements VodLauncher {
     EpisodeItem episode, {
     Duration? from,
   }) => _start(PlayableEpisode(series, episode), from);
+
+  @override
+  Future<void> playLibraryItem(LibraryItem item, {Duration? from}) =>
+      _start(PlayableLibraryItem(item), from);
 
   Future<void> _start(Playable item, Duration? from) async {
     // The player opens on the new item's Opening, not on what played last.

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
@@ -29,6 +30,9 @@ final class RecordingLauncher implements VodLauncher {
     EpisodeItem episode, {
     Duration? from,
   }) async => played.add('${episode.remoteKey} from ${from?.inMinutes ?? 0}');
+
+  @override
+  Future<void> playLibraryItem(LibraryItem item, {Duration? from}) async {}
 }
 
 const _info = XtreamMovieInfo(
