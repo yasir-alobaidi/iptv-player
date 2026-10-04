@@ -14,6 +14,47 @@ import 'support/playback_fakes.dart';
 /// Phase 8 decision 8: library files and downloads on the one
 /// coordinator — no connection, no reconnects, history by quick hash.
 void main() {
+  test("a download keeps its title's history key however it plays; a file "
+      "of the user's own its quick hash", () {
+    LibraryItem with_(ProviderLink? provider) => LibraryItem(
+      id: 1,
+      folderId: 1,
+      relPath: 'a.mkv',
+      sizeBytes: 1,
+      modifiedAt: DateTime.utc(2026),
+      quickHash: 'hash-1',
+      kind: LibraryKind.movie,
+      title: 'A',
+      addedAt: DateTime.utc(2026),
+      provider: provider,
+    );
+    expect(libraryVodRef(with_(null)), const LocalRef('hash-1'));
+    expect(
+      PlayableLibraryItem(
+        with_(
+          const ProviderLink(
+            sourceId: 'src',
+            type: VodType.movie,
+            remoteKey: '100000',
+          ),
+        ),
+      ).vodRef,
+      const MovieRef('src', '100000'),
+    );
+    expect(
+      libraryVodRef(
+        with_(
+          const ProviderLink(
+            sourceId: 'src',
+            type: VodType.episode,
+            remoteKey: '7201',
+            seriesKey: '77',
+          ),
+        ),
+      ),
+      const EpisodeRef('src', '7201', seriesKey: '77'),
+    );
+  });
   const length = Duration(minutes: 42);
 
   LibraryItem file({

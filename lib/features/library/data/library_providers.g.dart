@@ -383,3 +383,133 @@ final class LibraryFavoritesProvider
 }
 
 String _$libraryFavoritesHash() => r'14570b8f73ae6f7021aabbaaeab28f2e2d2a63ed';
+
+/// Whether a folder is watched ("Updates automatically") or only scanned
+/// when asked ("Updates when rescanned"); null until its watch started.
+
+@ProviderFor(libraryFolderWatched)
+final libraryFolderWatchedProvider = LibraryFolderWatchedFamily._();
+
+/// Whether a folder is watched ("Updates automatically") or only scanned
+/// when asked ("Updates when rescanned"); null until its watch started.
+
+final class LibraryFolderWatchedProvider
+    extends $FunctionalProvider<AsyncValue<bool?>, bool?, Stream<bool?>>
+    with $FutureModifier<bool?>, $StreamProvider<bool?> {
+  /// Whether a folder is watched ("Updates automatically") or only scanned
+  /// when asked ("Updates when rescanned"); null until its watch started.
+  LibraryFolderWatchedProvider._({
+    required LibraryFolderWatchedFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'libraryFolderWatchedProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$libraryFolderWatchedHash();
+
+  @override
+  String toString() {
+    return r'libraryFolderWatchedProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<bool?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<bool?> create(Ref ref) {
+    final argument = this.argument as int;
+    return libraryFolderWatched(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LibraryFolderWatchedProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$libraryFolderWatchedHash() =>
+    r'c53a6538fbd6552f1a11d5b72b32dd949c5c5763';
+
+/// Whether a folder is watched ("Updates automatically") or only scanned
+/// when asked ("Updates when rescanned"); null until its watch started.
+
+final class LibraryFolderWatchedFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<bool?>, int> {
+  LibraryFolderWatchedFamily._()
+    : super(
+        retry: null,
+        name: r'libraryFolderWatchedProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Whether a folder is watched ("Updates automatically") or only scanned
+  /// when asked ("Updates when rescanned"); null until its watch started.
+
+  LibraryFolderWatchedProvider call(int folderId) =>
+      LibraryFolderWatchedProvider._(argument: folderId, from: this);
+
+  @override
+  String toString() => r'libraryFolderWatchedProvider';
+}
+
+/// The user's home folder, which folder paths show as `~`.
+
+@ProviderFor(homeFolder)
+final homeFolderProvider = HomeFolderProvider._();
+
+/// The user's home folder, which folder paths show as `~`.
+
+final class HomeFolderProvider
+    extends $FunctionalProvider<String?, String?, String?>
+    with $Provider<String?> {
+  /// The user's home folder, which folder paths show as `~`.
+  HomeFolderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'homeFolderProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$homeFolderHash();
+
+  @$internal
+  @override
+  $ProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String? create(Ref ref) {
+    return homeFolder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$homeFolderHash() => r'52196f1693be974071c0658a18d2c39712ce5436';

@@ -133,3 +133,27 @@ class SkeletonPoster extends StatelessWidget {
     );
   }
 }
+
+/// Skeleton for a 16:9 card with its caption.
+class SkeletonLandscape extends StatelessWidget {
+  const new({this.width = 280, super.key});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Skeleton(
+          width: width,
+          height: width * 9 / 16,
+          borderRadius: tokens.radii.mdAll,
+        ),
+        SizedBox(height: tokens.spacing.s8),
+        Skeleton(width: width * 0.7, height: 12),
+      ],
+    );
+  }
+}

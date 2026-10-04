@@ -94,3 +94,19 @@ Stream<LibraryScanState> libraryScanState(Ref ref) async* {
 @Riverpod(keepAlive: true)
 LibraryFavorites libraryFavorites(Ref ref) =>
     LibraryFavorites(ref.watch(appDatabaseProvider));
+
+/// Whether a folder is watched ("Updates automatically") or only scanned
+/// when asked ("Updates when rescanned"); null until its watch started.
+@riverpod
+Stream<bool?> libraryFolderWatched(Ref ref, int folderId) async* {
+  final scans = ref.watch(libraryScansProvider);
+  yield scans.watched(folderId);
+  await for (final _ in scans.watchChanges) {
+    yield scans.watched(folderId);
+  }
+}
+
+/// The user's home folder, which folder paths show as `~`.
+@Riverpod(keepAlive: true)
+String? homeFolder(Ref ref) =>
+    Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];

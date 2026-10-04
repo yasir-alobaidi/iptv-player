@@ -130,7 +130,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                     (_Tab.movies, 'Movies', movies.value?.count),
                     (_Tab.series, 'Series', series.value?.count),
                   ]) ...[
-                    _TabButton(
+                    CountTab(
                       label: label,
                       count: count,
                       selected: _tab == tab,
@@ -198,70 +198,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         actionLabel: movies ? 'Open Movies' : 'Open Series',
         onAction: () => context.go(
           movies ? AppDestination.movies.path : AppDestination.series.path,
-        ),
-      ),
-    );
-  }
-}
-
-/// "Channels 8": a tab with its count, underlined when chosen (canvas).
-class _TabButton extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.count,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final String label;
-  final int? count;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final colors = tokens.colors;
-    return FocusableSurface(
-      onPressed: onPressed,
-      borderRadius: tokens.radii.smAll,
-      semanticLabel: count == null ? label : '$label, $count',
-      builder: (context, states) => Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: tokens.spacing.s4,
-          vertical: tokens.spacing.s12,
-        ),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? colors.accentBase : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: tokens.text.label
-                  .withWeight(700)
-                  .copyWith(
-                    color: selected || states.highlighted
-                        ? colors.textPrimary
-                        : colors.textSecondary,
-                  ),
-            ),
-            if (count case final count?) ...[
-              SizedBox(width: tokens.spacing.s4 + 2),
-              Text(
-                formatCount(count),
-                style: tokens.text.labelSmall.copyWith(
-                  color: selected ? colors.textSecondary : colors.textTertiary,
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );

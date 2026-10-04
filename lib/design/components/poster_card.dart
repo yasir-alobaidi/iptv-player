@@ -22,6 +22,10 @@ class PosterCard extends StatelessWidget {
     this.width = 160,
     this.autofocus = false,
     this.focusNode,
+    this.metaIcon,
+    this.metaTone = CardMetaTone.plain,
+    this.dimmed = false,
+    this.frame,
     super.key,
   });
 
@@ -30,6 +34,18 @@ class PosterCard extends StatelessWidget {
 
   /// Year, runtime — whatever belongs under the title.
   final String? meta;
+
+  /// An icon before [meta] (canvas `Library`: Downloaded, a folder, a
+  /// drive not connected), drawn in [metaTone].
+  final AppIcons? metaIcon;
+  final CardMetaTone metaTone;
+
+  /// Faded: an item on a drive that isn't connected.
+  final bool dimmed;
+
+  /// A 16:9 frame from the video, drawn across the poster's middle when
+  /// there is no poster (a file of the user's own).
+  final ImageProvider? frame;
 
   /// What the line says while the card has the focus: the canvas adds the
   /// runtime there ("2024 · 1 h 46 min").
@@ -65,90 +81,97 @@ class PosterCard extends StatelessWidget {
       growth: FocusGrowth.tile,
       borderRadius: tokens.radii.mdAll,
       semanticLabel: title,
-      builder: (context, states) => SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: tokens.radii.mdAll,
-              child: SizedBox(
-                width: width,
-                height: width * 3 / 2,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ArtworkImage(
-                      image: image,
-                      fallback: _ArtworkFallback(title: title),
-                    ),
-                    if (badge != null)
-                      Positioned(
-                        top: tokens.spacing.s8,
-                        left: tokens.spacing.s8,
-                        child: badge!,
+      builder: (context, states) => _Dimmed(
+        dimmed: dimmed,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: tokens.radii.mdAll,
+                child: SizedBox(
+                  width: width,
+                  height: width * 3 / 2,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ArtworkImage(
+                        image: image,
+                        fallback: frame == null
+                            ? _ArtworkFallback(title: title)
+                            : _FrameInPoster(frame: frame!, title: title),
                       ),
-                    if (cornerBadge != null)
-                      Positioned(
-                        top: tokens.spacing.s8,
-                        right: tokens.spacing.s8,
-                        child: cornerBadge!,
-                      ),
-                    if (progress != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: ProgressBar(value: progress),
-                      ),
-                  ],
+                      if (badge != null)
+                        Positioned(
+                          top: tokens.spacing.s8,
+                          left: tokens.spacing.s8,
+                          child: badge!,
+                        ),
+                      if (cornerBadge != null)
+                        Positioned(
+                          top: tokens.spacing.s8,
+                          right: tokens.spacing.s8,
+                          child: cornerBadge!,
+                        ),
+                      if (progress != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ProgressBar(value: progress),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: tokens.spacing.s8 + 2),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.text.label
-                  .withWeight(700)
-                  .copyWith(color: colors.textPrimary),
-            ),
-            if (meta != null || rating != null) ...[
-              SizedBox(height: tokens.spacing.s4 - 2),
-              Row(
-                children: [
-                  if (_metaFor(states) case final line?)
-                    Flexible(
-                      child: Text(
-                        rating == null ? line : '$line ·',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              SizedBox(height: tokens.spacing.s8 + 2),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.label
+                    .withWeight(700)
+                    .copyWith(color: colors.textPrimary),
+              ),
+              if (meta != null || rating != null) ...[
+                SizedBox(height: tokens.spacing.s4 - 2),
+                Row(
+                  children: [
+                    if (metaIcon case final icon?) ...[
+                      AppIcon(icon, size: 12, color: _metaIconColor(colors)),
+                      SizedBox(width: tokens.spacing.s4 + 1),
+                    ],
+                    if (_metaFor(states) case final line?)
+                      Flexible(
+                        child: Text(
+                          rating == null ? line : '$line ·',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _metaStyle(tokens),
+                        ),
+                      ),
+                    if (rating != null) ...[
+                      SizedBox(width: tokens.spacing.s4),
+                      AppIcon(
+                        AppIcons.starFilled,
+                        size: 11,
+                        color: colors.warning,
+                      ),
+                      SizedBox(width: tokens.spacing.s4 - 1),
+                      Text(
+                        rating!.toStringAsFixed(1),
                         style: tokens.text.labelSmall
                             .withWeight(500)
                             .copyWith(color: colors.textTertiary),
                       ),
-                    ),
-                  if (rating != null) ...[
-                    SizedBox(width: tokens.spacing.s4),
-                    AppIcon(
-                      AppIcons.starFilled,
-                      size: 11,
-                      color: colors.warning,
-                    ),
-                    SizedBox(width: tokens.spacing.s4 - 1),
-                    Text(
-                      rating!.toStringAsFixed(1),
-                      style: tokens.text.labelSmall
-                          .withWeight(500)
-                          .copyWith(color: colors.textTertiary),
-                    ),
+                    ],
                   ],
-                ],
-              ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -156,6 +179,67 @@ class PosterCard extends StatelessWidget {
 
   String? _metaFor(SurfaceStates states) =>
       states.focused ? focusedMeta ?? meta : meta;
+
+  Color _metaIconColor(AppColors colors) => switch (metaTone) {
+    CardMetaTone.plain => colors.textTertiary,
+    CardMetaTone.success => colors.success,
+    CardMetaTone.warning => colors.warning,
+  };
+
+  TextStyle _metaStyle(AppTokens tokens) => metaTone == CardMetaTone.warning
+      ? tokens.text.labelSmall
+            .withWeight(700)
+            .copyWith(color: tokens.colors.warning)
+      : tokens.text.labelSmall
+            .withWeight(500)
+            .copyWith(color: tokens.colors.textTertiary);
+}
+
+/// How a card's line under its title reads (canvas `Library`): plainly;
+/// with a green icon (Downloaded); amber and bold (Drive not connected).
+enum CardMetaTone { plain, success, warning }
+
+/// A card faded as the canvas fades an item on a drive that isn't
+/// connected.
+class _Dimmed extends StatelessWidget {
+  const new({required this.dimmed, required this.child});
+
+  final bool dimmed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => dimmed
+      ? Opacity(
+          opacity: context.tokens.library.unavailableOpacity,
+          child: child,
+        )
+      : child;
+}
+
+/// A poster's place with no poster: the video's own frame across its
+/// middle, on the card's surface (canvas `Library`, "Harbor Walk").
+class _FrameInPoster extends StatelessWidget {
+  const new({required this.frame, required this.title});
+
+  final ImageProvider frame;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.tokens.colors;
+    return DecoratedBox(
+      decoration: BoxDecoration(color: colors.surface1),
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: ArtworkImage(
+            image: frame,
+            fallback: _ArtworkFallback(title: title, landscape: true),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A poster's picture over its stand-in, for places that draw a poster
@@ -261,6 +345,8 @@ class LandscapeCard extends StatelessWidget {
     this.width = 280,
     this.autofocus = false,
     this.focusNode,
+    this.subtitleTone = CardMetaTone.plain,
+    this.dimmed = false,
     super.key,
   });
 
@@ -269,6 +355,12 @@ class LandscapeCard extends StatelessWidget {
 
   /// "S1 · E3", a channel name, whatever identifies the item.
   final String? subtitle;
+
+  /// Amber and bold for a drive not connected (canvas `Library`).
+  final CardMetaTone subtitleTone;
+
+  /// Faded: an item on a drive that isn't connected.
+  final bool dimmed;
   final double? progress;
   final Widget? badge;
   final VoidCallback? onPressed;
@@ -290,62 +382,72 @@ class LandscapeCard extends StatelessWidget {
       growth: FocusGrowth.tile,
       borderRadius: tokens.radii.mdAll,
       semanticLabel: title,
-      builder: (context, states) => SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: tokens.radii.mdAll,
-              child: SizedBox(
-                width: width,
-                height: width * 9 / 16,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ArtworkImage(
-                      image: image,
-                      fallback: _ArtworkFallback(title: title, landscape: true),
-                    ),
-                    if (badge != null)
-                      Positioned(
-                        top: tokens.spacing.s8,
-                        left: tokens.spacing.s8,
-                        child: badge!,
+      builder: (context, states) => _Dimmed(
+        dimmed: dimmed,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: tokens.radii.mdAll,
+                child: SizedBox(
+                  width: width,
+                  height: width * 9 / 16,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ArtworkImage(
+                        image: image,
+                        fallback: _ArtworkFallback(
+                          title: title,
+                          landscape: true,
+                        ),
                       ),
-                    if (progress != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: ProgressBar(value: progress),
-                      ),
-                  ],
+                      if (badge != null)
+                        Positioned(
+                          top: tokens.spacing.s8,
+                          left: tokens.spacing.s8,
+                          child: badge!,
+                        ),
+                      if (progress != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ProgressBar(value: progress),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: tokens.spacing.s8 + 2),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.text.label
-                  .withWeight(700)
-                  .copyWith(color: colors.textPrimary),
-            ),
-            if (subtitle != null) ...[
-              SizedBox(height: tokens.spacing.s4 - 2),
+              SizedBox(height: tokens.spacing.s8 + 2),
               Text(
-                subtitle!,
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: tokens.text.labelSmall
-                    .withWeight(500)
-                    .copyWith(color: colors.textTertiary),
+                style: tokens.text.label
+                    .withWeight(700)
+                    .copyWith(color: colors.textPrimary),
               ),
+              if (subtitle != null) ...[
+                SizedBox(height: tokens.spacing.s4 - 2),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: subtitleTone == CardMetaTone.warning
+                      ? tokens.text.labelSmall
+                            .withWeight(700)
+                            .copyWith(color: colors.warning)
+                      : tokens.text.labelSmall
+                            .withWeight(500)
+                            .copyWith(color: colors.textTertiary),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

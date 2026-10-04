@@ -521,6 +521,38 @@ class AppCastTokens {
   double get barLogo => 40;
 }
 
+/// The Library's measures (canvas `Library`, `Library · Downloads`,
+/// `Settings · Downloads and library`).
+@immutable
+class AppLibraryTokens {
+  const new();
+
+  /// An item on a drive that isn't connected.
+  double get unavailableOpacity => 0.45;
+
+  /// The landscape grid of Videos: its narrowest card.
+  double get videoCardMinWidth => 280;
+
+  /// The Downloads list's rows: in progress, needing attention, finished.
+  double get downloadRowHeight => 92;
+  double get attentionRowHeight => 80;
+  double get finishedRowHeight => 72;
+
+  /// The box a row's picture sits in, and the pictures: a poster, a still.
+  double get rowArtBox => 96;
+  double get rowPosterWidth => 48;
+  double get rowPosterHeight => 72;
+  double get rowStillHeight => 54;
+
+  /// The bar under a running download, and the storage meter's.
+  double get rowBarHeight => 4;
+  double get meterHeight => 6;
+
+  /// A folder row (the Folders tab, Settings) and its icon tile.
+  double get folderRowHeight => 56;
+  double get folderIconSize => 36;
+}
+
 /// Shadows. Only floating surfaces get one (docs/05).
 @immutable
 class AppElevation {
@@ -555,6 +587,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.details = const AppDetailsTokens(),
     this.search = const AppSearchTokens(),
     this.cast = const AppCastTokens(),
+    this.library = const AppLibraryTokens(),
   });
 
   /// Defaults: blue accent, comfortable rows, full motion.
@@ -580,6 +613,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppDetailsTokens details;
   final AppSearchTokens search;
   final AppCastTokens cast;
+  final AppLibraryTokens library;
 
   @override
   AppTokens copyWith({
@@ -595,6 +629,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppDetailsTokens? details,
     AppSearchTokens? search,
     AppCastTokens? cast,
+    AppLibraryTokens? library,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -608,6 +643,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     details: details ?? this.details,
     search: search ?? this.search,
     cast: cast ?? this.cast,
+    library: library ?? this.library,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

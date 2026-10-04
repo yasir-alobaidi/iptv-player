@@ -36,6 +36,7 @@ class TitleGrid<T extends Object> extends StatefulWidget {
     required this.revision,
     this.onFavorite,
     this.pageSize = 120,
+    this.shape = TitleGridShape.poster,
     super.key,
   });
 
@@ -59,6 +60,9 @@ class TitleGrid<T extends Object> extends StatefulWidget {
   final void Function(T item)? onFavorite;
   final int pageSize;
 
+  /// Posters, or 16:9 cards (the Library's Videos).
+  final TitleGridShape shape;
+
   static const minCardWidth = 160.0;
 
   /// The canvas's gaps: 20 across, 24 down.
@@ -70,6 +74,32 @@ class TitleGrid<T extends Object> extends StatefulWidget {
 
   @override
   State<TitleGrid<T>> createState() => _TitleGridState<T>();
+}
+
+/// A [TitleGrid]'s cards: their narrowest, and their picture's height
+/// for its width.
+@immutable
+final class TitleGridShape {
+  const new({
+    required this.minCardWidth,
+    required this.pictureAspect,
+    this.landscape = false,
+  });
+
+  /// 16:9 cards of at least [minCardWidth] (the Library's Videos).
+  const new landscape(this.minCardWidth)
+    : pictureAspect = 9 / 16,
+      landscape = true;
+
+  /// 2:3 posters (Movies, Series, the Library's movies and shows).
+  static const poster = TitleGridShape(
+    minCardWidth: TitleGrid.minCardWidth,
+    pictureAspect: 3 / 2,
+  );
+
+  final double minCardWidth;
+  final double pictureAspect;
+  final bool landscape;
 }
 
 class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
@@ -312,15 +342,17 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
             // Room for a focused card's growth and ring at the edges.
             final inset = tokens.spacing.s8;
             final width = constraints.maxWidth - inset * 2;
+            final shape = widget.shape;
             _columns = math.max(
               1,
               ((width + TitleGrid.columnGap) /
-                      (TitleGrid.minCardWidth + TitleGrid.columnGap))
+                      (shape.minCardWidth + TitleGrid.columnGap))
                   .floor(),
             );
             final cardWidth =
                 (width - TitleGrid.columnGap * (_columns - 1)) / _columns;
-            final extent = cardWidth * 3 / 2 + TitleGrid.captionHeight;
+            final extent =
+                cardWidth * shape.pictureAspect + TitleGrid.captionHeight;
             _stride = extent + TitleGrid.rowGap;
             _inset = inset;
             final grid = GridView.builder(
@@ -341,7 +373,9 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
                 if (item == null) {
                   return Align(
                     alignment: Alignment.topLeft,
-                    child: SkeletonPoster(width: cardWidth),
+                    child: shape.landscape
+                        ? SkeletonLandscape(width: cardWidth)
+                        : SkeletonPoster(width: cardWidth),
                   );
                 }
                 return _Card(

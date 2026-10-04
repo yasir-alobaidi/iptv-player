@@ -106,7 +106,7 @@ final class PlayableEpisode extends Playable {
 
 /// A video of the user's own from the library (Phase 8 decision 8): no
 /// source, no connection, no reconnects. History keys it by its quick
-/// hash ([LocalRef]).
+/// hash ([LocalRef]); a download keeps its title's ([libraryVodRef]).
 final class PlayableLibraryItem extends Playable {
   const new(this.item);
 
@@ -123,7 +123,7 @@ final class PlayableLibraryItem extends Playable {
   bool get live => false;
 
   @override
-  VodRef get vodRef => LocalRef(item.quickHash);
+  VodRef get vodRef => libraryVodRef(item);
 
   @override
   bool operator ==(Object other) =>
@@ -132,3 +132,20 @@ final class PlayableLibraryItem extends Playable {
   @override
   int get hashCode => Object.hash('library', item.id);
 }
+
+/// Where a library item's place is kept: a download's under its title at
+/// the provider — the same place its page and Continue watching read,
+/// however it was played — and a file of the user's own by its quick
+/// hash.
+VodRef libraryVodRef(LibraryItem item) => switch (item.provider) {
+  ProviderLink(:final sourceId, type: VodType.movie, :final remoteKey) =>
+    MovieRef(sourceId, remoteKey),
+  ProviderLink(
+    :final sourceId,
+    type: VodType.episode,
+    :final remoteKey,
+    :final seriesKey?,
+  ) =>
+    EpisodeRef(sourceId, remoteKey, seriesKey: seriesKey),
+  _ => LocalRef(item.quickHash),
+};

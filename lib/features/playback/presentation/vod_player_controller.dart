@@ -280,7 +280,7 @@ final class VodPlayerController extends ChangeNotifier {
   Future<void> _findNextFile(Playable item, LibraryItem file) async {
     final found = await _library?.episodeAfter(file);
     if (_disposed || _item != item || found == null) return;
-    final from = await _resumeAt(LocalRef(found.quickHash));
+    final from = await _resumeAt(libraryVodRef(found));
     if (_disposed || _item != item) return;
     _next = NextEpisode.local(found, from: from);
     notifyListeners();

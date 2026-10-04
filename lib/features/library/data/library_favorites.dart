@@ -15,6 +15,15 @@ final class LibraryFavorites {
   /// The quick hashes of the user's own files that are favorites.
   Stream<Set<String>> watchLocalKeys() => _db.favoritesDao.watchLocalKeys();
 
+  /// Whether [item] is a favorite, now and on every change.
+  Stream<bool> watchFavorite(LibraryItem item) {
+    final (type, sourceId, key) = _key(item);
+    final keys = sourceId == null
+        ? watchLocalKeys()
+        : _db.favoritesDao.watchKeys(type, sourceId);
+    return keys.map((keys) => keys.contains(key));
+  }
+
   Future<bool> isFavorite(LibraryItem item) async {
     final (type, sourceId, key) = _key(item);
     if (sourceId == null) {

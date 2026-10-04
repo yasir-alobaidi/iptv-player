@@ -22,22 +22,29 @@ import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:iptv_player/features/vod/presentation/details_state.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
-/// A movie's page (canvas `Movie details`), inside the Movies branch.
+/// A movie's page (canvas `Movie details`), inside the Movies branch
+/// (or the Library's, for a download: [back] says "Library").
 class MovieDetailsScreen extends ConsumerWidget {
-  const new({required this.sourceId, required this.remoteKey, super.key});
+  const new({
+    required this.sourceId,
+    required this.remoteKey,
+    this.back = 'Movies',
+    super.key,
+  });
 
   final String sourceId;
   final String remoteKey;
+  final String back;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final found = ref.watch(movieItemProvider(sourceId, remoteKey));
-    return _DetailsFrame(
-      back: 'Movies',
+    return DetailsFrame(
+      back: back,
       loading: found is! AsyncData && found is! AsyncError,
       child: switch (found) {
         AsyncData(value: Ok(value: final movie?)) => _MoviePage(movie: movie),
-        AsyncData(value: Ok(value: null)) => const _Gone(
+        AsyncData(value: Ok(value: null)) => const DetailsGone(
           message: 'This movie is no longer available from your provider.',
         ),
         AsyncData(value: Err(:final Object failure)) ||
@@ -46,30 +53,37 @@ class MovieDetailsScreen extends ConsumerWidget {
           details: '$failure',
           onRetry: () => ref.invalidate(movieItemProvider(sourceId, remoteKey)),
         ),
-        _ => const _Loading(),
+        _ => const DetailsPageLoading(),
       },
     );
   }
 }
 
-/// A series' page (canvas `Series details`), inside the Series branch.
+/// A series' page (canvas `Series details`), inside the Series branch
+/// (or the Library's, for downloaded episodes: [back] says "Library").
 class SeriesDetailsScreen extends ConsumerWidget {
-  const new({required this.sourceId, required this.remoteKey, super.key});
+  const new({
+    required this.sourceId,
+    required this.remoteKey,
+    this.back = 'Series',
+    super.key,
+  });
 
   final String sourceId;
   final String remoteKey;
+  final String back;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final found = ref.watch(seriesItemProvider(sourceId, remoteKey));
-    return _DetailsFrame(
-      back: 'Series',
+    return DetailsFrame(
+      back: back,
       loading: found is! AsyncData && found is! AsyncError,
       child: switch (found) {
         AsyncData(value: Ok(value: final series?)) => _SeriesPage(
           series: series,
         ),
-        AsyncData(value: Ok(value: null)) => const _Gone(
+        AsyncData(value: Ok(value: null)) => const DetailsGone(
           message: 'This series is no longer available from your provider.',
         ),
         AsyncData(value: Err(:final Object failure)) ||
@@ -79,16 +93,22 @@ class SeriesDetailsScreen extends ConsumerWidget {
           onRetry: () =>
               ref.invalidate(seriesItemProvider(sourceId, remoteKey)),
         ),
-        _ => const _Loading(),
+        _ => const DetailsPageLoading(),
       },
     );
   }
 }
 
 /// What every details page has: the page's own focus group, Esc back to
-/// the grid, and the canvas's "‹ Movies" chip over the artwork.
-class _DetailsFrame extends StatelessWidget {
-  const new({required this.back, required this.child, this.loading = false});
+/// the grid, and the canvas's "‹ Movies" chip over the artwork (the
+/// Library's pages too).
+class DetailsFrame extends StatelessWidget {
+  const new({
+    required this.back,
+    required this.child,
+    this.loading = false,
+    super.key,
+  });
 
   final String back;
   final Widget child;
@@ -1299,8 +1319,8 @@ class DetailsMetaLine extends StatelessWidget {
   }
 }
 
-class _Loading extends StatelessWidget {
-  const new();
+class DetailsPageLoading extends StatelessWidget {
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1319,8 +1339,8 @@ class _Loading extends StatelessWidget {
   }
 }
 
-class _Gone extends StatelessWidget {
-  const new({required this.message});
+class DetailsGone extends StatelessWidget {
+  const new({required this.message, super.key});
 
   final String message;
 

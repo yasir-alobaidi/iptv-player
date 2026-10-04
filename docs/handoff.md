@@ -1,17 +1,18 @@
-# Handoff — 2026-10-04 (Phase 8 steps 1–5 done; step 6, the UI, next; the TV runs wait)
+# Handoff — 2026-10-04 (Phase 8 steps 1–5 done; step 6, the UI, part-way; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
-docs/decisions.md (Phase 8, step by step), docs/plans/phase-8-downloads-and-library.md,
-docs/09-downloads-and-library.md, and the Phase 8 part of
-docs/08-phases-and-prompts.md.
+docs/decisions.md (Phase 8, step by step — its step 6 section is the
+latest), docs/plans/phase-8-downloads-and-library.md (step 6 and sketches
+A–H), docs/09-downloads-and-library.md, and docs/05's Library section.
 
 ## Before you start the next session (user)
 1. **Nothing to review first.** You approved the whole Phase 8 plan and
-   asked for the steps one by one; step 5 is finished.
-2. **Push** the 4 local commits when you like: 2024e14 (the CI cast test
-   fix), a13ac82 (step 5 part 1), 72f8be6 (CI names the analyzer's
-   findings), and step 5 part 2.
+   asked for the steps one by one; step 6 stopped part-way when you asked
+   for a handoff.
+2. **Push** the 6 local commits when you like: 2024e14 (the CI cast test
+   fix), a13ac82 and 0b83f48 (step 5), 72f8be6 (CI names the analyzer's
+   findings), 8325ad3 (step 6 part 1) and step 6 part 2's building blocks.
 3. **CI on step 4's push (9f20223) failed on both systems:** Linux on the
    cast test 2024e14 fixes; **Windows at the Analyze step**, with nothing
    local reproducing it and the log behind your rights. The next push
@@ -29,43 +30,130 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md and
 docs/09-downloads-and-library.md first. Check CI on the last push, then go on
-with Phase 8 step 6 (the UI), step by step. <The TV runs wait | The TV is on the network: ask first>.
+with Phase 8 step 6 (the Library screen next), step by step. <The TV runs wait | The TV is on the network: ask first>.
 ```
 
 ## Where things stand
 - **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
   exit) waits for the TV.**
-- **Phase 8 (downloads and the library): steps 1–5 committed.** Step 6, the
-  UI, is next: read the canvas with the Artifact tool first (Library,
-  Library · Downloads, Settings · Downloads and library), then the plan's
-  step 6 list and sketches A–H.
+- **Phase 8: steps 1–5 committed. Step 6 (the UI):** part 1 (the lists and
+  pictures from disk, 8325ad3) and part 2's building blocks (cards, tabs,
+  the folder list, the Library's state, words and routes) committed; **the
+  Library screen itself is not written yet** — `library_screen.dart` is
+  still Phase 1's placeholder.
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,184 app tests** (18 skipped) under `TZ=UTC`; the integration
-  tests `library_playback_test`, `vod_player_test`, `playback_faults_test`
-  and `home_continue_test` under Xvfb (X11).
+  diff, **3,202 app tests** (18 skipped) under `TZ=UTC`. Integration tests
+  last run for step 5 (`library_playback_test`, `vod_player_test`,
+  `playback_faults_test`, `home_continue_test`, all green); nothing they
+  cover changed since.
 - **CI:** run 37187899890 (9f20223) failed: Linux on the cast test fixed in
   2024e14, Windows at Analyze (unknown; see above). Nothing pushed since.
 
+## Step 6: what is built, and what comes next
+**Read first:** the canvas's artboards are in `design/Library.dc.html`,
+`design/Downloads.dc.html`, `design/Settings.dc.html` (identical to the
+published canvas; checked this session). The plan's step 6 list and
+sketches A–H are the spec for what the canvas doesn't draw. ADR-015's
+step 6 section records the UX calls already made.
+
+**Built and ready to use** (`lib/features/library/presentation/` unless
+said):
+- `library_state.dart`: `LibraryTab` (movies, series, videos, folders —
+  Downloads is added with its part), `LibraryView` (keepAlive: tab and
+  chip; other screens call `showTab`), `libraryQueryFor(tab, origin)`, and
+  providers `libraryCount(query)`, `libraryShows(origin)`,
+  `libraryShowEpisodes(key)`, `libraryFolders`, `libraryFolderTotals`,
+  `libraryItem(id)`, `libraryMark(item)`, `libraryFavorite(item)`.
+- `library_text.dart`: sizes, the count line, card and show lines, folder
+  lines, `displayFolderPath` (`~`), `libraryEpisodeTitle`.
+- `library_cards.dart`: `LibraryMovieCard` (poster, or its frame from
+  `libraryThumbnailProvider`; Downloaded/folder/away line; progress; star),
+  `LibraryShowCard`, `LibraryVideoCard` (16:9).
+- `library_folders.dart`: `LibraryFolderList` (rows as Settings' canvas
+  draws them; Rescan, Remove with a confirmation, menu with Rename… / Show
+  in folder), `addLibraryFolder(ref, {path})`, `folderPickerProvider`.
+- `library_routes.dart`: `libraryMoviePath(item)`, `libraryShowPath(key)`,
+  `libraryProviderMoviePath(movie)`, `libraryProviderSeriesPath(series)`,
+  `isLibraryPagePath` — **not wired into the router yet**.
+- Elsewhere: `CountTab` (design), `PosterCard`/`LandscapeCard` states,
+  `SkeletonLandscape`, `AppLibraryTokens` (`tokens.library`),
+  `TitleGridShape.landscape(tokens.library.videoCardMinWidth)` for
+  `TitleGrid`; `MovieDetailsScreen`/`SeriesDetailsScreen(back:)`;
+  `DetailsFrame`, `DetailsPageLoading`, `DetailsGone` (public);
+  `languageName`; `libraryFolderWatchedProvider`, `homeFolderProvider`
+  (`library_providers.dart`); `fileRevealProvider` (Show in folder);
+  `homeOfflineProvider` (Home's banner).
+
+**Next, in order** (commit after each):
+1. **The Library screen** (`library_screen.dart`, replacing the
+   placeholder), as the canvas: padding 12/32/20; the tab row (`CountTab`
+   × Movies, Series, Videos, Folders; counts from `libraryCount` /
+   `libraryShows` with `LibraryOrigin.all`) with Add folder on the right;
+   under it the count line (`libraryCountLine`) with the scan state
+   (`libraryScanStateProvider`: "Scanning · 1,204 found") and the chips
+   (`SegmentedControl`, Movies and Series only); the body: `TitleGrid<
+   LibraryItem>` (load = `libraryRepositoryProvider.range`, total and
+   revision from `libraryCount`, identity = item id, F =
+   `libraryFavoritesProvider.toggle`) for Movies and Videos (landscape),
+   `TitleGrid<LibraryShow>` from the shows list for Series, and
+   `LibraryFolderList` in a scroll view for Folders. Folder labels for the
+   cards come from `libraryFolders`. Empty first run (no items at all):
+   "Add a folder with your own movies and shows" + "Press D on a movie or
+   episode to download it." [Add folder]; per-tab empties with the next
+   action. A `DropTarget` (desktop_drop, already a dependency) adds a
+   dropped folder through `addLibraryFolder(ref, path:)`. Enter: a video
+   plays (`vodLauncherProvider.playLibraryItem`, from its mark when
+   resumable); a movie opens `libraryProviderMoviePath` when its provider
+   still lists it (`movieRepositoryProvider.byRemoteKey`), else
+   `libraryMoviePath`; a show likewise (`seriesRepositoryProvider`), else
+   `libraryShowPath`. Use `context.go` (sub-routes of `/library`).
+2. **The router:** `_detailsRouteFor` becomes a list for the Library: the
+   four routes above (`MovieDetailsScreen(back: 'Library')`,
+   `SeriesDetailsScreen(back: 'Library')`, and the two new pages); the
+   shell's `immersive:` adds `isLibraryPagePath`.
+3. **Sketch A, a movie of the library** (`DetailsFrame(back: 'Library')`,
+   `DetailsBackdrop`/`DetailsPoster` with `localArtworkUrl`, the meta line
+   with `item.media?.qualityLine`, the folder and relative path, subtitles
+   by `languageName`, the bar and time left, Resume/Start over, Cast, F,
+   ⋯); a download the provider dropped shows its stored poster and plot
+   (`item.details`) and "Downloaded" for the folder. **Sketch B, a show of
+   the library** (season tabs, episode rows with frames, Continue S · E by
+   the Continue watching rule, `libraryEpisodeTitle`). Decided: no ☆ on a
+   local show's page (favorites for local files are per file; a show key
+   isn't modelled) — record it in ADR-015 when built.
+4. **Widget tests** for every state of the screen and both pages (the
+   harness: `pumpApp` with overrides for `libraryRepositoryProvider`, or a
+   real `DbLibraryRepository` on a memory database — write rows before the
+   app is pumped, see the trap below); goldens later with the rest.
+5. Then the plan's remaining step 6 parts: **Downloads** (the tab with
+   `downloadServiceProvider`'s tasks: IN PROGRESS / NEEDS ATTENTION /
+   FINISHED TODAY rows per `design/Downloads.dc.html`, Pause all / Resume
+   all, the storage meter with Change folder, drag and Alt+↑/↓), the
+   **DownloadButton on the provider's pages** (sketch E) and **D**, the
+   **top bar's indicator** ("↓ 2 · 34 %", opens the Downloads tab), the
+   toasts ("Download finished · <title>" [Play], "Downloads paused while
+   you watch…"); **the item menu, Edit details, Delete** (sketches D, F),
+   **Hidden videos** (H); **Settings → Downloads & library** (the canvas;
+   `LibraryFolderList` under LIBRARY FOLDERS); **Search's Library group**;
+   **the banners** (offline from `homeOfflineProvider` with Open Library;
+   disk space, sketch G); **Ctrl+7**; then goldens at 1280 × 800 and
+   1920 × 1080 and the keyboard walk on the real app.
+
 ## Done this session (2026-10-04)
 - The Phase 8 plan, approved; ADR-015 started; Phase 7 steps 6–7 approved.
-- **Step 1** — schema v9, the domain types, the DAOs, the download folder.
-- **Step 2** — the fake panel's download faults and `library_tree.sh`.
-- **Step 3** — the download engine (99.6 % of curl at network rates; +20–31
-  MB over 4 GB; the SIGKILL tests).
-- **Step 4** — the name parser, the scanner, folder watching, thumbnails,
-  our own freedesktop trash, the library repository (5,000 new files in
-  about 45 s, 5,000 unchanged in 3 s).
+- **Steps 1–4** — schema v9 and the domain; the fake panel's download
+  faults and `library_tree.sh`; the download engine (99.6 % of curl at
+  network rates); the name parser, the scanner, the trash, the repository.
 - **Step 5** — library files and downloads through the one coordinator;
-  the failure card's Show in folder and Remove from library; offline from
+  Show in folder and Remove from library on the failure card; offline from
   the system with the sources' answers as the fallback; the real-player
   integration test.
+- **Step 6, part 1 and part 2's building blocks** (above).
 - **CI** — analyzer findings as annotations (`tools/ci/analyze_findings.dart`).
 
 ## What's next
-1. **Phase 8 step 6 (the UI)**, then steps 7 and 8, stopping only where the
-   user asks or a step needs the TV. Step 6 draws Home's offline banner
-   from `homeOfflineProvider`, and uses `fileRevealProvider` for the item
-   menu's Show in folder.
+1. **The rest of Phase 8 step 6** (the list above), then steps 7 and 8,
+   stopping only where the user asks or a step needs the TV.
 2. **The TV runs, only when the user says the TV is back, after asking and
    with the user watching:** Phase 7's (check `ip -4 addr` shows 192.168.1.x;
    `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
@@ -85,6 +173,8 @@ with Phase 8 step 6 (the UI), step by step. <The TV runs wait | The TV is on the
 - A provider's own HLS isn't watched for a codec switch (only MPEG-TS
   channels are).
 - The Windows sync cancel timeout (intermittent; now self-describing).
+- A folder away says "stay listed for 30 days" as the canvas does, not the
+  days left.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
@@ -201,7 +291,23 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 8 step 5, part 2):
+New this session (Phase 8 step 6 so far):
+- **The Library's data:** `LibraryRepository.watchCount/range/watchShows/
+  watchShowEpisodes/watchFolderTotals` (`DbLibraryRepository`; the DAO's
+  `itemWindow`, `watchTotals`, `watchShows`, `watchShowEpisodes` share one
+  filter, `_whereSql`/`_items`). A show's key: `l:<title lower case>` for
+  the user's own, `p:<source>:<series key>` for downloads (`_showKey`).
+- **Pictures on disk:** pass `localArtworkUrl(path)` to `artworkFor`; both
+  `ArtworkImages` implementations answer `file:` URLs with a `FileImage`.
+- **Presentation may not import `dart:io` or `lib/data/`** (the layering
+  test): the home folder comes from `homeFolderProvider`, the folder dialog
+  from `folderPickerProvider` (file_selector).
+- **`libraryVodRef(item)`** is where any library item's place is kept;
+  `PlayableLibraryItem.vodRef` uses it (a download → its title's ref).
+- **Trap:** a public widget named like an imported type shadows it in that
+  file without a warning (`DetailsLoading` broke a pattern match).
+
+From earlier this session (Phase 8 step 5, part 2):
 - **Show in folder:** `fileRevealProvider` (`lib/core/platform/file_reveal.dart`,
   default `NoFileReveal`; `bootstrap()` gives it `platformFileReveal(log)`
   from `lib/data/platform/file_reveals.dart`). Linux calls
