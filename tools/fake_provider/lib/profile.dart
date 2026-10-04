@@ -116,6 +116,8 @@ class FakeFaults {
     this.throttleKbps,
     this.changeEtag = false,
     this.wrongContentLength = false,
+    this.sizeMb,
+    this.vodAsHls = false,
   });
 
   /// Reads the fault set a POST /admin/faults body carries. Unknown keys are
@@ -152,6 +154,8 @@ class FakeFaults {
       throttleKbps: asInt('throttle_kbps'),
       changeEtag: asBool('change_etag'),
       wrongContentLength: asBool('wrong_content_length'),
+      sizeMb: asInt('size_mb'),
+      vodAsHls: asBool('vod_as_hls'),
     );
   }
 
@@ -173,8 +177,26 @@ class FakeFaults {
   final bool ignoreRange;
   final int? dropAfterBytes;
   final int? throttleKbps;
+
+  /// Every answer about a file has a new ETag and Last-Modified, as if the
+  /// file changed between requests: a resume's `If-Range` never matches,
+  /// so it gets the whole file (Phase 8).
   final bool changeEtag;
+
+  /// A file's Content-Length says 4 KiB more than its body holds, and the
+  /// connection closes after the body: a download must not take the short
+  /// file for a whole one (Phase 8).
   final bool wrongContentLength;
+
+  /// A file padded to this many MiB (never shorter than its sample), with
+  /// filler made as it is sent (`fakePaddingByte`): the 4 GB download
+  /// measurement needs no 4 GB file (Phase 8).
+  final int? sizeMb;
+
+  /// A movie or an episode answers as an HLS VOD playlist of TS segments,
+  /// made once with ffmpeg; each segment request holds a connection slot
+  /// while it is sent (Phase 8).
+  final bool vodAsHls;
 
   /// This set with the faults a request's query names laid over it, so a
   /// test can fault one stream (`/live/u/p/7.ts?drop_after_s=5`) and leave
@@ -202,6 +224,8 @@ class FakeFaults {
     'throttle_kbps': throttleKbps,
     'change_etag': changeEtag,
     'wrong_content_length': wrongContentLength,
+    'size_mb': sizeMb,
+    'vod_as_hls': vodAsHls,
   };
 }
 

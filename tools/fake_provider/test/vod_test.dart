@@ -7,6 +7,8 @@ import 'package:fake_provider/generator.dart';
 import 'package:fake_provider/profile.dart';
 import 'package:fake_provider/server.dart';
 import 'package:fake_provider/server_state.dart';
+import 'package:fake_provider/streams.dart' show maxConnectionsBody;
+import 'package:fake_provider/vod.dart';
 import 'package:test/test.dart';
 
 /// The VOD relay parses nothing, so the samples here are stand-ins: bytes
@@ -272,6 +274,89 @@ void main() {
       expect(await body(resumed), expected.sublist(dropAt));
     });
 
+    test('change_etag: new validators every time, so If-Range never '
+        'matches and a resume gets the whole file', () async {
+      final first = await send('$movieMp4?change_etag=1');
+      final etag = first.headers.value('etag')!;
+      final modified = first.headers.value('last-modified')!;
+      await body(first);
+
+      for (final validator in [etag, modified]) {
+        final again = await send(
+          '$movieMp4?change_etag=1',
+          headers: {'range': 'bytes=$sampleSize-', 'if-range': validator},
+        );
+        // Past the end, but If-Range failing first means the whole file.
+        expect(again.statusCode, HttpStatus.ok, reason: validator);
+        expect(again.headers.value('etag'), isNot(etag));
+        expect(again.headers.value('last-modified'), isNot(modified));
+        expect(await body(again), expected);
+      }
+    });
+
+    test('wrong_content_length says more than the body holds', () async {
+      final response = await send('$movieMp4?wrong_content_length=1');
+      expect(response.contentLength, sampleSize + 4096);
+      final got = BytesBuilder(copy: false);
+      Object? error;
+      try {
+        await response.forEach(got.add);
+      } on HttpException catch (e) {
+        error = e;
+      }
+      expect(error, isNotNull, reason: 'the body ends short of its length');
+      expect(got.takeBytes(), expected);
+
+      final ranged = await send(
+        '$movieMp4?wrong_content_length=1',
+        headers: {'range': 'bytes=0-99'},
+      );
+      expect(ranged.contentLength, 100 + 4096);
+      await ranged.drain<void>().catchError((Object _) {});
+      await settled(0);
+    });
+
+    test('size_mb pads the file with filler, in every range', () async {
+      const size = 2 * 1024 * 1024;
+      final head = await send('$movieMp4?size_mb=2', method: 'HEAD');
+      expect(head.contentLength, size);
+      final etag = head.headers.value('etag')!;
+      await body(head);
+
+      final whole = await send('$movieMp4?size_mb=2');
+      expect(whole.headers.value('etag'), etag);
+      final bytes = await body(whole);
+      expect(bytes, hasLength(size));
+      expect(bytes.sublist(0, sampleSize), expected);
+      for (final at in [sampleSize, sampleSize + 70000, size - 1]) {
+        expect(bytes[at], fakePaddingByte(at), reason: '$at');
+      }
+
+      // A range across the sample's end, and one in the padding alone.
+      final across = await send(
+        '$movieMp4?size_mb=2',
+        headers: {'range': 'bytes=${sampleSize - 10}-${sampleSize + 9}'},
+      );
+      expect(across.statusCode, HttpStatus.partialContent);
+      expect(await body(across), [
+        ...expected.sublist(sampleSize - 10),
+        for (var at = sampleSize; at < sampleSize + 10; at++)
+          fakePaddingByte(at),
+      ]);
+      final tail = await send(
+        '$movieMp4?size_mb=2',
+        headers: {'range': 'bytes=-5'},
+      );
+      expect(await body(tail), [
+        for (var at = size - 5; at < size; at++) fakePaddingByte(at),
+      ]);
+
+      // Smaller than the sample: the sample as it is.
+      final small = await send('$movieMp4?size_mb=0', method: 'HEAD');
+      expect(small.contentLength, sampleSize);
+      await body(small);
+    });
+
     test('throttle_kbps paces the body', () async {
       // 256 kbit/s = 32 KB/s: 48 KB takes about 1.5 s.
       final clock = Stopwatch()..start();
@@ -283,6 +368,80 @@ void main() {
       expect(clock.elapsed, greaterThan(const Duration(milliseconds: 1300)));
     });
   });
+
+  group(
+    'vod_as_hls',
+    () {
+      setUp(() async {
+        await start();
+        // A real clip under the MP4's name: ffmpeg cuts it into segments.
+        final made = await Process.run('ffmpeg', [
+          ...['-hide_banner', '-loglevel', 'error', '-y'],
+          ...['-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=25:duration=9'],
+          ...['-f', 'lavfi', '-i', 'sine=frequency=440:duration=9'],
+          ...['-c:v', 'libx264', '-g', '50', '-c:a', 'aac', '-shortest'],
+          '${samples.path}/${vodSamples.first}',
+        ]);
+        expect(made.exitCode, 0, reason: '${made.stderr}');
+      });
+
+      test('a movie answers a VOD playlist whose segments ffprobe reads end to '
+          'end', () async {
+        final response = await send('$movieMp4?vod_as_hls=1');
+        expect(response.statusCode, HttpStatus.ok);
+        expect(
+          response.headers.contentType?.mimeType,
+          'application/vnd.apple.mpegurl',
+        );
+        final playlist = utf8.decode(await body(response));
+        expect(playlist, startsWith('#EXTM3U'));
+        expect(playlist, contains('#EXT-X-PLAYLIST-TYPE:VOD'));
+        expect(playlist, contains('#EXT-X-ENDLIST'));
+        final segments = [
+          for (final line in const LineSplitter().convert(playlist))
+            if (line.startsWith('/vodhls/')) line,
+        ];
+        expect(segments.length, greaterThanOrEqualTo(2));
+
+        for (final segment in segments) {
+          final got = await send(segment);
+          expect(got.statusCode, HttpStatus.ok, reason: segment);
+          expect(got.headers.contentType?.mimeType, 'video/mp2t');
+          expect(await body(got), isNotEmpty);
+        }
+        await settled(0);
+
+        final probe = await Process.run('ffprobe', [
+          ...['-v', 'error', '-show_entries', 'format=duration'],
+          ...['-of', 'default=nw=1:nk=1'],
+          server.url.resolve('$movieMp4?vod_as_hls=1').toString(),
+        ]);
+        expect(probe.exitCode, 0, reason: '${probe.stderr}');
+        expect(double.parse('${probe.stdout}'.trim()), closeTo(9, 0.5));
+      });
+
+      test('a segment holds a connection slot: none free, none sent', () async {
+        final playlist = utf8.decode(
+          await body(await send('$movieMp4?vod_as_hls=1')),
+        );
+        final first = const LineSplitter()
+            .convert(playlist)
+            .firstWhere((line) => line.startsWith('/vodhls/'));
+        final refused = await send('$first?max_connections=0');
+        expect(refused.statusCode, HttpStatus.forbidden);
+        expect(utf8.decode(await body(refused)), contains(maxConnectionsBody));
+        expect((await send('/vodhls/nothing/seg_00000.ts')).statusCode, 404);
+        expect(
+          (await send('${first.substring(0, first.lastIndexOf('/'))}/x.ts'))
+              .statusCode,
+          404,
+        );
+      });
+    },
+    skip: _hasTool('ffmpeg') && _hasTool('ffprobe')
+        ? false
+        : 'needs ffmpeg and ffprobe on PATH',
+  );
 
   group('connections', () {
     /// A body that stays open: 16 kbit/s makes the 300 KB file last minutes.
@@ -344,4 +503,12 @@ void main() {
       await second.cancel();
     });
   });
+}
+
+bool _hasTool(String name) {
+  try {
+    return Process.runSync(name, ['-version']).exitCode == 0;
+  } on ProcessException {
+    return false;
+  }
 }

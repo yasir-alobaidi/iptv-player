@@ -6,8 +6,9 @@
 /// where it is served. The live-stream faults (drop, stall, slow start,
 /// HTTP status, max connections, expiring redirect, codec switch) act in
 /// `streams.dart` since Phase 3; the VOD faults (ignore range, drop after
-/// bytes, throttle) in `vod.dart` since Phase 5; `change_etag` and
-/// `wrong_content_length` arrive with downloads (Phase 8).
+/// bytes, throttle) in `vod.dart` since Phase 5, and the downloads' (change
+/// ETag, wrong Content-Length, size in MiB, VOD as HLS) there since Phase
+/// 8.
 library;
 
 import 'dart:convert';

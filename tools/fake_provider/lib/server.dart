@@ -47,6 +47,7 @@ class FakeProviderServer {
       ..all('/hls/<rest|.*>', to(relay.handler))
       ..all('/movie/<rest|.*>', to(vod.handler))
       ..all('/series/<rest|.*>', to(vod.handler))
+      ..all('/vodhls/<rest|.*>', to(vod.handler))
       ..all('/art/<rest|.*>', to(artwork))
       ..all('/admin/<rest|.*>', to(admin))
       ..get('/', (Request request) => Response.ok(_index(state)));
@@ -101,6 +102,7 @@ fake IPTV provider — profile "${p.name}"
   GET /get.php · GET /xmltv.php
   GET /live/{username}/{password}/{stream_id}.ts|.m3u8
   GET|HEAD /movie|series/{username}/{password}/{id}.{ext} (Range, ETag)
+  GET /vodhls/… (a file's segments under vod_as_hls)
   GET /art/… (posters, logos, backdrops, stills)
   GET|POST|DELETE /admin/faults
 

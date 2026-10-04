@@ -133,14 +133,6 @@ analyze` and `dart format` cover this package with the app's lints
 (`dart format --set-exit-if-changed lib test integration_test tools` from
 the repo root includes it).
 
-## Not here yet
-
-By design — each arrives with the phase that tests it (docs/06):
-
-- `vod_as_hls`, `size_mb` padding, and the VOD faults `change_etag` and
-  `wrong_content_length` — the downloads (Phase 8). They are stored and
-  reported by `/admin/faults`, and nothing reads them yet.
-
 ## Faults
 
 Set with `POST /admin/faults` (the whole set) or per request in the query
@@ -154,3 +146,12 @@ Set with `POST /admin/faults` (the whole set) or per request in the query
   connection closes once a body passes that byte of the file, so a request
   starting past it gets through) and `throttle_kbps` (kilobits per second)
   (`lib/vod.dart`).
+- Downloads (Phase 8, `lib/vod.dart`): `change_etag` (every answer has a
+  new ETag and Last-Modified, so a resume's `If-Range` never matches and
+  gets the whole file), `wrong_content_length` (Content-Length 4 KiB past
+  the body, then the connection closes), `size_mb` (the file padded to that
+  many MiB with `fakePaddingByte`s made as they are sent, for the 4 GB
+  measurement) and `vod_as_hls` (the movie or episode answers an HLS VOD
+  playlist of 4 s TS segments under `/vodhls/<sample>/`, cut once with
+  ffmpeg into the run folder; each segment holds a connection slot while it
+  is sent). `If-Range` is checked before the range, as HTTP has it.
