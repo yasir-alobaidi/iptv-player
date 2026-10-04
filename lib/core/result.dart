@@ -83,6 +83,8 @@ sealed class AppFailure implements Exception {
   factory fromError(Object error) {
     final text = error.toString();
     return switch (error) {
+      // Thrown inside a guard on purpose: as it is.
+      AppFailure() => error,
       TimeoutException() => TimeoutFailure(text),
       SocketException() ||
       HttpException() ||

@@ -76,6 +76,15 @@ Filenames: remove characters Windows rejects (`< > : " / \ | ? *`, control chara
 - **Delete file:** only after confirmation. Moves the video and its matching subtitle files to the system trash (for downloads, also the app's artwork and the emptied folder); if no trash is available, deletes permanently after a second confirmation.
 - **Hands off otherwise:** the app never renames, moves, or changes files in folders the user added.
 
+### As built (Phase 8 step 4; ADR-015)
+- **The scan** runs as a guarded background job, one at a time: at launch, on Rescan or a folder added, and 3 s after a watched folder's last change. Pass 1 walks, stats, quick-hashes only what is new or changed, parses names and writes in batches (the Library fills as it runs); a row whose file is gone waits until every folder is walked, so a file moved between folders keeps its id, history, favorites and edits. Pass 2 probes 4 at a time.
+- **Skipped as well:** folders named Sample(s), Trailers, Featurettes, Extras, Behind the Scenes.
+- **Pictures:** `<name>-poster.jpg`, `<name>.jpg`, `poster`/`folder`/`cover` beside the file; a season folder's videos take the show folder's.
+- **A bare year makes a movie** only in parentheses or brackets, in a dotted scene name, or followed by release tags ("Birthday at the lake 2021" is a home video). Dots part words only in names without spaces.
+- **Remove from library** deletes the row and remembers the file, so later scans leave it out; the file stays.
+- **Folders** can't overlap: one inside another would list files twice.
+- **Measured:** 5,000 new files in about 45 s, probed, the first rows after 3 s; 5,000 unchanged in about 3 s.
+
 ### NameParser cases (one fixture test each)
 | Path | Result |
 |---|---|

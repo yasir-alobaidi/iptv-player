@@ -131,17 +131,25 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
             ..limit(1))
           .getSingleOrNull();
 
-  /// The items of [kind] by title (episodes by show, season, episode),
-  /// hidden ones only when [hidden].
+  /// The items of [kind] (every kind when null) by title, episodes by
+  /// show, season and episode; hidden ones only when [hidden]; only
+  /// downloads or only the user's files when [downloaded] says.
   Stream<List<LibraryItemRow>> watchItems({
-    required LibraryKind kind,
+    LibraryKind? kind,
     bool hidden = false,
     int? folderId,
+    bool? downloaded,
   }) =>
       (select(libraryItems)
             ..where((t) {
-              var where = t.kind.equalsValue(kind) & t.isHidden.equals(hidden);
+              var where = t.isHidden.equals(hidden);
+              if (kind != null) where &= t.kind.equalsValue(kind);
               if (folderId != null) where &= t.folderId.equals(folderId);
+              if (downloaded != null) {
+                where &= downloaded
+                    ? t.providerRemoteKey.isNotNull()
+                    : t.providerRemoteKey.isNull();
+              }
               return where;
             })
             ..orderBy([

@@ -10,13 +10,14 @@ enum LibraryOrigin { all, downloaded, localFolders }
 @immutable
 final class LibraryQuery {
   const new({
-    required this.kind,
+    this.kind,
     this.origin = LibraryOrigin.all,
     this.hidden = false,
     this.folderId,
   });
 
-  final LibraryKind kind;
+  /// Null: every kind (Settings' Hidden videos).
+  final LibraryKind? kind;
   final LibraryOrigin origin;
 
   /// True lists only hidden items (Settings' Hidden videos); false leaves

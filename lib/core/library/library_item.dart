@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:iptv_player/core/library/library_media.dart';
 
 part 'library_item.freezed.dart';
 
@@ -83,6 +84,35 @@ abstract class LibraryItemEdit with _$LibraryItemEdit {
     int? season,
     int? episode,
   }) = _LibraryItemEdit;
+
+  const new _();
+
+  /// Tolerant: null when it isn't an edit.
+  static LibraryItemEdit? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final kind = LibraryKind.values.asNameMap()[json['kind']];
+    final title = json['title'];
+    if (kind == null || title is! String) return null;
+    int? number(Object? value) => value is int ? value : null;
+    final show = json['show'];
+    return LibraryItemEdit(
+      kind: kind,
+      title: title,
+      year: number(json['year']),
+      showTitle: show is String ? show : null,
+      season: number(json['season']),
+      episode: number(json['episode']),
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    'title': title,
+    'year': ?year,
+    'show': ?showTitle,
+    'season': ?season,
+    'episode': ?episode,
+  };
 }
 
 /// A video in the library (`library_items`, schema v9). [title], [year],
@@ -129,9 +159,23 @@ abstract class LibraryItem with _$LibraryItem {
     /// When its folder stopped being readable; the item goes 30 days
     /// later (docs/09).
     DateTime? unavailableSince,
+
+    /// The file, absolute.
+    String? path,
+
+    /// What ffprobe said of it; null until the scanner's probe pass.
+    LibraryMedia? media,
+
+    /// A download's copy of its title's details (Phase 8 decision 5).
+    Map<String, Object?>? details,
+
+    /// Downloaded from a source (it may since have been removed).
+    @Default(false) bool downloaded,
   }) = _LibraryItem;
 
   const new _();
 
-  bool get isDownload => provider != null;
+  bool get isDownload => downloaded || provider != null;
+
+  bool get available => unavailableSince == null;
 }

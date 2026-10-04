@@ -1070,8 +1070,8 @@ return $default(_that.kind,_that.title,_that.year,_that.showTitle,_that.season,_
 /// @nodoc
 
 
-class _LibraryItemEdit implements LibraryItemEdit {
-  const _LibraryItemEdit({required this.kind, required this.title, this.year, this.showTitle, this.season, this.episode});
+class _LibraryItemEdit extends LibraryItemEdit {
+  const _LibraryItemEdit({required this.kind, required this.title, this.year, this.showTitle, this.season, this.episode}): super._();
   
 
 @override final  LibraryKind kind;
@@ -1157,7 +1157,11 @@ mixin _$LibraryItem {
  LibraryItemEdit? get edit;/// Set for a download.
  ProviderLink? get provider; bool get hidden;/// When its folder stopped being readable; the item goes 30 days
 /// later (docs/09).
- DateTime? get unavailableSince;
+ DateTime? get unavailableSince;/// The file, absolute.
+ String? get path;/// What ffprobe said of it; null until the scanner's probe pass.
+ LibraryMedia? get media;/// A download's copy of its title's details (Phase 8 decision 5).
+ Map<String, Object?>? get details;/// Downloaded from a source (it may since have been removed).
+ bool get downloaded;
 /// Create a copy of LibraryItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1169,20 +1173,20 @@ $LibraryItemCopyWith<LibraryItem> get copyWith => _$LibraryItemCopyWithImpl<Libr
 @override
 bool operator ==(Object other) {
   final _this = this as LibraryItem;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibraryItem&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.folderId, _this.folderId) || other.folderId == _this.folderId)&&(identical(other.relPath, _this.relPath) || other.relPath == _this.relPath)&&(identical(other.sizeBytes, _this.sizeBytes) || other.sizeBytes == _this.sizeBytes)&&(identical(other.modifiedAt, _this.modifiedAt) || other.modifiedAt == _this.modifiedAt)&&(identical(other.quickHash, _this.quickHash) || other.quickHash == _this.quickHash)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.addedAt, _this.addedAt) || other.addedAt == _this.addedAt)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.showTitle, _this.showTitle) || other.showTitle == _this.showTitle)&&(identical(other.season, _this.season) || other.season == _this.season)&&(identical(other.episode, _this.episode) || other.episode == _this.episode)&&(identical(other.episodeEnd, _this.episodeEnd) || other.episodeEnd == _this.episodeEnd)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.thumbnailPath, _this.thumbnailPath) || other.thumbnailPath == _this.thumbnailPath)&&(identical(other.artworkPath, _this.artworkPath) || other.artworkPath == _this.artworkPath)&&const DeepCollectionEquality().equals(other.subtitles, _this.subtitles)&&(identical(other.edit, _this.edit) || other.edit == _this.edit)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.hidden, _this.hidden) || other.hidden == _this.hidden)&&(identical(other.unavailableSince, _this.unavailableSince) || other.unavailableSince == _this.unavailableSince));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibraryItem&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.folderId, _this.folderId) || other.folderId == _this.folderId)&&(identical(other.relPath, _this.relPath) || other.relPath == _this.relPath)&&(identical(other.sizeBytes, _this.sizeBytes) || other.sizeBytes == _this.sizeBytes)&&(identical(other.modifiedAt, _this.modifiedAt) || other.modifiedAt == _this.modifiedAt)&&(identical(other.quickHash, _this.quickHash) || other.quickHash == _this.quickHash)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.addedAt, _this.addedAt) || other.addedAt == _this.addedAt)&&(identical(other.year, _this.year) || other.year == _this.year)&&(identical(other.showTitle, _this.showTitle) || other.showTitle == _this.showTitle)&&(identical(other.season, _this.season) || other.season == _this.season)&&(identical(other.episode, _this.episode) || other.episode == _this.episode)&&(identical(other.episodeEnd, _this.episodeEnd) || other.episodeEnd == _this.episodeEnd)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.thumbnailPath, _this.thumbnailPath) || other.thumbnailPath == _this.thumbnailPath)&&(identical(other.artworkPath, _this.artworkPath) || other.artworkPath == _this.artworkPath)&&const DeepCollectionEquality().equals(other.subtitles, _this.subtitles)&&(identical(other.edit, _this.edit) || other.edit == _this.edit)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.hidden, _this.hidden) || other.hidden == _this.hidden)&&(identical(other.unavailableSince, _this.unavailableSince) || other.unavailableSince == _this.unavailableSince)&&(identical(other.path, _this.path) || other.path == _this.path)&&(identical(other.media, _this.media) || other.media == _this.media)&&const DeepCollectionEquality().equals(other.details, _this.details)&&(identical(other.downloaded, _this.downloaded) || other.downloaded == _this.downloaded));
 }
 
 
 @override
 int get hashCode {
   final _this = this as LibraryItem;
-  return Object.hashAll([runtimeType,_this.id,_this.folderId,_this.relPath,_this.sizeBytes,_this.modifiedAt,_this.quickHash,_this.kind,_this.title,_this.addedAt,_this.year,_this.showTitle,_this.season,_this.episode,_this.episodeEnd,_this.duration,_this.thumbnailPath,_this.artworkPath,const DeepCollectionEquality().hash(_this.subtitles),_this.edit,_this.provider,_this.hidden,_this.unavailableSince]);
+  return Object.hashAll([runtimeType,_this.id,_this.folderId,_this.relPath,_this.sizeBytes,_this.modifiedAt,_this.quickHash,_this.kind,_this.title,_this.addedAt,_this.year,_this.showTitle,_this.season,_this.episode,_this.episodeEnd,_this.duration,_this.thumbnailPath,_this.artworkPath,const DeepCollectionEquality().hash(_this.subtitles),_this.edit,_this.provider,_this.hidden,_this.unavailableSince,_this.path,_this.media,const DeepCollectionEquality().hash(_this.details),_this.downloaded]);
 }
 
 @override
 String toString() {
   final _this = this as LibraryItem;
-  return 'LibraryItem(id: ${_this.id}, folderId: ${_this.folderId}, relPath: ${_this.relPath}, sizeBytes: ${_this.sizeBytes}, modifiedAt: ${_this.modifiedAt}, quickHash: ${_this.quickHash}, kind: ${_this.kind}, title: ${_this.title}, addedAt: ${_this.addedAt}, year: ${_this.year}, showTitle: ${_this.showTitle}, season: ${_this.season}, episode: ${_this.episode}, episodeEnd: ${_this.episodeEnd}, duration: ${_this.duration}, thumbnailPath: ${_this.thumbnailPath}, artworkPath: ${_this.artworkPath}, subtitles: ${_this.subtitles}, edit: ${_this.edit}, provider: ${_this.provider}, hidden: ${_this.hidden}, unavailableSince: ${_this.unavailableSince})';
+  return 'LibraryItem(id: ${_this.id}, folderId: ${_this.folderId}, relPath: ${_this.relPath}, sizeBytes: ${_this.sizeBytes}, modifiedAt: ${_this.modifiedAt}, quickHash: ${_this.quickHash}, kind: ${_this.kind}, title: ${_this.title}, addedAt: ${_this.addedAt}, year: ${_this.year}, showTitle: ${_this.showTitle}, season: ${_this.season}, episode: ${_this.episode}, episodeEnd: ${_this.episodeEnd}, duration: ${_this.duration}, thumbnailPath: ${_this.thumbnailPath}, artworkPath: ${_this.artworkPath}, subtitles: ${_this.subtitles}, edit: ${_this.edit}, provider: ${_this.provider}, hidden: ${_this.hidden}, unavailableSince: ${_this.unavailableSince}, path: ${_this.path}, media: ${_this.media}, details: ${_this.details}, downloaded: ${_this.downloaded})';
 }
 
 
@@ -1193,7 +1197,7 @@ abstract mixin class $LibraryItemCopyWith<$Res>  {
   factory $LibraryItemCopyWith(LibraryItem value, $Res Function(LibraryItem) _then) = _$LibraryItemCopyWithImpl;
 @useResult
 $Res call({
- int id, int folderId, String relPath, int sizeBytes, DateTime modifiedAt, String quickHash, LibraryKind kind, String title, DateTime addedAt, int? year, String? showTitle, int? season, int? episode, int? episodeEnd, Duration? duration, String? thumbnailPath, String? artworkPath, List<ExternalSubtitle> subtitles, LibraryItemEdit? edit, ProviderLink? provider, bool hidden, DateTime? unavailableSince
+ int id, int folderId, String relPath, int sizeBytes, DateTime modifiedAt, String quickHash, LibraryKind kind, String title, DateTime addedAt, int? year, String? showTitle, int? season, int? episode, int? episodeEnd, Duration? duration, String? thumbnailPath, String? artworkPath, List<ExternalSubtitle> subtitles, LibraryItemEdit? edit, ProviderLink? provider, bool hidden, DateTime? unavailableSince, String? path, LibraryMedia? media, Map<String, Object?>? details, bool downloaded
 });
 
 
@@ -1210,7 +1214,7 @@ class _$LibraryItemCopyWithImpl<$Res>
 
 /// Create a copy of LibraryItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? folderId = null,Object? relPath = null,Object? sizeBytes = null,Object? modifiedAt = null,Object? quickHash = null,Object? kind = null,Object? title = null,Object? addedAt = null,Object? year = freezed,Object? showTitle = freezed,Object? season = freezed,Object? episode = freezed,Object? episodeEnd = freezed,Object? duration = freezed,Object? thumbnailPath = freezed,Object? artworkPath = freezed,Object? subtitles = null,Object? edit = freezed,Object? provider = freezed,Object? hidden = null,Object? unavailableSince = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? folderId = null,Object? relPath = null,Object? sizeBytes = null,Object? modifiedAt = null,Object? quickHash = null,Object? kind = null,Object? title = null,Object? addedAt = null,Object? year = freezed,Object? showTitle = freezed,Object? season = freezed,Object? episode = freezed,Object? episodeEnd = freezed,Object? duration = freezed,Object? thumbnailPath = freezed,Object? artworkPath = freezed,Object? subtitles = null,Object? edit = freezed,Object? provider = freezed,Object? hidden = null,Object? unavailableSince = freezed,Object? path = freezed,Object? media = freezed,Object? details = freezed,Object? downloaded = null,}) {
   return _then(LibraryItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,folderId: null == folderId ? _self.folderId : folderId // ignore: cast_nullable_to_non_nullable
@@ -1234,7 +1238,11 @@ as List<ExternalSubtitle>,edit: freezed == edit ? _self.edit : edit // ignore: c
 as LibraryItemEdit?,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as ProviderLink?,hidden: null == hidden ? _self.hidden : hidden // ignore: cast_nullable_to_non_nullable
 as bool,unavailableSince: freezed == unavailableSince ? _self.unavailableSince : unavailableSince // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,path: freezed == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
+as String?,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+as LibraryMedia?,details: freezed == details ? _self.details : details // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,downloaded: null == downloaded ? _self.downloaded : downloaded // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of LibraryItem
@@ -1343,10 +1351,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince,  String? path,  LibraryMedia? media,  Map<String, Object?>? details,  bool downloaded)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LibraryItem() when $default != null:
-return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince);case _:
+return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince,_that.path,_that.media,_that.details,_that.downloaded);case _:
   return orElse();
 
 }
@@ -1364,10 +1372,10 @@ return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince,  String? path,  LibraryMedia? media,  Map<String, Object?>? details,  bool downloaded)  $default,) {final _that = this;
 switch (_that) {
 case _LibraryItem():
-return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince);case _:
+return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince,_that.path,_that.media,_that.details,_that.downloaded);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1384,10 +1392,10 @@ return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int folderId,  String relPath,  int sizeBytes,  DateTime modifiedAt,  String quickHash,  LibraryKind kind,  String title,  DateTime addedAt,  int? year,  String? showTitle,  int? season,  int? episode,  int? episodeEnd,  Duration? duration,  String? thumbnailPath,  String? artworkPath,  List<ExternalSubtitle> subtitles,  LibraryItemEdit? edit,  ProviderLink? provider,  bool hidden,  DateTime? unavailableSince,  String? path,  LibraryMedia? media,  Map<String, Object?>? details,  bool downloaded)?  $default,) {final _that = this;
 switch (_that) {
 case _LibraryItem() when $default != null:
-return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince);case _:
+return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modifiedAt,_that.quickHash,_that.kind,_that.title,_that.addedAt,_that.year,_that.showTitle,_that.season,_that.episode,_that.episodeEnd,_that.duration,_that.thumbnailPath,_that.artworkPath,_that.subtitles,_that.edit,_that.provider,_that.hidden,_that.unavailableSince,_that.path,_that.media,_that.details,_that.downloaded);case _:
   return null;
 
 }
@@ -1399,7 +1407,7 @@ return $default(_that.id,_that.folderId,_that.relPath,_that.sizeBytes,_that.modi
 
 
 class _LibraryItem extends LibraryItem {
-  const _LibraryItem({required this.id, required this.folderId, required this.relPath, required this.sizeBytes, required this.modifiedAt, required this.quickHash, required this.kind, required this.title, required this.addedAt, this.year, this.showTitle, this.season, this.episode, this.episodeEnd, this.duration, this.thumbnailPath, this.artworkPath,  List<ExternalSubtitle> subtitles = const <ExternalSubtitle>[], this.edit, this.provider, this.hidden = false, this.unavailableSince}): _subtitles = subtitles,super._();
+  const _LibraryItem({required this.id, required this.folderId, required this.relPath, required this.sizeBytes, required this.modifiedAt, required this.quickHash, required this.kind, required this.title, required this.addedAt, this.year, this.showTitle, this.season, this.episode, this.episodeEnd, this.duration, this.thumbnailPath, this.artworkPath,  List<ExternalSubtitle> subtitles = const <ExternalSubtitle>[], this.edit, this.provider, this.hidden = false, this.unavailableSince, this.path, this.media,  Map<String, Object?>? details, this.downloaded = false}): _subtitles = subtitles,_details = details,super._();
   
 
 @override final  int id;
@@ -1439,6 +1447,23 @@ class _LibraryItem extends LibraryItem {
 /// When its folder stopped being readable; the item goes 30 days
 /// later (docs/09).
 @override final  DateTime? unavailableSince;
+/// The file, absolute.
+@override final  String? path;
+/// What ffprobe said of it; null until the scanner's probe pass.
+@override final  LibraryMedia? media;
+/// A download's copy of its title's details (Phase 8 decision 5).
+ final  Map<String, Object?>? _details;
+/// A download's copy of its title's details (Phase 8 decision 5).
+@override Map<String, Object?>? get details {
+  final value = _details;
+  if (value == null) return null;
+  if (_details is EqualUnmodifiableMapView) return _details;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+/// Downloaded from a source (it may since have been removed).
+@override@JsonKey() final  bool downloaded;
 
 /// Create a copy of LibraryItem
 /// with the given fields replaced by the non-null parameter values.
@@ -1450,18 +1475,18 @@ _$LibraryItemCopyWith<_LibraryItem> get copyWith => __$LibraryItemCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibraryItem&&(identical(other.id, id) || other.id == id)&&(identical(other.folderId, folderId) || other.folderId == folderId)&&(identical(other.relPath, relPath) || other.relPath == relPath)&&(identical(other.sizeBytes, sizeBytes) || other.sizeBytes == sizeBytes)&&(identical(other.modifiedAt, modifiedAt) || other.modifiedAt == modifiedAt)&&(identical(other.quickHash, quickHash) || other.quickHash == quickHash)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.title, title) || other.title == title)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.year, year) || other.year == year)&&(identical(other.showTitle, showTitle) || other.showTitle == showTitle)&&(identical(other.season, season) || other.season == season)&&(identical(other.episode, episode) || other.episode == episode)&&(identical(other.episodeEnd, episodeEnd) || other.episodeEnd == episodeEnd)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.thumbnailPath, thumbnailPath) || other.thumbnailPath == thumbnailPath)&&(identical(other.artworkPath, artworkPath) || other.artworkPath == artworkPath)&&const DeepCollectionEquality().equals(other.subtitles, _subtitles)&&(identical(other.edit, edit) || other.edit == edit)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.unavailableSince, unavailableSince) || other.unavailableSince == unavailableSince));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibraryItem&&(identical(other.id, id) || other.id == id)&&(identical(other.folderId, folderId) || other.folderId == folderId)&&(identical(other.relPath, relPath) || other.relPath == relPath)&&(identical(other.sizeBytes, sizeBytes) || other.sizeBytes == sizeBytes)&&(identical(other.modifiedAt, modifiedAt) || other.modifiedAt == modifiedAt)&&(identical(other.quickHash, quickHash) || other.quickHash == quickHash)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.title, title) || other.title == title)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.year, year) || other.year == year)&&(identical(other.showTitle, showTitle) || other.showTitle == showTitle)&&(identical(other.season, season) || other.season == season)&&(identical(other.episode, episode) || other.episode == episode)&&(identical(other.episodeEnd, episodeEnd) || other.episodeEnd == episodeEnd)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.thumbnailPath, thumbnailPath) || other.thumbnailPath == thumbnailPath)&&(identical(other.artworkPath, artworkPath) || other.artworkPath == artworkPath)&&const DeepCollectionEquality().equals(other.subtitles, _subtitles)&&(identical(other.edit, edit) || other.edit == edit)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.unavailableSince, unavailableSince) || other.unavailableSince == unavailableSince)&&(identical(other.path, path) || other.path == path)&&(identical(other.media, media) || other.media == media)&&const DeepCollectionEquality().equals(other.details, _details)&&(identical(other.downloaded, downloaded) || other.downloaded == downloaded));
 }
 
 
 @override
 int get hashCode {
-    return Object.hashAll([runtimeType,id,folderId,relPath,sizeBytes,modifiedAt,quickHash,kind,title,addedAt,year,showTitle,season,episode,episodeEnd,duration,thumbnailPath,artworkPath,const DeepCollectionEquality().hash(_subtitles),edit,provider,hidden,unavailableSince]);
+    return Object.hashAll([runtimeType,id,folderId,relPath,sizeBytes,modifiedAt,quickHash,kind,title,addedAt,year,showTitle,season,episode,episodeEnd,duration,thumbnailPath,artworkPath,const DeepCollectionEquality().hash(_subtitles),edit,provider,hidden,unavailableSince,path,media,const DeepCollectionEquality().hash(_details),downloaded]);
 }
 
 @override
 String toString() {
-    return 'LibraryItem(id: $id, folderId: $folderId, relPath: $relPath, sizeBytes: $sizeBytes, modifiedAt: $modifiedAt, quickHash: $quickHash, kind: $kind, title: $title, addedAt: $addedAt, year: $year, showTitle: $showTitle, season: $season, episode: $episode, episodeEnd: $episodeEnd, duration: $duration, thumbnailPath: $thumbnailPath, artworkPath: $artworkPath, subtitles: $subtitles, edit: $edit, provider: $provider, hidden: $hidden, unavailableSince: $unavailableSince)';
+    return 'LibraryItem(id: $id, folderId: $folderId, relPath: $relPath, sizeBytes: $sizeBytes, modifiedAt: $modifiedAt, quickHash: $quickHash, kind: $kind, title: $title, addedAt: $addedAt, year: $year, showTitle: $showTitle, season: $season, episode: $episode, episodeEnd: $episodeEnd, duration: $duration, thumbnailPath: $thumbnailPath, artworkPath: $artworkPath, subtitles: $subtitles, edit: $edit, provider: $provider, hidden: $hidden, unavailableSince: $unavailableSince, path: $path, media: $media, details: $details, downloaded: $downloaded)';
 }
 
 
@@ -1472,7 +1497,7 @@ abstract mixin class _$LibraryItemCopyWith<$Res> implements $LibraryItemCopyWith
   factory _$LibraryItemCopyWith(_LibraryItem value, $Res Function(_LibraryItem) _then) = __$LibraryItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int folderId, String relPath, int sizeBytes, DateTime modifiedAt, String quickHash, LibraryKind kind, String title, DateTime addedAt, int? year, String? showTitle, int? season, int? episode, int? episodeEnd, Duration? duration, String? thumbnailPath, String? artworkPath, List<ExternalSubtitle> subtitles, LibraryItemEdit? edit, ProviderLink? provider, bool hidden, DateTime? unavailableSince
+ int id, int folderId, String relPath, int sizeBytes, DateTime modifiedAt, String quickHash, LibraryKind kind, String title, DateTime addedAt, int? year, String? showTitle, int? season, int? episode, int? episodeEnd, Duration? duration, String? thumbnailPath, String? artworkPath, List<ExternalSubtitle> subtitles, LibraryItemEdit? edit, ProviderLink? provider, bool hidden, DateTime? unavailableSince, String? path, LibraryMedia? media, Map<String, Object?>? details, bool downloaded
 });
 
 
@@ -1489,7 +1514,7 @@ class __$LibraryItemCopyWithImpl<$Res>
 
 /// Create a copy of LibraryItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? folderId = null,Object? relPath = null,Object? sizeBytes = null,Object? modifiedAt = null,Object? quickHash = null,Object? kind = null,Object? title = null,Object? addedAt = null,Object? year = freezed,Object? showTitle = freezed,Object? season = freezed,Object? episode = freezed,Object? episodeEnd = freezed,Object? duration = freezed,Object? thumbnailPath = freezed,Object? artworkPath = freezed,Object? subtitles = null,Object? edit = freezed,Object? provider = freezed,Object? hidden = null,Object? unavailableSince = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? folderId = null,Object? relPath = null,Object? sizeBytes = null,Object? modifiedAt = null,Object? quickHash = null,Object? kind = null,Object? title = null,Object? addedAt = null,Object? year = freezed,Object? showTitle = freezed,Object? season = freezed,Object? episode = freezed,Object? episodeEnd = freezed,Object? duration = freezed,Object? thumbnailPath = freezed,Object? artworkPath = freezed,Object? subtitles = null,Object? edit = freezed,Object? provider = freezed,Object? hidden = null,Object? unavailableSince = freezed,Object? path = freezed,Object? media = freezed,Object? details = freezed,Object? downloaded = null,}) {
   return _then(_LibraryItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,folderId: null == folderId ? _self.folderId : folderId // ignore: cast_nullable_to_non_nullable
@@ -1513,7 +1538,11 @@ as List<ExternalSubtitle>,edit: freezed == edit ? _self.edit : edit // ignore: c
 as LibraryItemEdit?,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as ProviderLink?,hidden: null == hidden ? _self.hidden : hidden // ignore: cast_nullable_to_non_nullable
 as bool,unavailableSince: freezed == unavailableSince ? _self.unavailableSince : unavailableSince // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,path: freezed == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
+as String?,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+as LibraryMedia?,details: freezed == details ? _self._details : details // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,downloaded: null == downloaded ? _self.downloaded : downloaded // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

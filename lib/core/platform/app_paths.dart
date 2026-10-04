@@ -35,4 +35,8 @@ final class AppPaths {
 
   /// The relay's sessions: HLS segments for the TV (Phase 7 step 5).
   Directory get relay => Directory(p.join(cacheRoot.path, 'relay'));
+
+  /// Library videos' frames, by quick hash (Phase 8 step 4).
+  Directory get thumbnails =>
+      Directory(p.join(cacheRoot.path, 'library', 'thumbnails'));
 }

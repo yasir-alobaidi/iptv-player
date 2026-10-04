@@ -74,7 +74,7 @@ Measured by tests tagged `benchmark`, which are skipped unless run with `flutter
 | Idle memory after sync with guide | ≤ 450 MB |
 | H.264 1080p50 playback CPU (hwdec) | ≤ 15 % total CPU |
 | 8 h soak memory growth | ≤ 50 MB (median of the last five minutes over the median of minutes 21–25: the player settles for ~40 min, and a reconnect spikes RSS for a sample or two — ADR-010 "The soak run") |
-| Library scan, 5,000 new files (library_tree.sh) | ≤ 5 min; browsable while scanning; no UI frame > 32 ms |
+| Library scan, 5,000 new files (library_tree.sh) | ≤ 5 min; browsable while scanning; no UI frame > 32 ms (`test/tools/library_scan_measure_test.dart`: a guarded job on a file database, every file probed) |
 | Library rescan, 5,000 unchanged files | ≤ 5 s |
 | Download speed vs `curl` on the same URL (fake provider) | ≥ 90 % at network rates (1 Gbps and 100 Mbps through the fake panel's throttle); unthrottled loopback, which measures Dart's HTTP stack (about 0.7–1 GB/s here against curl's 1.9), is reported (ADR-015 step 3; `test/tools/download_measure_test.dart`) |
 | Memory growth during a 4 GB download | ≤ 30 MB (at 1 Gbps; peak over the start, recorded by quarter of the file) |

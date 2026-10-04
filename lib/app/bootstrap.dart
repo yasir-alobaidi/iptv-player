@@ -40,6 +40,7 @@ import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:logger/logger.dart';
@@ -120,6 +121,7 @@ Future<void> bootstrap() async {
         processFolderProvider.overrideWithValue(paths.processes),
         castFolderProvider.overrideWithValue(paths.cast),
         relayFolderProvider.overrideWithValue(paths.relay),
+        libraryThumbnailFolderProvider.overrideWithValue(paths.thumbnails),
       ],
       ...sourceShellOverrides,
       ...castShellOverrides,
@@ -201,6 +203,8 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
         // was downloading when the app went picks up again.
         await _registerDownloadFolder(container);
         await container.read(downloadQueueProvider).startUp();
+        // The library's folders: scanned now, watched from then on.
+        unawaited(container.read(libraryScansProvider).startUp());
         await container.read(epgRepositoryProvider).recoverInterrupted();
         // Before the syncs, which write names of their own (ADR-013).
         await container.read(channelNameFillProvider).run();
