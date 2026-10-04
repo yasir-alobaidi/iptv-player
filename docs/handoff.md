@@ -1,33 +1,38 @@
-# Handoff — 2026-10-03 (Phase 7 steps 6 and 7 done, step 8's matrix runner ready; stopped for review; the TV runs wait)
+# Handoff — 2026-10-04 (Phase 8 plan written, for approval; Phase 7 steps 6 and 7 still for review; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, the Phase 7
-part of docs/08-phases-and-prompts.md and docs/04-casting.md.
+docs/plans/phase-8-downloads-and-library.md, docs/09-downloads-and-library.md,
+the Phase 8 part of docs/08-phases-and-prompts.md, and the docs that plan
+names (docs/03, docs/04 "Local files and downloads", docs/05 Library, docs/06,
+ADR-005, ADR-014).
 
 ## Before you start the next session (user)
-1. **Review Phase 7 step 6** (ADR-014 "The cast coordinator"): a screen's
-   stop leaves a cast alone; the TV's remote stopping a cast leaves the
-   session on with nothing playing; a refusal more than 15 s after a LOAD
-   reloads a live stream (3 within 2 minutes) but fails a file; learning
-   also catches a copied sound other than AAC; quitting waits up to 4 s
-   for the TV and the relay; `dbus` is a direct dependency.
-2. **Review Phase 7 step 7** (ADR-014 "The casting UI"). Its UX decisions:
-   - **the casting view is an overlay on the content pane**, not a page:
-     Esc goes back to exactly where you were while the cast goes on; the
-     full-screen player hands over to it;
-   - **while casting, a click in Live TV only chooses a channel**; Enter
-     (or "Play on Living Room TV") plays it on the TV;
-   - **live has no pause** (as the canvas); ←/→ seek files by 10 s, ↑/↓
-     zap, Space, M, Esc;
-   - **Forget for every kept device**, not only those added by address;
-   - the picker's help opens by itself after 10 s with no device.
-   And the fixes the keyboard walk led to: **the relay no longer takes a
-   TV that holds back (buffer full, paused) for a stall**, and **stopping
-   or seeking a relayed stream no longer waits 3 s**. Without them every
-   relayed movie on the TV would have broken within minutes.
-3. **Push** the four local commits (6ebff8e the Windows CI fixes; step 6;
-   step 7; the matrix runner).
+1. **Review Phase 7 steps 6 and 7** (ADR-014 "The cast coordinator" and "The
+   casting UI"; step 7's UX decisions are listed there). The 2026-10-04
+   session read "continue the work" as the go-ahead to move on, but recorded
+   no approval: say "approved" (or what to change) in the start prompt.
+2. **Review the Phase 8 plan** (`docs/plans/phase-8-downloads-and-library.md`):
+   twelve decisions with a recommendation each, eight steps, eight sketches.
+   **Decision 1 asks to start Phase 8 before Phase 7's TV sitting**, against
+   docs/08's "a phase waits for the one before", because that sitting waits
+   only on the TV. The others in short:
+   - **2:** downloads in their own isolate (dart:io); the queue's rules in
+     the app's isolate;
+   - **3:** downloads yield through `SourceConnections` at once, and come back
+     10 s after the source is free;
+   - **4:** HLS items through the relay's proxy into FFmpeg, no resume;
+   - **5:** a download keeps a copy of its details (`details_json`);
+   - **6:** a two-pass scanner (fast walk and hash, then ffprobe);
+   - **7:** watched folders, with "Updates when rescanned" as the fallback;
+   - **8:** every Play of a downloaded title uses the file;
+   - **9:** Enter opens pages for movies and shows, plays videos;
+   - **10:** our own freedesktop trash;
+   - **11:** offline from NetworkManager;
+   - **12:** library casting direct, else the continuous relay plus an MP4
+     made beside it so later seeks are native.
+3. **Push** the five local commits (6ebff8e the Windows CI fixes; step 6;
+   step 7; the matrix runner; the Phase 8 plan).
 4. **The TV runs wait** until you say Living Room TV is back. Then step 2's
    script and step 8's matrix go in one sitting, about 25 minutes (asked
    first, with you watching); have the TV's remote at hand, and be ready to
@@ -38,72 +43,57 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-7-casting.md, ADR-014 in docs/decisions.md, docs/08-phases-and-prompts.md (Phase 7)
-and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these changes: …>.
-<The TV runs wait | The TV is on the network: run step 8's matrix after you ask>.
+docs/plans/phase-8-downloads-and-library.md and the docs it names first.
+Phase 7 steps 6 and 7 are <approved | approved with these changes: …>.
+The Phase 8 plan is <approved: do the recommended | approved with these changes: …>.
+<The TV runs wait | The TV is on the network: run Phase 7 step 8's matrix after you ask>.
 ```
 
 ## Where things stand
-- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done; step 8's
-  matrix runner written and checked 16 of 16 on the fake TV; the TV runs
-  wait** (2026-10-03: "no living room tv yet till I tell u we have it";
-  then "continue" and "stop at a proper point and do the hand off"). Step
-  8 itself (the matrix on the TV and the phase exit) needs the TV.
-- **Checks at the last commit (the runner):** analyze, format, **2,953 app
-  tests** (16 skipped: the runner is one) under `TZ=UTC`; the runner with
-  `CAST_HOST=fake` 16 of 16. **At the step 7 commit:** `build_runner`
-  leaves no diff; the fake
-  receiver's 35 (also with FFmpeg 4.4), the fake provider's 141; the cast
-  walk 4 of 4 under Xvfb (one CI-style: `IPTV_PLAYER_VIDEO=0
-  RELAY_FFMPEG_DIR=/usr/bin`), `favorites_walk_test` and `vod_walk_test`
-  (PanelApp changed); the end-to-end cast files.
+- **Phase 7 (casting): steps 1–5 approved; steps 6 and 7 done and waiting for
+  review; step 8's matrix runner written and checked 16 of 16 on the fake
+  TV; the TV runs wait.** On 2026-10-04 the laptop was on 192.168.26.x
+  again, so the TV was out of reach. Step 8 itself (the matrix on the TV and
+  the phase exit) needs the TV.
+- **Phase 8: the plan is written and waiting for approval.** Nothing of it is
+  built.
+- **Checks at the last code commit (7f1230c, the runner):** analyze, format,
+  **2,953 app tests** (16 skipped: the runner is one) under `TZ=UTC`; the
+  runner with `CAST_HOST=fake` 16 of 16. The plan commit changes docs only.
 - **CI:** not run since the step 5 push (red on Windows; fixed in 6ebff8e,
   not yet pushed). Check the first run after the push. The new
   `cast_walk_test.dart` runs in CI's integration loop (system FFmpeg 4.4,
   no picture); it skips itself without FFmpeg or the samples.
 
-## Done this session (2026-10-03)
-- **Step 6** (committed aaa231e) — see ADR-014 "The cast coordinator".
-- **Step 7** (committed ded9f12; details in ADR-014 "The casting UI"):
-  - `lib/features/casting/presentation/`: `cast_picker.dart`,
-    `add_cast_device_dialog.dart`, `cast_help.dart`, `casting_view.dart`,
-    `casting_view_state.dart` (+ .g), `cast_preview_card.dart`,
-    `cast_settings_section.dart`, `cast_shell_slots.dart` (+ .g),
-    `cast_actions.dart`, `cast_text.dart`;
-  - the shell: `shellCastButtonProvider`, `shellContentOverlayProvider`,
-    `ShellCastSession` grown, the overlay in `desktop_shell.dart`, the top
-    bar's Casting state, `CastIntent` on C (`lib/app/shortcuts.dart`);
-    `bootstrap()` adds `castShellOverrides`, reads
-    `castNoticeToastsProvider`, and on Windows gives
-    `relayFirewallNoticeProvider` its dialog;
-  - design: `AppCastTokens`, `castTitle`/`castKicker`/`qualityTag`,
-    `AppSpinner`, `QualityTag`, `AppIconButton.filled`/`danger`,
-    `AppButtonVariant.dangerOutline`, `AppSlider(compact:)`, `CastingBar`;
-  - data: `CastSettingsController` (`SettingsKeys.cast`),
-    `castNetworkAvailable`, `CastFirewallNoticeStore`;
-    `cast_relay_ports.dart`;
-  - **the relay fixes** (`relay_runtime.dart`: the continuous quiet rule
-    paused with the TV, `dropStream()` before FFmpeg stops;
-    `relay_proxy.dart`: the idle rule paused with FFmpeg);
-  - **the fake receiver** reads like a TV's buffer (`fmp4_clock.dart`,
-    `FakePlayback.bufferAhead`/`bufferRefill`, `FakeWatchListener.played`)
-    and deletes its scratch on cancel;
-  - tests: `test/features/casting/presentation/*` (+ `cast_ui_harness.dart`),
-    `test/golden/casting_golden_test.dart`, the relay's and the fake's new
-    tests, the pause test in `cast_e2e_files_test.dart`,
-    `integration_test/cast_walk_test.dart` (+ `support/cast_tv.dart`);
-  - docs: ADR-014 step 7, docs/05 (Casting as built, Settings → Casting,
-    the player's and details pages' Cast), docs/04 (backpressure), docs/06
-    and the fake's README (its buffer).
-- **Step 8, before the TV** (ADR-014 "Step 8, before the TV"): the matrix
-  runner `test/tools/cast_matrix_tv_test.dart`, 16 rows through the app's
-  casting stack; `CAST_HOST=fake` 16 of 16. Not yet run on the TV.
+## Done this session (2026-10-04)
+- **The Phase 8 plan** (`docs/plans/phase-8-downloads-and-library.md`), read
+  against docs/09, docs/03, docs/04, docs/05, docs/06, ADR-005, the canvas's
+  Library, Downloads and Settings artboards (from the local
+  `design/*.dc.html`; step 6 reads the canvas with the Artifact tool first),
+  and the code Phase 8 builds on. Found while reading:
+  - SQLite counts NULLs as distinct in a unique key, so the existing
+    `(item_type, source_id, remote_key)` key in `favorites` and
+    `watch_history` would let a local file (no source) get two rows. Step 1
+    adds a unique index for local rows.
+  - The fake panel parses `change_etag` and `wrong_content_length` but does
+    nothing with them; `size_mb` and `vod_as_hls` aren't there (step 2).
+  - `SleepInhibitor` has one holder (`hold`/`release`); with casting and
+    downloads both holding it, step 3 puts a shared hold in front of it.
+  - The canvas names folders ("Movies HDD", "USB drive"), which docs/09's
+    table has no column for (`library_folders.label`), and docs/05's drag to
+    reorder downloads needs `downloads.sort_order`.
+- progress.md updated. No ADR-015 yet: it starts when the plan is approved,
+  as ADR-014 did.
 
 ## What's next
-1. **The TV runs, only when the user says the TV is back, after asking and
+1. **With the plan approved: Phase 8 step 1** (schema v9 with the plan's
+   three extra columns and the local-rows index, the migration test, the
+   domain types and interfaces, the DAOs, the download folder). Start
+   ADR-015 with the approval, as ADR-014 did.
+2. **The TV runs, only when the user says the TV is back, after asking and
    with the user watching** (announce each; one cast at a time):
    - check the laptop is on 192.168.1.x (`ip -4 addr`; it was on
-     192.168.26.x on 2026-10-03);
+     192.168.26.x on 2026-10-04);
    - step 2's `CAST_HOST=192.168.1.155 flutter test --tags real_cast
      --run-skipped test/tools/cast_tv_test.dart` (about 30 s; also says
      whether MULTIZONE_STATUS's id equals the TXT id);
@@ -117,7 +107,7 @@ and docs/04-casting.md first. Steps 6 and 7 are <approved | approved with these 
      backpressure fix); what the TV's screen shows of the time for a movie
      started at a place; whether it heeds mute (fixed volume); whether the
      panel's MP4 plays directly without CORS (row 14 says which).
-2. **Then the phase exit:** the results and budgets in ADR-014 (cast start
+3. **Then Phase 7's exit:** the results and budgets in ADR-014 (cast start
    ≤ 8 s launched / ≤ 5 s running — the zaps stand in — and zapping ≤ 6 s
    proposed for docs/06), ADR-014 Accepted, docs/04 "As built", docs/06's
    budgets, progress and this file. The plan offers one channel from the
