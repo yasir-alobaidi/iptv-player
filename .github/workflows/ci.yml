@@ -86,7 +86,17 @@ jobs:
         # diff here means someone changed a model without regenerating.
 
       - name: Analyze
-        run: flutter analyze
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee analyze.log
+
+      - name: Name the analyzer's findings
+        if: failure() && hashFiles('analyze.log') != ''
+        run: dart run tools/ci/analyze_findings.dart analyze.log
+        # Annotations, like the failed tests below: the Windows job's log
+        # needs rights on the repository (step 4's push failed here on
+        # Windows only, and nothing local reproduced it).
 
       - name: Format
         run: dart format --set-exit-if-changed lib test integration_test tools
