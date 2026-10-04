@@ -898,7 +898,7 @@ final class CastCoordinatorProvider
   }
 }
 
-String _$castCoordinatorHash() => r'8cc71bf44c1e6739227a9f7e280943b0a9a3b52c';
+String _$castCoordinatorHash() => r'e3d744cd624ea3d7305e19b10a7e0c27a5d5cbd9';
 
 /// Whether Windows' firewall prompt has been explained before the first
 /// relay start (Phase 7 step 7): once is enough.

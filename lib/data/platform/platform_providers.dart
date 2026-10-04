@@ -1,4 +1,5 @@
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/shared_sleep.dart';
 import 'package:iptv_player/core/platform/sleep_inhibitor.dart';
 import 'package:iptv_player/data/platform/sleep_inhibitors.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -13,3 +14,9 @@ SleepInhibitor sleepInhibitor(Ref ref) {
   ref.onDispose(inhibitor.release);
   return inhibitor;
 }
+
+/// The one hold the cast and the downloads share (Phase 8 step 3): the
+/// computer sleeps again only when neither needs it awake.
+@Riverpod(keepAlive: true)
+SharedSleep sharedSleep(Ref ref) =>
+    SharedSleep(ref.watch(sleepInhibitorProvider));

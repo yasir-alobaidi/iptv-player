@@ -56,3 +56,52 @@ final class SleepInhibitorProvider
 }
 
 String _$sleepInhibitorHash() => r'd3907199311fd54bce41cd43e35b8c113c693a84';
+
+/// The one hold the cast and the downloads share (Phase 8 step 3): the
+/// computer sleeps again only when neither needs it awake.
+
+@ProviderFor(sharedSleep)
+final sharedSleepProvider = SharedSleepProvider._();
+
+/// The one hold the cast and the downloads share (Phase 8 step 3): the
+/// computer sleeps again only when neither needs it awake.
+
+final class SharedSleepProvider
+    extends $FunctionalProvider<SharedSleep, SharedSleep, SharedSleep>
+    with $Provider<SharedSleep> {
+  /// The one hold the cast and the downloads share (Phase 8 step 3): the
+  /// computer sleeps again only when neither needs it awake.
+  SharedSleepProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sharedSleepProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sharedSleepHash();
+
+  @$internal
+  @override
+  $ProviderElement<SharedSleep> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SharedSleep create(Ref ref) {
+    return sharedSleep(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SharedSleep value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SharedSleep>(value),
+    );
+  }
+}
+
+String _$sharedSleepHash() => r'44d2cc48259dc645e71228fe29cdae537096623d';

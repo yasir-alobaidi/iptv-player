@@ -20,6 +20,17 @@ enum StreamHolder {
 final class SourceConnections {
   final _held = <String, Map<StreamHolder, int>>{};
   final _changes = StreamController<void>.broadcast(sync: true);
+  final _yielding = <StreamHolder, void Function(String sourceId)>{};
+
+  /// After every change of any holder's count.
+  Stream<void> get changes => _changes.stream;
+
+  /// Makes [holder] one that gives way (Phase 8's downloads, decision 3):
+  /// whenever another holder waits for [room] at a source where [holder]
+  /// has a connection open, [letGo] is asked to close one there. It
+  /// reports the close through [set], which ends the wait at once.
+  void giveWay(StreamHolder holder, void Function(String sourceId) letGo) =>
+      _yielding[holder] = letGo;
 
   /// What [holder] has open at [sourceId] now.
   void set(String sourceId, StreamHolder holder, int open) {
@@ -52,6 +63,14 @@ final class SourceConnections {
     Duration within = const Duration(seconds: 5),
   }) async {
     bool free() => held(sourceId, except: holder) < limit;
+    if (free()) return true;
+    // A holder that gives way lets go of one, and the wait ends when it
+    // has.
+    _yielding.forEach((yielding, letGo) {
+      if (yielding != holder && (_held[sourceId]?[yielding] ?? 0) > 0) {
+        letGo(sourceId);
+      }
+    });
     if (free()) return true;
     final freed = Completer<bool>();
     final timer = Timer(within, () {

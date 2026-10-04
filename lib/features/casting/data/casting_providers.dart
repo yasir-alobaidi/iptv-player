@@ -227,7 +227,7 @@ CastCoordinator castCoordinator(Ref ref) {
     log: ref.watch(appLogProvider),
     progress: ref.watch(watchProgressProvider),
     history: ref.watch(playbackHistoryProvider),
-    sleep: ref.watch(sleepInhibitorProvider),
+    sleep: ref.watch(sharedSleepProvider).view('cast'),
     pictures: ref.watch(castPicturesProvider),
     settings: () => ref.read(castSettingsControllerProvider),
     audioLanguages: () =>
