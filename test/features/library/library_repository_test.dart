@@ -443,7 +443,7 @@ void main() {
         "file's name", () async {
       final item = await scanOne('Glass.Tide.S01E03.mkv');
       expect(item.kind, LibraryKind.episode);
-      expect(item.path, endsWith('Mine/Glass.Tide.S01E03.mkv'));
+      expect(item.path, endsWith(p.join('Mine', 'Glass.Tide.S01E03.mkv')));
       await library.editItem(
         item.id,
         const LibraryItemEdit(
@@ -510,19 +510,33 @@ void main() {
         (await library.deleteFile(ember.id)).valueOrNull,
         DeleteOutcome.trashed,
       );
-      final trash = p.join(
-        temp.path,
-        'home',
-        '.local',
-        'share',
-        'Trash',
-        'files',
-      );
-      expect(File(p.join(trash, 'Ember Road (2011).mkv')).existsSync(), isTrue);
-      expect(
-        File(p.join(trash, 'Ember Road (2011).en.srt')).existsSync(),
-        isTrue,
-      );
+      for (final name in [
+        'Ember Road (2011).mkv',
+        'Ember Road (2011).en.srt',
+      ]) {
+        expect(
+          File(p.join(folder.path, name)).existsSync(),
+          isFalse,
+          reason: '$name left its folder',
+        );
+        // Windows has its own Recycle Bin, wherever the test's home is.
+        if (!Platform.isLinux) continue;
+        expect(
+          File(
+            p.join(
+              temp.path,
+              'home',
+              '.local',
+              'share',
+              'Trash',
+              'files',
+              name,
+            ),
+          ).existsSync(),
+          isTrue,
+          reason: '$name is in the trash',
+        );
+      }
       expect(await db.libraryDao.itemById(ember.id), isNull);
 
       // A drive with no trash: asked again, then deleted for good.
@@ -536,11 +550,14 @@ void main() {
         trash: SystemTrash(environment: const {}, mountOf: (_) => null),
       );
       final other = items['Other']!;
-      expect(
-        (await noTrash.deleteFile(other.id)).valueOrNull,
-        DeleteOutcome.noTrash,
-      );
-      expect(File(other.path!).existsSync(), isTrue);
+      // Only Linux has drives with no trash.
+      if (Platform.isLinux) {
+        expect(
+          (await noTrash.deleteFile(other.id)).valueOrNull,
+          DeleteOutcome.noTrash,
+        );
+        expect(File(other.path!).existsSync(), isTrue);
+      }
       expect(
         (await noTrash.deleteFile(other.id, permanently: true)).valueOrNull,
         DeleteOutcome.deleted,

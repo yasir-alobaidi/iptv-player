@@ -52,8 +52,9 @@ String? videosFromUserDirs(String contents, {required String home}) {
       ? raw
       : null;
   if (path == null) return null;
-  final normal = p.normalize(path);
-  return p.equals(normal, p.normalize(home)) ? null : normal;
+  // The file is Linux's: its paths are POSIX whatever system reads it.
+  final normal = p.posix.normalize(path);
+  return p.posix.equals(normal, p.posix.normalize(home)) ? null : normal;
 }
 
 /// The Videos known folder (which the user may have moved); null when

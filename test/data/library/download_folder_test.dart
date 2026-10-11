@@ -6,6 +6,7 @@ import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group("the system's Videos folder from user-dirs.dirs", () {
@@ -55,7 +56,7 @@ void main() {
       Future<String> videos() async => '/home/me/Videos';
       expect(
         await downloadFolderPath(videos: videos),
-        '/home/me/Videos/IPTV Player',
+        p.join('/home/me/Videos', 'IPTV Player'),
       );
       expect(
         await downloadFolderPath(chosen: '/media/data/Films', videos: videos),
@@ -114,7 +115,7 @@ void main() {
     test('is Videos + IPTV Player until a folder is chosen', () async {
       expect(
         await container.read(downloadFolderProvider.future),
-        '/home/me/Videos/IPTV Player',
+        p.join('/home/me/Videos', 'IPTV Player'),
       );
       await container
           .read(downloadSettingsControllerProvider.notifier)

@@ -737,8 +737,20 @@ void main() {
     await _checkSearchIndexes(env.db);
     mark('checked');
 
-    // And the next sync picks up cleanly.
+    // And the next sync picks up cleanly. Each new stage or thousand
+    // channels is marked: on Windows CI this is the sync that has waited.
+    String? last;
+    final again = env.engine.watch(id).listen((status) {
+      final now = switch (status) {
+        SyncRunning(:final progress) =>
+          'again: ${progress.stage.name}, '
+              '${progress.channels ~/ 1000}k channels',
+        _ => 'again: ${status.runtimeType}',
+      };
+      if (now != last) mark(last = now);
+    });
     expect((await env.engine.sync(id)).valueOrNull!.channels, 20000);
+    await again.cancel();
     mark('synced again');
     expect(await env.db.channelsDao.countFor(id), 20000);
   });

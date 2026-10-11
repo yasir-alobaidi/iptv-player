@@ -25,7 +25,7 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 75
     strategy:
       # One target failing should still tell us about the other.
       fail-fast: false
@@ -157,13 +157,23 @@ jobs:
         # multi-file run never starts ("Unable to start the app on the
         # device"), whichever file it is. Every file runs, and each test
         # that fails is an annotation with its error, which the public API
-        # shows without the log's admin rights.
+        # shows without the log's admin rights. A file gets 10 minutes
+        # (the longest takes about 3 here): one that hangs is named and
+        # the rest still run, where it used to take the whole job to its
+        # time limit with nothing said (run 37193276058).
         run: |
           failed=0
           for test in integration_test/*_test.dart; do
             rm -f integration-results.json
-            if ! xvfb-run -a flutter test "$test" -d linux \
-                --file-reporter json:integration-results.json; then
+            started=$(date +%s)
+            code=0
+            timeout -k 30 600 xvfb-run -a flutter test "$test" -d linux \
+                --file-reporter json:integration-results.json || code=$?
+            echo "$test: exit $code after $(( $(date +%s) - started )) s"
+            if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then
+              failed=1
+              echo "::error title=Integration test timed out::$test ran for 10 minutes"
+            elif [ "$code" -ne 0 ]; then
               failed=1
               named=''
               if [ -s integration-results.json ]; then
