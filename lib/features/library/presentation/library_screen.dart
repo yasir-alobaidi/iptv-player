@@ -450,24 +450,35 @@ class _Header extends StatelessWidget {
     final style = tokens.text.caption.copyWith(color: colors.textTertiary);
     return ConstrainedBox(
       // The chips' height, so the grid stays put where a tab has none.
-      constraints: BoxConstraints(minHeight: tokens.spacing.s32),
+      constraints: BoxConstraints(
+        minHeight: tokens.spacing.s32 + tokens.spacing.s4,
+      ),
       child: Row(
         children: [
-          Flexible(
-            child: Text(
-              line ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    line ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: style,
+                  ),
+                ),
+                if (scanning case final scanning?) ...[
+                  SizedBox(width: tokens.spacing.s16),
+                  const AppSpinner(size: 12),
+                  SizedBox(width: tokens.spacing.s8),
+                  Text(
+                    scanning,
+                    style: style.copyWith(color: colors.textSecondary),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (scanning case final scanning?) ...[
-            SizedBox(width: tokens.spacing.s16),
-            const AppSpinner(size: 12),
-            SizedBox(width: tokens.spacing.s8),
-            Text(scanning, style: style.copyWith(color: colors.textSecondary)),
-          ],
-          const Spacer(),
+          SizedBox(width: tokens.spacing.s12),
           if (origin case final origin?)
             SegmentedControl<LibraryOrigin>(
               value: origin,

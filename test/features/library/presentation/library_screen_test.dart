@@ -239,7 +239,7 @@ void main() {
     await tester.tap(find.text('Downloaded'));
     await settle(tester);
     expect(find.text('No downloaded movies'), findsOneWidget);
-    expect(find.text('0 movies · 0 bytes on this computer'), findsOneWidget);
+    expect(find.textContaining('on this computer'), findsNothing);
     // The tab still counts the whole library.
     expect(tester.widget<CountTab>(tab('Movies')).count, 1);
 
@@ -377,7 +377,7 @@ void main() {
     await show(tester, 'Videos');
 
     expect(find.text('No other videos'), findsOneWidget);
-    expect(find.text('0 videos · 0 bytes on this computer'), findsOneWidget);
+    expect(find.textContaining('on this computer'), findsNothing);
   });
 
   testWidgets('Folders: the list Settings has, the download folder first, '

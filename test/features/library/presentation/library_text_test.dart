@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/text/languages.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
@@ -128,6 +129,95 @@ void main() {
     expect(
       libraryEpisodeTitle(episode.copyWith(title: 'The Long Tide')),
       'The Long Tide',
+    );
+  });
+
+  test('an empty list has no count line; a scan says what it found', () {
+    expect(
+      libraryCountLine(
+        LibraryTab.movies,
+        const LibraryCount(count: 0, bytes: 0),
+      ),
+      '',
+    );
+    expect(libraryScanLine(0), 'Scanning');
+    expect(libraryScanLine(1204), 'Scanning · 1,204 found');
+  });
+
+  test('every tab and chip has its own words when empty', () {
+    final texts = {
+      for (final tab in [
+        LibraryTab.movies,
+        LibraryTab.series,
+        LibraryTab.videos,
+      ])
+        for (final origin in LibraryOrigin.values)
+          if (tab != LibraryTab.videos || origin == LibraryOrigin.all)
+            libraryEmptyText(tab, origin).title,
+    };
+    expect(texts, hasLength(7));
+    expect(
+      libraryEmptyText(LibraryTab.series, LibraryOrigin.downloaded).message,
+      'Press D on an episode to download it.',
+    );
+  });
+
+  test("a video's page: where it is, its subtitles, its number", () {
+    final file = item().copyWith(
+      relPath: 'Paper Kites (2019)/Paper Kites (2019).mkv',
+    );
+    expect(
+      libraryFileLine(file, 'Movies HDD'),
+      'Movies HDD · Paper Kites (2019)/Paper Kites (2019).mkv · 2.1 GB',
+    );
+    expect(
+      libraryFileLine(item(download: true), 'Downloads'),
+      'Downloaded · a.mkv · 2.1 GB',
+    );
+    expect(
+      libraryFileLine(item(away: at), 'Movies HDD'),
+      startsWith('Drive not connected · Movies HDD'),
+    );
+
+    expect(librarySubtitleNames(item()), isEmpty);
+    expect(
+      librarySubtitleNames(
+        item().copyWith(
+          subtitles: const [
+            ExternalSubtitle(
+              fileName: 'a.en.srt',
+              format: 'srt',
+              language: 'en',
+            ),
+            ExternalSubtitle(fileName: 'a.srt', format: 'srt'),
+          ],
+          media: const LibraryMedia(
+            subtitles: [
+              LibrarySubtitle(language: 'eng'),
+              LibrarySubtitle(language: 'eng', forced: true),
+              LibrarySubtitle(language: 'und', title: 'Signs'),
+            ],
+          ),
+        ),
+      ),
+      ['English', 'Unknown', 'English (forced)', 'Signs'],
+      reason: 'each once: the file and the track in English are one',
+    );
+
+    final episode = item().copyWith(
+      kind: LibraryKind.episode,
+      season: 2,
+      episode: 4,
+    );
+    expect(libraryEpisodeNumber(episode), 'S2 · E4');
+    expect(libraryEpisodeNumber(episode.copyWith(episodeEnd: 5)), 'S2 · E4–5');
+    expect(libraryEpisodeNumber(episode.copyWith(season: null)), 'E4');
+    expect(libraryEpisodeNumber(item()), '');
+    expect(libraryContinueLabel('Continue', episode), 'Continue S2 · E4');
+    expect(libraryContinueLabel('Play', item()), 'Play');
+    expect(
+      driveAwayNotice('Movies HDD'),
+      "Movies HDD isn't connected. Connect its drive to play this.",
     );
   });
 

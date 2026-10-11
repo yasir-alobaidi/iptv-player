@@ -28,8 +28,10 @@ String librarySize(int bytes) {
 String _plural(int count, String one, [String? many]) =>
     '${formatCount(count)} ${count == 1 ? one : many ?? '${one}s'}';
 
-/// "42 movies · 186 GB on this computer".
+/// "42 movies · 186 GB on this computer"; nothing for none, which the
+/// empty tab says in its own words.
 String libraryCountLine(LibraryTab tab, LibraryCount count) {
+  if (count.count == 0) return '';
   final what = switch (tab) {
     LibraryTab.movies => _plural(count.count, 'movie'),
     LibraryTab.series => _plural(count.count, 'show'),

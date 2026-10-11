@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Size;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/misc.dart';
@@ -194,8 +195,11 @@ Future<(LibraryUi, AppUnderTest)> openLibrary(
   FutureOr<void> Function(LibraryUi ui)? before,
   List<Override> overrides = const [],
   Watcher Function(String path)? watcher,
+  Size size = const Size(1440, 900),
+  DateTime? now,
 }) async {
   final ui = LibraryUi(watcher: watcher);
+  if (now != null) ui.vod.fakes.now = now;
   addTearDown(
     () => tester.runAsync(() async {
       await ui.scans.dispose();
@@ -208,6 +212,7 @@ Future<(LibraryUi, AppUnderTest)> openLibrary(
   });
   final app = await pumpApp(
     tester,
+    size: size,
     initialLocation: location,
     overrides: [...ui.overrides, ...overrides],
   );
