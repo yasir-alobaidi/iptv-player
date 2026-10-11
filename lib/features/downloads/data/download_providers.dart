@@ -128,8 +128,11 @@ Stream<List<DownloadTask>> downloadTasks(Ref ref) =>
     ref.watch(downloadQueueProvider).tasks;
 
 /// The queue's toasts and banners.
+/// The queue's news, as the stream itself: what turns it into toasts
+/// subscribes to it directly, since a provider nothing watches is paused
+/// and would miss it.
 @Riverpod(keepAlive: true)
-Stream<DownloadNotice> downloadNotices(Ref ref) =>
+Raw<Stream<DownloadNotice>> downloadNoticeStream(Ref ref) =>
     ref.watch(downloadQueueProvider).notices;
 
 /// The drive the download folder is on: what is free on it and its size,

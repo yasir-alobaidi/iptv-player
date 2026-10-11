@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
@@ -81,6 +82,10 @@ class CatalogueGrid extends ConsumerWidget {
           ? await series.range(query, offset, limit)
           : await movies.range(query, offset, limit),
       onFavorite: (item) => unawaited(_toggleFavorite(ref, item)),
+      // A movie downloads as it is; a series by its episodes, on its page.
+      onDownload: kind == CatalogueKind.movie
+          ? (item) => _download(context, item)
+          : null,
       card: (context, item, focus, width) => switch (item) {
         final MovieItem movie => MovieCard(
           movie: movie,
@@ -115,6 +120,12 @@ class CatalogueGrid extends ConsumerWidget {
       open(path);
     } else {
       unawaited(context.push(path));
+    }
+  }
+
+  void _download(BuildContext context, Object item) {
+    if (item is MovieItem) {
+      unawaited(startDownloads(context, [movieDownloadRequest(item)]));
     }
   }
 
@@ -156,6 +167,13 @@ class CatalogueGrid extends ConsumerWidget {
           shortcut: 'F',
           onPressed: () => unawaited(_toggleFavorite(ref, item)),
         ),
+        if (item is MovieItem)
+          AppMenuItem(
+            label: 'Download',
+            icon: AppIcons.download,
+            shortcut: 'D',
+            onPressed: () => _download(context, item),
+          ),
       ],
     );
   }

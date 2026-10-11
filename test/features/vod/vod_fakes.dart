@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/sources/data/db_category_repository.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
@@ -14,6 +15,7 @@ import 'package:iptv_player/features/vod/data/db_series_repository.dart';
 import 'package:iptv_player/features/vod/data/db_watch_progress.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 
+import '../downloads/support/fake_downloads.dart';
 import '../onboarding/onboarding_fakes.dart';
 import 'vod_test_support.dart';
 
@@ -33,6 +35,9 @@ final class VodFakes {
 
   final OnboardingFakes fakes;
   final AppDatabase db;
+
+  /// The download queue: the pages show where a title's download is.
+  final queue = FakeDownloads();
   final details = ScriptedDetails();
   late int drama;
   late int kids;
@@ -112,6 +117,8 @@ final class VodFakes {
     sourceOverviewRepositoryProvider.overrideWithValue(fakes.overviews),
     appClockProvider.overrideWithValue(() => now),
     appDatabaseProvider.overrideWithValue(db),
+    downloadServiceProvider.overrideWithValue(queue),
+    downloadTasksProvider.overrideWith((ref) => queue.tasks),
     categoryRepositoryProvider.overrideWithValue(DbCategoryRepository(db)),
     titleDetailsSourceProvider.overrideWithValue(details),
     movieRepositoryProvider.overrideWithValue(

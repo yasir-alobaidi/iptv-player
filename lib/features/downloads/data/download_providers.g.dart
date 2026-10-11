@@ -348,48 +348,66 @@ final class DownloadTasksProvider
 String _$downloadTasksHash() => r'ca7611d7b4453a710fd0bd758161da9a72f9c19b';
 
 /// The queue's toasts and banners.
+/// The queue's news, as the stream itself: what turns it into toasts
+/// subscribes to it directly, since a provider nothing watches is paused
+/// and would miss it.
 
-@ProviderFor(downloadNotices)
-final downloadNoticesProvider = DownloadNoticesProvider._();
+@ProviderFor(downloadNoticeStream)
+final downloadNoticeStreamProvider = DownloadNoticeStreamProvider._();
 
 /// The queue's toasts and banners.
+/// The queue's news, as the stream itself: what turns it into toasts
+/// subscribes to it directly, since a provider nothing watches is paused
+/// and would miss it.
 
-final class DownloadNoticesProvider
+final class DownloadNoticeStreamProvider
     extends
         $FunctionalProvider<
-          AsyncValue<DownloadNotice>,
-          DownloadNotice,
-          Stream<DownloadNotice>
+          Raw<Stream<DownloadNotice>>,
+          Raw<Stream<DownloadNotice>>,
+          Raw<Stream<DownloadNotice>>
         >
-    with $FutureModifier<DownloadNotice>, $StreamProvider<DownloadNotice> {
+    with $Provider<Raw<Stream<DownloadNotice>>> {
   /// The queue's toasts and banners.
-  DownloadNoticesProvider._()
+  /// The queue's news, as the stream itself: what turns it into toasts
+  /// subscribes to it directly, since a provider nothing watches is paused
+  /// and would miss it.
+  DownloadNoticeStreamProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'downloadNoticesProvider',
+        name: r'downloadNoticeStreamProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$downloadNoticesHash();
+  String debugGetCreateSourceHash() => _$downloadNoticeStreamHash();
 
   @$internal
   @override
-  $StreamProviderElement<DownloadNotice> $createElement(
+  $ProviderElement<Raw<Stream<DownloadNotice>>> $createElement(
     $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
+  ) => $ProviderElement(pointer);
 
   @override
-  Stream<DownloadNotice> create(Ref ref) {
-    return downloadNotices(ref);
+  Raw<Stream<DownloadNotice>> create(Ref ref) {
+    return downloadNoticeStream(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Raw<Stream<DownloadNotice>> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Raw<Stream<DownloadNotice>>>(value),
+    );
   }
 }
 
-String _$downloadNoticesHash() => r'fc0a0358dfa1b2bb927774dda5598cc1323778e0';
+String _$downloadNoticeStreamHash() =>
+    r'c41dd7cace4bc2eea0389f9dc5de9096985b43d7';
 
 /// The drive the download folder is on: what is free on it and its size,
 /// read again whenever the downloads move (the Downloads tab's meter).

@@ -248,3 +248,18 @@ String libraryContinueLabel(String verb, LibraryItem episode) {
   final number = libraryEpisodeNumber(episode);
   return number.isEmpty ? verb : '$verb $number';
 }
+
+/// A file's own name, as its folder shows it.
+String libraryFileName(LibraryItem item) => item.relPath.split('/').last;
+
+/// Delete file's question (sketch F): "The video and its 2 subtitle files
+/// go to the trash (2.1 GB)."
+String deleteFileBody(LibraryItem item) {
+  final subtitles = item.subtitles.length;
+  final what = switch (subtitles) {
+    0 => 'The video goes',
+    1 => 'The video and its subtitle file go',
+    _ => 'The video and its $subtitles subtitle files go',
+  };
+  return '$what to the trash (${librarySize(item.sizeBytes)}).';
+}

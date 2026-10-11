@@ -157,6 +157,12 @@ ShellNotice? shellNotice(Ref ref) => null;
 @riverpod
 ShellDownloads? shellDownloads(Ref ref) => null;
 
+/// What the download slot does when pressed, before the shell goes to the
+/// Library: the Library's own state shows its Downloads tab. Null does
+/// nothing more.
+@riverpod
+void Function()? shellShowDownloads(Ref ref) => null;
+
 @riverpod
 ShellCastSession? shellCastSession(Ref ref) => null;
 

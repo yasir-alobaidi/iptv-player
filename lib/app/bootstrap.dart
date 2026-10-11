@@ -43,6 +43,7 @@ import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
@@ -132,6 +133,7 @@ Future<void> bootstrap() async {
       ],
       ...sourceShellOverrides,
       ...castShellOverrides,
+      ...downloadShellOverrides,
       if (Platform.isWindows)
         relayFirewallNoticeProvider.overrideWith(
           (ref) => windowsFirewallNotice(
@@ -212,6 +214,8 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
         // The download folder is a library folder (docs/09), and what
         // was downloading when the app went picks up again.
         await _registerDownloadFolder(container);
+        // The queue's news as toasts, from before it starts.
+        container.read(downloadToastsProvider);
         await container.read(downloadQueueProvider).startUp();
         // The library's folders: scanned now, watched from then on.
         unawaited(container.read(libraryScansProvider).startUp());

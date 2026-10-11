@@ -35,6 +35,7 @@ class TitleGrid<T extends Object> extends StatefulWidget {
     required this.query,
     required this.revision,
     this.onFavorite,
+    this.onDownload,
     this.pageSize = 120,
     this.shape = TitleGridShape.poster,
     super.key,
@@ -58,6 +59,9 @@ class TitleGrid<T extends Object> extends StatefulWidget {
   /// read again in place, the cards on screen staying until then.
   final Object revision;
   final void Function(T item)? onFavorite;
+
+  /// D on the focused title (docs/05: downloads a movie).
+  final void Function(T item)? onDownload;
   final int pageSize;
 
   /// Posters, or 16:9 cards (the Library's Videos).
@@ -374,6 +378,11 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
           final item = _itemAt(_focused);
           if (item != null) widget.onFavorite?.call(item);
         },
+        if (widget.onDownload case final download?)
+          const SingleActivator(LogicalKeyboardKey.keyD): () {
+            final item = _itemAt(_focused);
+            if (item != null) download(item);
+          },
       },
       child: FocusPane(
         debugLabel: 'title grid',

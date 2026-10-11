@@ -200,8 +200,10 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                               downloads: downloads,
                               onOpenSearch: widget.onOpenSearch ?? () {},
                               onOpenSource: () => _go(AppDestination.settings),
-                              onOpenDownloads: () =>
-                                  _go(AppDestination.library),
+                              onOpenDownloads: () {
+                                ref.read(shellShowDownloadsProvider)?.call();
+                                _go(AppDestination.library);
+                              },
                               onCast: castButton == null
                                   ? null
                                   : () => castButton.onPressed(context),

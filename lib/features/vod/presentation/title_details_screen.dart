@@ -6,12 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
@@ -235,10 +238,18 @@ class _MoviePage extends ConsumerWidget {
     void play({Duration? from}) =>
         unawaited(ref.read(vodLauncherProvider).playMovie(movie, from: from));
 
+    final download = ref.watch(
+      titleDownloadProvider(VodType.movie, movie.sourceId, movie.remoteKey),
+    );
+    final downloadFace = downloadButtonFace(download);
+    final request = movieDownloadRequest(movie);
+
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyF): () =>
             unawaited(toggleFavorite()),
+        const SingleActivator(LogicalKeyboardKey.keyD): () =>
+            unawaited(startDownloads(context, [request])),
       },
       child: Stack(
         fit: StackFit.expand,
@@ -340,6 +351,20 @@ class _MoviePage extends ConsumerWidget {
                                 size: AppButtonSize.xl,
                                 onPressed: play,
                               ),
+                            // Sketch E: Download, its progress, or
+                            // Downloaded; Enter on one under way or
+                            // done opens its menu.
+                            Builder(
+                              builder: (anchor) => AppButton(
+                                label: downloadFace.label,
+                                icon: downloadFace.icon,
+                                variant: AppButtonVariant.secondary,
+                                size: AppButtonSize.xl,
+                                onPressed: () => unawaited(
+                                  downloadPressed(anchor, download, request),
+                                ),
+                              ),
+                            ),
                             AppIconButton(
                               icon: movie.isFavorite
                                   ? AppIcons.starFilled
@@ -743,6 +768,14 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
           controller: _tabs,
           onPick: (season) => setState(() => _season = season),
           onLeaveLeft: _primary.requestFocus,
+          trailing: _DownloadSeason(
+            onPressed: () => unawaited(
+              startDownloads(context, [
+                for (final episode in shown.episodes)
+                  episodeDownloadRequest(series, episode),
+              ]),
+            ),
+          ),
         ),
         SizedBox(height: tokens.spacing.s16),
         Expanded(
@@ -755,6 +788,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
               return _EpisodeRow(
                 key: _rowKey(episode.remoteKey),
                 episode: episode,
+                request: episodeDownloadRequest(series, episode),
                 mark: marks[episode.remoteKey],
                 focus: _rowNode(episode.remoteKey),
                 onPlay: _play,
@@ -908,8 +942,13 @@ class DetailsSeasonTabs extends StatefulWidget {
     required this.controller,
     required this.onPick,
     this.onLeaveLeft,
+    this.trailing,
     super.key,
   });
+
+  /// After the episode count: the provider's page has Download season
+  /// there (canvas).
+  final Widget? trailing;
 
   /// The seasons' numbers, in order.
   final List<int> seasons;
@@ -1030,6 +1069,10 @@ class _DetailsSeasonTabsState extends State<DetailsSeasonTabs> {
             episodes == 1 ? '1 episode' : '$episodes episodes',
             style: tokens.text.labelSmall.copyWith(color: colors.textTertiary),
           ),
+          if (widget.trailing case final trailing?) ...[
+            SizedBox(width: tokens.spacing.s16),
+            trailing,
+          ],
         ],
       ),
     );
@@ -1075,6 +1118,7 @@ class DetailsEpisodeList extends StatelessWidget {
 class _EpisodeRow extends ConsumerWidget {
   const new({
     required this.episode,
+    required this.request,
     required this.mark,
     required this.focus,
     required this.onPlay,
@@ -1082,6 +1126,9 @@ class _EpisodeRow extends ConsumerWidget {
   });
 
   final EpisodeItem episode;
+
+  /// What Download asks the queue for.
+  final DownloadRequest request;
   final WatchMark? mark;
   final FocusNode focus;
   final void Function(EpisodeItem episode, {Duration? from}) onPlay;
@@ -1103,6 +1150,14 @@ class _EpisodeRow extends ConsumerWidget {
       if (watched) 'Watched',
       if (remaining != null) formatTimeLeft(remaining),
     ].join(' · ');
+    final download = ref.watch(
+      titleDownloadProvider(
+        VodType.episode,
+        episode.sourceId,
+        episode.remoteKey,
+      ),
+    );
+    final downloadFace = downloadButtonFace(download);
 
     Future<void> menu() => showAppMenu(
       context,
@@ -1128,124 +1183,263 @@ class _EpisodeRow extends ConsumerWidget {
                 .setWatched(episode.ref, watched: !watched),
           ),
         ),
+        if (download.none)
+          AppMenuItem(
+            label: 'Download',
+            icon: AppIcons.download,
+            shortcut: 'D',
+            onPressed: () => unawaited(startDownloads(context, [request])),
+          )
+        else
+          AppMenuItem(
+            label: '${downloadFace.label}…',
+            icon: downloadFace.icon,
+            onPressed: () =>
+                unawaited(downloadPressed(context, download, request)),
+          ),
       ],
     );
 
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spacing.s4),
-      child: FocusableSurface(
-        focusNode: focus,
-        borderRadius: tokens.radii.mdAll,
-        semanticLabel: 'Episode ${episode.episode}, ${episode.title}',
-        onPressed: () =>
-            onPlay(episode, from: resumable ? mark.position : null),
-        onMenu: () => unawaited(menu()),
-        builder: (context, states) => Container(
-          padding: EdgeInsets.all(tokens.spacing.s8 + 2),
-          decoration: BoxDecoration(
-            color: states.highlighted
-                ? colors.surface3
-                : colors.surface3.withValues(alpha: 0),
-            borderRadius: tokens.radii.mdAll,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: tokens.radii.smAll,
-                child: SizedBox(
-                  width: still.width,
-                  height: still.height,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      PosterArtwork(
-                        title: '',
-                        image: artworkFor(
-                          context,
-                          episode.stillUrl,
-                          width: still.width,
-                        ),
-                      ),
-                      if (mark != null && mark.position > Duration.zero)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: ProgressBar(
-                            value: watched ? 1 : mark.fraction,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.keyD): () =>
+              unawaited(startDownloads(context, [request])),
+        },
+        child: FocusableSurface(
+          focusNode: focus,
+          borderRadius: tokens.radii.mdAll,
+          semanticLabel: 'Episode ${episode.episode}, ${episode.title}',
+          onPressed: () =>
+              onPlay(episode, from: resumable ? mark.position : null),
+          onMenu: () => unawaited(menu()),
+          builder: (context, states) => Container(
+            padding: EdgeInsets.all(tokens.spacing.s8 + 2),
+            decoration: BoxDecoration(
+              color: states.highlighted
+                  ? colors.surface3
+                  : colors.surface3.withValues(alpha: 0),
+              borderRadius: tokens.radii.mdAll,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: tokens.radii.smAll,
+                  child: SizedBox(
+                    width: still.width,
+                    height: still.height,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        PosterArtwork(
+                          title: '',
+                          image: artworkFor(
+                            context,
+                            episode.stillUrl,
+                            width: still.width,
                           ),
                         ),
-                    ],
+                        if (mark != null && mark.position > Duration.zero)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: ProgressBar(
+                              value: watched ? 1 : mark.fraction,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: tokens.spacing.s16 + 2),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: tokens.spacing.s4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'E${episode.episode}',
-                            style: tokens.text.labelSmall
-                                .withWeight(700)
-                                .copyWith(
-                                  color: states.focused
-                                      ? colors.accentBase
-                                      : colors.textTertiary,
+                SizedBox(width: tokens.spacing.s16 + 2),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: tokens.spacing.s4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'E${episode.episode}',
+                              style: tokens.text.labelSmall
+                                  .withWeight(700)
+                                  .copyWith(
+                                    color: states.focused
+                                        ? colors.accentBase
+                                        : colors.textTertiary,
+                                  ),
+                            ),
+                            SizedBox(width: tokens.spacing.s8 + 2),
+                            Expanded(
+                              child: Text(
+                                episode.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: tokens.text.bodyStrong.copyWith(
+                                  color: watched && !states.focused
+                                      ? colors.textSecondary
+                                      : colors.textPrimary,
                                 ),
-                          ),
-                          SizedBox(width: tokens.spacing.s8 + 2),
-                          Expanded(
-                            child: Text(
-                              episode.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: tokens.text.bodyStrong.copyWith(
-                                color: watched && !states.focused
-                                    ? colors.textSecondary
-                                    : colors.textPrimary,
                               ),
                             ),
-                          ),
-                          if (watched)
-                            AppIcon(
-                              AppIcons.check,
-                              size: 18,
-                              color: colors.success,
+                            if (watched)
+                              AppIcon(
+                                AppIcons.check,
+                                size: 18,
+                                color: colors.success,
+                              ),
+                            SizedBox(width: tokens.spacing.s8 + 2),
+                            // The mouse's: the keyboard has D and the
+                            // row's menu.
+                            ExcludeFocus(
+                              child: Builder(
+                                builder: (anchor) => _EpisodeDownload(
+                                  download: download,
+                                  onPressed: () => unawaited(
+                                    downloadPressed(anchor, download, request),
+                                  ),
+                                ),
+                              ),
                             ),
-                        ],
-                      ),
-                      if (line.isNotEmpty) ...[
-                        SizedBox(height: tokens.spacing.s4),
-                        Text(
-                          line,
-                          style: tokens.text.labelSmall.copyWith(
-                            color: colors.textTertiary,
+                          ],
+                        ),
+                        if (line.isNotEmpty) ...[
+                          SizedBox(height: tokens.spacing.s4),
+                          Text(
+                            line,
+                            style: tokens.text.labelSmall.copyWith(
+                              color: colors.textTertiary,
+                            ),
                           ),
-                        ),
+                        ],
+                        if (states.focused && episode.plot != null) ...[
+                          SizedBox(height: tokens.spacing.s4 + 2),
+                          Text(
+                            episode.plot!,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.text.label
+                                .withWeight(400)
+                                .copyWith(color: colors.textSecondary),
+                          ),
+                        ],
                       ],
-                      if (states.focused && episode.plot != null) ...[
-                        SizedBox(height: tokens.spacing.s4 + 2),
-                        Text(
-                          episode.plot!,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.text.label
-                              .withWeight(400)
-                              .copyWith(color: colors.textSecondary),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Download season" at the right of the seasons (canvas): every episode
+/// of the season shown that isn't downloaded or on its way.
+class _DownloadSeason extends StatelessWidget {
+  const new({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return FocusableSurface(
+      onPressed: onPressed,
+      borderRadius: tokens.radii.smAll,
+      semanticLabel: 'Download season',
+      builder: (context, states) => Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: tokens.spacing.s4,
+          vertical: tokens.spacing.s4,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIcon(
+              AppIcons.download,
+              size: 14,
+              color: states.highlighted
+                  ? colors.accentHover
+                  : colors.accentBase,
+            ),
+            SizedBox(width: tokens.spacing.s4 + 2),
+            Text(
+              'Download season',
+              style: tokens.text.caption
+                  .withWeight(700)
+                  .copyWith(
+                    color: states.highlighted
+                        ? colors.accentHover
+                        : colors.accentBase,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// An episode's download at the right of its title (canvas: a 32 px
+/// bordered button): the arrow, its progress as it comes, the green
+/// check once it is on this computer.
+class _EpisodeDownload extends StatelessWidget {
+  const new({required this.download, required this.onPressed});
+
+  final TitleDownload download;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.tokens.colors;
+    final face = downloadButtonFace(download);
+    final task = download.task;
+    final done = download.file != null;
+    return AppTooltip(
+      message: face.label,
+      child: FocusableSurface(
+        onPressed: onPressed,
+        borderRadius: context.tokens.radii.smAll,
+        semanticLabel: face.label,
+        builder: (context, states) => Container(
+          width: context.tokens.spacing.s32,
+          height: context.tokens.spacing.s32,
+          decoration: BoxDecoration(
+            color: states.highlighted
+                ? colors.surface2
+                : colors.surface2.withValues(alpha: 0),
+            borderRadius: context.tokens.radii.smAll,
+            border: Border.all(color: colors.border),
+          ),
+          alignment: Alignment.center,
+          child: task != null && task.progress != null
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    value: task.progress,
+                    strokeWidth: 2,
+                    backgroundColor: colors.border,
+                    valueColor: AlwaysStoppedAnimation(colors.accentBase),
+                  ),
+                )
+              : AppIcon(
+                  face.icon,
+                  size: 16,
+                  color: done
+                      ? colors.success
+                      : task != null
+                      ? colors.accentBase
+                      : colors.textSecondary,
+                ),
         ),
       ),
     );

@@ -227,6 +227,64 @@ final class ShellDownloadsProvider
 
 String _$shellDownloadsHash() => r'8423a0ac8dc67b8d03aa3ef058ef44983cb0842a';
 
+/// What the download slot does when pressed, before the shell goes to the
+/// Library: the Library's own state shows its Downloads tab. Null does
+/// nothing more.
+
+@ProviderFor(shellShowDownloads)
+final shellShowDownloadsProvider = ShellShowDownloadsProvider._();
+
+/// What the download slot does when pressed, before the shell goes to the
+/// Library: the Library's own state shows its Downloads tab. Null does
+/// nothing more.
+
+final class ShellShowDownloadsProvider
+    extends
+        $FunctionalProvider<
+          void Function()?,
+          void Function()?,
+          void Function()?
+        >
+    with $Provider<void Function()?> {
+  /// What the download slot does when pressed, before the shell goes to the
+  /// Library: the Library's own state shows its Downloads tab. Null does
+  /// nothing more.
+  ShellShowDownloadsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shellShowDownloadsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shellShowDownloadsHash();
+
+  @$internal
+  @override
+  $ProviderElement<void Function()?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  void Function()? create(Ref ref) {
+    return shellShowDownloads(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void Function()? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void Function()?>(value),
+    );
+  }
+}
+
+String _$shellShowDownloadsHash() =>
+    r'03174803920bedb4f3bf5513e7ab74f835a5f500';
+
 @ProviderFor(shellCastSession)
 final shellCastSessionProvider = ShellCastSessionProvider._();
 
