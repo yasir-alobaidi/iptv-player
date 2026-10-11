@@ -9,6 +9,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/presentation/download_settings_section.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../app/app_harness.dart';
 import '../../library/presentation/library_ui_support.dart';
@@ -40,7 +41,10 @@ void main() {
     await open(tester);
 
     expect(find.text('DOWNLOADS'), findsOneWidget);
-    expect(find.text('~/Videos/IPTV Player · 118 GB free'), findsOneWidget);
+    expect(
+      find.text('${p.join('~', 'Videos', 'IPTV Player')} · 118 GB free'),
+      findsOneWidget,
+    );
     expect(find.text('Downloads at a time'), findsOneWidget);
     expect(
       find.text(

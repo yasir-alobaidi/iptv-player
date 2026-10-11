@@ -12,6 +12,7 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_routes.dart';
 import 'package:iptv_player/features/vod/presentation/title_grid.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../app/app_harness.dart';
 import '../../vod/catalogue_screen_test.dart' show focusedLabel;
@@ -386,7 +387,7 @@ void main() {
     await show(tester, 'Folders');
 
     expect(find.text('3 folders · 17.5 GB on this computer'), findsOneWidget);
-    expect(find.text('~/Videos/IPTV Player'), findsOneWidget);
+    expect(find.text(p.join('~', 'Videos', 'IPTV Player')), findsOneWidget);
     expect(find.text('/media/hdd/Movies'), findsOneWidget);
     expect(find.textContaining('Movies HDD · 5 videos'), findsOneWidget);
     expect(find.text('Rescan'), findsWidgets);

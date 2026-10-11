@@ -9,6 +9,7 @@ import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/downloads/presentation/download_text.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../app/app_harness.dart';
 import '../../library/presentation/library_ui_support.dart';
@@ -137,7 +138,7 @@ void main() {
 
     expect(find.text('Downloads 0 bytes'), findsOneWidget);
     expect(find.text('118 GB free of 512 GB'), findsOneWidget);
-    expect(find.text('~/Videos/IPTV Player'), findsOneWidget);
+    expect(find.text(p.join('~', 'Videos', 'IPTV Player')), findsOneWidget);
     expect(find.text('Change folder'), findsOneWidget);
   });
 

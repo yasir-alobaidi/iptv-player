@@ -139,7 +139,9 @@ void main() {
 
     await menu(tester, 'Paper Kites (2019)');
     await choose(tester, 'Show in folder');
-    expect(ui.revealed, [p.join('/media/hdd/Movies', _kites)]);
+    expect(ui.revealed, [
+      p.joinAll(['/media/hdd/Movies', ..._kites.split('/')]),
+    ]);
   });
 
   testWidgets('Mark as watched, and the favorite, from the menu', (
