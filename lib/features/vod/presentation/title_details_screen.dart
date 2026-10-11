@@ -370,7 +370,7 @@ class _MoviePage extends ConsumerWidget {
                         ),
                         if (resumable) ...[
                           SizedBox(height: tokens.spacing.s12),
-                          _TimeLeft(mark: mark),
+                          DetailsTimeLeft(mark: mark),
                         ],
                       ],
                     ),
@@ -489,8 +489,8 @@ class _About extends StatelessWidget {
 }
 
 /// "46 min left" beside the progress bar (canvas: 420 wide).
-class _TimeLeft extends StatelessWidget {
-  const new({required this.mark});
+class DetailsTimeLeft extends StatelessWidget {
+  const new({required this.mark, super.key});
 
   final WatchMark mark;
 
@@ -534,6 +534,10 @@ class _SeriesPage extends ConsumerStatefulWidget {
 class _SeriesPageState extends ConsumerState<_SeriesPage> {
   final _episodes = FocusPaneController();
   final _tabs = FocusPaneController();
+
+  /// The column's main action (Play, or the favorite while there is
+  /// nothing to play): where ← from the seasons and the episodes goes.
+  final _primary = FocusNode(debugLabel: 'series primary');
   final _rows = <String, FocusNode>{};
   final _rowKeys = <String, GlobalKey>{};
 
@@ -549,6 +553,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
   void dispose() {
     _episodes.dispose();
     _tabs.dispose();
+    _primary.dispose();
     for (final node in _rows.values) {
       node.dispose();
     }
@@ -643,6 +648,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
                     details: details,
                     state: state,
                     nextUp: nextUp,
+                    primaryFocus: _primary,
                     onPlay: _play,
                     onFavorite: () => unawaited(_toggleFavorite()),
                     onRetry: () => ref.invalidate(
@@ -730,31 +736,30 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SeasonTabs(
-          seasons: seasons,
-          shown: shown,
+        DetailsSeasonTabs(
+          seasons: [for (final season in seasons) season.number],
+          shown: shown.number,
+          episodes: shown.episodes.length,
           controller: _tabs,
-          onPick: (season) => setState(() => _season = season.number),
+          onPick: (season) => setState(() => _season = season),
+          onLeaveLeft: _primary.requestFocus,
         ),
         SizedBox(height: tokens.spacing.s16),
         Expanded(
-          child: FocusPane(
-            debugLabel: 'episodes',
+          child: DetailsEpisodeList(
             controller: _episodes,
-            tabStop: true,
-            child: ListView.builder(
-              itemCount: shown.episodes.length,
-              itemBuilder: (context, index) {
-                final episode = shown.episodes[index];
-                return _EpisodeRow(
-                  key: _rowKey(episode.remoteKey),
-                  episode: episode,
-                  mark: marks[episode.remoteKey],
-                  focus: _rowNode(episode.remoteKey),
-                  onPlay: _play,
-                );
-              },
-            ),
+            onLeaveLeft: _primary.requestFocus,
+            itemCount: shown.episodes.length,
+            itemBuilder: (context, index) {
+              final episode = shown.episodes[index];
+              return _EpisodeRow(
+                key: _rowKey(episode.remoteKey),
+                episode: episode,
+                mark: marks[episode.remoteKey],
+                focus: _rowNode(episode.remoteKey),
+                onPlay: _play,
+              );
+            },
           ),
         ),
       ],
@@ -768,11 +773,14 @@ class _SeriesColumn extends StatelessWidget {
     required this.details,
     required this.state,
     required this.nextUp,
+    required this.primaryFocus,
     required this.onPlay,
     required this.onFavorite,
     required this.onRetry,
   });
 
+  /// Play's node, or the favorite's while there is nothing to play.
+  final FocusNode primaryFocus;
   final SeriesItem series;
   final SeriesDetails? details;
   final Details<SeriesDetails>? state;
@@ -836,6 +844,7 @@ class _SeriesColumn extends StatelessWidget {
                   icon: AppIcons.play,
                   size: AppButtonSize.xl,
                   autofocus: true,
+                  focusNode: primaryFocus,
                   onPressed: () => onPlay(nextUp.episode, from: nextUp.from),
                 ),
               ),
@@ -852,6 +861,7 @@ class _SeriesColumn extends StatelessWidget {
               // Only once the page knows there is nothing to play: the
               // Play button, arriving with the episodes, takes it then.
               autofocus: nextUp == null && state is DetailsReady,
+              focusNode: nextUp == null ? primaryFocus : null,
               size: layout.movieActionHeight,
               onPressed: onFavorite,
             ),
@@ -884,25 +894,68 @@ String _episodeLabel(EpisodeItem episode) =>
 
 /// Season 1, Season 2… with the shown one underlined, and its episode
 /// count at the right (canvas). One Tab stop; ←/→ inside, Enter shows a
-/// season.
-class _SeasonTabs extends StatelessWidget {
+/// season. A library show's page has them too.
+///
+/// The arrows are the tabs' own: the shell takes ← in a screen as "back
+/// to the nav rail" unless the screen binds it, which would leave the
+/// seasons before the first could be reached. ← on the first season
+/// calls [onLeaveLeft] (the page's column is there).
+class DetailsSeasonTabs extends StatefulWidget {
   const new({
     required this.seasons,
     required this.shown,
+    required this.episodes,
     required this.controller,
     required this.onPick,
+    this.onLeaveLeft,
+    super.key,
   });
 
-  final List<Season> seasons;
-  final Season shown;
+  /// The seasons' numbers, in order.
+  final List<int> seasons;
+  final int shown;
+
+  /// How many episodes the shown season has.
+  final int episodes;
   final FocusPaneController controller;
-  final void Function(Season season) onPick;
+  final void Function(int season) onPick;
+  final VoidCallback? onLeaveLeft;
+
+  @override
+  State<DetailsSeasonTabs> createState() => _DetailsSeasonTabsState();
+}
+
+class _DetailsSeasonTabsState extends State<DetailsSeasonTabs> {
+  final _nodes = <int, FocusNode>{};
+
+  @override
+  void dispose() {
+    for (final node in _nodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  FocusNode _node(int season) =>
+      _nodes.putIfAbsent(season, () => FocusNode(debugLabel: 'season $season'));
+
+  void _step(int by) {
+    final seasons = widget.seasons;
+    final at = seasons.indexWhere((season) => _node(season).hasFocus);
+    if (at < 0) return;
+    final to = at + by;
+    if (to < 0) {
+      widget.onLeaveLeft?.call();
+    } else if (to < seasons.length) {
+      _node(seasons[to]).requestFocus();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final count = shown.episodes.length;
+    final episodes = widget.episodes;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: colors.surface3)),
@@ -910,64 +963,108 @@ class _SeasonTabs extends StatelessWidget {
       child: Row(
         children: [
           Flexible(
-            child: FocusPane(
-              debugLabel: 'seasons',
-              controller: controller,
-              tabStop: true,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final season in seasons)
-                      FocusableSurface(
-                        onPressed: () => onPick(season),
-                        borderRadius: tokens.radii.smAll,
-                        semanticLabel: 'Season ${season.number}',
-                        builder: (context, states) {
-                          final active = season.number == shown.number;
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: tokens.spacing.s4,
-                              vertical: tokens.spacing.s12,
-                            ),
-                            margin: EdgeInsets.only(right: tokens.spacing.s16),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: active
-                                      ? colors.accentBase
-                                      : colors.accentBase.withValues(alpha: 0),
-                                  width: 2,
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+                    _step(-1),
+                const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+                    _step(1),
+              },
+              child: FocusPane(
+                debugLabel: 'seasons',
+                controller: widget.controller,
+                tabStop: true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final season in widget.seasons)
+                        FocusableSurface(
+                          focusNode: _node(season),
+                          onPressed: () => widget.onPick(season),
+                          borderRadius: tokens.radii.smAll,
+                          semanticLabel: 'Season $season',
+                          builder: (context, states) {
+                            final active = season == widget.shown;
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: tokens.spacing.s4,
+                                vertical: tokens.spacing.s12,
+                              ),
+                              margin: EdgeInsets.only(
+                                right: tokens.spacing.s16,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: active
+                                        ? colors.accentBase
+                                        : colors.accentBase.withValues(
+                                            alpha: 0,
+                                          ),
+                                    width: 2,
+                                  ),
                                 ),
                               ),
-                            ),
-                            child: Text(
-                              'Season ${season.number}',
-                              style: tokens.text.label
-                                  .withWeight(700)
-                                  .copyWith(
-                                    color: active || states.highlighted
-                                        ? colors.textPrimary
-                                        : colors.textSecondary,
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
+                              child: Text(
+                                'Season $season',
+                                style: tokens.text.label
+                                    .withWeight(700)
+                                    .copyWith(
+                                      color: active || states.highlighted
+                                          ? colors.textPrimary
+                                          : colors.textSecondary,
+                                    ),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
           SizedBox(width: tokens.spacing.s12),
           Text(
-            count == 1 ? '1 episode' : '$count episodes',
+            episodes == 1 ? '1 episode' : '$episodes episodes',
             style: tokens.text.labelSmall.copyWith(color: colors.textTertiary),
           ),
         ],
       ),
     );
   }
+}
+
+/// The episodes of a details page, one Tab stop with ↑/↓ inside; ← goes
+/// to the page's column ([onLeaveLeft]) rather than out to the nav rail,
+/// so Play can be reached again by keys.
+class DetailsEpisodeList extends StatelessWidget {
+  const new({
+    required this.controller,
+    required this.onLeaveLeft,
+    required this.itemCount,
+    required this.itemBuilder,
+    super.key,
+  });
+
+  final FocusPaneController controller;
+  final VoidCallback onLeaveLeft;
+  final int itemCount;
+  final NullableIndexedWidgetBuilder itemBuilder;
+
+  @override
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.arrowLeft): onLeaveLeft,
+    },
+    child: FocusPane(
+      debugLabel: 'episodes',
+      controller: controller,
+      tabStop: true,
+      child: ListView.builder(itemCount: itemCount, itemBuilder: itemBuilder),
+    ),
+  );
 }
 
 /// One episode (canvas): the still with its progress line, E4 and the
@@ -1263,6 +1360,7 @@ class DetailsMetaLine extends StatelessWidget {
     this.rating,
     this.genre,
     this.runtime,
+    this.more = const [],
     this.badges = const [],
     this.watched = false,
     super.key,
@@ -1272,6 +1370,9 @@ class DetailsMetaLine extends StatelessWidget {
   final double? rating;
   final String? genre;
   final String? runtime;
+
+  /// More of the line, in order: a file's "1080p", "H.264", "AC-3 5.1".
+  final List<String> more;
   final List<String> badges;
   final bool watched;
 
@@ -1297,6 +1398,7 @@ class DetailsMetaLine extends StatelessWidget {
         ),
       if (genre != null && genre!.trim().isNotEmpty)
         Text(genre!.trim(), style: style),
+      for (final part in more) Text(part, style: style),
       if (watched)
         Row(
           mainAxisSize: MainAxisSize.min,

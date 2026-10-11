@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/design/components.dart';
-import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
@@ -57,7 +56,7 @@ class CatalogueGrid extends ConsumerWidget {
       );
     }
     final counted = count.value;
-    if (counted == null) return const _SkeletonGrid();
+    if (counted == null) return const TitleGridSkeleton();
     final total = counted.count;
     if (total == 0) return empty();
     final movies = ref.read(movieRepositoryProvider);
@@ -158,41 +157,6 @@ class CatalogueGrid extends ConsumerWidget {
           onPressed: () => unawaited(_toggleFavorite(ref, item)),
         ),
       ],
-    );
-  }
-}
-
-class _SkeletonGrid extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns =
-            ((constraints.maxWidth + TitleGrid.columnGap) /
-                    (TitleGrid.minCardWidth + TitleGrid.columnGap))
-                .floor()
-                .clamp(1, 12);
-        final width =
-            (constraints.maxWidth -
-                tokens.spacing.s8 * 2 -
-                TitleGrid.columnGap * (columns - 1)) /
-            columns;
-        return Padding(
-          padding: EdgeInsets.all(tokens.spacing.s8),
-          child: Wrap(
-            spacing: TitleGrid.columnGap,
-            runSpacing: TitleGrid.rowGap,
-            clipBehavior: Clip.hardEdge,
-            children: [
-              for (var i = 0; i < columns * 2; i++)
-                SkeletonPoster(width: width),
-            ],
-          ),
-        );
-      },
     );
   }
 }

@@ -7,11 +7,15 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/theme.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:logger/logger.dart';
 
 /// What a pumped app gives a test: the router to assert on and the error
@@ -92,4 +96,37 @@ Finder findByLabel(String label) => find.byWidgetPredicate(
 class _SilentOutput extends LogOutput {
   @override
   void output(OutputEvent event) {}
+}
+
+/// The Library with nothing in it, for tests of the shell that pass
+/// through it with no database: it is the one destination that reads its
+/// lists whether or not there is a source.
+final List<Override> emptyLibraryOverrides = [
+  libraryRepositoryProvider.overrideWithValue(const _EmptyLibrary()),
+  libraryScanStateProvider.overrideWith(
+    (ref) => Stream.value(const LibraryScanState()),
+  ),
+];
+
+final class _EmptyLibrary implements LibraryRepository {
+  const new();
+
+  @override
+  Stream<LibraryCount> watchCount(LibraryQuery query) =>
+      Stream.value(const LibraryCount(count: 0, bytes: 0));
+
+  @override
+  Stream<List<LibraryShow>> watchShows({
+    LibraryOrigin origin = LibraryOrigin.all,
+  }) => Stream.value(const []);
+
+  @override
+  Stream<List<LibraryFolder>> watchFolders() => Stream.value(const []);
+
+  @override
+  Stream<Map<int, LibraryFolderTotals>> watchFolderTotals() =>
+      Stream.value(const {});
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

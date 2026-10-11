@@ -618,3 +618,161 @@ final class LibraryFavoriteFamily extends $Family
   @override
   String toString() => r'libraryFavoriteProvider';
 }
+
+/// Where the user's own files were left, by quick hash.
+
+@ProviderFor(libraryLocalMarks)
+final libraryLocalMarksProvider = LibraryLocalMarksProvider._();
+
+/// Where the user's own files were left, by quick hash.
+
+final class LibraryLocalMarksProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, WatchMark>>,
+          Map<String, WatchMark>,
+          Stream<Map<String, WatchMark>>
+        >
+    with
+        $FutureModifier<Map<String, WatchMark>>,
+        $StreamProvider<Map<String, WatchMark>> {
+  /// Where the user's own files were left, by quick hash.
+  LibraryLocalMarksProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'libraryLocalMarksProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$libraryLocalMarksHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, WatchMark>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, WatchMark>> create(Ref ref) {
+    return libraryLocalMarks(ref);
+  }
+}
+
+String _$libraryLocalMarksHash() => r'c50582c372044394c6624b21eb0bdbd65c7ea1ca';
+
+/// Where a show's episodes were left, by item id (its page: the rows'
+/// bars and Continue); null until every mark has been read, so the page
+/// decides once where to continue. A file of the user's own is found by
+/// its quick hash, a download under its series at the provider
+/// ([libraryVodRef]).
+
+@ProviderFor(libraryShowMarks)
+final libraryShowMarksProvider = LibraryShowMarksFamily._();
+
+/// Where a show's episodes were left, by item id (its page: the rows'
+/// bars and Continue); null until every mark has been read, so the page
+/// decides once where to continue. A file of the user's own is found by
+/// its quick hash, a download under its series at the provider
+/// ([libraryVodRef]).
+
+final class LibraryShowMarksProvider
+    extends
+        $FunctionalProvider<
+          Map<int, WatchMark>?,
+          Map<int, WatchMark>?,
+          Map<int, WatchMark>?
+        >
+    with $Provider<Map<int, WatchMark>?> {
+  /// Where a show's episodes were left, by item id (its page: the rows'
+  /// bars and Continue); null until every mark has been read, so the page
+  /// decides once where to continue. A file of the user's own is found by
+  /// its quick hash, a download under its series at the provider
+  /// ([libraryVodRef]).
+  LibraryShowMarksProvider._({
+    required LibraryShowMarksFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'libraryShowMarksProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$libraryShowMarksHash();
+
+  @override
+  String toString() {
+    return r'libraryShowMarksProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<Map<int, WatchMark>?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<int, WatchMark>? create(Ref ref) {
+    final argument = this.argument as String;
+    return libraryShowMarks(ref, argument);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<int, WatchMark>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<int, WatchMark>?>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LibraryShowMarksProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$libraryShowMarksHash() => r'7ec6ef05e5622a2966a6f9b9c63fd73bb3e392b1';
+
+/// Where a show's episodes were left, by item id (its page: the rows'
+/// bars and Continue); null until every mark has been read, so the page
+/// decides once where to continue. A file of the user's own is found by
+/// its quick hash, a download under its series at the provider
+/// ([libraryVodRef]).
+
+final class LibraryShowMarksFamily extends $Family
+    with $FunctionalFamilyOverride<Map<int, WatchMark>?, String> {
+  LibraryShowMarksFamily._()
+    : super(
+        retry: null,
+        name: r'libraryShowMarksProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Where a show's episodes were left, by item id (its page: the rows'
+  /// bars and Continue); null until every mark has been read, so the page
+  /// decides once where to continue. A file of the user's own is found by
+  /// its quick hash, a download under its series at the provider
+  /// ([libraryVodRef]).
+
+  LibraryShowMarksProvider call(String showKey) =>
+      LibraryShowMarksProvider._(argument: showKey, from: this);
+
+  @override
+  String toString() => r'libraryShowMarksProvider';
+}

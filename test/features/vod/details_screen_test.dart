@@ -262,6 +262,46 @@ void main() {
       expect(launcher.played, ['7101 from 0']);
     });
 
+    testWidgets('by keys: the arrows stay in the seasons and the episodes, '
+        'and ← from them goes back to Play, not out to the nav rail', (
+      tester,
+    ) async {
+      await open(tester, '/series/src-1/77');
+      expect(focusedLabel(), 'Play S1 · E1');
+
+      // Past the favorite and Cast, to the episodes.
+      for (var i = 0; i < 4 && focusedLabel() != 'Episode 1, Low Water'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focusedLabel(), 'Episode 1, Low Water');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(focusedLabel(), 'Episode 2, Ledger');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(focusedLabel(), 'Play S1 · E1');
+
+      // Round to the seasons: → and ← between them, ← on the first to Play.
+      for (var i = 0; i < 8 && focusedLabel() != 'Season 1'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focusedLabel(), 'Season 1');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(focusedLabel(), 'Season 2');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(focusedLabel(), 'Season 2', reason: 'the last one');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(focusedLabel(), 'Season 1');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(focusedLabel(), 'Play S1 · E1');
+    });
+
     testWidgets('one watched, one part-way: Continue it, ✓ and the time '
         'left on the rows', (tester) async {
       final (_, launcher, _) = await open(

@@ -2,8 +2,10 @@
 library;
 
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/text/format.dart';
+import 'package:iptv_player/core/text/languages.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart'
     show LibraryTab;
 import 'package:path/path.dart' as p;
@@ -133,4 +135,112 @@ String displayFolderPath(String path, String? home) {
   if (p.equals(path, home)) return '~';
   if (!p.isWithin(home, path)) return path;
   return p.join('~', p.relative(path, from: home));
+}
+
+/// Beside the count while a scan runs: "Scanning · 1,204 found".
+String libraryScanLine(int found) =>
+    found == 0 ? 'Scanning' : 'Scanning · ${formatCount(found)} found';
+
+/// The first run, before anything is in the library (docs/05).
+const libraryFirstRunTitle = 'Add a folder with your own movies and shows';
+const libraryFirstRunMessage = 'Press D on a movie or episode to download it.';
+
+/// What an empty tab says: what would be here, and how it gets here.
+({String title, String message}) libraryEmptyText(
+  LibraryTab tab,
+  LibraryOrigin origin,
+) => switch ((tab, origin)) {
+  (LibraryTab.movies, LibraryOrigin.downloaded) => (
+    title: 'No downloaded movies',
+    message: 'Press D on a movie to download it.',
+  ),
+  (LibraryTab.movies, LibraryOrigin.localFolders) => (
+    title: 'No movies in your folders',
+    message: 'Add a folder with your own movies.',
+  ),
+  (LibraryTab.movies, _) => (
+    title: 'No movies here yet',
+    message:
+        'Add a folder with your own movies, or press D on a movie to '
+        'download it.',
+  ),
+  (LibraryTab.series, LibraryOrigin.downloaded) => (
+    title: 'No downloaded episodes',
+    message: 'Press D on an episode to download it.',
+  ),
+  (LibraryTab.series, LibraryOrigin.localFolders) => (
+    title: 'No shows in your folders',
+    message: 'Add a folder with your own shows.',
+  ),
+  (LibraryTab.series, _) => (
+    title: 'No shows here yet',
+    message:
+        'Add a folder with your own shows, or press D on an episode '
+        'to download it.',
+  ),
+  _ => (
+    title: 'No other videos',
+    message:
+        "Videos in your folders that aren't a movie or an episode "
+        'show here.',
+  ),
+};
+
+/// The drive of the folder called [folderLabel] is away: why Enter didn't
+/// play.
+String driveAwayNotice(String? folderLabel) => folderLabel == null
+    ? "Its drive isn't connected. Connect it to play this."
+    : "$folderLabel isn't connected. Connect its drive to play this.";
+
+/// What a library page says its video is, over the title.
+String libraryKindWord(LibraryKind kind) => switch (kind) {
+  LibraryKind.movie => 'Movie',
+  LibraryKind.episode => 'Episode',
+  LibraryKind.unsorted => 'Video',
+};
+
+/// Where a video is, on its page (sketch A): "Movies HDD · Paper Kites
+/// (2019)/Paper Kites (2019).mkv · 2.1 GB"; "Downloaded" where the folder
+/// would be for a download; and that its drive is away.
+String libraryFileLine(LibraryItem item, String? folderLabel) => [
+  if (!item.available) driveNotConnected,
+  if (item.isDownload) 'Downloaded' else ?folderLabel,
+  item.relPath,
+  librarySize(item.sizeBytes),
+].join(' · ');
+
+/// The subtitles a video comes with (sketch A: "English · English
+/// (forced)"): the files beside it, then the tracks inside it, each
+/// language once.
+List<String> librarySubtitleNames(LibraryItem item) {
+  String name(String? language, String? title, {required bool forced}) {
+    final base = switch (language) {
+      final code? when code.isNotEmpty && code != 'und' => languageName(code),
+      _ => title ?? 'Unknown',
+    };
+    return forced ? '$base (forced)' : base;
+  }
+
+  return {
+    for (final file in item.subtitles)
+      name(file.language, null, forced: file.forced),
+    for (final track in item.media?.subtitles ?? const <LibrarySubtitle>[])
+      name(track.language, track.title, forced: track.forced),
+  }.toList();
+}
+
+/// "S2 · E3" beside an episode's title (sketch B); what is known of it.
+String libraryEpisodeNumber(LibraryItem item) => [
+  if (item.season case final season?) 'S$season',
+  if (item.episode case final episode?)
+    if (item.episodeEnd case final end? when end != episode)
+      'E$episode–$end'
+    else
+      'E$episode',
+].join(' · ');
+
+/// Continue's label on a show's page: "Continue S2 · E4".
+String libraryContinueLabel(String verb, LibraryItem episode) {
+  final number = libraryEpisodeNumber(episode);
+  return number.isEmpty ? verb : '$verb $number';
 }

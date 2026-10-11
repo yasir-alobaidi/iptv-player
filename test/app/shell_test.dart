@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/core/core_providers.dart';
@@ -277,7 +278,7 @@ void main() {
       addTearDown(notices.dispose);
       final app = await pumpApp(
         tester,
-        initialLocation: AppDestination.library.path,
+        initialLocation: AppDestination.favorites.path,
         overrides: [appNoticesProvider.overrideWithValue(notices)],
       );
       var undone = 0;
@@ -288,7 +289,7 @@ void main() {
 
       await tester.tap(find.text('Add a source'));
       await settleApp(tester);
-      expect(app.location, AppDestination.settings.path);
+      expect(app.location, addSourceRoutePath);
       expect(find.text('Channel hidden'), findsOneWidget);
 
       await tester.tap(find.text('Undo'));
@@ -312,27 +313,6 @@ void main() {
       await settleApp(tester);
 
       expect(find.byType(AppToast), findsNothing);
-    });
-  });
-
-  group('placeholder screens', () {
-    testWidgets('every screen says what is coming and offers a next step', (
-      tester,
-    ) async {
-      final app = await pumpApp(
-        tester,
-        initialLocation: AppDestination.library.path,
-      );
-
-      expect(
-        find.textContaining('The library comes in Phase 8'),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('Add a source'));
-      await settleApp(tester);
-
-      expect(app.location, AppDestination.settings.path);
     });
   });
 }

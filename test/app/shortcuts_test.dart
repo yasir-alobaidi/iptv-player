@@ -23,7 +23,7 @@ void main() {
   testWidgets('Ctrl+1 … Ctrl+7 go to the first seven destinations', (
     tester,
   ) async {
-    final app = await pumpApp(tester);
+    final app = await pumpApp(tester, overrides: emptyLibraryOverrides);
 
     const numberKeys = [
       LogicalKeyboardKey.digit1,

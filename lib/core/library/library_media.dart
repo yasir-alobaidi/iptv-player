@@ -60,13 +60,16 @@ final class LibraryMedia {
 
   /// The line under a library page's title: `1080p · H.264 · AC-3 5.1`.
   String? get qualityLine {
-    final parts = [
-      ?video?.label,
-      ?video?.codecName,
-      if (audio.isNotEmpty) audio.first.label,
-    ];
+    final parts = qualityParts;
     return parts.isEmpty ? null : parts.join(' · ');
   }
+
+  /// [qualityLine]'s parts: the picture, its codec, the first sound.
+  List<String> get qualityParts => [
+    ?video?.label,
+    ?video?.codecName,
+    if (audio.isNotEmpty) audio.first.label,
+  ];
 
   Map<String, Object?> toJson() => failed
       ? {'failed': true}

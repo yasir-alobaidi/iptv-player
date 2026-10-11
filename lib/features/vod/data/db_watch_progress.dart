@@ -111,6 +111,12 @@ final class DbWatchProgress implements WatchProgress {
       );
 
   @override
+  Stream<Map<String, WatchMark>> watchLocalFiles() =>
+      _db.watchHistoryDao.watchAllLocal().map(
+        (rows) => {for (final row in rows) row.remoteKey: markFromHistory(row)},
+      );
+
+  @override
   Future<Result<void>> dismiss(ContinueItem item) => Result.guard(
     () => switch (item) {
       ContinueMovie(:final movie) => _db.watchHistoryDao.dismiss(

@@ -102,6 +102,48 @@ final class TitleGridShape {
   final bool landscape;
 }
 
+/// Two rows of skeleton cards laid out as a [TitleGrid] would lay them:
+/// what shows while a grid's count is read.
+class TitleGridSkeleton extends StatelessWidget {
+  const new({this.shape = TitleGridShape.poster, super.key});
+
+  final TitleGridShape shape;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            ((constraints.maxWidth + TitleGrid.columnGap) /
+                    (shape.minCardWidth + TitleGrid.columnGap))
+                .floor()
+                .clamp(1, 12);
+        final width =
+            (constraints.maxWidth -
+                tokens.spacing.s8 * 2 -
+                TitleGrid.columnGap * (columns - 1)) /
+            columns;
+        return Padding(
+          padding: EdgeInsets.all(tokens.spacing.s8),
+          child: Wrap(
+            spacing: TitleGrid.columnGap,
+            runSpacing: TitleGrid.rowGap,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              for (var i = 0; i < columns * 2; i++)
+                if (shape.landscape)
+                  SkeletonLandscape(width: width)
+                else
+                  SkeletonPoster(width: width),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
   final _scroll = ScrollController();
   final _pages = <int, List<T>>{};

@@ -9,7 +9,10 @@ import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
 import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
+import 'package:iptv_player/features/library/presentation/library_movie_page.dart';
+import 'package:iptv_player/features/library/presentation/library_routes.dart';
 import 'package:iptv_player/features/library/presentation/library_screen.dart';
+import 'package:iptv_player/features/library/presentation/library_show_page.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/movies/presentation/movies_screen.dart';
@@ -82,7 +85,9 @@ GoRouter buildRouter({String initialLocation = '/'}) {
           navigationShell: navigationShell,
           onOpenSearch: () => openSearch(context),
           // The canvas draws no top bar on a title's page.
-          immersive: isTitleDetailsPath(state.uri.path),
+          immersive:
+              isTitleDetailsPath(state.uri.path) ||
+              isLibraryPagePath(state.uri.path),
         ),
         branches: [
           for (final destination in AppDestination.values)
@@ -91,7 +96,7 @@ GoRouter buildRouter({String initialLocation = '/'}) {
                 GoRoute(
                   path: destination.path,
                   builder: (context, state) => _screenFor(destination),
-                  routes: [?_detailsRouteFor(destination)],
+                  routes: _pagesOf(destination),
                 ),
               ],
             ),
@@ -160,22 +165,59 @@ GoRouter buildRouter({String initialLocation = '/'}) {
 }
 
 /// A title's page, inside its branch (Phase 5 step 5).
-GoRoute? _detailsRouteFor(AppDestination destination) => switch (destination) {
-  AppDestination.movies => GoRoute(
-    path: ':sourceId/:remoteKey',
-    builder: (context, state) => MovieDetailsScreen(
-      sourceId: state.pathParameters['sourceId']!,
-      remoteKey: state.pathParameters['remoteKey']!,
+/// The pages inside a destination's branch: a title's page under Movies
+/// and Series; under the Library, a movie and a show of its own (Phase 8
+/// sketches A and B) and the provider's pages of what was downloaded,
+/// which say "‹ Library" there.
+List<GoRoute> _pagesOf(AppDestination destination) => switch (destination) {
+  AppDestination.movies => [
+    GoRoute(
+      path: ':sourceId/:remoteKey',
+      builder: (context, state) => MovieDetailsScreen(
+        sourceId: state.pathParameters['sourceId']!,
+        remoteKey: state.pathParameters['remoteKey']!,
+      ),
     ),
-  ),
-  AppDestination.series => GoRoute(
-    path: ':sourceId/:remoteKey',
-    builder: (context, state) => SeriesDetailsScreen(
-      sourceId: state.pathParameters['sourceId']!,
-      remoteKey: state.pathParameters['remoteKey']!,
+  ],
+  AppDestination.series => [
+    GoRoute(
+      path: ':sourceId/:remoteKey',
+      builder: (context, state) => SeriesDetailsScreen(
+        sourceId: state.pathParameters['sourceId']!,
+        remoteKey: state.pathParameters['remoteKey']!,
+      ),
     ),
-  ),
-  _ => null,
+  ],
+  AppDestination.library => [
+    GoRoute(
+      path: 'movie/:itemId',
+      builder: (context, state) => LibraryMovieScreen(
+        itemId: int.tryParse(state.pathParameters['itemId']!),
+      ),
+    ),
+    GoRoute(
+      path: 'show/:showKey',
+      builder: (context, state) =>
+          LibraryShowScreen(showKey: state.pathParameters['showKey']!),
+    ),
+    GoRoute(
+      path: 'movies/:sourceId/:remoteKey',
+      builder: (context, state) => MovieDetailsScreen(
+        sourceId: state.pathParameters['sourceId']!,
+        remoteKey: state.pathParameters['remoteKey']!,
+        back: 'Library',
+      ),
+    ),
+    GoRoute(
+      path: 'series/:sourceId/:remoteKey',
+      builder: (context, state) => SeriesDetailsScreen(
+        sourceId: state.pathParameters['sourceId']!,
+        remoteKey: state.pathParameters['remoteKey']!,
+        back: 'Library',
+      ),
+    ),
+  ],
+  _ => const [],
 };
 
 Widget _screenFor(AppDestination destination) => switch (destination) {

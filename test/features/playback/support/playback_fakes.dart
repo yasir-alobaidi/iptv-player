@@ -241,6 +241,12 @@ final class FakeWatchProgress implements WatchProgress {
   ) => Stream.value(const {});
 
   @override
+  Stream<Map<String, WatchMark>> watchLocalFiles() => Stream.value({
+    for (final MapEntry(:key, :value) in marks.entries)
+      if (key is LocalRef) key.quickHash: value,
+  });
+
+  @override
   Stream<List<ContinueItem>> continueWatching({int limit = 20}) =>
       Stream.value(const []);
 

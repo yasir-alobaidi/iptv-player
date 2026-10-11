@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
-import 'package:iptv_player/app/placeholder_screen.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/design/components.dart';
 
@@ -12,7 +11,7 @@ import 'app_harness.dart';
 /// walk asks the component for it instead of copying the string.
 final String _searchLabel = const SearchField().hint;
 
-/// The placeholder screens' one action (Phase 2 replaces it), which is
+/// A screen's one action while there is no source, which is
 /// where Tab lands once it has left the shell's chrome.
 const _screenActionLabel = 'Add a source';
 
@@ -41,7 +40,7 @@ bool _hasFocusRing(WidgetTester tester, String label) => tester
 
 /// The `debugLabel` of the innermost [FocusPane] around whatever has
 /// focus — how a test tells "in the guide" from "in the home screen",
-/// since every placeholder screen offers the same action.
+/// since every screen without a source offers the same action.
 String? _focusedPaneLabel() {
   final context = FocusManager.instance.primaryFocus?.context;
   return context?.findAncestorWidgetOfExactType<FocusPane>()?.debugLabel;
@@ -387,11 +386,11 @@ void main() {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, 'Source: No source');
-    await _pressCtrl(tester, LogicalKeyboardKey.digit7);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit6);
 
-    expect(app.location, AppDestination.library.path);
-    // Ctrl+7 means "take me to the library", so focus is already there — no
-    // Tab walk back into the content, and no ring left behind.
+    expect(app.location, AppDestination.favorites.path);
+    // Ctrl+6 means "take me to my favorites", so focus is already there —
+    // no Tab walk back into the content, and no ring left behind.
     expect(_focusedLabel(tester), _screenActionLabel);
 
     // The move waits for the new branch to be laid out before it can
@@ -405,14 +404,9 @@ void main() {
       isFalse,
       reason: 'no stale ring on the control the jump left behind',
     );
-    // The on-stage placeholder names its own pane, so this asks the
-    // destination that is showing rather than assuming its title.
-    final screen = tester.widget<PlaceholderScreen>(
-      find.byType(PlaceholderScreen),
-    );
     expect(
       _focusedPaneLabel(),
-      'screen-${screen.title}',
+      'screen-favorites',
       reason: 'the screen the shortcut opened, not the one it left',
     );
   });

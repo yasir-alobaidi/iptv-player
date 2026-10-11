@@ -180,6 +180,15 @@ class WatchHistoryDao extends DatabaseAccessor<AppDatabase>
   Stream<WatchHistoryRow?> watchLocal(String remoteKey) =>
       _local(remoteKey).watchSingleOrNull();
 
+  /// Every local file's row.
+  Stream<List<WatchHistoryRow>> watchAllLocal() =>
+      (select(watchHistory)..where(
+            (t) =>
+                t.itemType.equalsValue(UserItemType.local) &
+                t.sourceId.isNull(),
+          ))
+          .watch();
+
   Future<WatchHistoryRow?> findLocal(String remoteKey) =>
       _local(remoteKey).getSingleOrNull();
 

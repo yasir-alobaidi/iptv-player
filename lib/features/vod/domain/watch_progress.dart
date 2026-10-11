@@ -237,6 +237,10 @@ abstract interface class WatchProgress {
   /// A series' episodes, by the episode's remote key.
   Stream<Map<String, WatchMark>> watchSeries(String sourceId, String seriesKey);
 
+  /// Where the user's own files were left, by quick hash: a library
+  /// show's page reads every episode's mark from one stream.
+  Stream<Map<String, WatchMark>> watchLocalFiles();
+
   /// Continue watching across every source, newest first (decision 5).
   Stream<List<ContinueItem>> continueWatching({int limit = 20});
 
