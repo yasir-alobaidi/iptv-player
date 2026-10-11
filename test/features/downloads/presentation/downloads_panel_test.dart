@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/downloads/presentation/download_text.dart';
 
 import '../../../app/app_harness.dart';
@@ -371,6 +373,59 @@ void main() {
       find.textContaining('What you downloaded stays where it is.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('no disk space (sketch G): the banner says how much to '
+      'free, with Change folder; the stopped download needs attention', (
+    tester,
+  ) async {
+    final temp = Directory.systemTemp.createTempSync('downloads_ui_');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final (ui, _) = await open(
+      tester,
+      tasks: (ui) => [
+        download(
+          1,
+          'Copper Hollow',
+          state: DownloadTaskState.paused,
+          problem: DownloadProblem.noSpace,
+          downloaded: gb,
+          total: 4 * gb,
+        ),
+      ],
+    );
+
+    expect(
+      find.text(
+        'Downloads paused: not enough disk space. Free up some space or '
+        'choose another download folder.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    expect(find.text('Not enough disk space to go on.'), findsOneWidget);
+
+    ProviderScope.containerOf(tester.element(find.byType(AppBanner)))
+        .read(downloadSpaceNeededProvider.notifier)
+        .need((3.2 * gb).round());
+    await settle(tester);
+    expect(
+      find.text(
+        'Downloads paused: not enough disk space. Free up 3.2 GB or choose '
+        'another download folder.',
+      ),
+      findsOneWidget,
+    );
+
+    ui.picked = temp.path;
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBanner),
+        matching: find.text('Change folder'),
+      ),
+    );
+    await settle(tester);
+    expect(ui.downloadFolders, [temp.path]);
   });
 
   test('a download finished yesterday is not listed', () {

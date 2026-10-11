@@ -196,28 +196,95 @@ final class TitleDownloadFamily extends $Family
   String toString() => r'titleDownloadProvider';
 }
 
+/// What the queue last said it lacks on the drive, for the Downloads
+/// tab's banner (sketch G: "Free up 3.2 GB or choose another download
+/// folder."); null when it never said.
+
+@ProviderFor(DownloadSpaceNeeded)
+final downloadSpaceNeededProvider = DownloadSpaceNeededProvider._();
+
+/// What the queue last said it lacks on the drive, for the Downloads
+/// tab's banner (sketch G: "Free up 3.2 GB or choose another download
+/// folder."); null when it never said.
+final class DownloadSpaceNeededProvider
+    extends $NotifierProvider<DownloadSpaceNeeded, int?> {
+  /// What the queue last said it lacks on the drive, for the Downloads
+  /// tab's banner (sketch G: "Free up 3.2 GB or choose another download
+  /// folder."); null when it never said.
+  DownloadSpaceNeededProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'downloadSpaceNeededProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$downloadSpaceNeededHash();
+
+  @$internal
+  @override
+  DownloadSpaceNeeded create() => DownloadSpaceNeeded();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int?>(value),
+    );
+  }
+}
+
+String _$downloadSpaceNeededHash() =>
+    r'43b95267a82a0dc7c9bbccc12c6d1be5ff957140';
+
+/// What the queue last said it lacks on the drive, for the Downloads
+/// tab's banner (sketch G: "Free up 3.2 GB or choose another download
+/// folder."); null when it never said.
+
+abstract class _$DownloadSpaceNeeded extends $Notifier<int?> {
+  int? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<int?, int?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<int?, int?>,
+              int?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// The queue's news as toasts (docs/05): "Download finished · <title>"
 /// with Play, "Downloads paused while you watch — your provider allows 1
-/// connection.", and a refused account with Edit source. Alive from
-/// launch (`bootstrap()` reads it once); the disk-space banner is the
-/// shell's.
+/// connection.", a refused account with Edit source, and no disk space
+/// with Show (the Downloads tab has the banner and Change folder). Alive
+/// from launch (`bootstrap()` reads it once).
 
 @ProviderFor(downloadToasts)
 final downloadToastsProvider = DownloadToastsProvider._();
 
 /// The queue's news as toasts (docs/05): "Download finished · <title>"
 /// with Play, "Downloads paused while you watch — your provider allows 1
-/// connection.", and a refused account with Edit source. Alive from
-/// launch (`bootstrap()` reads it once); the disk-space banner is the
-/// shell's.
+/// connection.", a refused account with Edit source, and no disk space
+/// with Show (the Downloads tab has the banner and Change folder). Alive
+/// from launch (`bootstrap()` reads it once).
 
 final class DownloadToastsProvider extends $FunctionalProvider<void, void, void>
     with $Provider<void> {
   /// The queue's news as toasts (docs/05): "Download finished · <title>"
   /// with Play, "Downloads paused while you watch — your provider allows 1
-  /// connection.", and a refused account with Edit source. Alive from
-  /// launch (`bootstrap()` reads it once); the disk-space banner is the
-  /// shell's.
+  /// connection.", a refused account with Edit source, and no disk space
+  /// with Show (the Downloads tab has the banner and Change folder). Alive
+  /// from launch (`bootstrap()` reads it once).
   DownloadToastsProvider._()
     : super(
         from: null,
@@ -251,4 +318,4 @@ final class DownloadToastsProvider extends $FunctionalProvider<void, void, void>
   }
 }
 
-String _$downloadToastsHash() => r'eee4722271b6d2ac3cbcbd1aee85436c3f1740b9';
+String _$downloadToastsHash() => r'83ad6b5882afb839fb1372e86fb1f8b82cfb454e';

@@ -360,11 +360,31 @@ Future<void> pickDownloadFolder(ProviderContainer container) async {
   }
 }
 
+/// What the queue last said it lacks on the drive, for the Downloads
+/// tab's banner (sketch G: "Free up 3.2 GB or choose another download
+/// folder."); null when it never said.
+@Riverpod(keepAlive: true)
+class DownloadSpaceNeeded extends _$DownloadSpaceNeeded {
+  @override
+  int? build() => null;
+
+  void need(int bytes) {
+    if (state != bytes) state = bytes;
+  }
+}
+
+/// The banner's sentence (sketch G).
+String downloadSpaceBanner(int? neededBytes) => neededBytes == null
+    ? 'Downloads paused: not enough disk space. Free up some space or '
+          'choose another download folder.'
+    : 'Downloads paused: not enough disk space. Free up '
+          '${librarySize(neededBytes)} or choose another download folder.';
+
 /// The queue's news as toasts (docs/05): "Download finished · <title>"
 /// with Play, "Downloads paused while you watch — your provider allows 1
-/// connection.", and a refused account with Edit source. Alive from
-/// launch (`bootstrap()` reads it once); the disk-space banner is the
-/// shell's.
+/// connection.", a refused account with Edit source, and no disk space
+/// with Show (the Downloads tab has the banner and Change folder). Alive
+/// from launch (`bootstrap()` reads it once).
 @Riverpod(keepAlive: true)
 void downloadToasts(Ref ref) {
   final notices = ref.watch(appNoticesProvider);
@@ -400,8 +420,21 @@ void downloadToasts(Ref ref) {
             ),
           ),
         );
-      case DownloadsNeedSpace():
-        break;
+      case DownloadsNeedSpace(:final neededBytes):
+        ref.read(downloadSpaceNeededProvider.notifier).need(neededBytes);
+        notices.show(
+          AppNotice(
+            'Downloads paused: not enough disk space.',
+            tone: NoticeTone.error,
+            actionLabel: 'Show',
+            onAction: () {
+              ref
+                  .read(libraryViewProvider.notifier)
+                  .showTab(LibraryTab.downloads);
+              ref.read(routerProvider).go(AppDestination.library.path);
+            },
+          ),
+        );
     }
   });
   ref.onDispose(listening.cancel);

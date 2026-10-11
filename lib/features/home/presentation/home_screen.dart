@@ -270,7 +270,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         syncing: syncing,
       );
     }
-    return FocusPane(debugLabel: 'screen-home', child: body);
+    // Sketch G: with the internet down, what is on this computer still
+    // plays, and the Library is where it is.
+    final offline = ref.watch(homeOfflineProvider).value ?? false;
+    final tokens = context.tokens;
+    return FocusPane(
+      debugLabel: 'screen-home',
+      child: !offline
+          ? body
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    tokens.spacing.s32,
+                    tokens.spacing.s12,
+                    tokens.spacing.s32,
+                    0,
+                  ),
+                  child: AppBanner(
+                    message:
+                        "You're offline — downloads and local files still "
+                        'play.',
+                    tone: BannerTone.warning,
+                    actionLabel: 'Open Library',
+                    onAction: () => context.go(AppDestination.library.path),
+                  ),
+                ),
+                Expanded(child: body),
+              ],
+            ),
+    );
   }
 
   /// The launch's first Home with its rows: the end of a cold start.

@@ -199,9 +199,29 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
         );
     }
 
+    // Sketch G: the queue stopped for want of room on the drive.
+    final noSpace = (tasks.value ?? const <DownloadTask>[]).any(
+      (task) =>
+          task.state == DownloadTaskState.paused &&
+          task.problem == DownloadProblem.noSpace,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (noSpace) ...[
+          AppBanner(
+            message: downloadSpaceBanner(
+              ref.watch(downloadSpaceNeededProvider),
+            ),
+            tone: BannerTone.warning,
+            actionLabel: 'Change folder',
+            onAction: () => unawaited(
+              pickDownloadFolder(ProviderScope.containerOf(context)),
+            ),
+          ),
+          SizedBox(height: tokens.spacing.s12),
+        ],
         Expanded(child: body),
         SizedBox(height: tokens.spacing.s12),
         _Storage(

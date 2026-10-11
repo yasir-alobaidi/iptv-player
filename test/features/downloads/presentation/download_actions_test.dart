@@ -383,6 +383,17 @@ void main() {
       await tester.pump(AppToast.defaultDuration);
       await settle(tester);
 
+      news.add(
+        const DownloadsNeedSpace(neededBytes: 3 * 1073741824, folder: '/d'),
+      );
+      await settle(tester);
+      expect(
+        find.text('Downloads paused: not enough disk space.'),
+        findsOneWidget,
+      );
+      await tester.pump(AppToast.defaultDuration);
+      await settle(tester);
+
       news.add(const DownloadsAccountRefused('src-1'));
       await settle(tester);
       expect(

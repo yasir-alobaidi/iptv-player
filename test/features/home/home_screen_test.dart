@@ -11,8 +11,12 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/home/data/home_providers.dart';
 import 'package:iptv_player/features/home/domain/home.dart';
+import 'package:iptv_player/features/home/presentation/home_state.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
@@ -59,6 +63,39 @@ void main() {
     await settle(tester);
     return (home, app);
   }
+
+  testWidgets('offline: Home says downloads and local files still play, '
+      'and opens the Library', (tester) async {
+    final (_, app) = await open(
+      tester,
+      extra: [
+        homeOfflineProvider.overrideWith((ref) => Stream.value(true)),
+        libraryScanStateProvider.overrideWith(
+          (ref) => Stream.value(const LibraryScanState()),
+        ),
+        downloadDiskSpaceProvider.overrideWith((ref) async => null),
+        downloadFolderProvider.overrideWith((ref) async => '/downloads'),
+      ],
+    );
+
+    expect(
+      find.text("You're offline — downloads and local files still play."),
+      findsOneWidget,
+    );
+    expect(find.text('WELCOME'), findsOneWidget, reason: 'Home is still there');
+
+    await tester.tap(find.text('Open Library'));
+    await settle(tester);
+    expect(app.location, '/library');
+  });
+
+  testWidgets('online: no banner', (tester) async {
+    await open(
+      tester,
+      extra: [homeOfflineProvider.overrideWith((ref) => Stream.value(false))],
+    );
+    expect(find.textContaining("You're offline"), findsNothing);
+  });
 
   group('first run', () {
     testWidgets('the hero says what the source holds; the rows with '
