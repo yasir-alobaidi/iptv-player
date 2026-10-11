@@ -16,7 +16,9 @@ import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
+import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
@@ -143,12 +145,19 @@ final class PanelApp {
 
   Future<void> _stop() async {
     // What quitting stops, as `bootstrap()`'s quit does: a cast (its TV
-    // goes home), then the relay and its FFmpegs.
+    // goes home), then the relay and its FFmpegs, then the downloads.
     if (container.exists(castCoordinatorProvider)) {
       await container.read(castCoordinatorProvider).shutdown();
     }
     if (container.exists(castRelayProvider)) {
       await container.read(castRelayProvider).close();
+    }
+    // Downloads pause and flush, and every supervised process ends.
+    if (container.exists(downloadQueueProvider)) {
+      await container.read(downloadQueueProvider).shutdown();
+    }
+    if (container.exists(processSupervisorProvider)) {
+      await container.read(processSupervisorProvider).stopAll();
     }
     final coordinator = container.read(playbackCoordinatorProvider);
     await coordinator.stop();
