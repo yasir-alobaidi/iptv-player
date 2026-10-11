@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
@@ -157,6 +159,134 @@ void main() {
         categoryName: 'Kids',
       );
       expect(seriesHitLine(one, sources: 1), 'Series · 1 season · Kids');
+    });
+
+    test('the library: where it is, then how long', () {
+      final added = DateTime.utc(2026, 10, 4);
+      LibraryItem file(
+        String title, {
+        LibraryKind kind = LibraryKind.movie,
+        int? year,
+        String? show,
+        int? season,
+        int? episode,
+        Duration? length = const Duration(minutes: 12),
+        bool downloaded = false,
+        bool away = false,
+      }) => LibraryItem(
+        id: 1,
+        folderId: 1,
+        relPath: '$title.mkv',
+        sizeBytes: 1,
+        modifiedAt: added,
+        quickHash: 'h',
+        kind: kind,
+        title: title,
+        addedAt: added,
+        year: year,
+        showTitle: show,
+        season: season,
+        episode: episode,
+        duration: length,
+        downloaded: downloaded,
+        unavailableSince: away ? added : null,
+      );
+
+      // The canvas's row: "Harbor Walk (2021)", "Home videos · 12 min".
+      final walk = LibraryItemHit(
+        file('Harbor Walk', year: 2021),
+        folderLabel: 'Home videos',
+      );
+      expect(libraryHitTitle(walk), 'Harbor Walk (2021)');
+      expect(libraryHitLine(walk), 'Home videos · 12 min');
+      expect(libraryHitMark(walk), LibraryHitMark.folder);
+
+      final download = LibraryItemHit(
+        file(
+          'Copper Hollow',
+          year: 2025,
+          length: const Duration(hours: 1, minutes: 52),
+          downloaded: true,
+        ),
+        folderLabel: 'Downloads',
+      );
+      expect(libraryHitTitle(download), 'Copper Hollow');
+      expect(libraryHitLine(download), 'Downloaded · 1 h 52 min');
+      expect(libraryHitMark(download), LibraryHitMark.downloaded);
+
+      final video = LibraryItemHit(
+        file('Garden timelapse', kind: LibraryKind.unsorted, length: null),
+        folderLabel: 'Home videos',
+      );
+      expect(libraryHitTitle(video), 'Garden timelapse');
+      expect(libraryHitLine(video), 'Home videos', reason: 'not probed yet');
+
+      final episode = LibraryItemHit(
+        file(
+          'The Long Tide',
+          kind: LibraryKind.episode,
+          show: 'Kettle Bay',
+          season: 2,
+          episode: 3,
+          length: const Duration(minutes: 44),
+        ),
+        folderLabel: 'Movies HDD',
+      );
+      expect(libraryHitTitle(episode), 'The Long Tide');
+      expect(libraryHitLine(episode), 'Kettle Bay · S2 · E3 · 44 min');
+
+      final away = LibraryItemHit(
+        file('Paper Kites', away: true),
+        folderLabel: 'Movies HDD',
+      );
+      expect(libraryHitLine(away), 'Drive not connected');
+      expect(libraryHitMark(away), LibraryHitMark.driveAway);
+    });
+
+    test('a show of the library: where it is, then its seasons or '
+        'episodes', () {
+      LibraryShow show({
+        int episodes = 14,
+        int seasons = 3,
+        bool downloaded = false,
+        bool available = true,
+      }) => LibraryShow(
+        key: 'l:harbor nine',
+        title: 'Harbor Nine',
+        episodes: episodes,
+        seasons: seasons,
+        bytes: 1,
+        downloaded: downloaded,
+        available: available,
+      );
+
+      final own = LibraryShowHit(show(), folderLabel: 'Movies HDD');
+      expect(libraryHitTitle(own), 'Harbor Nine');
+      expect(libraryHitLine(own), 'Movies HDD · 3 seasons');
+      expect(libraryHitMark(own), LibraryHitMark.folder);
+      expect(
+        libraryHitLine(
+          LibraryShowHit(show(episodes: 2, seasons: 1, downloaded: true)),
+        ),
+        'Downloaded · 2 episodes',
+      );
+      expect(
+        libraryHitLine(LibraryShowHit(show(episodes: 1, seasons: 1))),
+        '1 episode',
+        reason: 'across several folders: none named',
+      );
+      expect(
+        libraryHitLine(
+          LibraryShowHit(show(available: false), folderLabel: 'Movies HDD'),
+        ),
+        'Drive not connected',
+      );
+    });
+
+    test('Show all: where a screen can list them', () {
+      expect(showAllLabel(SearchGroupKind.channels), 'Show all in Live TV');
+      expect(showAllLabel(SearchGroupKind.programmes), isNull);
+      expect(showAllLabel(SearchGroupKind.library), isNull);
     });
 
     test('counts and the empty state', () {

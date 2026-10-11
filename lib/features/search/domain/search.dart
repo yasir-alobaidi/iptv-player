@@ -1,9 +1,11 @@
 /// What Ctrl+K search finds (Phase 6 decision 3): channels, what is on
-/// now and next, movies and series, from every source, each group ranked
-/// and capped.
+/// now and next, movies and series, from every source, and the library
+/// on this computer (Phase 8), each group ranked and capped.
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -136,6 +138,61 @@ final class SeriesHit {
   String toString() => 'SeriesHit(${series.name})';
 }
 
+/// Something of the library (Phase 8 step 6): a video on this computer,
+/// or a show of them.
+///
+/// **A title is found once.** A download its provider still lists is the
+/// movie or the series MOVIES and SERIES find, with its page there; the
+/// library group holds what they don't: the user's own files, a download
+/// the provider dropped or the user hid the category of, and an episode
+/// found by its own title.
+@immutable
+sealed class LibraryHit {
+  const new({this.folderLabel});
+
+  /// What the screens call its folder ("Home videos"); null for a show
+  /// whose episodes are in several.
+  final String? folderLabel;
+}
+
+/// A movie, a video, or an episode found by its own title.
+final class LibraryItemHit extends LibraryHit {
+  const new(this.item, {super.folderLabel});
+
+  final LibraryItem item;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LibraryItemHit &&
+      other.item == item &&
+      other.folderLabel == folderLabel;
+
+  @override
+  int get hashCode => Object.hash(item, folderLabel);
+
+  @override
+  String toString() => 'LibraryItemHit(${item.title})';
+}
+
+/// A show found by its name: its episodes are one row.
+final class LibraryShowHit extends LibraryHit {
+  const new(this.show, {super.folderLabel});
+
+  final LibraryShow show;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LibraryShowHit &&
+      other.show == show &&
+      other.folderLabel == folderLabel;
+
+  @override
+  int get hashCode => Object.hash(show, folderLabel);
+
+  @override
+  String toString() => 'LibraryShowHit(${show.title})';
+}
+
 /// One group's first [searchGroupSize] hits, best first, and whether
 /// there were more.
 @immutable
@@ -159,7 +216,7 @@ final class SearchGroup<T> {
   int get hashCode => Object.hash(Object.hashAll(hits), hasMore);
 }
 
-/// What one search found, in the canvas's four groups.
+/// What one search found, in the canvas's five groups.
 @immutable
 final class SearchResults {
   const new({
@@ -168,6 +225,7 @@ final class SearchResults {
     this.programmes = const SearchGroup.empty(),
     this.movies = const SearchGroup.empty(),
     this.series = const SearchGroup.empty(),
+    this.library = const SearchGroup.empty(),
     this.hiddenChannels = 0,
     this.sourceCount = 1,
   });
@@ -178,6 +236,7 @@ final class SearchResults {
   final SearchGroup<ProgrammeHit> programmes;
   final SearchGroup<MovieHit> movies;
   final SearchGroup<SeriesHit> series;
+  final SearchGroup<LibraryHit> library;
 
   /// Channels that match but are hidden (decision 8): counted only when
   /// no visible channel matched, for the empty state's "2 hidden channels
@@ -191,17 +250,20 @@ final class SearchResults {
       channels.isEmpty &&
       programmes.isEmpty &&
       movies.isEmpty &&
-      series.isEmpty;
+      series.isEmpty &&
+      library.isEmpty;
 
   /// Hits shown, over every group.
   int get count =>
       channels.hits.length +
       programmes.hits.length +
       movies.hits.length +
-      series.hits.length;
+      series.hits.length +
+      library.hits.length;
 }
 
-/// Search over the catalogue and the guide on this computer (decision 3).
+/// Search over the catalogue, the guide and the library on this computer
+/// (decision 3).
 /// Everything runs as SQL on the database isolate; nothing throws across
 /// this boundary, and no text makes a query fail.
 abstract interface class SearchRepository {

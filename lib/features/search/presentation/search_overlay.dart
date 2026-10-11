@@ -7,9 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
@@ -25,7 +29,7 @@ import 'package:iptv_player/features/sources/presentation/current_source.dart';
 
 /// The Ctrl+K / `/` search overlay (canvas `Search`, Phase 6 step 4): a
 /// scrim over the shell and a 760 px panel — the query, the results in
-/// four groups, and a footer of keys.
+/// five groups, and a footer of keys.
 ///
 /// **The keyboard's focus stays in the field** (as in the Match… picker):
 /// ↑/↓ move a cursor through every result, PageUp/PageDown by a screen,
@@ -212,6 +216,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
             actions.openMovie(movie);
           case SeriesHit(:final series):
             actions.openSeries(series);
+          case final LibraryHit library:
+            await actions.openLibrary(library);
         }
       case _ShowAllEntry(:final kind):
         final actions = _actions();
@@ -257,6 +263,22 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
             ),
           ],
         );
+      case LibraryItemHit(:final item, :final folderLabel):
+        // The Library's own menu; playing from it closes search first.
+        return showLibraryItemMenu(
+          anchor,
+          item,
+          folderLabel: folderLabel,
+          beforePlay: () {
+            unawaited(_session.rememberText());
+            actions.close();
+          },
+          onChanged: searchAgain,
+          onGone: searchAgain,
+        );
+      case LibraryShowHit():
+        // A show has no menu: what can be done is done to its episodes.
+        return Future.value();
     }
     final favorite = switch (hit) {
       MovieHit(:final movie) => movie.isFavorite,
@@ -491,6 +513,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       ..._group(SearchGroupKind.programmes, results.programmes),
       ..._group(SearchGroupKind.movies, results.movies),
       ..._group(SearchGroupKind.series, results.series),
+      ..._group(SearchGroupKind.library, results.library),
     ];
     return _list(context, padding);
   }
@@ -603,13 +626,15 @@ final class _HeadingEntry extends _Entry {
           SearchGroupKind.programmes => programmesHeading,
           SearchGroupKind.movies => moviesHeading,
           SearchGroupKind.series => seriesHeading,
+          SearchGroupKind.library => libraryHeading,
         };
 }
 
 final class _HitEntry extends _Entry {
   const new(SearchGroupKind super.group, this.hit);
 
-  /// A [ChannelHit], [ProgrammeHit], [MovieHit] or [SeriesHit].
+  /// A [ChannelHit], [ProgrammeHit], [MovieHit], [SeriesHit] or
+  /// [LibraryHit].
   final Object hit;
 }
 
@@ -869,6 +894,7 @@ class _EntryRowState extends State<_EntryRow> {
     final colors = tokens.colors;
     final search = tokens.search;
     final selected = widget.selected;
+    final mark = hit is LibraryHit ? libraryHitMark(hit) : null;
     final (
       String title,
       String line,
@@ -906,8 +932,19 @@ class _EntryRowState extends State<_EntryRow> {
         _poster(context, series.name, series.posterUrl),
         null,
       ),
+      final LibraryHit library => (
+        libraryHitTitle(library),
+        libraryHitLine(library),
+        _LibraryPicture(library),
+        null,
+      ),
       _ => ('', '', const SizedBox.shrink(), null),
     };
+    final lineColor = mark == LibraryHitMark.driveAway
+        ? colors.warning
+        : selected
+        ? colors.textSecondary
+        : colors.textTertiary;
     final nameStyle = tokens.text.label.copyWith(color: colors.textEmphasis);
     final ranges = highlightRanges(title, widget.words);
     return Row(
@@ -941,15 +978,33 @@ class _EntryRowState extends State<_EntryRow> {
               ),
               if (line.isNotEmpty) ...[
                 SizedBox(height: tokens.spacing.s4 - 2),
-                Text(
-                  line,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.text.small.copyWith(
-                    color: selected
-                        ? colors.textSecondary
-                        : colors.textTertiary,
-                  ),
+                Row(
+                  children: [
+                    // Where a library video is: its folder, a download,
+                    // or a drive that is away (canvas).
+                    if (mark != null) ...[
+                      AppIcon(
+                        switch (mark) {
+                          LibraryHitMark.folder => AppIcons.folder,
+                          LibraryHitMark.downloaded => AppIcons.download,
+                          LibraryHitMark.driveAway => AppIcons.alertTriangle,
+                        },
+                        size: search.lineIconSize,
+                        color: mark == LibraryHitMark.downloaded
+                            ? colors.success
+                            : lineColor,
+                      ),
+                      SizedBox(width: search.lineIconGap),
+                    ],
+                    Flexible(
+                      child: Text(
+                        line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.text.small.copyWith(color: lineColor),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -1047,6 +1102,54 @@ class _EntryRowState extends State<_EntryRow> {
     }
     if (at < text.length) spans.add((text.substring(at), false));
     return spans;
+  }
+}
+
+/// A library row's picture: a show's or a movie's poster; with none, the
+/// video's own frame (canvas: 56 × 32), made when first shown. Faded when
+/// its drive is away, as its card is.
+class _LibraryPicture extends ConsumerWidget {
+  const new(this.hit);
+
+  final LibraryHit hit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    final search = tokens.search;
+    final (String title, String? poster, LibraryItem? video) = switch (hit) {
+      LibraryShowHit(:final show) => (show.title, show.artworkPath, null),
+      LibraryItemHit(:final item)
+          when item.kind == LibraryKind.movie && item.artworkPath != null =>
+        (item.title, item.artworkPath, null),
+      LibraryItemHit(:final item) => (item.title, null, item),
+    };
+    final size = video == null ? search.posterSize : search.frameSize;
+    final path = video == null
+        ? poster
+        : (video.available
+                  ? ref.watch(libraryThumbnailProvider(video.id)).value
+                  : null) ??
+              video.artworkPath;
+    return Opacity(
+      opacity: libraryHitMark(hit) == LibraryHitMark.driveAway
+          ? tokens.library.unavailableOpacity
+          : 1,
+      child: ClipRRect(
+        borderRadius: tokens.radii.xsAll,
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: PosterArtwork(
+            title: title,
+            showTitle: false,
+            image: path == null
+                ? null
+                : artworkFor(context, localArtworkUrl(path), width: size.width),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -205,11 +205,23 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   /// grouped by show title (case aside) across folders, a provider
   /// series' downloads by their series. Hidden episodes are left out;
   /// [downloaded] keeps only downloads, or only the user's files.
-  Stream<List<LibraryShowRow>> watchShows({bool? downloaded}) {
+  Stream<List<LibraryShowRow>> watchShows({bool? downloaded}) =>
+      _shows(downloaded: downloaded).watch();
+
+  /// The shows keyed [keys], as [watchShows] lists them (search's rows).
+  Future<List<LibraryShowRow>> showsKeyed(Set<String> keys) async =>
+      keys.isEmpty ? const [] : await _shows(keys: keys).get();
+
+  Selectable<LibraryShowRow> _shows({bool? downloaded, Set<String>? keys}) {
     final (where, variables) = _whereSql(
       kind: LibraryKind.episode,
       downloaded: downloaded,
     );
+    final asked = [
+      for (var i = 0; i < (keys?.length ?? 0); i++)
+        '?${variables.length + i + 1}',
+    ].join(', ');
+    final keyed = keys == null ? '' : 'AND $_showKey IN ($asked) ';
     return customSelect(
       'SELECT $_showKey AS show_key, '
       'MIN(show_title) AS title, COUNT(*) AS episodes, '
@@ -221,28 +233,28 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
       'MIN(provider_source_id) AS source_id, '
       'MIN(provider_series_key) AS series_key, '
       'SUM(unavailable_since IS NULL) AS available '
-      'FROM library_items WHERE $where AND show_title IS NOT NULL '
+      'FROM library_items WHERE $where AND show_title IS NOT NULL $keyed'
       'GROUP BY show_key ORDER BY title COLLATE NOCASE, show_key',
-      variables: variables,
-      readsFrom: {libraryItems},
-    ).watch().map(
-      (rows) => [
-        for (final row in rows)
-          (
-            key: row.read<String>('show_key'),
-            title: row.read<String>('title'),
-            episodes: row.read<int>('episodes'),
-            seasons: row.read<int>('seasons'),
-            bytes: row.read<int>('bytes'),
-            artworkPath: row.readNullable<String>('artwork'),
-            folders: row.read<int>('folders'),
-            folderId: row.read<int>('folder_id'),
-            downloaded: row.read<int>('downloaded') == 1,
-            sourceId: row.readNullable<String>('source_id'),
-            seriesKey: row.readNullable<String>('series_key'),
-            available: row.read<int>('available'),
-          ),
+      variables: [
+        ...variables,
+        for (final key in keys ?? const <String>{}) Variable.withString(key),
       ],
+      readsFrom: {libraryItems},
+    ).map(
+      (row) => (
+        key: row.read<String>('show_key'),
+        title: row.read<String>('title'),
+        episodes: row.read<int>('episodes'),
+        seasons: row.read<int>('seasons'),
+        bytes: row.read<int>('bytes'),
+        artworkPath: row.readNullable<String>('artwork'),
+        folders: row.read<int>('folders'),
+        folderId: row.read<int>('folder_id'),
+        downloaded: row.read<int>('downloaded') == 1,
+        sourceId: row.readNullable<String>('source_id'),
+        seriesKey: row.readNullable<String>('series_key'),
+        available: row.read<int>('available'),
+      ),
     );
   }
 
@@ -259,12 +271,16 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
     ).asyncMap((row) => libraryItems.mapFromRow(row)).watch();
   }
 
-  /// What a show is keyed by: `l:` and its title in lower case for the
-  /// user's own episodes, `p:`, the source and the series for downloads.
-  static const _showKey =
-      "CASE WHEN provider_remote_key IS NULL THEN 'l:' || lower(show_title) "
-      "ELSE 'p:' || COALESCE(provider_source_id, '') || ':' || "
-      'COALESCE(provider_series_key, lower(show_title)) END';
+  /// What a show is keyed by, as SQL: `l:` and its title in lower case
+  /// for the user's own episodes, `p:`, the source and the series for
+  /// downloads. [of] names the table the columns are read from (`i.`).
+  static String showKeySql([String of = '']) =>
+      "CASE WHEN ${of}provider_remote_key IS NULL THEN 'l:' || "
+      'lower(${of}show_title) '
+      "ELSE 'p:' || COALESCE(${of}provider_source_id, '') || ':' || "
+      'COALESCE(${of}provider_series_key, lower(${of}show_title)) END';
+
+  static final String _showKey = showKeySql();
 
   SimpleSelectStatement<$LibraryItemsTable, LibraryItemRow> _items({
     LibraryKind? kind,

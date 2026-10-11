@@ -3,19 +3,21 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/daos/library_dao.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
+import 'package:iptv_player/features/library/data/db_library_repository.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/domain/search_words.dart';
 import 'package:iptv_player/features/vod/data/vod_rows.dart';
 
-/// [SearchRepository] over the FTS5 indexes (`search.drift`): one query
-/// per group, run as SQL on the database isolate (hard rule 2). Each
-/// picks its group's ids with only the joins its filter and order need,
-/// then reads the rows for those few (the pattern of the Movies grid's
-/// window).
+/// [SearchRepository] over the FTS5 indexes (`search.drift`, and the
+/// library's in `library.drift`): one query per group, run as SQL on the
+/// database isolate (hard rule 2). Each picks its group's ids with only
+/// the joins its filter and order need, then reads the rows for those few
+/// (the pattern of the Movies grid's window).
 ///
 /// **Visible** is decision 8's rule, the one Live TV, the Guide and Home
 /// share: a channel the user hid is left out; one in a hidden category
@@ -55,6 +57,7 @@ final class DbSearchRepository implements SearchRepository {
       _programmes(query, sources),
       _movies(query),
       _series(query),
+      _library(query),
     ]);
     final channels = found[0] as SearchGroup<ChannelHit>;
     return SearchResults(
@@ -63,6 +66,7 @@ final class DbSearchRepository implements SearchRepository {
       programmes: found[1] as SearchGroup<ProgrammeHit>,
       movies: found[2] as SearchGroup<MovieHit>,
       series: found[3] as SearchGroup<SeriesHit>,
+      library: found[4] as SearchGroup<LibraryHit>,
       hiddenChannels: channels.isEmpty ? await _hiddenChannels(query) : 0,
       sourceCount: sources.length,
     );
@@ -381,6 +385,101 @@ final class DbSearchRepository implements SearchRepository {
       '(k.id IS NULL OR k.is_hidden = 0 OR f.id IS '
       'NOT NULL)';
 
+  /// The library on this computer (Phase 8 step 6): videos whose title
+  /// matches, and shows whose name does — a show's episodes are one hit,
+  /// while an episode found by its own title is its own. Hidden videos
+  /// are left out. Names that start with the text first, then a word that
+  /// does, then the index's rank.
+  ///
+  /// **A download MOVIES or SERIES finds is left to them** (the same
+  /// match, the same visibility): one title, one row. What the provider
+  /// dropped, and what sits in a category the user hid, is found here.
+  Future<SearchGroup<LibraryHit>> _library(_Query query) async {
+    const shown = 'CASE WHEN m.as_show THEN m.show_title ELSE m.title END';
+    // ?2, the browsed source, has no say here: the library has no source.
+    final rows = await _db
+        .customSelect(
+          'WITH by_show AS ( '
+          'SELECT rowid AS id FROM library_fts '
+          "WHERE library_fts MATCH '{show_title} : (' || ?1 || ')'), "
+          'found AS ( '
+          'SELECT m.id AS id, '
+          'CASE WHEN m.as_show THEN m.show_key END AS show_key, '
+          '${_closeness(shown)} AS closeness, m.score AS score, '
+          '($shown) COLLATE NOCASE AS sort_name '
+          'FROM (SELECT i.id AS id, i.title AS title, '
+          'i.show_title AS show_title, '
+          "${LibraryDao.showKeySql('i.')} AS show_key, "
+          "i.kind = 'episode' AND i.show_title IS NOT NULL "
+          'AND i.id IN (SELECT id FROM by_show) AS as_show, '
+          'library_fts.rank AS score '
+          'FROM library_fts JOIN library_items i ON i.id = library_fts.rowid '
+          'WHERE library_fts MATCH ?1 AND i.is_hidden = 0 '
+          'AND NOT EXISTS (SELECT 1 FROM movies t '
+          'LEFT JOIN categories k ON k.id = t.category_id '
+          "LEFT JOIN favorites f ON f.item_type = 'movie' "
+          'AND f.source_id = t.source_id AND f.remote_key = t.remote_key '
+          "WHERE i.provider_item_type = 'movie' "
+          'AND t.source_id = i.provider_source_id '
+          'AND t.remote_key = i.provider_remote_key AND $_visibleTitle '
+          'AND EXISTS (SELECT 1 FROM movies_fts '
+          'WHERE movies_fts MATCH ?1 AND rowid = t.id)) '
+          'AND NOT EXISTS (SELECT 1 FROM series t '
+          'LEFT JOIN categories k ON k.id = t.category_id '
+          "LEFT JOIN favorites f ON f.item_type = 'series' "
+          'AND f.source_id = t.source_id AND f.remote_key = t.remote_key '
+          "WHERE i.provider_item_type = 'episode' "
+          'AND t.source_id = i.provider_source_id '
+          'AND t.remote_key = i.provider_series_key AND $_visibleTitle '
+          'AND EXISTS (SELECT 1 FROM series_fts '
+          'WHERE series_fts MATCH ?1 AND rowid = t.id))) m), '
+          'hit AS ( '
+          'SELECT MIN(id) AS id, show_key, MIN(closeness) AS closeness, '
+          'MIN(score) AS score, MIN(sort_name) AS sort_name '
+          "FROM found GROUP BY COALESCE(show_key, 'i:' || id) "
+          'ORDER BY closeness, score, sort_name, id LIMIT $_read) '
+          'SELECT hit.show_key AS show_key, i.* '
+          'FROM hit JOIN library_items i ON i.id = hit.id '
+          'ORDER BY hit.closeness, hit.score, hit.sort_name, hit.id',
+          variables: query.variables,
+          readsFrom: {
+            _db.libraryItems,
+            _db.movies,
+            _db.series,
+            _db.categories,
+            _db.favorites,
+          },
+        )
+        .get();
+    if (rows.isEmpty) return const SearchGroup.empty();
+    final folders = {for (final f in await _db.libraryDao.folders()) f.id: f};
+    final shows = {
+      for (final row in await _db.libraryDao.showsKeyed({
+        for (final row in rows) ?row.readNullable<String>('show_key'),
+      }))
+        row.key: libraryShowFromRow(row),
+    };
+    final hits = <LibraryHit>[];
+    for (final row in rows) {
+      final key = row.readNullable<String>('show_key');
+      if (key == null) {
+        final item = await _db.libraryItems.mapFromRow(row);
+        final folder = folders[item.folderId];
+        hits.add(
+          LibraryItemHit(
+            libraryItemFromRow(item, folder),
+            folderLabel: folder?.label,
+          ),
+        );
+      } else if (shows[key] case final show?) {
+        hits.add(
+          LibraryShowHit(show, folderLabel: folders[show.folderId]?.label),
+        );
+      }
+    }
+    return _group(hits);
+  }
+
   static String _titleOrder(String of) =>
       '${of}preferred DESC, ${of}closeness, ${of}score, ${of}sort_name, '
       '${of}id';
@@ -489,9 +588,10 @@ final class DbSearchRepository implements SearchRepository {
       : SearchGroup(rows);
 }
 
-/// One search's bound values, in the order the channel, movie and series
-/// queries number them: ?1 the FTS query, ?2 the browsed source, ?3 and
-/// ?4 the LIKE patterns for "starts with" and "a word starts with".
+/// One search's bound values, in the order the channel, movie, series and
+/// library queries number them: ?1 the FTS query, ?2 the browsed source,
+/// ?3 and ?4 the LIKE patterns for "starts with" and "a word starts
+/// with".
 final class _Query {
   const new({
     required this.words,

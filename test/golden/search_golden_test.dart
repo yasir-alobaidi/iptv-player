@@ -7,7 +7,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
+import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/search/data/search_providers.dart';
@@ -23,7 +25,8 @@ import '../features/search/search_fakes.dart';
 import 'golden_harness.dart';
 
 /// The canvas's `Search` example: "harbor" over two channels, a match on
-/// now and one tomorrow, a movie to resume and a series.
+/// now and one tomorrow, a movie to resume, a series, and a video of the
+/// library.
 SearchResults _harbor(DateTime now) {
   ChannelItem channel(String key, String name) => ChannelItem(
     id: int.parse(key),
@@ -101,6 +104,24 @@ SearchResults _harbor(DateTime now) {
         seasons: 3,
       ),
     ]),
+    library: SearchGroup([
+      LibraryItemHit(
+        LibraryItem(
+          id: 1,
+          folderId: 1,
+          relPath: 'Harbor Walk (2021).mkv',
+          sizeBytes: 640 * 1024 * 1024,
+          modifiedAt: now,
+          quickHash: 'harbor-walk',
+          kind: LibraryKind.movie,
+          title: 'Harbor Walk',
+          addedAt: now,
+          year: 2021,
+          duration: const Duration(minutes: 12),
+        ),
+        folderLabel: 'Home videos',
+      ),
+    ]),
   );
 }
 
@@ -122,6 +143,8 @@ void main() {
         ...live.overrides,
         ...sourceShellOverrides,
         searchRepositoryProvider.overrideWithValue(search),
+        // No frame is made in a golden: the row draws its stand-in.
+        libraryThumbnailProvider.overrideWith((ref, id) async => null),
       ],
     );
     await _settle(tester);

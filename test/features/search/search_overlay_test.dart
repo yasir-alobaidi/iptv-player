@@ -518,4 +518,4 @@ void main() {
 
 const searchCoverageForTest =
     'Channels, what’s on now and next, movies and series, from every '
-    'source.';
+    'source — and the videos on this computer.';

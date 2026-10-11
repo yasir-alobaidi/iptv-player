@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
+import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
@@ -33,6 +35,9 @@ final class SearchActions {
   void _close() {
     if (isSearchOpen(_router)) _router.pop();
   }
+
+  /// Closes search, for an action that goes on elsewhere (a menu's Play).
+  void close() => _close();
 
   /// Browses [sourceId] when the result came from another source: the
   /// screen it opens shows the browsed one.
@@ -78,6 +83,21 @@ final class SearchActions {
     _router.go(seriesDetailsPath(series));
   }
 
+  /// Something of the library, as the Library opens it: a movie's page
+  /// or a show's — its provider's while the provider still lists it — and
+  /// a video or an episode plays, from where it was left.
+  Future<void> openLibrary(LibraryHit hit) async {
+    _close();
+    switch (hit) {
+      case LibraryShowHit(:final show):
+        _router.go(await libraryShowLocation(_container, show));
+      case LibraryItemHit(:final item) when item.kind == LibraryKind.movie:
+        _router.go(await libraryMovieLocation(_container, item));
+      case LibraryItemHit(:final item, :final folderLabel):
+        await playLibraryItem(_container, item, folderLabel: folderLabel);
+    }
+  }
+
   /// "Show all in Live TV / Movies / Series": the screen, every channel
   /// or title, the text in its filter. The screen's view is made when it
   /// is, so the filter is set once it is up.
@@ -107,6 +127,7 @@ final class SearchActions {
               .showSearch(text),
         );
       case SearchGroupKind.programmes:
+      case SearchGroupKind.library:
         break;
     }
   }

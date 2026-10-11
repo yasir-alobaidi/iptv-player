@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/catalogue_tables.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
+import 'package:iptv_player/data/db/library_tables.dart';
 import 'package:iptv_player/data/db/tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
@@ -268,6 +269,62 @@ final class _Catalogue {
     ], fetchedAt: _now);
   }
 
+  /// A folder of the library; its id.
+  Future<int> folder(String label, {bool downloads = false}) async => downloads
+      ? (await db.libraryDao.makeDownloadFolder(
+          '/library/$label',
+          label: label,
+          at: _now,
+        )).id
+      : await db.libraryDao.addFolder(
+          path: '/library/$label',
+          label: label,
+          at: _now,
+        );
+
+  var _videos = 0;
+
+  /// A video in [folder]; [from] is the provider's title a download came
+  /// from: its source, the title's key, and an episode's series.
+  Future<int> video(
+    int folder,
+    String title, {
+    LibraryKind kind = LibraryKind.movie,
+    String? show,
+    int? season,
+    int? episode,
+    int? year,
+    bool hidden = false,
+    (String source, String key, String? series)? from,
+  }) => db.libraryDao.insertItem(
+    LibraryItemsCompanion.insert(
+      folderId: folder,
+      relPath: 'video-${++_videos}.mkv',
+      sizeBytes: 2100000000,
+      mtime: _now.millisecondsSinceEpoch,
+      quickHash: 'hash-$_videos',
+      kind: kind,
+      title: title,
+      year: Value(year),
+      showTitle: Value(show),
+      season: Value(season),
+      episode: Value(episode),
+      durationMs: const Value(12 * 60 * 1000),
+      isHidden: Value(hidden),
+      providerSourceId: Value(from?.$1),
+      providerItemType: Value(
+        from == null
+            ? null
+            : kind == LibraryKind.episode
+            ? VodType.episode
+            : VodType.movie,
+      ),
+      providerRemoteKey: Value(from?.$2),
+      providerSeriesKey: Value(from?.$3),
+      addedAt: _now,
+    ),
+  );
+
   Future<SearchResults> search(String text, {String? preferred = 'a'}) async {
     final result = await repo.search(
       text,
@@ -282,6 +339,18 @@ final class _Catalogue {
 List<String> _channels(SearchResults results) => [
   for (final hit in results.channels.hits)
     '${hit.channel.sourceId}/${hit.channel.remoteKey}',
+];
+
+/// The library group as its rows name things: a show by its name, an
+/// episode by its show and its own title, anything else by its title.
+List<String> _library(SearchResults results) => [
+  for (final hit in results.library.hits)
+    switch (hit) {
+      LibraryShowHit(:final show) => 'show ${show.title}',
+      LibraryItemHit(:final item) when item.kind == LibraryKind.episode =>
+        'episode ${item.showTitle}: ${item.title}',
+      LibraryItemHit(:final item) => item.title,
+    },
 ];
 
 void main() {
@@ -466,6 +535,268 @@ void main() {
       expect(hits.first.categoryName, 'Crime');
       expect(hits.last.seasons, isNull);
       expect(hits.last.sourceName, 'Harbor Cable');
+    });
+  });
+
+  group('library', () {
+    test('videos by their title, a show by its name with its episodes as '
+        'one row, an episode by its own title', () async {
+      final catalogue = await _Catalogue.open();
+      final hdd = await catalogue.folder('Movies HDD');
+      await catalogue.video(hdd, 'Kite Walk', year: 2021);
+      await catalogue.video(hdd, 'Kite timelapse', kind: LibraryKind.unsorted);
+      for (final (episode, title) in [(1, 'The Long Tide'), (2, '')]) {
+        await catalogue.video(
+          hdd,
+          title,
+          kind: LibraryKind.episode,
+          show: 'Kite Nine',
+          season: 1,
+          episode: episode,
+        );
+      }
+      await catalogue.video(
+        hdd,
+        'Kite Lights',
+        kind: LibraryKind.episode,
+        show: 'Kettle Bay',
+        season: 2,
+        episode: 3,
+      );
+
+      final kite = await catalogue.search('kite');
+      expect(_library(kite), hasLength(4));
+      expect(
+        _library(kite),
+        containsAll([
+          'Kite Walk',
+          'Kite timelapse',
+          'show Kite Nine',
+          'episode Kettle Bay: Kite Lights',
+        ]),
+      );
+      final show = kite.library.hits.whereType<LibraryShowHit>().single;
+      expect(show.show.episodes, 2);
+      expect(show.show.key, 'l:kite nine');
+      expect(show.folderLabel, 'Movies HDD');
+      final walk = kite.library.hits.whereType<LibraryItemHit>().firstWhere(
+        (hit) => hit.item.title == 'Kite Walk',
+      );
+      expect(walk.folderLabel, 'Movies HDD');
+      expect(walk.item.year, 2021);
+      expect(walk.item.duration, const Duration(minutes: 12));
+      expect(walk.item.path, endsWith('.mkv'));
+      expect(kite.count, 4);
+      expect(kite.isEmpty, isFalse);
+
+      expect(_library(await catalogue.search('long tide')), [
+        'episode Kite Nine: The Long Tide',
+      ]);
+      // Words from the show's name and the episode's title: the episode.
+      expect(_library(await catalogue.search('kite long')), [
+        'episode Kite Nine: The Long Tide',
+      ]);
+      expect(_library(await catalogue.search('kettle')), ['show Kettle Bay']);
+      expect(_library(await catalogue.search('ite')), isEmpty);
+    });
+
+    test('names that start with the text, then a word that does', () async {
+      final catalogue = await _Catalogue.open();
+      final hdd = await catalogue.folder('Movies HDD');
+      await catalogue.video(hdd, 'The Kite');
+      await catalogue.video(hdd, 'Kite Walk');
+      await catalogue.video(
+        hdd,
+        'Pilot',
+        kind: LibraryKind.episode,
+        show: 'A Kite Story',
+        episode: 1,
+      );
+      await catalogue.video(
+        hdd,
+        'Pilot',
+        kind: LibraryKind.episode,
+        show: 'Kite Nine',
+        episode: 1,
+      );
+
+      final found = _library(await catalogue.search('kite'));
+      expect(
+        found.sublist(0, 2),
+        unorderedEquals(['Kite Walk', 'show Kite Nine']),
+      );
+      expect(
+        found.sublist(2),
+        unorderedEquals(['The Kite', 'show A Kite Story']),
+      );
+    });
+
+    test('a hidden video is left out, and a show goes with its last '
+        'episode', () async {
+      final catalogue = await _Catalogue.open();
+      final hdd = await catalogue.folder('Movies HDD');
+      await catalogue.video(hdd, 'Kite Walk', hidden: true);
+      final episode = await catalogue.video(
+        hdd,
+        'Pilot',
+        kind: LibraryKind.episode,
+        show: 'Kite Nine',
+        episode: 1,
+      );
+      await catalogue.video(
+        hdd,
+        'Second',
+        kind: LibraryKind.episode,
+        show: 'Kite Nine',
+        episode: 2,
+        hidden: true,
+      );
+
+      final shown = await catalogue.search('kite');
+      expect(_library(shown), ['show Kite Nine']);
+      expect(
+        (shown.library.hits.single as LibraryShowHit).show.episodes,
+        1,
+        reason: 'the hidden episode is not counted',
+      );
+
+      await catalogue.db.libraryDao.changeItem(
+        episode,
+        const LibraryItemsCompanion(isHidden: Value(true)),
+      );
+      final none = await catalogue.search('kite');
+      expect(none.library.isEmpty, isTrue);
+      expect(none.isEmpty, isTrue);
+    });
+
+    test('a download Movies or Series finds is left to them; one they '
+        "don't find is here", () async {
+      final catalogue = await _Catalogue.open();
+      final downloads = await catalogue.folder('Downloads', downloads: true);
+      // The provider lists it in a visible category: MOVIES has it.
+      await catalogue.video(downloads, 'The Arena', from: ('a', 'm1', null));
+      // In a category the user hid: only here.
+      await catalogue.video(downloads, 'Arena Hidden', from: ('a', 'm3', null));
+      // Hidden category, but a favorite: MOVIES has it.
+      await catalogue.video(
+        downloads,
+        'Arena Starred',
+        from: ('a', 'm4', null),
+      );
+      // The provider dropped it.
+      await catalogue.video(
+        downloads,
+        'Arena Dropped',
+        from: ('a', 'gone', null),
+      );
+      // Renamed in Edit details: MOVIES knows it only by the provider's
+      // name.
+      await catalogue.video(downloads, 'My Cut', from: ('a', 'm2', null));
+      // Episodes of a series SERIES finds by its name, one with a title
+      // of its own.
+      await catalogue.video(
+        downloads,
+        'Episode 1',
+        kind: LibraryKind.episode,
+        show: 'Arena Chronicles',
+        season: 1,
+        episode: 1,
+        from: ('a', 'e1-1', 's1'),
+      );
+      await catalogue.video(
+        downloads,
+        'The Kettle Job',
+        kind: LibraryKind.episode,
+        show: 'Arena Chronicles',
+        season: 1,
+        episode: 2,
+        from: ('a', 'e1-2', 's1'),
+      );
+
+      final arena = await catalogue.search('arena');
+      expect(
+        _library(arena),
+        unorderedEquals(['Arena Hidden', 'Arena Dropped']),
+      );
+      expect([
+        for (final hit in arena.movies.hits) hit.movie.remoteKey,
+      ], containsAll(['m1', 'm4']));
+      expect(arena.series.hits.first.series.remoteKey, 's1');
+      final dropped = arena.library.hits.whereType<LibraryItemHit>().firstWhere(
+        (hit) => hit.item.title == 'Arena Dropped',
+      );
+      expect(dropped.item.isDownload, isTrue);
+      expect(dropped.folderLabel, 'Downloads');
+
+      expect(_library(await catalogue.search('cut')), ['My Cut']);
+      expect(_library(await catalogue.search('kettle')), [
+        'episode Arena Chronicles: The Kettle Job',
+      ]);
+      // The series' name and the episode's title together: SERIES can't
+      // find that, the library does.
+      expect(_library(await catalogue.search('arena kettle')), [
+        'episode Arena Chronicles: The Kettle Job',
+      ]);
+    });
+
+    test("a provider's series no longer listed: its downloads are a show "
+        'here', () async {
+      final catalogue = await _Catalogue.open();
+      final downloads = await catalogue.folder('Downloads', downloads: true);
+      for (final episode in [1, 2]) {
+        await catalogue.video(
+          downloads,
+          'Episode $episode',
+          kind: LibraryKind.episode,
+          show: 'Glass Tide',
+          season: 1,
+          episode: episode,
+          from: ('a', 'g$episode', 'gone'),
+        );
+      }
+
+      final found = await catalogue.search('glass');
+      final hit = found.library.hits.single as LibraryShowHit;
+      expect(hit.show.key, 'p:a:gone');
+      expect(hit.show.downloaded, isTrue);
+      expect(hit.show.episodes, 2);
+      expect(hit.show.providerSeriesKey, 'gone');
+    });
+
+    test('a show in several folders names none', () async {
+      final catalogue = await _Catalogue.open();
+      final hdd = await catalogue.folder('Movies HDD');
+      final usb = await catalogue.folder('USB drive');
+      for (final (folder, episode) in [(hdd, 1), (usb, 2)]) {
+        await catalogue.video(
+          folder,
+          'Episode $episode',
+          kind: LibraryKind.episode,
+          show: 'Kite Nine',
+          episode: episode,
+        );
+      }
+
+      final hit =
+          (await catalogue.search('kite')).library.hits.single
+              as LibraryShowHit;
+      expect(hit.show.episodes, 2);
+      expect(hit.folderLabel, isNull);
+    });
+
+    test('five shown, and a sixth says there are more; accents and case '
+        'fold', () async {
+      final catalogue = await _Catalogue.open();
+      final hdd = await catalogue.folder('Movies HDD');
+      for (var i = 1; i <= 6; i++) {
+        await catalogue.video(hdd, 'Été Kite $i');
+      }
+
+      final found = await catalogue.search('ETE k');
+      expect(found.library.hits, hasLength(searchGroupSize));
+      expect(found.library.hasMore, isTrue);
+      expect(_library(found).first, 'Été Kite 1');
+      expect((await catalogue.search('été kite 6')).library.hasMore, isFalse);
     });
   });
 

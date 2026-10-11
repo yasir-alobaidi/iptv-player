@@ -2,7 +2,9 @@
 /// sets in bold. Pure, so the rules are tested without a screen.
 library;
 
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
+import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/live_tv/domain/channel_name_tags.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
@@ -12,6 +14,7 @@ const channelsHeading = 'CHANNELS';
 const programmesHeading = 'ON TV NOW & UPCOMING';
 const moviesHeading = 'MOVIES';
 const seriesHeading = 'SERIES';
+const libraryHeading = 'LIBRARY';
 
 const searchHint = 'Search channels, shows, movies';
 
@@ -88,18 +91,77 @@ String seriesHitLine(SeriesHit hit, {required int sources}) {
   ].join(' · ');
 }
 
+/// A library row's name: a movie of the user's own with its year, "Harbor
+/// Walk (2021)" (canvas); an episode by its title, or "Episode 4"; a show
+/// by its name.
+String libraryHitTitle(LibraryHit hit) => switch (hit) {
+  LibraryShowHit(:final show) => show.title,
+  LibraryItemHit(:final item) => switch (item.kind) {
+    LibraryKind.movie => libraryMovieTitle(item),
+    LibraryKind.episode => libraryEpisodeTitle(item),
+    LibraryKind.unsorted => item.title,
+  },
+};
+
+/// What stands before a library row's second line.
+enum LibraryHitMark { folder, downloaded, driveAway }
+
+LibraryHitMark libraryHitMark(LibraryHit hit) {
+  final (available, downloaded) = switch (hit) {
+    LibraryShowHit(:final show) => (show.available, show.downloaded),
+    LibraryItemHit(:final item) => (item.available, item.isDownload),
+  };
+  if (!available) return LibraryHitMark.driveAway;
+  return downloaded ? LibraryHitMark.downloaded : LibraryHitMark.folder;
+}
+
+/// A library row's second line, where it is first, as the canvas has it:
+/// "Home videos · 12 min"; "Downloaded · 1 h 52 min" for a download;
+/// "Kettle Bay · S2 · E3 · 44 min" for an episode found by its title;
+/// "Movies HDD · 3 seasons" for a show; and that its drive is away.
+String libraryHitLine(LibraryHit hit) {
+  if (libraryHitMark(hit) == LibraryHitMark.driveAway) return driveNotConnected;
+  switch (hit) {
+    case LibraryShowHit(:final show, :final folderLabel):
+      final count = show.seasons > 1
+          ? '${show.seasons} seasons'
+          : show.episodes == 1
+          ? '1 episode'
+          : '${formatCount(show.episodes)} episodes';
+      return [
+        if (show.downloaded) 'Downloaded' else ?folderLabel,
+        count,
+      ].join(' · ');
+    case LibraryItemHit(:final item, :final folderLabel):
+      final episode = item.kind == LibraryKind.episode;
+      final number = libraryEpisodeNumber(item);
+      return [
+        if (episode)
+          ?item.showTitle
+        else if (item.isDownload)
+          'Downloaded'
+        else
+          ?folderLabel,
+        if (episode && number.isNotEmpty) number,
+        if (item.duration case final length?) formatRuntime(length),
+      ].join(' · ');
+  }
+}
+
 /// "Show all in Live TV" and the like, at the end of a group with more.
 /// Null for programmes: no screen lists the guide by text, and the five
-/// soonest are the ones that matter.
+/// soonest are the ones that matter. Null for the library: it has no text
+/// filter to open on, and more letters narrow what is here.
 String? showAllLabel(SearchGroupKind kind) => switch (kind) {
   SearchGroupKind.channels => 'Show all in Live TV',
   SearchGroupKind.programmes => null,
   SearchGroupKind.movies => 'Show all in Movies',
   SearchGroupKind.series => 'Show all in Series',
+  SearchGroupKind.library => null,
 };
 
-/// The four groups, in the overlay's order.
-enum SearchGroupKind { channels, programmes, movies, series }
+/// The five groups, in the overlay's order.
+enum SearchGroupKind { channels, programmes, movies, series, library }
 
 /// "No results for "harbour"".
 String noResultsTitle(String text) => 'No results for "${text.trim()}"';
@@ -112,7 +174,7 @@ String hiddenMatchesLine(int count) => count == 1
 /// The body with no text and no recent search (sketch C).
 const searchCoverage =
     'Channels, what’s on now and next, movies and series, from every '
-    'source.';
+    'source — and the videos on this computer.';
 
 /// The footer's recent searches: "Recent: tennis open · cup final".
 String recentLine(List<String> recent) =>

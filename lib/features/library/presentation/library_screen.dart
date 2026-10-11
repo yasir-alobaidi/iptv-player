@@ -9,7 +9,6 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
-import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -20,12 +19,8 @@ import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/library/presentation/library_cards.dart';
 import 'package:iptv_player/features/library/presentation/library_folders.dart';
-import 'package:iptv_player/features/library/presentation/library_routes.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
-import 'package:iptv_player/features/playback/domain/playable.dart';
-import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
-import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/presentation/title_grid.dart';
 
 /// Library (canvas `Library`, sketches B and C; docs/05, docs/09): the
@@ -109,56 +104,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
   }
 
-  /// A downloaded movie the provider still lists opens its page there,
-  /// with everything the provider says of it; any other, the Library's.
+  ProviderContainer get _container =>
+      ProviderScope.containerOf(context, listen: false);
+
   Future<void> _openMovie(LibraryItem item) async {
-    final link = item.provider;
-    if (link != null && link.type == VodType.movie) {
-      final listed = await ref
-          .read(movieRepositoryProvider)
-          .byRemoteKey(link.sourceId, link.remoteKey);
-      if (!mounted) return;
-      if (listed case Ok(value: final movie?)) {
-        context.go(libraryProviderMoviePath(movie));
-        return;
-      }
-    }
-    if (mounted) context.go(libraryMoviePath(item));
+    final location = await libraryMovieLocation(_container, item);
+    if (mounted) context.go(location);
   }
 
   Future<void> _openShow(LibraryShow show) async {
-    final source = show.providerSourceId;
-    final key = show.providerSeriesKey;
-    if (source != null && key != null) {
-      final listed = await ref
-          .read(seriesRepositoryProvider)
-          .byRemoteKey(source, key);
-      if (!mounted) return;
-      if (listed case Ok(value: final series?)) {
-        context.go(libraryProviderSeriesPath(series));
-        return;
-      }
-    }
-    if (mounted) context.go(libraryShowPath(show.key));
-  }
-
-  /// Enter on a video: it plays, from where it was left.
-  Future<void> _play(LibraryItem item, String? folderLabel) async {
-    if (!item.available) {
-      ref
-          .read(appNoticesProvider)
-          .show(AppNotice(driveAwayNotice(folderLabel)));
-      return;
-    }
-    final launcher = ref.read(vodLauncherProvider);
-    final mark = await ref
-        .read(watchProgressProvider)
-        .watch(libraryVodRef(item))
-        .first;
-    await launcher.playLibraryItem(
-      item,
-      from: mark != null && mark.resumable ? mark.position : null,
-    );
+    final location = await libraryShowLocation(_container, show);
+    if (mounted) context.go(location);
   }
 
   @override
@@ -427,7 +383,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               folderLabel: labels[item.folderId],
               focus: focus,
               width: width,
-              onPlay: () => unawaited(_play(item, labels[item.folderId])),
+              onPlay: () => unawaited(
+                playLibraryItem(
+                  _container,
+                  item,
+                  folderLabel: labels[item.folderId],
+                ),
+              ),
               onMenu: (anchor) => unawaited(
                 showLibraryItemMenu(
                   anchor,

@@ -410,11 +410,17 @@ class AppSearchTokens {
   double get queryIconSize => 22;
 
   /// A result: 52 tall, its picture centred in a 56 slot — a logo 36
-  /// square, a poster 30 × 44.
+  /// square, a poster 30 × 44, a library video's frame 56 × 32.
   double get rowHeight => 52;
   double get pictureSlot => 56;
   double get logoSize => 36;
   Size get posterSize => const Size(30, 44);
+  Size get frameSize => const Size(56, 32);
+
+  /// The mark before a library row's second line (its folder), and the
+  /// one in a row's Downloaded badge.
+  double get lineIconSize => 12;
+  double get lineIconGap => 5;
 
   /// The footer of keys and recent searches.
   double get footerHeight => 44;

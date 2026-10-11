@@ -13,10 +13,73 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_edit_dialog.dart';
+import 'package:iptv_player/features/library/presentation/library_routes.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
+
+/// Where a library movie opens (the Library's grid, Search): a download
+/// the provider still lists at its page there, with everything the
+/// provider says of it; any other at the Library's own.
+Future<String> libraryMovieLocation(
+  ProviderContainer container,
+  LibraryItem item,
+) async {
+  final link = item.provider;
+  if (link != null && link.type == VodType.movie) {
+    final listed = await container
+        .read(movieRepositoryProvider)
+        .byRemoteKey(link.sourceId, link.remoteKey);
+    if (listed case Ok(value: final movie?)) {
+      return libraryProviderMoviePath(movie);
+    }
+  }
+  return libraryMoviePath(item);
+}
+
+/// Where a library show opens: a provider's series it still lists at its
+/// page there; any other at the Library's own.
+Future<String> libraryShowLocation(
+  ProviderContainer container,
+  LibraryShow show,
+) async {
+  final source = show.providerSourceId;
+  final key = show.providerSeriesKey;
+  if (source != null && key != null) {
+    final listed = await container
+        .read(seriesRepositoryProvider)
+        .byRemoteKey(source, key);
+    if (listed case Ok(value: final series?)) {
+      return libraryProviderSeriesPath(series);
+    }
+  }
+  return libraryShowPath(show.key);
+}
+
+/// Enter on a video: it plays, from where it was left. One whose drive is
+/// away says so instead of opening the player on a file that isn't there.
+Future<void> playLibraryItem(
+  ProviderContainer container,
+  LibraryItem item, {
+  String? folderLabel,
+}) async {
+  if (!item.available) {
+    container
+        .read(appNoticesProvider)
+        .show(AppNotice(driveAwayNotice(folderLabel)));
+    return;
+  }
+  final launcher = container.read(vodLauncherProvider);
+  final mark = await container
+      .read(watchProgressProvider)
+      .watch(libraryVodRef(item))
+      .first;
+  await launcher.playLibraryItem(
+    item,
+    from: mark != null && mark.resumable ? mark.position : null,
+  );
+}
 
 /// Delete file (sketch F; hard rule 11): always asked, Keep focused. The
 /// video and its subtitle files go to the system's trash; on a drive with
@@ -95,11 +158,14 @@ Future<bool> confirmDeleteFile(BuildContext context, LibraryItem item) async {
 /// Resume or Play, Play from the start, the favorite, Mark as watched,
 /// Show in folder, Edit details…, Hide, Remove from library, Delete
 /// file…. Cast joins it with step 7. [onGone] is told when the item has
-/// left the library (its page goes back).
+/// left the library (its page goes back), [onChanged] when its details
+/// were edited, and [beforePlay] before it plays (Search closes).
 Future<void> showLibraryItemMenu(
   BuildContext anchor,
   LibraryItem item, {
   String? folderLabel,
+  VoidCallback? beforePlay,
+  VoidCallback? onChanged,
   VoidCallback? onGone,
 }) async {
   final container = ProviderScope.containerOf(anchor, listen: false);
@@ -119,6 +185,7 @@ Future<void> showLibraryItemMenu(
       notices.show(AppNotice(driveAwayNotice(folderLabel)));
       return;
     }
+    beforePlay?.call();
     await container.read(vodLauncherProvider).playLibraryItem(item, from: from);
   });
 
@@ -177,8 +244,11 @@ Future<void> showLibraryItemMenu(
             item.id,
             answer.useFileName ? null : answer.edit,
           );
-          if (saved case Err(:final failure)) {
-            failed("Couldn't save the details.", failure);
+          switch (saved) {
+            case Ok():
+              onChanged?.call();
+            case Err(:final failure):
+              failed("Couldn't save the details.", failure);
           }
         }),
       ),

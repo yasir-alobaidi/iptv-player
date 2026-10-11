@@ -8,6 +8,7 @@ import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/daos/library_dao.dart';
 import 'package:iptv_player/data/db/table_changes.dart';
 import 'package:iptv_player/data/library/library_scan.dart';
 import 'package:iptv_player/data/library/name_parser.dart';
@@ -122,24 +123,7 @@ final class DbLibraryRepository implements LibraryRepository {
     LibraryOrigin origin = LibraryOrigin.all,
   }) => _db.libraryDao
       .watchShows(downloaded: _downloaded(origin))
-      .map(
-        (rows) => [
-          for (final row in rows)
-            LibraryShow(
-              key: row.key,
-              title: row.title,
-              episodes: row.episodes,
-              seasons: row.seasons,
-              bytes: row.bytes,
-              artworkPath: row.artworkPath,
-              folderId: row.folders == 1 ? row.folderId : null,
-              downloaded: row.downloaded,
-              providerSourceId: row.downloaded ? row.sourceId : null,
-              providerSeriesKey: row.downloaded ? row.seriesKey : null,
-              available: row.available > 0,
-            ),
-        ],
-      );
+      .map((rows) => [for (final row in rows) libraryShowFromRow(row)]);
 
   @override
   Stream<List<LibraryItem>> watchShowEpisodes(String showKey) => Stream.multi((
@@ -452,6 +436,20 @@ LibraryFolder libraryFolderFromRow(LibraryFolderRow row) => LibraryFolder(
   isAvailable: row.isAvailable,
   addedAt: row.addedAt,
   lastScanAt: row.lastScanAt,
+);
+
+LibraryShow libraryShowFromRow(LibraryShowRow row) => LibraryShow(
+  key: row.key,
+  title: row.title,
+  episodes: row.episodes,
+  seasons: row.seasons,
+  bytes: row.bytes,
+  artworkPath: row.artworkPath,
+  folderId: row.folders == 1 ? row.folderId : null,
+  downloaded: row.downloaded,
+  providerSourceId: row.downloaded ? row.sourceId : null,
+  providerSeriesKey: row.downloaded ? row.seriesKey : null,
+  available: row.available > 0,
 );
 
 LibraryItem libraryItemFromRow(LibraryItemRow row, LibraryFolderRow? folder) {
