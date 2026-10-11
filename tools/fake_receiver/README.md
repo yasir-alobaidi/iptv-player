@@ -78,9 +78,19 @@ arrived:
   numbering goes back (a restart that didn't continue it); `#EXT-X-
   DISCONTINUITY` is recorded on the segment after it; `#EXT-X-ENDLIST`
   plays out to IDLE/FINISHED.
-- **A continuous stream or a file** (`video/mp4`): read from the start
-  with `Range: bytes=0-`; its first 256 KB checked; IDLE/FINISHED after
-  its end and `endDelay` (Living Room TV plays out about 4 s).
+- **A continuous stream** (`video/mp4` with no length: the relay's): read
+  from the start with `Range: bytes=0-`; its first 256 KB checked;
+  IDLE/FINISHED after its end and `endDelay` (Living Room TV plays out
+  about 4 s).
+- **A file with a length** (a direct play; Phase 8 step 7): an answer
+  with `Content-Range` or `Content-Length` + `Accept-Ranges` is a file,
+  not the relay's stream. Its first 4 MB are checked and its length read
+  from them (an index at the front); it is then read `bufferAhead` past
+  where it plays, and not at all while paused. A **SEEK**, or a LOAD that
+  starts past 0:00, is a new request with `Range: bytes=<n>-` at the byte
+  that time is at (what the TV did in Phase 0); an answer other than 206
+  fails it. FINISHED once it has played to its end. A file whose index
+  isn't at the front is read to its end and finished, as before.
 - **A buffer, as a TV's** (Phase 7 step 7): a fragmented MP4 (the relay's
   continuous stream) is read until it holds `bufferAhead` (30 s) more
   than has played, then not again until it holds less than

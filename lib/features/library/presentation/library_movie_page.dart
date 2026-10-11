@@ -107,9 +107,19 @@ class _MoviePage extends ConsumerWidget {
         .read(appNoticesProvider)
         .show(AppNotice(driveAwayNotice(folder?.label)));
 
+    void cast() => unawaited(
+      castLibraryItem(
+        context,
+        item,
+        folderLabel: folder?.label,
+        from: resumable ? mark.position : null,
+      ),
+    );
+
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyF): toggleFavorite,
+        const SingleActivator(LogicalKeyboardKey.keyC): cast,
       },
       child: Stack(
         fit: StackFit.expand,
@@ -249,6 +259,14 @@ class _MoviePage extends ConsumerWidget {
                               bordered: true,
                               size: layout.movieActionHeight,
                               onPressed: toggleFavorite,
+                            ),
+                            AppIconButton(
+                              icon: AppIcons.cast,
+                              tooltip: 'Cast',
+                              shortcut: 'C',
+                              bordered: true,
+                              size: layout.movieActionHeight,
+                              onPressed: cast,
                             ),
                             // Sketch A's ⋯: the item menu. An item that
                             // leaves the library takes its page with it.

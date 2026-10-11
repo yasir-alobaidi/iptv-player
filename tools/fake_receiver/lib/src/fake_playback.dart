@@ -117,6 +117,10 @@ abstract interface class FakeWatchListener {
   /// given out. It stands still while paused.
   Duration get played;
 
+  /// Where in the media it is: where it started, what it has played
+  /// since, and where a SEEK put it.
+  Duration get position;
+
   /// It can't play: [reason] for the log.
   void failed(String reason);
 
@@ -128,7 +132,9 @@ abstract interface class FakeWatchListener {
 /// Fetches one LOAD's stream like the receiver: the HLS playlist polled
 /// and every new segment read (with `Origin: https://www.gstatic.com`, so
 /// a missing CORS header fails as it would in the TV's browser), or a
-/// continuous stream read from its start with `Range: bytes=0-`.
+/// continuous stream read from its start with `Range: bytes=0-`. A file
+/// with a length (a direct play) is read as it plays, and a SEEK in it is
+/// a new request with `Range` at the byte that time is at.
 final class FakeWatch {
   new({
     required this.url,
@@ -152,7 +158,16 @@ final class FakeWatch {
 
   bool get _hls => contentType.contains('mpegurl');
 
+  /// Where a SEEK asked to go, until the file's reader has gone there.
+  Duration? _seekTo;
+
   void start() => unawaited(_run());
+
+  /// The sender's SEEK. In a file with a length the TV asks for the bytes
+  /// at that time; any other stream has only what it is sent.
+  // A command, as the receiver's other ones are: not a property of it.
+  // ignore: use_setters_to_change_properties
+  void seek(Duration to) => _seekTo = to;
 
   void cancel() {
     _cancelled = true;
@@ -269,6 +284,9 @@ final class FakeWatch {
       return listener.failed('HTTP ${response.statusCode}');
     }
     if (!cors) return listener.failed('no CORS header');
+    if (_fileSize(response) case final size?) {
+      return await _watchFile(response, size);
+    }
     final head = File('${_scratch!.path}/stream.mp4');
     final sink = head.openWrite();
     final clock = Fmp4Clock();
@@ -334,6 +352,154 @@ final class FakeWatch {
     }
     await _pause(playback.endDelay);
     if (!_cancelled) listener.finished();
+  }
+
+  /// The whole length of a file that was answered with one: the total in
+  /// `Content-Range`, else `Content-Length` of an answer that takes
+  /// ranges. Null for a stream with no end in sight (the relay's).
+  static int? _fileSize(HttpClientResponse response) {
+    final range = response.headers.value(HttpHeaders.contentRangeHeader);
+    final total = range == null
+        ? null
+        : int.tryParse(range.split('/').last.trim());
+    if (total != null && total > 0) return total;
+    final ranges = response.headers.value(HttpHeaders.acceptRangesHeader);
+    return ranges == 'bytes' && response.contentLength > 0
+        ? response.contentLength
+        : null;
+  }
+
+  /// What a player needs of a file's start: its index, when that is at
+  /// the front.
+  static const int _headBytes = 4 << 20;
+
+  /// A file with a length (a direct play, docs/04 "Direct file"), read as
+  /// a TV reads one. Its head is probed for what it holds and how long it
+  /// is. Then it is read in bursts, [FakePlayback.bufferAhead] past where
+  /// it plays, and not at all while paused. A SEEK, or a start past 0:00,
+  /// is a new request with `Range` at the byte that time is at (Phase 0
+  /// saw the TV do so). FINISHED comes once it has played to its end.
+  Future<void> _watchFile(HttpClientResponse first, int size) async {
+    final head = File('${_scratch!.path}/stream.mp4');
+    IOSink? sink = head.openWrite();
+    var offset = 0;
+    var wanted = min(size, _headBytes);
+    var ended = false;
+    var holding = false;
+    StreamSubscription<List<int>>? body;
+
+    void read(HttpClientResponse response, int from) {
+      offset = from;
+      ended = false;
+      holding = false;
+      // Cancelled as `body`, by the next request or at the end.
+      // ignore: cancel_subscriptions
+      late final StreamSubscription<List<int>> reading;
+      reading = body = response.listen(
+        (chunk) {
+          sink?.add(chunk);
+          offset += chunk.length;
+          if (offset >= wanted && !holding) {
+            holding = true;
+            reading.pause();
+          }
+        },
+        onDone: () => ended = true,
+        onError: (Object _) => ended = true,
+        cancelOnError: true,
+      );
+    }
+
+    read(first, 0);
+    while (!_cancelled && !ended && offset < wanted) {
+      await _pause(const Duration(milliseconds: 20));
+    }
+    if (_cancelled) return;
+    final started = sink;
+    sink = null;
+    await _startStream(started, head);
+    final length = await _length(head);
+    if (_cancelled) return;
+
+    if (length == null || length <= Duration.zero) {
+      // Its index isn't at the front: read to its end, as before.
+      wanted = size;
+      if (holding) body?.resume();
+      while (!_cancelled && !ended) {
+        await _pause(const Duration(milliseconds: 50));
+      }
+      await _pause(playback.endDelay);
+      if (!_cancelled) listener.finished();
+      return;
+    }
+
+    int byteOf(Duration at) => max(
+      0,
+      min(size - 1, (size * at.inMicroseconds / length.inMicroseconds).floor()),
+    );
+    // A LOAD that starts past 0:00 jumps there once the index is read.
+    if (listener.position > const Duration(seconds: 1)) {
+      _seekTo ??= listener.position;
+    }
+    final ahead = playback.bufferAhead;
+    while (!_cancelled) {
+      final to = _seekTo;
+      _seekTo = null;
+      if (to != null) {
+        await body?.cancel();
+        final from = byteOf(to);
+        final request = await _client.getUrl(url);
+        request.headers
+          ..set('Origin', 'https://www.gstatic.com')
+          ..set(HttpHeaders.rangeHeader, 'bytes=$from-');
+        final response = await request.close().timeout(playback.giveUp);
+        final cors =
+            response.headers.value('access-control-allow-origin') != null;
+        listener.fetched(
+          FakeFetch(
+            url.path,
+            response.statusCode,
+            range: 'bytes=$from-',
+            cors: cors,
+          ),
+        );
+        if (response.statusCode != HttpStatus.partialContent) {
+          await response.drain<void>().catchError((Object _) {});
+          return listener.failed(
+            'HTTP ${response.statusCode} to a Range request',
+          );
+        }
+        wanted = from;
+        read(response, from);
+      }
+      final at = listener.position;
+      if (at + const Duration(milliseconds: 200) >= length) break;
+      wanted = ahead == null ? size : min(size, byteOf(at + ahead) + 1);
+      if (holding && offset < wanted) {
+        holding = false;
+        body?.resume();
+      }
+      if (ended && offset < size && offset < wanted) {
+        return listener.failed('the file ended at $offset of $size bytes');
+      }
+      await _pause(const Duration(milliseconds: 100));
+    }
+    await body?.cancel();
+    if (_cancelled) return;
+    await _pause(playback.endDelay);
+    if (!_cancelled) listener.finished();
+  }
+
+  /// How long ffprobe says [file] is, when its index is in what was read.
+  Future<Duration?> _length(File file) async {
+    final result = await Process.run(playback.ffprobe, [
+      ...['-v', 'error', '-show_entries', 'format=duration'],
+      ...['-of', 'default=nw=1:nk=1', file.path],
+    ]);
+    final seconds = double.tryParse('${result.stdout}'.trim());
+    return seconds == null || !seconds.isFinite || seconds <= 0
+        ? null
+        : Duration(microseconds: (seconds * 1e6).round());
   }
 
   Future<void> _startStream(IOSink sink, File head) async {

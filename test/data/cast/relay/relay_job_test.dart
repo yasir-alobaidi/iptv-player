@@ -71,6 +71,29 @@ void main() {
       ]);
     });
 
+    test('a file on this computer: FFmpeg reads it itself, with none of '
+        "a connection's options (it refuses them for a file)", () {
+      const file = '/films/Paper Kites (2019)/Paper Kites (2019).mkv';
+      const local = RelayJob(
+        ffmpeg: '/app/ffmpeg/ffmpeg',
+        output: RelayOutput.continuous,
+        live: false,
+        inputArgs: ['-ss', '60.000'],
+        outputArgs: ['-map', '0:V:0', '-c:v', 'copy'],
+        localInput: file,
+      );
+      final args = relayArguments(local, input: file);
+      expect(args.where((a) => a.startsWith('-reconnect')), isEmpty);
+      expect(args.sublist(0, 13), [
+        ...['-hide_banner', '-nostdin', '-nostats'],
+        ...['-loglevel', 'repeat+level+info'],
+        ...['-fflags', '+genpts+discardcorrupt'],
+        ...['-analyzeduration', '2000000', '-probesize', '5000000'],
+        ...['-ss', '60.000'],
+      ]);
+      expect(args[args.indexOf('-i') + 1], file);
+    });
+
     test('HLS after a restart continues its playlist', () {
       final args = relayArguments(
         job,

@@ -28,6 +28,15 @@ abstract interface class CastRelay {
     required String localAddress,
   });
 
+  /// Serves the video file at [path] (a library file, a download) to a
+  /// TV that reaches this computer at [localAddress], with Range requests
+  /// (docs/04 "Direct file"): the TV seeks in it by itself. Null when
+  /// nothing can listen there.
+  Future<CastServedFile?> serveFile(
+    String path, {
+    required String localAddress,
+  });
+
   /// The provider connections the proxy holds, per source, as they open
   /// and close (one-connection sources, Phase 8's downloads).
   Stream<CastRelayConnections> get connections;
@@ -45,9 +54,16 @@ final class CastUpstreamSource {
     required this.sourceId,
     required this.live,
     required this.resolve,
+    this.file,
   });
 
   final String sourceId;
+
+  /// A file on this computer (a library file, a download; Phase 8
+  /// decision 12): FFmpeg and ffprobe read it themselves, the relay's
+  /// server gives it to the TV, and no provider is asked for anything —
+  /// [resolve] is never called.
+  final String? file;
 
   /// A live channel: reconnected whenever it ends. A file is read with
   /// Range.
@@ -312,6 +328,12 @@ final class UnavailableCastRelay implements CastRelay {
 
   @override
   Future<CastRelayInput?> openInput(CastUpstreamSource source) async => null;
+
+  @override
+  Future<CastServedFile?> serveFile(
+    String path, {
+    required String localAddress,
+  }) async => null;
 
   @override
   Future<CastServedFile?> servePicture(

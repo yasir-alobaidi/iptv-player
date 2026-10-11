@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:iptv_player/data/images/artwork_cache.dart';
 import 'package:iptv_player/features/casting/domain/cast_items.dart';
 
@@ -12,6 +14,12 @@ final class ArtworkCastPictures implements CastPictures {
   @override
   Future<String?> fileFor(String url) async {
     try {
+      // A library item's poster or frame is a file already.
+      final uri = Uri.tryParse(url);
+      if (uri != null && uri.isScheme('file')) {
+        final path = uri.toFilePath();
+        return File(path).existsSync() ? path : null;
+      }
       await _cache.bytes(url);
       final file = _cache.fileFor(url);
       return file.existsSync() ? file.path : null;

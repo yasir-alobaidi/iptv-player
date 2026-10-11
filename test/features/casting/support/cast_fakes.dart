@@ -393,6 +393,24 @@ final class FakeRelay implements CastRelay {
     return FakeServed('http://$localAddress:38400/f/pic/media.png', unserved);
   }
 
+  /// The video files served to the TV, and whether one can be.
+  final files = <String>[];
+  bool canServeFiles = true;
+
+  @override
+  Future<CastServedFile?> serveFile(
+    String path, {
+    required String localAddress,
+  }) async {
+    if (!canServeFiles) return null;
+    files.add(path);
+    log.add('file');
+    return FakeServed(
+      'http://$localAddress:38400/f/file${files.length}/media.mp4',
+      unserved,
+    );
+  }
+
   @override
   Stream<CastRelayConnections> get connections => _connections.stream;
 

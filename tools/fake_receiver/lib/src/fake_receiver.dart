@@ -560,6 +560,8 @@ final class FakeReceiver {
           media
             ..position = to.toDouble()
             ..since = _now;
+          // In a file the TV reads itself, a SEEK is a new Range request.
+          media.watch?.seek(Duration(microseconds: (to * 1e6).round()));
         }
         final next = switch (m.payload['resumeState']) {
           'PLAYBACK_START' => 'PLAYING',
@@ -974,6 +976,10 @@ final class _Watching implements FakeWatchListener {
     ),
     null => Duration.zero,
   };
+
+  @override
+  Duration get position =>
+      Duration(microseconds: (_fake._positionOf(_session) * 1e6).round());
 
   @override
   void fetched(FakeFetch fetch) => _fake._fetches.add(fetch);

@@ -889,6 +889,85 @@ void main() {
       expect(rig.tv.loads, hasLength(1));
     });
 
+    group('from a file on this computer (Phase 8 decision 12)', () {
+      const file = '/downloads/Movies/Film (2025)/Film (2025).mp4';
+
+      Future<void> castDownloaded({
+        Duration? from,
+        StreamFacts facts = mp4Facts,
+      }) async {
+        rig.playback.resolver.downloads['m7'] = file;
+        rig.probe.next = StreamProbed(facts);
+        await rig.coordinator.connect(tvDevice);
+        await rig.phase(CastPhase.idle);
+        unawaited(
+          rig.playback.coordinator.playVod(PlayableMovie(movie(7)), from: from),
+        );
+        await rig.loaded();
+        rig.relay.sessions.lastOrNull?.emit(const CastRelayFetched());
+      }
+
+      test('an MP4 the TV plays: served from this computer, sought by the '
+          "TV itself, with none of the provider's connections", () async {
+        await castDownloaded(from: const Duration(minutes: 5));
+        // ffprobe read the file itself: no proxy, no room asked for.
+        expect(rig.probe.inputs, [file]);
+        expect(rig.relay.log, isNot(contains('input')));
+        expect(rig.relay.files, [file]);
+        expect(rig.relay.sessions, isEmpty);
+        final load = rig.tv.loads.single;
+        expect(load.url, 'http://192.168.1.20:38400/f/file1/media.mp4');
+        expect(load.contentType, 'video/mp4');
+        expect(load.start, const Duration(minutes: 5));
+        expect(rig.playback.coordinator.connections.held('src'), 0);
+
+        rig.tv.playing(position: const Duration(minutes: 5));
+        await rig.phase(CastPhase.playing);
+        await rig.playback.coordinator.seek(const Duration(minutes: 20));
+        expect(rig.tv.calls, contains('seek:1200000'));
+        expect(rig.tv.loads, hasLength(1));
+        expect(rig.playback.coordinator.connections.held('src'), 0);
+
+        // Its place is the title's; its URL goes with the cast.
+        await rig.coordinator.disconnect();
+        expect(rig.playback.progress.saves.last.ref, movie(7).ref);
+        expect(rig.relay.unserved, contains(load.url));
+      });
+
+      test('anything else: the relay, whose FFmpeg reads the file', () async {
+        await castDownloaded(facts: mkvFacts);
+        final request = rig.relay.last.request;
+        expect(request.plan.delivery, CastDelivery.relayContinuous);
+        expect(request.source.file, file);
+        expect(rig.relay.files, isEmpty);
+        expect(rig.relay.log, isNot(contains('input')));
+      });
+
+      test("the file can't be served: said so, not left loading", () async {
+        rig.relay.canServeFiles = false;
+        rig.playback.resolver.downloads['m7'] = file;
+        rig.probe.next = const StreamProbed(mp4Facts);
+        await rig.coordinator.connect(tvDevice);
+        await rig.phase(CastPhase.idle);
+        unawaited(rig.playback.coordinator.playVod(PlayableMovie(movie(7))));
+        await rig.until(() => rig.coordinator.state.problem != null);
+        expect(rig.coordinator.state.problem!.kind, CastProblemKind.relay);
+        expect(rig.tv.loads, isEmpty);
+      });
+
+      test('a TV that refuses the file as it is: the relay for this file, '
+          'and nothing learned about the provider', () async {
+        await castDownloaded();
+        rig.tv.idle(CastIdleReason.error);
+        await rig.until(() => rig.relay.sessions.isNotEmpty);
+        expect(rig.relay.last.request.source.file, file);
+        expect(rig.relay.unserved, hasLength(1), reason: 'its URL is gone');
+        expect(rig.devices.devices.values.single.learned.directRefusedSources, {
+          'file:$file',
+        });
+      });
+    });
+
     test('Stop casting saves where the TV was', () async {
       await castMovie();
       rig.tv.playing(position: const Duration(minutes: 12));

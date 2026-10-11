@@ -167,6 +167,68 @@ void main() {
     });
   }, skip: skip);
 
+  group('a file with a length (a direct play)', () {
+    test('probed from its head, played to its end, then FINISHED', () async {
+      final recorder = _Recorder();
+      watch(recorder, '/file.mp4', type: 'video/mp4');
+      final check = await recorder.firstCheck.future.timeout(_wait);
+      expect(check.videoCodec, 'h264');
+      expect(check.audioCodec, 'aac');
+      expect(recorder.ended.isCompleted, isFalse, reason: 'it plays first');
+      await recorder.ended.future.timeout(_wait);
+      // The clip is 4 s long.
+      expect(
+        recorder.clock.elapsed,
+        greaterThanOrEqualTo(const Duration(milliseconds: 3700)),
+      );
+      expect(server.ranges, ['bytes=0-']);
+      expect(recorder.fetches.single.status, 206);
+    });
+
+    test('a SEEK is a new request, with Range at the byte that time is '
+        'at', () async {
+      final size = File('${clips.path}/file.mp4').lengthSync();
+      final recorder = _Recorder();
+      final watching = watch(recorder, '/file.mp4', type: 'video/mp4');
+      await recorder.firstCheck.future.timeout(_wait);
+      recorder.seekTo(const Duration(seconds: 3));
+      watching.seek(const Duration(seconds: 3));
+      await recorder.ended.future.timeout(_wait);
+
+      expect(server.ranges, hasLength(2));
+      final from = int.parse(
+        RegExp(r'^bytes=(\d+)-$').firstMatch(server.ranges.last!)![1]!,
+      );
+      // Three quarters of the way into a 4 s file.
+      expect(from, closeTo(size * 3 / 4, size * 0.02));
+      expect(recorder.fetches.last.status, 206);
+      expect(recorder.fetches.last.range, 'bytes=$from-');
+      // One second was left to play.
+      expect(recorder.clock.elapsed, lessThan(const Duration(seconds: 3)));
+    });
+
+    test('a LOAD that starts past 0:00 jumps there once the index is '
+        'read', () async {
+      final recorder = _Recorder()..seekedTo = const Duration(seconds: 2);
+      watch(recorder, '/file.mp4', type: 'video/mp4');
+      await recorder.ended.future.timeout(_wait);
+      expect(server.ranges, hasLength(2));
+      expect(server.ranges.first, 'bytes=0-');
+      expect(server.ranges.last, matches(r'^bytes=[1-9]\d*-$'));
+    });
+
+    test('nothing is read or ended while paused', () async {
+      final recorder = _Recorder();
+      watch(recorder, '/file.mp4', type: 'video/mp4');
+      await recorder.firstCheck.future.timeout(_wait);
+      recorder.clock.stop();
+      await Future<void>.delayed(const Duration(seconds: 5));
+      expect(recorder.ended.isCompleted, isFalse, reason: 'paused');
+      recorder.clock.start();
+      await recorder.ended.future.timeout(_wait);
+    });
+  }, skip: skip);
+
   group('a fragmented MP4, as it arrives', () {
     test("how far into its media it got: each fragment's start", () {
       final bytes = File('${clips.path}/stream.mp4').readAsBytesSync();
@@ -360,6 +422,18 @@ final class _Recorder implements FakeWatchListener {
   @override
   Duration get played => clock.elapsed;
 
+  /// Where a test's SEEK put it, and the clock's time then.
+  Duration seekedTo = Duration.zero;
+  Duration seekedAt = Duration.zero;
+
+  @override
+  Duration get position => seekedTo + (clock.elapsed - seekedAt);
+
+  void seekTo(Duration to) {
+    seekedTo = to;
+    seekedAt = clock.elapsed;
+  }
+
   final firstCheck = Completer<FakeMediaCheck>();
   final ended = Completer<void>();
   final failure = Completer<String>();
@@ -437,6 +511,25 @@ final class _Server {
       final name = path.substring(5);
       final kind = name[0];
       await response.addStream(File('${_clips.path}/$kind.ts').openRead());
+    } else if (path == '/file.mp4') {
+      // A file, as the relay's server and a provider give one: with its
+      // length, and any part of it.
+      final range = request.headers.value(HttpHeaders.rangeHeader);
+      ranges.add(range);
+      final file = File('${_clips.path}$path');
+      final size = file.lengthSync();
+      final from = int.parse(
+        RegExp(r'^bytes=(\d+)-$').firstMatch(range ?? 'bytes=0-')![1]!,
+      );
+      response
+        ..statusCode = HttpStatus.partialContent
+        ..headers.set(HttpHeaders.acceptRangesHeader, 'bytes')
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $from-${size - 1}/$size',
+        )
+        ..headers.contentLength = size - from;
+      await response.addStream(file.openRead(from));
     } else if (path == '/stream.mp4' || path == '/head.mp4') {
       ranges.add(request.headers.value(HttpHeaders.rangeHeader));
       // Chunked and without a length, as the relay sends it.
@@ -477,7 +570,7 @@ final class _Tools {
 
   /// `a.ts` H.264 180p + AAC; `h.ts` HEVC; `t.ts` a 2160-tall picture;
   /// `stream.mp4` fragmented, as the relay's continuous stream; `head.mp4`
-  /// its header alone.
+  /// its header alone; `file.mp4` a whole 4 s file.
   Future<void> makeClips(Directory folder) async {
     Future<void> make(List<String> args) async {
       final result = await Process.run(ffmpeg, [
@@ -512,6 +605,14 @@ final class _Tools {
       ...['-c:a', 'aac', '-ac', '2', '-f', 'mp4'],
       ...['-movflags', 'frag_keyframe+empty_moov+default_base_moof'],
       '${folder.path}/stream.mp4',
+    ]);
+    // A whole file with its index at the front, as a download is kept.
+    await make([
+      ...['-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=25:duration=4'],
+      ...['-f', 'lavfi', '-i', 'sine=frequency=440:duration=4'],
+      ...['-c:v', 'libx264', '-preset', 'ultrafast', '-g', '25'],
+      ...['-c:a', 'aac', '-ac', '2', '-movflags', '+faststart'],
+      ...['-f', 'mp4', '${folder.path}/file.mp4'],
     ]);
     // Its header and no fragment: streams named, nothing to play.
     await make([

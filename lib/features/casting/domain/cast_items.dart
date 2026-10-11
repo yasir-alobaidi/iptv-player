@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
-import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_names.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
@@ -61,25 +61,39 @@ final class CastItems {
     final first = await _resolve(item);
     final stream = first.valueOrNull;
     if (stream == null) return Err(first.failureOrNull!);
+    // A file on this computer (Phase 8 decision 12): the file is what is
+    // known and learned about, not the provider its title came from. It
+    // may be in another container than the provider's (a download remade
+    // as MP4), and a TV that refuses this file says nothing of the next.
+    final file = stream.local ? stream.url : null;
     return Ok(
       CastItemStream(
-        key: keyOf(item),
+        key: file == null
+            ? keyOf(item)
+            : CastStreamKey(
+                sourceId: '',
+                kind: CastStreamKind.libraryFile,
+                id: file,
+              ),
         stream: stream,
         info: CastSourceInfo(
-          sourceId: item.sourceId,
+          sourceId: file == null ? item.sourceId : 'file:$file',
           live: item.live,
           hls: stream.hls,
           customUserAgent: stream.customUserAgent,
-          fileExtension: switch (item) {
-            PlayableMovie(:final movie) => movie.ext,
-            PlayableEpisode(:final episode) => episode.ext,
-            PlayableLibraryItem(:final item) => _extension(item.relPath),
-            PlayableChannel() => null,
-          },
+          fileExtension: file != null
+              ? _extension(file)
+              : switch (item) {
+                  PlayableMovie(:final movie) => movie.ext,
+                  PlayableEpisode(:final episode) => episode.ext,
+                  PlayableLibraryItem(:final item) => _extension(item.relPath),
+                  PlayableChannel() => null,
+                },
         ),
         upstream: CastUpstreamSource(
           sourceId: item.sourceId,
           live: item.live,
+          file: file,
           resolve: () async => switch (await _resolve(item)) {
             Ok(:final value) => Ok(
               CastUpstream(
@@ -96,23 +110,20 @@ final class CastItems {
     );
   }
 
-  /// The provider's stream, also for a title that was downloaded: the
-  /// TV reads URLs, and sending it the file comes with Phase 8 step 7.
+  /// A title that was downloaded casts from its file, as it plays from
+  /// it (Phase 8 decisions 8 and 12): no connection of the provider's is
+  /// used, and a download can keep running.
   Future<Result<ResolvedStream>> _resolve(Playable item) => switch (item) {
     PlayableChannel(:final channel) => _resolver.live(channel),
-    PlayableMovie(:final movie) => _resolver.movie(movie, downloaded: false),
-    PlayableEpisode(:final episode) => _resolver.episode(
-      episode,
-      downloaded: false,
-    ),
-    PlayableLibraryItem() => Future.value(
-      Err(InvalidInputFailure("A file from the library can't be cast yet.")),
-    ),
+    PlayableMovie(:final movie) => _resolver.movie(movie),
+    PlayableEpisode(:final episode) => _resolver.episode(episode),
+    PlayableLibraryItem(:final item) => _resolver.libraryFile(item),
   };
 
-  static String? _extension(String relPath) {
-    final dot = relPath.lastIndexOf('.');
-    return dot < 0 ? null : relPath.substring(dot + 1).toLowerCase();
+  static String? _extension(String path) {
+    final dot = path.lastIndexOf('.');
+    final slash = path.lastIndexOf(RegExp(r'[/\\]'));
+    return dot <= slash ? null : path.substring(dot + 1).toLowerCase();
   }
 
   /// "201 · Arena Sports 1" and its programme; a movie and its year; an
@@ -147,11 +158,13 @@ final class CastItems {
           imageUrl: episode.stillUrl ?? series.posterUrl,
         );
       case PlayableLibraryItem(:final item):
+        final names = libraryItemNames(item);
+        final picture = libraryItemPicture(item);
         return CastMetadata(
-          title: item.title,
-          subtitle: item.kind == LibraryKind.episode
-              ? '${item.showTitle ?? ''} · S${item.season} E${item.episode}'
-              : item.year?.toString(),
+          title: names.title,
+          subtitle: names.over,
+          // A file on this computer: [CastPictures] hands it over as it is.
+          imageUrl: picture == null ? null : Uri.file(picture).toString(),
         );
     }
   }

@@ -11,6 +11,7 @@ import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_edit_dialog.dart';
 import 'package:iptv_player/features/library/presentation/library_routes.dart';
@@ -154,10 +155,29 @@ Future<bool> confirmDeleteFile(BuildContext context, LibraryItem item) async {
   }
 }
 
+/// Casts [item] from its file (Phase 8 decision 12): the device picker,
+/// or the TV at once while a session is on. A file whose drive is away
+/// says so instead.
+Future<void> castLibraryItem(
+  BuildContext context,
+  LibraryItem item, {
+  String? folderLabel,
+  Duration? from,
+}) async {
+  if (!item.available) {
+    ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(appNoticesProvider).show(AppNotice(driveAwayNotice(folderLabel)));
+    return;
+  }
+  await castFrom(context, item: PlayableLibraryItem(item), from: from);
+}
+
 /// The item menu (sketch D; the menu key, Shift+F10 or a right-click):
 /// Resume or Play, Play from the start, the favorite, Mark as watched,
 /// Show in folder, Edit details…, Hide, Remove from library, Delete
-/// file…. Cast joins it with step 7. [onGone] is told when the item has
+/// file…; Cast after the plays (C). [onGone] is told when the item has
 /// left the library (its page goes back), [onChanged] when its details
 /// were edited, and [beforePlay] before it plays (Search closes).
 Future<void> showLibraryItemMenu(
@@ -208,6 +228,19 @@ Future<void> showLibraryItemMenu(
           icon: AppIcons.retry,
           onPressed: play,
         ),
+      AppMenuItem(
+        label: 'Cast',
+        icon: AppIcons.cast,
+        shortcut: 'C',
+        onPressed: () => choose(
+          () => castLibraryItem(
+            anchor,
+            item,
+            folderLabel: folderLabel,
+            from: resumable ? mark.position : null,
+          ),
+        ),
+      ),
       AppMenuItem(
         label: favorite ? 'Remove from favorites' : 'Add to favorites',
         icon: favorite ? AppIcons.starFilled : AppIcons.star,

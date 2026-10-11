@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/casting/domain/cast_items.dart';
 import 'package:iptv_player/features/casting/domain/stream_facts_lookup.dart';
@@ -82,6 +83,116 @@ void main() {
       expect(show.key.id, 'e12');
     },
   );
+
+  group('a file on this computer (Phase 8 decision 12)', () {
+    LibraryItem own({
+      LibraryKind kind = LibraryKind.movie,
+      String title = 'Paper Kites',
+      String? show,
+      String? poster,
+      String? frame,
+    }) => LibraryItem(
+      id: 1,
+      folderId: 1,
+      relPath: 'Paper Kites (2019)/Paper Kites (2019).mkv',
+      sizeBytes: 1,
+      modifiedAt: DateTime.utc(2026),
+      quickHash: 'hash-1',
+      kind: kind,
+      title: title,
+      year: kind == LibraryKind.movie ? 2019 : null,
+      showTitle: show,
+      season: show == null ? null : 2,
+      episode: show == null ? null : 4,
+      addedAt: DateTime.utc(2026),
+      path: '/films/Paper Kites (2019)/Paper Kites (2019).mkv',
+      artworkPath: poster,
+      thumbnailPath: frame,
+    );
+
+    test('a library file: read by FFmpeg and the TV from the disk, known '
+        'and learned about as the file', () async {
+      final resolved = (await items.resolve(PlayableLibraryItem(own())))
+          .valueOrNull!;
+      const path = '/films/Paper Kites (2019)/Paper Kites (2019).mkv';
+      expect(resolved.stream.local, isTrue);
+      expect(resolved.upstream.file, path);
+      expect(resolved.info.live, isFalse);
+      expect(resolved.info.fileExtension, 'mkv');
+      expect(resolved.info.sourceId, 'file:$path');
+      expect(
+        resolved.key,
+        const CastStreamKey(
+          sourceId: '',
+          kind: CastStreamKind.libraryFile,
+          id: path,
+        ),
+      );
+    });
+
+    test("a downloaded movie casts from its file: the file's container, "
+        "not the provider's, and nothing learned for the provider", () async {
+      // The provider lists it as Matroska; it was kept as MP4.
+      resolver.downloads['m3'] =
+          '/downloads/Movies/Film (2025)/Film (2025).mp4';
+      final film = (await items.resolve(PlayableMovie(movie(3)))).valueOrNull!;
+      expect(film.stream.local, isTrue);
+      expect(film.upstream.file, endsWith('Film (2025).mp4'));
+      expect(film.info.fileExtension, 'mp4');
+      expect(film.info.sourceId, startsWith('file:'));
+      expect(film.key.kind, CastStreamKind.libraryFile);
+      // A title with no file: the provider's stream, as before.
+      final other = (await items.resolve(PlayableMovie(movie(4)))).valueOrNull!;
+      expect(other.upstream.file, isNull);
+      expect(other.info.sourceId, 'src');
+    });
+
+    test('a file that is gone: the failure', () async {
+      resolver.missingFiles.add(1);
+      expect((await items.resolve(PlayableLibraryItem(own()))).isOk, isFalse);
+    });
+
+    test('what the TV shows: a movie over its year, an episode under its '
+        'show, with its poster or frame', () async {
+      final film = await items.metadataFor(
+        PlayableLibraryItem(
+          own(poster: '/films/Paper Kites (2019)/poster.jpg'),
+        ),
+      );
+      expect(film.title, 'Paper Kites');
+      expect(film.subtitle, '2019');
+      expect(film.imageUrl, 'file:///films/Paper%20Kites%20(2019)/poster.jpg');
+
+      final titled = await items.metadataFor(
+        PlayableLibraryItem(
+          own(
+            kind: LibraryKind.episode,
+            title: 'Undertow',
+            show: 'Glass Tide',
+            frame: '/cache/thumbs/hash-1.jpg',
+          ),
+        ),
+      );
+      expect(titled.title, 'Undertow');
+      expect(titled.subtitle, 'Glass Tide · S2 E4');
+      expect(titled.imageUrl, 'file:///cache/thumbs/hash-1.jpg');
+
+      // A name that gave no title (a provider's "S02E04").
+      final bare = await items.metadataFor(
+        PlayableLibraryItem(
+          own(kind: LibraryKind.episode, title: '', show: 'Glass Tide'),
+        ),
+      );
+      expect(bare.title, 'Episode 4');
+      expect(bare.subtitle, 'Glass Tide · S2 E4');
+      expect(bare.imageUrl, isNull);
+
+      final video = await items.metadataFor(
+        PlayableLibraryItem(own(kind: LibraryKind.unsorted, title: 'Beach')),
+      );
+      expect((video.title, video.subtitle), ('Beach', null));
+    });
+  });
 
   test('a source with its own User-Agent says so', () async {
     resolver.customUserAgent = true;

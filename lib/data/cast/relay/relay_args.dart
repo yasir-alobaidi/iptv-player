@@ -27,6 +27,7 @@ RelayJob castRelayJob({
   CastEncoder? encoder,
   Duration? startAt,
   bool? windows,
+  String? localInput,
 }) {
   final output = switch (plan.delivery) {
     CastDelivery.relayHls => RelayOutput.hls,
@@ -91,5 +92,6 @@ RelayJob castRelayJob({
     outputArgs: args,
     environment: environment,
     transcode: plan.video is CastVideoTranscode,
+    localInput: localInput,
   );
 }

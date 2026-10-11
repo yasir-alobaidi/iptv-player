@@ -603,6 +603,8 @@ final class CastCoordinator implements RemotePlayback {
         stream.key,
         fromPlayer: cast.fromPlayer,
         probeInput: () async {
+          // A file on this computer: ffprobe reads it itself.
+          if (stream.upstream.file case final file?) return file;
           await _room(stream);
           final opened = input = await _relay.openInput(stream.upstream);
           if (opened == null) throw StateError('the relay cannot run here');
@@ -693,6 +695,9 @@ final class CastCoordinator implements RemotePlayback {
     final stream = cast.stream!;
     if (cast.relay != null) await _stopRelay(cast);
     if (!_fresh(cast, generation)) return;
+    if (plan.delivery.direct && stream.upstream.file != null) {
+      return await _deliverFile(cast, generation, stream.upstream.file!);
+    }
     if (plan.delivery.direct) {
       final tv = await _joined;
       if (tv == null || !_fresh(cast, generation)) return;
@@ -759,6 +764,48 @@ final class CastCoordinator implements RemotePlayback {
           contentType: session.contentType,
         );
     }
+  }
+
+  /// A file on this computer the TV plays as it is (docs/04 "Direct
+  /// file"): the relay's server gives it to the TV with Range, so the TV
+  /// seeks in it by itself. No provider connection is asked for or
+  /// counted.
+  Future<void> _deliverFile(_Cast cast, int generation, String file) async {
+    final plan = cast.plan!;
+    final local = await _local?.future;
+    if (local == null || !_fresh(cast, generation)) return;
+    if (_beforeFirstRelay case final explain?) {
+      _beforeFirstRelay = null;
+      await explain();
+      if (!_fresh(cast, generation)) return;
+    }
+    // Loaded again (the connection came back): the same URL still serves.
+    final served =
+        cast.served ?? await _relay.serveFile(file, localAddress: local);
+    if (!_fresh(cast, generation)) {
+      if (!identical(served, cast.served)) await served?.close();
+      return;
+    }
+    if (served == null) {
+      return await _fail(
+        cast,
+        const CastProblem(
+          CastProblemKind.relay,
+          detail: 'The file could not be served to the TV.',
+        ),
+      );
+    }
+    cast.served = served;
+    final tv = await _joined;
+    if (tv == null || !_fresh(cast, generation)) return;
+    await _load(
+      cast,
+      tv,
+      generation,
+      url: served.url,
+      contentType: plan.delivery.contentType,
+      start: cast.from ?? Duration.zero,
+    );
   }
 
   Future<void> _load(
@@ -1258,6 +1305,9 @@ final class CastCoordinator implements RemotePlayback {
     }
     await events?.cancel();
     await session?.stop();
+    final served = cast.served;
+    cast.served = null;
+    await served?.close();
   }
 
   /// One more automatic LOAD of [cast]; false once
@@ -1502,6 +1552,9 @@ final class _Cast {
 
   /// The TV reads the provider itself: one of the source's connections.
   bool directOnTv = false;
+
+  /// A file on this computer the TV reads from the relay's server.
+  CastServedFile? served;
 
   /// LOADs made, the URL of the last, and its media session on the TV.
   int loads = 0;

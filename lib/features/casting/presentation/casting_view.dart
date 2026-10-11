@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
-import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_names.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -521,7 +522,15 @@ class _Artwork extends StatelessWidget {
         episode.stillUrl == null,
       ),
       null => ('', null, false),
-      PlayableLibraryItem(:final item) => (item.title, null, true),
+      PlayableLibraryItem(:final item) => (
+        item.showTitle ?? item.title,
+        switch (libraryItemPicture(item)) {
+          final path? => localArtworkUrl(path),
+          null => null,
+        },
+        // A poster beside the file is upright; a grabbed frame is wide.
+        item.artworkPath != null,
+      ),
     };
     final width = poster ? size * 2 / 3 : size;
     return Container(
@@ -592,10 +601,8 @@ class _Titles extends ConsumerWidget {
         episode.title,
       ),
       PlayableLibraryItem(:final item) => (
-        item.kind == LibraryKind.episode
-            ? '${item.showTitle ?? ''} · S${item.season} E${item.episode}'
-            : item.year?.toString(),
-        item.title,
+        libraryItemNames(item).over,
+        libraryItemNames(item).title,
       ),
     };
     return Column(

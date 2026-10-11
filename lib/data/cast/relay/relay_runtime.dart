@@ -383,6 +383,30 @@ final class RelayRuntime {
   bool _servedBy(RelayServer server) =>
       _sessions.values.any((session) => identical(session.server, server));
 
+  /// What a session's FFmpeg reads: the file itself when it is on this
+  /// computer, else the proxy's URL for [inputId].
+  String _input(
+    String inputId, {
+    required String sourceId,
+    required RelayJob job,
+  }) =>
+      job.localInput ??
+      _proxy.open(inputId, sourceId: sourceId, live: job.live);
+
+  /// Serves the video at [path] to the TV at [localAddress], with Range;
+  /// its URL, or null when nothing can listen there or it isn't a file.
+  Future<String?> serveFile(String path, {required String localAddress}) async {
+    final file = File(path);
+    try {
+      if (!file.existsSync()) return null;
+      final server = await _serverFor(localAddress);
+      return server.serveFile(file);
+    } on Object catch (error) {
+      _log.info(_tag, 'The file could not be served: $error');
+      return null;
+    }
+  }
+
   /// What ffprobe reads for [inputId] (decision 3).
   String openInput(
     String inputId, {
@@ -655,7 +679,7 @@ final class _HlsSession extends _Session {
 
   @override
   Future<RelayStartAnswer> start() async {
-    inputUrl = runtime._proxy.open(inputId, sourceId: sourceId, live: job.live);
+    inputUrl = runtime._input(inputId, sourceId: sourceId, job: job);
     return await _begin();
   }
 
@@ -856,7 +880,7 @@ final class _ContinuousSession extends _Session {
 
   @override
   Future<RelayStartAnswer> start() async {
-    inputUrl = runtime._proxy.open(inputId, sourceId: sourceId, live: job.live);
+    inputUrl = runtime._input(inputId, sourceId: sourceId, job: job);
     _serveAnew();
     // After the answer: the app learns of the session first.
     Timer.run(() => emit(const RelayReady()));

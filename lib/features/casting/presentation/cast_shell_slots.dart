@@ -5,6 +5,8 @@ import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_images.dart';
+import 'package:iptv_player/core/library/library_names.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -47,7 +49,7 @@ ShellCastSession? _session(Ref ref) {
     PlayableMovie(:final movie) => movie.name,
     PlayableEpisode(:final series, :final episode) =>
       '${series.name} · S${episode.season} E${episode.episode}',
-    PlayableLibraryItem(:final item) => item.title,
+    PlayableLibraryItem(:final item) => libraryItemLine(item),
   };
   final imageUrl = switch (item) {
     null => null,
@@ -55,7 +57,10 @@ ShellCastSession? _session(Ref ref) {
     PlayableMovie(:final movie) => movie.posterUrl,
     PlayableEpisode(:final series, :final episode) =>
       episode.stillUrl ?? series.posterUrl,
-    PlayableLibraryItem() => null,
+    PlayableLibraryItem(:final item) => switch (libraryItemPicture(item)) {
+      final path? => localArtworkUrl(path),
+      null => null,
+    },
   };
   final playing = state.phase == CastPhase.playing;
   final plan = state.plan;

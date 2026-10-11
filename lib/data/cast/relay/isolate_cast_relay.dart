@@ -128,6 +128,27 @@ final class IsolateCastRelay implements CastRelay {
   }
 
   @override
+  Future<CastServedFile?> serveFile(
+    String path, {
+    required String localAddress,
+  }) async {
+    if (_closed) return null;
+    Object? url;
+    try {
+      url = await _call(
+        (reply) => RelayServeFileCommand(
+          replyId: reply,
+          path: path,
+          localAddress: localAddress,
+        ),
+      );
+    } on Object catch (error) {
+      _log.info(_tag, 'The relay could not serve a file: $error');
+    }
+    return url is String ? _Picture(this, url) : null;
+  }
+
+  @override
   Future<CastServedFile?> servePicture(
     String path, {
     required String localAddress,
@@ -187,6 +208,7 @@ final class IsolateCastRelay implements CastRelay {
     binaries: _binaries,
     encoder: request.encoder,
     startAt: startAt,
+    localInput: request.source.file,
   );
 
   Future<SendPort> _spawn() {
@@ -502,6 +524,7 @@ final class _Session implements CastRelaySession {
   }
 }
 
+/// A picture or a video file the relay's server gives the TV.
 final class _Picture implements CastServedFile {
   new(this._relay, this.url);
 

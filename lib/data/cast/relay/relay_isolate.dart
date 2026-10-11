@@ -108,6 +108,20 @@ final class RelayServePictureCommand {
   final String localAddress;
 }
 
+/// Serve the video file at [path] to the TV at [localAddress], with
+/// Range; the reply is its URL, or null.
+final class RelayServeFileCommand {
+  const new({
+    required this.replyId,
+    required this.path,
+    required this.localAddress,
+  });
+
+  final int replyId;
+  final String path;
+  final String localAddress;
+}
+
 final class RelayUnserveCommand {
   const new(this.url);
 
@@ -249,6 +263,16 @@ Future<void> relayIsolateMain(RelayIsolateSetup setup) async {
         unawaited(
           runtime
               .servePicture(path, localAddress: localAddress)
+              .then((url) => app.send(RelayReply(replyId, url))),
+        );
+      case RelayServeFileCommand(
+        :final replyId,
+        :final path,
+        :final localAddress,
+      ):
+        unawaited(
+          runtime
+              .serveFile(path, localAddress: localAddress)
               .then((url) => app.send(RelayReply(replyId, url))),
         );
       case RelayUnserveCommand(:final url):

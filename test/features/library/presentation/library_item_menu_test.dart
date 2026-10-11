@@ -61,6 +61,7 @@ void main() {
 
     for (final item in [
       'Play',
+      'Cast',
       'Add to favorites',
       'Mark as watched',
       'Show in folder',
@@ -100,6 +101,23 @@ void main() {
     await menu(tester, 'Paper Kites (2019)');
     await choose(tester, 'Play from the start');
     expect(ui.launcher.played, ['Paper Kites from 2520', 'Paper Kites from 0']);
+  });
+
+  testWidgets("Cast on a file whose drive isn't connected says so, and "
+      'offers no device', (tester) async {
+    await openLibrary(
+      tester,
+      before: (ui) async {
+        await ui.add(ui.hdd, _kites, 'Paper Kites', year: 2019, away: true);
+      },
+    );
+    await menu(tester, 'Paper Kites (2019)');
+    await choose(tester, 'Cast');
+    expect(
+      find.text("Movies HDD isn't connected. Connect its drive to play this."),
+      findsOneWidget,
+    );
+    expect(find.text('Cast to a device'), findsNothing);
   });
 
   testWidgets('Hide takes it out of the Library, and Undo puts it back', (

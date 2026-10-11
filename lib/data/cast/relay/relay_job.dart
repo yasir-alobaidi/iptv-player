@@ -17,6 +17,7 @@ final class RelayJob {
     this.environment = const {},
     this.transcode = false,
     this.segmentSeconds = 2,
+    this.localInput,
   });
 
   /// The bundled FFmpeg.
@@ -41,6 +42,10 @@ final class RelayJob {
 
   /// HLS's segment length (docs/04: 2 s).
   final int segmentSeconds;
+
+  /// A file on this computer (Phase 8 decision 12): FFmpeg reads it
+  /// itself, and the proxy has no part in it.
+  final String? localInput;
 
   @override
   String toString() =>
@@ -74,9 +79,13 @@ List<String> relayArguments(
   ...['-loglevel', 'repeat+level+info'],
   // Its one peer is the app's proxy, which retries the provider itself:
   // a refused reconnect means the app is gone, and FFmpeg ends within
-  // seconds rather than after docs/04's 5 s steps (16 s, measured).
-  ...['-reconnect', '1', '-reconnect_streamed', '1'],
-  ...['-reconnect_on_network_error', '1', '-reconnect_delay_max', '1'],
+  // seconds rather than after docs/04's 5 s steps (16 s, measured). A
+  // file on disk has no connection to make again (and FFmpeg refuses the
+  // options for one).
+  if (job.localInput == null) ...[
+    ...['-reconnect', '1', '-reconnect_streamed', '1'],
+    ...['-reconnect_on_network_error', '1', '-reconnect_delay_max', '1'],
+  ],
   ...['-fflags', '+genpts+discardcorrupt'],
   // 2 s of the stream, as the probe reads (ADR-014 step 3): every stream
   // of every sample found right, and the first segments a second sooner

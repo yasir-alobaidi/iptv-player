@@ -246,21 +246,47 @@ class _ShowPageState extends ConsumerState<_ShowPage> {
                     ],
                     SizedBox(height: tokens.spacing.s16 + 2),
                     if (nextUp != null)
-                      AppButton(
-                        label: switch (nextUp.kind) {
-                          NextUpKind.again => 'Play again',
-                          NextUpKind.start => libraryContinueLabel(
-                            'Play',
-                            nextUp.episode,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: AppButton(
+                              label: switch (nextUp.kind) {
+                                NextUpKind.again => 'Play again',
+                                NextUpKind.start => libraryContinueLabel(
+                                  'Play',
+                                  nextUp.episode,
+                                ),
+                                _ => libraryContinueLabel(
+                                  'Continue',
+                                  nextUp.episode,
+                                ),
+                              },
+                              icon: AppIcons.play,
+                              size: AppButtonSize.xl,
+                              autofocus: true,
+                              focusNode: _primary,
+                              onPressed: () =>
+                                  _play(nextUp.episode, from: nextUp.from),
+                            ),
                           ),
-                          _ => libraryContinueLabel('Continue', nextUp.episode),
-                        },
-                        icon: AppIcons.play,
-                        size: AppButtonSize.xl,
-                        autofocus: true,
-                        focusNode: _primary,
-                        onPressed: () =>
-                            _play(nextUp.episode, from: nextUp.from),
+                          SizedBox(width: tokens.spacing.s12),
+                          // As the provider's Series page has it: the
+                          // episode Play would start, on the TV.
+                          AppIconButton(
+                            icon: AppIcons.cast,
+                            tooltip: 'Cast',
+                            bordered: true,
+                            size: layout.movieActionHeight,
+                            onPressed: () => unawaited(
+                              castLibraryItem(
+                                context,
+                                nextUp.episode,
+                                folderLabel: folder?.label,
+                                from: nextUp.from,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                   ],
                 ),

@@ -132,6 +132,16 @@ Library items cast as seekable VOD (`streamType: BUFFERED`) and use no provider 
 4. **Progress:** the MEDIA_STATUS position plus the start offset is saved like local playback, so Resume works across the laptop and the TV.
 5. **Verify in Phase 8** on each owned device: which containers and audio codecs play direct, and WebVTT timing after relay restarts.
 
+### As built (Phase 8 step 7, part 1; ADR-015)
+- **What casts from a file:** a library item, and any movie or episode that was downloaded — every Cast of a downloaded title uses its file, as every Play does. No provider connection is asked for, waited on or counted, so a download can run meanwhile.
+- **Direct:** the relay's server gives the file to the TV at `/f/<token>/media.<ext>` with Range (206, `Content-Range`, the CORS headers), on the Cast connection's own local address; the LOAD carries the place to start at. A seek is the TV's own SEEK: no new LOAD. The URL stops answering when the cast ends.
+- **Through the relay:** FFmpeg reads the file's path itself (`RelayJob.localInput`): no proxy, and none of a connection's options (`-reconnect…`, which FFmpeg refuses for a file). Always the continuous fragmented MP4; a seek restarts it there (`-ss` before `-i`), as for a provider's file.
+- **The probe** is ffprobe on the path. The facts are kept by the file (a download remade as MP4 isn't the provider's Matroska).
+- **What a TV's refusal teaches is about the file,** not the provider its title came from: `directRefusedSources` gets `file:<path>`, so that file goes through the relay from then on and the next file is still tried as it is.
+- **On the TV's screen while it loads:** an episode by its own title under "Show · S2 E4" ("Episode 4" when its name gave none), a movie over its year; the picture is its poster beside the file, else the frame the app grabbed, served from disk.
+- **Downloads kept as MP4 (docs/09 "Format") are what makes most of them direct:** H.264 or HEVC with AAC or MP3 in MP4 plays as it is. AC-3 and E-AC-3 still go through the relay for their sound.
+- **Still to come in step 7:** text subtitles as WebVTT (LOAD `tracks`, S in the casting view), and the MP4 made beside a relayed file so later seeks are native (decision 12).
+
 ## Casting UX
 - Cast button in the top bar and player OSD opens the device picker (name, model, status, "Add by IP address", "Device not showing?" help)
 - While casting, local playback stops. The player area shows "Playing on <device>": artwork/logo, title, now/next, play/pause, volume, stop, and a quality badge — **Original** / **Converted audio** / **Transcoded** — with a tooltip explaining why

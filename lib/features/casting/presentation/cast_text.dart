@@ -1,6 +1,7 @@
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/library/library_names.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
@@ -64,7 +65,7 @@ String castWhatLine(Playable? item, {String? programme}) => switch (item) {
   PlayableEpisode(:final series, :final episode) =>
     '${series.name} · S${episode.season} E${episode.episode} · '
         '${episode.title}',
-  PlayableLibraryItem(:final item) => item.title,
+  PlayableLibraryItem(:final item) => libraryItemLine(item),
 };
 
 /// The casting view's and the bar's word for where a cast is, when it

@@ -76,11 +76,21 @@ final class PanelResolver implements StreamResolver {
     hls: hls,
   );
 
+  /// Files on this computer: a downloaded title's by its remote key, a
+  /// library item's by its quick hash.
+  final Map<String, String> files = {};
+
+  static Result<ResolvedStream> _file(String path) =>
+      Ok(ResolvedStream(url: path, maxConnections: 1, local: true));
+
   @override
   Future<Result<ResolvedStream>> movie(
     MovieItem movie, {
     bool downloaded = true,
-  }) => _answer('movie/test/test/${movie.remoteKey}.${movie.ext}');
+  }) async => switch (downloaded ? files[movie.remoteKey] : null) {
+    final path? => _file(path),
+    null => await _answer('movie/test/test/${movie.remoteKey}.${movie.ext}'),
+  };
 
   @override
   Future<Result<ResolvedStream>> episode(
@@ -90,7 +100,10 @@ final class PanelResolver implements StreamResolver {
 
   @override
   Future<Result<ResolvedStream>> libraryFile(LibraryItem item) async =>
-      Err(NotFoundFailure('no library here'));
+      switch (files[item.quickHash]) {
+        final path? => _file(path),
+        null => Err(NotFoundFailure('no library here')),
+      };
 }
 
 /// A cast through the app, real except the screens and the TV: the fake
