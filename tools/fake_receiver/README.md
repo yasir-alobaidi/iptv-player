@@ -91,6 +91,15 @@ arrived:
   that time is at (what the TV did in Phase 0); an answer other than 206
   fails it. FINISHED once it has played to its end. A file whose index
   isn't at the front is read to its end and finished, as before.
+- **Text tracks** (docs/04 "Subtitles"; Phase 8 step 7): LOAD's
+  `media.tracks` of type `TEXT` are each fetched beside the media, with
+  the receiver's `Origin`, and read as WebVTT: `textTracks` says how many
+  cues each holds, when the first shows and what it says, or why the TV
+  would show nothing of it (`HTTP 404`, `no CORS header`, `not WebVTT`,
+  a type other than `text/vtt`). A track that can't be read never fails
+  the LOAD. `activeTrackIds` is LOAD's, then **EDIT_TRACKS_INFO**'s (an
+  id the LOAD didn't name is `INVALID_REQUEST` / `INVALID_PARAMS`), and
+  is in every MEDIA_STATUS of a media that has tracks.
 - **A buffer, as a TV's** (Phase 7 step 7): a fragmented MP4 (the relay's
   continuous stream) is read until it holds `bufferAhead` (30 s) more
   than has played, then not again until it holds less than

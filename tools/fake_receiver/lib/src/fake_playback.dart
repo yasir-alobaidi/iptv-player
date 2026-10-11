@@ -101,6 +101,117 @@ final class FakeMediaCheck {
       '($audioPackets)';
 }
 
+/// A text track a LOAD named (docs/04 "Subtitles"), as the TV fetched
+/// and read it: WebVTT, asked for with the receiver's `Origin`.
+final class FakeTextTrack {
+  const new({
+    required this.id,
+    required this.url,
+    this.language,
+    this.name,
+    this.cues = 0,
+    this.firstCue,
+    this.firstText,
+    this.problem,
+  });
+
+  /// LOAD's `trackId`.
+  final int id;
+  final Uri url;
+  final String? language;
+  final String? name;
+
+  /// How many cues it holds; 0 when it couldn't be read.
+  final int cues;
+
+  /// When its first cue shows, and what it says.
+  final Duration? firstCue;
+  final String? firstText;
+
+  /// Why the TV would show nothing of it: no answer, no CORS header, not
+  /// WebVTT. Null when it can be shown.
+  final String? problem;
+
+  @override
+  String toString() =>
+      'text track $id (${language ?? 'no language'}): '
+      '${problem ?? '$cues cues from $firstCue'}';
+}
+
+/// Fetches the text track LOAD described as [track] the way the TV's
+/// browser does, and reads it. Never throws.
+Future<FakeTextTrack> fetchFakeTextTrack(
+  Map<Object?, Object?> track, {
+  Duration giveUp = const Duration(seconds: 10),
+}) async {
+  final id = track['trackId'] is int ? track['trackId']! as int : 0;
+  final url = Uri.tryParse('${track['trackContentId']}') ?? Uri();
+  final language = track['language'] is String
+      ? track['language']! as String
+      : null;
+  final name = track['name'] is String ? track['name']! as String : null;
+  FakeTextTrack unreadable(String problem) => FakeTextTrack(
+    id: id,
+    url: url,
+    language: language,
+    name: name,
+    problem: problem,
+  );
+  if (!url.hasScheme) return unreadable('no URL');
+  final type = '${track['trackContentType'] ?? ''}';
+  if (type != 'text/vtt') return unreadable('its type is "$type"');
+  final client = HttpClient();
+  try {
+    final request = await client.getUrl(url);
+    request.headers.set('Origin', 'https://www.gstatic.com');
+    final response = await request.close().timeout(giveUp);
+    final body = await response
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .join()
+        .timeout(giveUp);
+    if (response.statusCode != HttpStatus.ok) {
+      return unreadable('HTTP ${response.statusCode}');
+    }
+    if (response.headers.value('access-control-allow-origin') == null) {
+      return unreadable('no CORS header');
+    }
+    final text = body.startsWith('\uFEFF') ? body.substring(1) : body;
+    if (!text.startsWith('WEBVTT')) return unreadable('not WebVTT');
+    final lines = const LineSplitter().convert(text);
+    final timing = RegExp(r'^(?:(\d+):)?(\d\d):(\d\d)\.(\d{3})\s+-->\s+');
+    var cues = 0;
+    Duration? first;
+    String? said;
+    for (final (i, line) in lines.indexed) {
+      final match = timing.firstMatch(line);
+      if (match == null) continue;
+      cues++;
+      if (first != null) continue;
+      first = Duration(
+        hours: int.parse(match[1] ?? '0'),
+        minutes: int.parse(match[2]!),
+        seconds: int.parse(match[3]!),
+        milliseconds: int.parse(match[4]!),
+      );
+      said = i + 1 < lines.length ? lines[i + 1] : null;
+    }
+    return FakeTextTrack(
+      id: id,
+      url: url,
+      language: language,
+      name: name,
+      cues: cues,
+      firstCue: first,
+      firstText: said,
+      problem: cues == 0 ? 'no cues' : null,
+    );
+  } on Object catch (error) {
+    return unreadable('no answer (${error.runtimeType})');
+  } finally {
+    client.close(force: true);
+  }
+}
+
 /// What a [FakeWatch] tells the fake.
 abstract interface class FakeWatchListener {
   /// The first segment, or the stream's start, is in: [check] says what

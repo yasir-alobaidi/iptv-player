@@ -307,6 +307,106 @@ void main() {
       expect(receiver.fetches.first.path, '/hls/index.m3u8');
     });
 
+    test('text tracks: each fetched and read as WebVTT, the one LOAD '
+        'names showing, and EDIT_TRACKS_INFO changing it', () async {
+      await startReceiver(FakeDevice.tv4k);
+      final transportId = await sender.launch();
+      Map<String, Object?> track(int id, String path, String language) => {
+        'trackId': id,
+        'type': 'TEXT',
+        'subtype': 'SUBTITLES',
+        'trackContentId': '${server.url(path)}',
+        'trackContentType': 'text/vtt',
+        'language': language,
+        'name': language,
+      };
+      final loaded = await sender.next(
+        'MEDIA_STATUS',
+        () => sender.send(transportId, nsMedia, {
+          'type': 'LOAD',
+          'requestId': 7,
+          'activeTrackIds': [2],
+          'media': {
+            'contentId': '${server.url('/file.mp4')}',
+            'contentType': 'video/mp4',
+            'streamType': 'BUFFERED',
+            'tracks': [
+              track(1, '/subs/en.vtt', 'en'),
+              track(2, '/subs/de.vtt', 'de'),
+              track(3, '/subs/missing.vtt', 'fr'),
+              track(4, '/subs/not.vtt', 'es'),
+            ],
+          },
+        }),
+        (m) => _state(m) == 'PLAYING',
+      );
+      expect(_status(loaded)['activeTrackIds'], [2]);
+      await _until(() => receiver.textTracks.length == 4);
+      final byId = {for (final t in receiver.textTracks) t.id: t};
+      expect(byId[1]!.problem, isNull);
+      expect(byId[1]!.cues, 2);
+      expect(byId[1]!.firstCue, const Duration(milliseconds: 500));
+      expect(byId[1]!.firstText, 'Hello');
+      expect(byId[1]!.language, 'en');
+      expect(byId[2]!.firstCue, const Duration(hours: 1, seconds: 2));
+      expect(byId[3]!.problem, 'HTTP 404');
+      expect(byId[4]!.problem, 'not WebVTT');
+      expect(server.origins.last, 'https://www.gstatic.com');
+      expect(receiver.activeTrackIds, [2]);
+
+      // Off, another, one it never heard of.
+      final mediaSessionId = _status(loaded)['mediaSessionId'];
+      Future<WireMessage> edit(List<int> ids, String answer) => sender.next(
+        answer,
+        () => sender.send(transportId, nsMedia, {
+          'type': 'EDIT_TRACKS_INFO',
+          'requestId': 8,
+          'mediaSessionId': mediaSessionId,
+          'activeTrackIds': ids,
+        }),
+      );
+      expect(
+        _status(await edit([], 'MEDIA_STATUS'))['activeTrackIds'],
+        isEmpty,
+      );
+      expect(receiver.activeTrackIds, isEmpty);
+      expect(_status(await edit([1], 'MEDIA_STATUS'))['activeTrackIds'], [1]);
+      expect(
+        (await edit([9], 'INVALID_REQUEST')).payload!['reason'],
+        'INVALID_PARAMS',
+      );
+      expect(receiver.activeTrackIds, [1]);
+    });
+
+    test('a text track without CORS shows nothing; the media plays', () async {
+      await startReceiver(FakeDevice.tv4k);
+      final transportId = await sender.launch();
+      await sender.next(
+        'MEDIA_STATUS',
+        () => sender.send(transportId, nsMedia, {
+          'type': 'LOAD',
+          'requestId': 7,
+          'media': {
+            'contentId': '${server.url('/file.mp4')}',
+            'contentType': 'video/mp4',
+            'streamType': 'BUFFERED',
+            'tracks': [
+              {
+                'trackId': 1,
+                'type': 'TEXT',
+                'trackContentId': '${server.url('/nocors/en.vtt')}',
+                'trackContentType': 'text/vtt',
+              },
+            ],
+          },
+        }),
+        (m) => _state(m) == 'PLAYING',
+      );
+      await _until(() => receiver.textTracks.isNotEmpty);
+      expect(receiver.textTracks.single.problem, 'no CORS header');
+      expect(receiver.playerState, 'PLAYING');
+    });
+
     test('an H.264-only device refuses HEVC with LOAD_FAILED', () async {
       await startReceiver(FakeDevice.chromecastHd);
       server.playlist = _playlist(['h0']);
@@ -379,6 +479,10 @@ void main() {
 }
 
 const _wait = Duration(seconds: 20);
+
+/// The media status a MEDIA_STATUS message carries.
+Map<Object?, Object?> _status(WireMessage m) =>
+    ((m.payload!['status']! as List).first! as Map).cast<Object?, Object?>();
 
 String? _state(WireMessage m) =>
     ((m.payload?['status'] as List?)?.firstOrNull as Map?)?['playerState']
@@ -511,6 +615,23 @@ final class _Server {
       final name = path.substring(5);
       final kind = name[0];
       await response.addStream(File('${_clips.path}/$kind.ts').openRead());
+    } else if (path.endsWith('.vtt')) {
+      if (path.startsWith('/nocors/')) {
+        response.headers.removeAll('Access-Control-Allow-Origin');
+      }
+      switch (path.split('/').last) {
+        case 'en.vtt':
+          response.write(
+            'WEBVTT\n\n00:00.500 --> 00:02.000\nHello\n\n'
+            '00:03.000 --> 00:04.000\nGoodbye\n',
+          );
+        case 'de.vtt':
+          response.write('WEBVTT\n\n01:00:02.000 --> 01:00:04.000\nHallo\n');
+        case 'not.vtt':
+          response.write('1\n00:00:00,500 --> 00:00:02,000\nHello\n');
+        default:
+          response.statusCode = HttpStatus.notFound;
+      }
     } else if (path == '/file.mp4') {
       // A file, as the relay's server and a provider give one: with its
       // length, and any part of it.

@@ -210,6 +210,7 @@ final class FakeReceiver {
 
   final _fetches = <FakeFetch>[];
   final _checks = <FakeMediaCheck>[];
+  final _textTracks = <FakeTextTrack>[];
   final _checksStream = StreamController<FakeMediaCheck>.broadcast();
 
   final _senders = <_Sender>[];
@@ -267,6 +268,13 @@ final class FakeReceiver {
 
   /// Every request made for the media, in order ([playback] only).
   List<FakeFetch> get fetches => List.unmodifiable(_fetches);
+
+  /// The text tracks of what is loaded, as they were fetched and read
+  /// ([playback] only), and the ids of those showing.
+  List<FakeTextTrack> get textTracks => List.unmodifiable(_textTracks);
+
+  List<int> get activeTrackIds =>
+      List.unmodifiable(_media?.activeTrackIds ?? const <int>[]);
 
   /// What ffprobe found in each segment, or at the start of a continuous
   /// stream ([playback] only).
@@ -569,6 +577,26 @@ final class FakeReceiver {
           _ => media.state,
         };
         _setState(next, reply: (sender, m), force: true);
+      case 'EDIT_TRACKS_INFO':
+        // Which text track shows (docs/04 "Subtitles"): none, or ids the
+        // LOAD named.
+        final wanted = m.payload['activeTrackIds'];
+        final ids = [
+          if (wanted is List)
+            for (final id in wanted)
+              if (id is int) id,
+        ];
+        if (wanted is! List ||
+            ids.length != wanted.length ||
+            !ids.every(media.trackIds.contains)) {
+          _reply(sender, m, nsMedia, {
+            'type': 'INVALID_REQUEST',
+            'reason': 'INVALID_PARAMS',
+          });
+          return;
+        }
+        media.activeTrackIds = ids;
+        _setState(media.state, reply: (sender, m), force: true);
       case 'STOP':
         _end('CANCELLED', reply: (sender, m));
       default:
@@ -605,13 +633,33 @@ final class FakeReceiver {
       since: _now,
       requester: (sender, m),
     );
+    if (m.payload['activeTrackIds'] case final List<Object?> active) {
+      session.activeTrackIds = [
+        for (final id in active)
+          if (id is int && session.trackIds.contains(id)) id,
+      ];
+    }
     _media = session;
+    _textTracks.clear();
     _reply(sender, m, nsMedia, {
       'type': 'MEDIA_STATUS',
       'status': [_mediaStatus(session, full: true)],
     });
     final autoplay = m.payload['autoplay'] != false;
     final play = playback;
+    if (play != null) {
+      // Its text tracks are fetched beside the media; one that can't be
+      // read shows nothing, and the media plays all the same.
+      for (final track in session.textTracks) {
+        unawaited(
+          fetchFakeTextTrack(track, giveUp: play.giveUp).then((fetched) {
+            if (!identical(_media, session)) return;
+            _textTracks.add(fetched);
+            log?.call('fetched $fetched');
+          }),
+        );
+      }
+    }
     if (play != null && !(_refuse?.call(media) ?? false)) {
       final url = Uri.tryParse('${media['contentId']}');
       if (url == null || !url.hasScheme) {
@@ -833,6 +881,7 @@ final class FakeReceiver {
     'volume': {'level': 1, 'muted': false},
     if (media.state == 'IDLE' && media.idleReason != null)
       'idleReason': media.idleReason,
+    if (media.trackIds.isNotEmpty) 'activeTrackIds': media.activeTrackIds,
     if (full) 'media': media.media,
     if (media.loading)
       'extendedStatus': {
@@ -943,6 +992,23 @@ final class _Media {
 
   /// Fetching the stream ([FakeReceiver.playback]).
   FakeWatch? watch;
+
+  /// LOAD's `media.tracks` of type TEXT, and the ids of all its tracks.
+  Iterable<Map<Object?, Object?>> get textTracks sync* {
+    final tracks = media['tracks'];
+    if (tracks is! List) return;
+    for (final track in tracks) {
+      if (track is Map && track['type'] == 'TEXT') yield track;
+    }
+  }
+
+  Set<int> get trackIds => {
+    for (final track in textTracks)
+      if (track['trackId'] case final int id) id,
+  };
+
+  /// The tracks showing: LOAD's, then EDIT_TRACKS_INFO's.
+  List<int> activeTrackIds = const [];
 
   bool get ended => done;
 }
