@@ -14,9 +14,8 @@ library matrix, and docs/05's Library and Search sections ("As built").
 2. **CI on 2bcbdd7** (run 38122010610): **Windows failed 4 tests**, all new
    UI tests that compared a path written with `/` to one the app joined as
    Windows does; fixed in 80a20f3. The sync cancel timeout did not come
-   back in that run. **Linux** passed its unit tests and goldens; check
-   how its integration step ended (it was still running at the session's
-   end), and the next push for both systems.
+   back in that run. **Linux is green** (47 minutes of the job's 75). The
+   next push shows whether Windows is too.
 3. **One budget to look at** (ADR-015 step 3, unchanged): docs/06's
    "download speed ≥ 90 % of curl" is checked at network rates (99.6 %);
    over loopback it measures Dart's HTTP stack (35 %). Say if you want it
@@ -52,8 +51,8 @@ Phase 8 step 7 (casting library items), step by step.
   `vod_walk`, `library_playback`, `favorites_walk`, `app_launch`,
   `poster_grid_scroll`, `hiding_walk`. The search benchmark with a
   5,500-video library: worst 40 ms of its 50.
-- **CI:** run 38122010610 (2bcbdd7): Windows red on four path tests
-  (fixed, not pushed); Linux see above.
+- **CI:** run 38122010610 (2bcbdd7): Linux green; Windows red on four
+  path tests (fixed, not pushed).
 
 ## Step 7: casting library items (the plan's list, and where it starts)
 1. **The fake TV learns** (tools/fake_receiver): text tracks in LOAD,
