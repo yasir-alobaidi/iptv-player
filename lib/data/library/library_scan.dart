@@ -7,13 +7,13 @@ import 'package:drift/isolate.dart';
 import 'package:iptv_player/core/isolates/background.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/library/library_media.dart';
+import 'package:iptv_player/core/library/name_parser.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/job_database.dart';
 import 'package:iptv_player/data/library/library_probe.dart';
-import 'package:iptv_player/data/library/name_parser.dart';
 import 'package:iptv_player/data/library/quick_hash.dart';
 import 'package:iptv_player/data/process/process_supervisor.dart';
 import 'package:logger/logger.dart';
@@ -247,7 +247,18 @@ final class _Scan {
     final dao = db.libraryDao;
     final root = Directory(folder.path);
     if (!root.existsSync()) {
-      await _unavailable(folder);
+      // The download folder is made by its first download (docs/09):
+      // until it has held a file, it isn't a drive that went away.
+      final notMadeYet =
+          folder.isDownloadFolder && (await dao.itemsIn(folder.id)).isEmpty;
+      if (!notMadeYet) {
+        await _unavailable(folder);
+      } else if (!folder.isAvailable) {
+        await dao.changeFolder(
+          folder.id,
+          const LibraryFoldersCompanion(isAvailable: Value(true)),
+        );
+      }
       return;
     }
     if (!folder.isAvailable) {

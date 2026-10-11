@@ -3,6 +3,7 @@ library;
 
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/name_parser.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
 
@@ -96,7 +97,9 @@ String downloadSubtitle(DownloadTask task) {
   return [
     if (task.season case final season?) 'S$season',
     if (task.episode case final episode?) 'E$episode',
-    if (task.showTitle != null && task.title != task.showTitle) task.title,
+    if (task.showTitle != null && task.title != task.showTitle)
+      if (providerEpisodeTitle(task.title) case final said when said.isNotEmpty)
+        said,
   ].join(' · ');
 }
 

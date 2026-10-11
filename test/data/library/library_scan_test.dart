@@ -241,6 +241,47 @@ void main() {
     expect(after.probeJson, isNull, reason: 'to be probed again');
   });
 
+  test('the download folder before its first download is not a drive that '
+      'went away; one that held files and is gone is', () async {
+    final downloads = p.join(temp.path, 'Videos', 'IPTV Player');
+    var folder = await db.libraryDao.makeDownloadFolder(
+      downloads,
+      label: 'Downloads',
+      at: clock,
+    );
+    // Marked so by a build that took "not made yet" for "not there".
+    await db.libraryDao.changeFolder(
+      folder.id,
+      const LibraryFoldersCompanion(isAvailable: Value(false)),
+    );
+
+    var result = await scan(folders: [folder.id]);
+    expect(result.unavailableFolders, 0);
+    folder = (await db.libraryDao.folderById(folder.id))!;
+    expect(folder.isAvailable, isTrue);
+    expect(Directory(downloads).existsSync(), isFalse, reason: 'not made');
+
+    // A download lands, then the whole folder goes (a drive unplugged).
+    await db.libraryDao.insertItem(
+      LibraryItemsCompanion.insert(
+        folderId: folder.id,
+        relPath: 'Movies/Film (2025)/Film (2025).mp4',
+        sizeBytes: 1,
+        mtime: 0,
+        quickHash: 'h',
+        kind: LibraryKind.movie,
+        title: 'Film',
+        addedAt: clock,
+      ),
+    );
+    result = await scan(folders: [folder.id]);
+    expect(result.unavailableFolders, 1);
+    folder = (await db.libraryDao.folderById(folder.id))!;
+    expect(folder.isAvailable, isFalse);
+    final row = (await db.libraryDao.itemsIn(folder.id)).single;
+    expect(row.unavailableSince, clock);
+  });
+
   test(
     'a drive unplugged: its items stay, as not connected, for 30 days',
     () async {

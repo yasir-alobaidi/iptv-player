@@ -379,6 +379,40 @@ void main() {
       expect(folder.isDownloadFolder, isTrue);
     });
 
+    test('a download into a folder the library had as not connected: the '
+        'folder is there again, with what it held', () async {
+      // The download folder isn't made until its first download; a scan
+      // before that once marked it "not there", and the file wouldn't play.
+      final folder = (await db.libraryDao.folders()).single;
+      final before = await db.libraryDao.insertItem(
+        LibraryItemsCompanion.insert(
+          folderId: folder.id,
+          relPath: 'Movies/Old (2020)/Old (2020).mkv',
+          sizeBytes: 1,
+          mtime: 0,
+          quickHash: 'old',
+          kind: LibraryKind.movie,
+          title: 'Old',
+          addedAt: t0,
+          unavailableSince: Value(t0),
+        ),
+      );
+      await db.libraryDao.changeFolder(
+        folder.id,
+        const LibraryFoldersCompanion(isAvailable: Value(false)),
+      );
+
+      final t = task(total: 1000);
+      part(t);
+      final finish = await finisher.finish(t) as DownloadFinished;
+
+      expect((await db.libraryDao.folderById(folder.id))!.isAvailable, isTrue);
+      final item = (await db.libraryDao.itemById(finish.libraryItemId))!;
+      expect(item.folderId, folder.id);
+      expect(item.unavailableSince, isNull);
+      expect((await db.libraryDao.itemById(before))!.unavailableSince, isNull);
+    });
+
     test('after a crash between the rename and the database: finished from '
         'the final file', () async {
       final t = task(total: 1000);

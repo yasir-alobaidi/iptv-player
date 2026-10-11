@@ -187,12 +187,36 @@ String? _showFromFolders(List<String> folders) {
 
 String _episodeTitle(String text) {
   final title = _cleanTitle(text, atStart: true);
-  // A name's stand-in says nothing ("Episode 4").
-  if (RegExp(r'^(episode|ep|e)\s*\d+$', caseSensitive: false).hasMatch(title)) {
-    return '';
-  }
-  return title;
+  return _standIn.hasMatch(title) ? '' : title;
 }
+
+/// What a provider's episode title says beyond the episode's number
+/// (docs/09 "File layout"). Panels often send the code alone (`S01E01`),
+/// a release name around it (`The.Show.S02E12.1080p.WEB.H264-GRP`,
+/// `the.show.s33e11.mp4`) or a stand-in (`Episode 4`): all of those say
+/// nothing, and the answer is empty. A title after the code is kept
+/// (`Show - S02E04 - Undertow` is "Undertow"), and any other title is
+/// kept as it is.
+String providerEpisodeTitle(String title) {
+  final text = title
+      .replaceAll(RegExp(r'[/\\]'), ' ')
+      .replaceFirst(_videoExtension, '')
+      .trim();
+  for (final pattern in [_seasonEpisode, _crossed]) {
+    final match = pattern.firstMatch(text);
+    if (match != null) return _episodeTitle(text.substring(match.end));
+  }
+  return _standIn.hasMatch(text) ? '' : text;
+}
+
+/// A title that is a file's name, extension and all.
+final _videoExtension = RegExp(
+  r'\.(mkv|mp4|m4v|mov|avi|ts|m2ts|mts|webm|wmv|mpg|mpeg|flv)\s*$',
+  caseSensitive: false,
+);
+
+/// A name's stand-in says nothing ("Episode 4").
+final _standIn = RegExp(r'^(episode|ep|e)\s*\d+$', caseSensitive: false);
 
 // ---- Movies.
 

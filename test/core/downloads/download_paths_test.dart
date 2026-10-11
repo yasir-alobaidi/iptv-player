@@ -52,18 +52,45 @@ void main() {
     });
 
     test('an episode whose title says nothing goes without it', () {
-      for (final title in ['', 'Episode 4', 'E04', 'ep 4', '  episode 04 ']) {
+      for (final title in [
+        '',
+        'Episode 4',
+        'E04',
+        'ep 4',
+        '  episode 04 ',
+        // A stand-in is one whatever number the panel gave it.
+        'Episode 5',
+        // The code alone, or a release name around it, would only say
+        // the code twice ("Glass Tide - S02E04 - S02E04").
+        'S02E04',
+        's2e4',
+        '2x04',
+        'Glass.Tide.S02E04',
+        'glass.tide.s02e04.mp4',
+        'Glass.Tide.S02E04.1080p.WEB.H264-GRP',
+        'Glass Tide - S02E04',
+      ]) {
         expect(
           downloadTarget(folder, episode(title)),
           '$folder/Series/Glass Tide/Season 02/Glass Tide - S02E04.mp4',
           reason: title,
         );
       }
-      expect(
-        downloadTarget(folder, episode('Episode 5')),
-        '$folder/Series/Glass Tide/Season 02/Glass Tide - S02E04 - '
-        'Episode 5.mp4',
-      );
+    });
+
+    test('a title after the code is the title', () {
+      for (final title in [
+        'Glass Tide - S02E04 - Undertow',
+        'Glass.Tide.S02E04.Undertow.720p.WEB-DL',
+        'S02E04 - Undertow',
+      ]) {
+        expect(
+          downloadTarget(folder, episode(title)),
+          '$folder/Series/Glass Tide/Season 02/Glass Tide - S02E04 - '
+          'Undertow.mp4',
+          reason: title,
+        );
+      }
     });
 
     test("the extension is the provider's, else mp4", () {

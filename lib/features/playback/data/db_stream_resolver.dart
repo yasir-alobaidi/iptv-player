@@ -101,10 +101,12 @@ final class DbStreamResolver implements StreamResolver {
     }
   }
 
+  /// The disk decides, not the folder's "not connected" mark: that mark
+  /// is as old as the last scan, and a file that is there plays.
   Future<ResolvedStream?> _file(LibraryItemRow? row) async {
     if (row == null) return null;
     final folder = await _db.libraryDao.folderById(row.folderId);
-    if (folder == null || !folder.isAvailable) return null;
+    if (folder == null) return null;
     final path = p.joinAll([folder.path, ...row.relPath.split('/')]);
     if (!File(path).existsSync()) return null;
     final beside = p.dirname(path);

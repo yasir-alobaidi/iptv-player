@@ -1,5 +1,6 @@
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/name_parser.dart';
 import 'package:path/path.dart' as p;
 
 /// Where a download's file goes (docs/09 "File layout"), Plex/Jellyfin
@@ -33,13 +34,12 @@ String downloadTarget(
         final season = request.season ?? 1;
         final number = request.episode ?? 1;
         final code = 'S${_two(season)}E${_two(number)}';
-        final episodeTitle = name(request.title);
-        final file =
-            request.showTitle == null ||
-                episodeTitle.isEmpty ||
-                _isPlaceholder(request.title, number)
+        // "S02E04" or a release name for a title would only say the code
+        // twice ("Show - S02E04 - S02E04").
+        final said = providerEpisodeTitle(request.title);
+        final file = request.showTitle == null || said.isEmpty
             ? '$show - $code'
-            : '$show - $code - $episodeTitle';
+            : '$show - $code - ${name(said)}';
         return ['Series', show, 'Season ${_two(season)}', '$file.$ext'];
     }
   }
@@ -108,14 +108,6 @@ const _reserved = {
 };
 
 String _two(int n) => n.toString().padLeft(2, '0');
-
-/// A panel's own stand-in title ("Episode 4", "E04") says nothing.
-bool _isPlaceholder(String title, int number) {
-  final t = title.trim().toLowerCase();
-  return t.isEmpty ||
-      t == 'episode $number' ||
-      RegExp('^(e|ep|episode)\\s*0*$number\$').hasMatch(t);
-}
 
 /// A panel's container extension (`mkv`), or `mp4` when it sent none or
 /// something that isn't one.

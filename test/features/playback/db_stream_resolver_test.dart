@@ -401,23 +401,26 @@ void main() {
       expect((await resolver.movie(movie('502'))).valueOrNull!.local, isFalse);
     });
 
-    test("a download whose file is gone, or whose folder isn't available, "
-        'plays from the provider', () async {
+    test('a download whose file is gone plays from the provider; a file '
+        'that is there plays, whatever the folder was last marked', () async {
       await item('Movies/Gone.mkv', type: VodType.movie, remoteKey: '501');
       expect((await resolver.movie(movie('501'))).valueOrNull!.local, isFalse);
 
       make('Movies/There.mkv');
       await item('Movies/There.mkv', type: VodType.movie, remoteKey: '502');
       expect((await resolver.movie(movie('502'))).valueOrNull!.local, isTrue);
+      // The mark is as old as the last scan (the download folder before
+      // its first download was "not there"): the disk decides.
       await db.libraryDao.changeFolder(
         folderId,
         const LibraryFoldersCompanion(isAvailable: Value(false)),
       );
-      expect((await resolver.movie(movie('502'))).valueOrNull!.local, isFalse);
+      expect((await resolver.movie(movie('502'))).valueOrNull!.local, isTrue);
     });
 
-    test('a library file: its path and the subtitle files still beside it; '
-        'gone, or its folder unavailable, a failure and not a throw', () async {
+    test('a library file: its path and the subtitle files still beside it, '
+        'also in a folder marked not connected; gone, a failure and not a '
+        'throw', () async {
       final video = make('Paper Kites (2019)/Paper Kites (2019).mkv');
       final english = make('Paper Kites (2019)/Paper Kites (2019).en.srt');
       final id = await item(
@@ -438,10 +441,9 @@ void main() {
         folderId,
         const LibraryFoldersCompanion(isAvailable: Value(false)),
       );
-      expect((await resolver.libraryFile(await libraryItem(id))).isOk, isFalse);
-      await db.libraryDao.changeFolder(
-        folderId,
-        const LibraryFoldersCompanion(isAvailable: Value(true)),
+      expect(
+        (await resolver.libraryFile(await libraryItem(id))).valueOrNull?.url,
+        video,
       );
       File(video).deleteSync();
       final gone = await resolver.libraryFile(await libraryItem(id));

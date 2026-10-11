@@ -6,6 +6,7 @@ import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/downloads/download_paths.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/name_parser.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -196,6 +197,19 @@ final class FileDownloadFinisher implements DownloadFinisher {
     );
   }
 
+  /// A file was just written into a folder the library had as "not
+  /// connected" (the download folder before its first download, a drive
+  /// plugged in again): it is there, as a scan would find.
+  Future<void> _folderIsBack(int folderId) => _db.transaction(() async {
+    await _db.libraryDao.changeFolder(
+      folderId,
+      const LibraryFoldersCompanion(isAvailable: Value(true)),
+    );
+    await (_db.update(_db.libraryItems)
+          ..where((t) => t.folderId.equals(folderId)))
+        .write(const LibraryItemsCompanion(unavailableSince: Value(null)));
+  });
+
   Future<int> _addToLibrary(
     DownloadTask task,
     File file, {
@@ -205,6 +219,7 @@ final class FileDownloadFinisher implements DownloadFinisher {
   }) async {
     final folderId = await _folderOf(task, file);
     final folder = (await _db.libraryDao.folderById(folderId))!;
+    if (!folder.isAvailable) await _folderIsBack(folderId);
     final relPath = p.split(p.relative(file.path, from: folder.path)).join('/');
     final details = await _details(task);
     final item = LibraryItemsCompanion.insert(
@@ -216,7 +231,11 @@ final class FileDownloadFinisher implements DownloadFinisher {
       kind: task.type == VodType.movie
           ? LibraryKind.movie
           : LibraryKind.episode,
-      title: task.title,
+      // As the scanner would read the file's name: an episode's title is
+      // what it says beyond its number.
+      title: task.type == VodType.episode && task.showTitle != null
+          ? providerEpisodeTitle(task.title)
+          : task.title,
       year: Value(task.year),
       showTitle: Value(task.showTitle),
       season: Value(task.season),
