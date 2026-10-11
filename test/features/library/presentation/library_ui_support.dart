@@ -240,11 +240,16 @@ Future<(LibraryUi, AppUnderTest)> openLibrary(
 }) async {
   final ui = LibraryUi(watcher: watcher);
   if (now != null) ui.vod.fakes.now = now;
+  // A test that failed part-way leaves the screens watching the
+  // database, and closing it would then wait for good: give up on it
+  // after a moment so the failure is what the run reports.
   addTearDown(
-    () => tester.runAsync(() async {
-      await ui.scans.dispose();
-      await ui.db.close();
-    }),
+    () => tester.runAsync(
+      () => Future(() async {
+        await ui.scans.dispose();
+        await ui.db.close();
+      }).timeout(const Duration(seconds: 5), onTimeout: () {}),
+    ),
   );
   await tester.runAsync(() async {
     await ui.seed();

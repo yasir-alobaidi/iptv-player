@@ -12,11 +12,10 @@ import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
-import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
-import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/next_up.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:iptv_player/features/vod/presentation/title_details_screen.dart';
@@ -359,33 +358,6 @@ class _EpisodeRow extends ConsumerWidget {
     final number = libraryEpisodeNumber(episode);
     final title = libraryEpisodeTitle(episode);
 
-    Future<void> menu() => showAppMenu(
-      context,
-      items: [
-        AppMenuItem(
-          label: resumable ? 'Resume' : 'Play',
-          icon: AppIcons.play,
-          onPressed: () =>
-              onPlay(episode, from: resumable ? mark.position : null),
-        ),
-        if (resumable)
-          AppMenuItem(
-            label: 'Start over',
-            icon: AppIcons.retry,
-            onPressed: () => onPlay(episode),
-          ),
-        AppMenuItem(
-          label: watched ? 'Mark as unwatched' : 'Mark as watched',
-          icon: AppIcons.check,
-          onPressed: () => unawaited(
-            ref
-                .read(watchProgressProvider)
-                .setWatched(libraryVodRef(episode), watched: !watched),
-          ),
-        ),
-      ],
-    );
-
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spacing.s4),
       child: FocusableSurface(
@@ -394,7 +366,8 @@ class _EpisodeRow extends ConsumerWidget {
         semanticLabel: number.isEmpty ? title : '$number, $title',
         onPressed: () =>
             onPlay(episode, from: resumable ? mark.position : null),
-        onMenu: () => unawaited(menu()),
+        // The item menu (sketch D).
+        onMenu: () => unawaited(showLibraryItemMenu(context, episode)),
         builder: (context, states) => Opacity(
           opacity: away ? tokens.library.unavailableOpacity : 1,
           child: Container(

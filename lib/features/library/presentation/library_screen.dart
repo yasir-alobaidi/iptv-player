@@ -16,6 +16,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/presentation/downloads_panel.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/library/presentation/library_cards.dart';
 import 'package:iptv_player/features/library/presentation/library_folders.dart';
 import 'package:iptv_player/features/library/presentation/library_routes.dart';
@@ -426,6 +427,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               focus: focus,
               width: width,
               onPlay: () => unawaited(_play(item, labels[item.folderId])),
+              onMenu: (anchor) => unawaited(
+                showLibraryItemMenu(
+                  anchor,
+                  item,
+                  folderLabel: labels[item.folderId],
+                ),
+              ),
             )
           : LibraryMovieCard(
               item: item,
@@ -433,6 +441,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               focus: focus,
               width: width,
               onOpen: () => unawaited(_openMovie(item)),
+              onMenu: (anchor) => unawaited(
+                showLibraryItemMenu(
+                  anchor,
+                  item,
+                  folderLabel: labels[item.folderId],
+                ),
+              ),
             ),
     );
   }

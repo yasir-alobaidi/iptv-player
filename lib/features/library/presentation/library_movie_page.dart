@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
@@ -12,6 +13,7 @@ import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
@@ -247,6 +249,28 @@ class _MoviePage extends ConsumerWidget {
                               bordered: true,
                               size: layout.movieActionHeight,
                               onPressed: toggleFavorite,
+                            ),
+                            // Sketch A's ⋯: the item menu. An item that
+                            // leaves the library takes its page with it.
+                            Builder(
+                              builder: (anchor) => AppIconButton(
+                                icon: AppIcons.more,
+                                tooltip: 'More',
+                                bordered: true,
+                                size: layout.movieActionHeight,
+                                onPressed: () => unawaited(
+                                  showLibraryItemMenu(
+                                    anchor,
+                                    item,
+                                    folderLabel: folder?.label,
+                                    onGone: () {
+                                      if (context.mounted && context.canPop()) {
+                                        context.pop();
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
