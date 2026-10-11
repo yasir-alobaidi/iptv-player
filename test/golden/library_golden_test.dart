@@ -290,6 +290,17 @@ void main() {
       );
     });
 
+    testWidgets('settings: downloads and library', (tester) async {
+      await open(tester, location: '/settings');
+      await tester.tap(find.text('Downloads & library'));
+      await settle(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_downloads.png'),
+      );
+    });
+
     testWidgets('the first run', (tester) async {
       await open(tester, before: (ui) async {});
 

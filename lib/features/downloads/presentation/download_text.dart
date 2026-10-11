@@ -51,6 +51,39 @@ DownloadSection? downloadSectionOf(DownloadTask task, DateTime now) {
   }
 }
 
+/// The downloads a list shows, by section, in the queue's order.
+typedef DownloadSections = ({
+  List<DownloadTask> inProgress,
+  List<DownloadTask> needsAttention,
+  List<DownloadTask> finished,
+});
+
+DownloadSections downloadSections(List<DownloadTask> tasks, DateTime now) {
+  final sections = (
+    inProgress: <DownloadTask>[],
+    needsAttention: <DownloadTask>[],
+    finished: <DownloadTask>[],
+  );
+  for (final task in tasks) {
+    switch (downloadSectionOf(task, now)) {
+      case DownloadSection.inProgress:
+        sections.inProgress.add(task);
+      case DownloadSection.needsAttention:
+        sections.needsAttention.add(task);
+      case DownloadSection.finished:
+        sections.finished.add(task);
+      case null:
+        break;
+    }
+  }
+  // The newest finished first, as the canvas lists them.
+  sections.finished.sort(
+    (a, b) =>
+        (b.completedAt ?? b.createdAt).compareTo(a.completedAt ?? a.createdAt),
+  );
+  return sections;
+}
+
 /// A row's title: the movie, or the episode's show.
 String downloadTitle(DownloadTask task) =>
     task.type == VodType.episode ? task.showTitle ?? task.title : task.title;

@@ -14,6 +14,7 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:iptv_player/features/downloads/presentation/download_text.dart';
 import 'package:iptv_player/features/downloads/presentation/downloads_panel.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_actions.dart';

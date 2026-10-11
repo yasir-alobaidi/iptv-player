@@ -17,10 +17,11 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/domain/download_ports.dart';
 import 'package:iptv_player/features/downloads/presentation/download_text.dart';
-import 'package:iptv_player/features/downloads/presentation/downloads_panel.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_actions.dart';
+import 'package:iptv_player/features/library/presentation/library_folders.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
+import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
@@ -330,6 +331,33 @@ Future<void> downloadPressed(
       ),
     ],
   );
+}
+
+/// Change folder (Library → Downloads, Settings): the folder dialog,
+/// then new downloads go to the folder chosen and it joins the library;
+/// a toast says so, and that what was downloaded stays where it is.
+Future<void> pickDownloadFolder(ProviderContainer container) async {
+  final notices = container.read(appNoticesProvider);
+  final change = container.read(changeDownloadFolderProvider);
+  final home = container.read(homeFolderProvider);
+  final chosen = await container.read(folderPickerProvider)();
+  if (chosen == null) return;
+  switch (await change(chosen)) {
+    case Ok():
+      notices.show(
+        AppNotice(
+          'New downloads go to ${displayFolderPath(chosen, home)}. What '
+          'you downloaded stays where it is.',
+        ),
+      );
+    case Err(:final failure):
+      notices.show(
+        AppNotice(
+          "Couldn't change the folder. ${failureMessage(failure)}",
+          tone: NoticeTone.error,
+        ),
+      );
+  }
 }
 
 /// The queue's news as toasts (docs/05): "Download finished · <title>"

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/design/components.dart';
-import 'package:iptv_player/features/downloads/presentation/downloads_panel.dart';
+import 'package:iptv_player/features/downloads/presentation/download_text.dart';
 
 import '../../../app/app_harness.dart';
 import '../../library/presentation/library_ui_support.dart';

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
@@ -12,51 +11,17 @@ import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
-import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/downloads/presentation/download_text.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
-import 'package:iptv_player/features/library/presentation/library_folders.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
 import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
-
-/// The downloads a list shows, by section, in the queue's order.
-typedef DownloadSections = ({
-  List<DownloadTask> inProgress,
-  List<DownloadTask> needsAttention,
-  List<DownloadTask> finished,
-});
-
-DownloadSections downloadSections(List<DownloadTask> tasks, DateTime now) {
-  final sections = (
-    inProgress: <DownloadTask>[],
-    needsAttention: <DownloadTask>[],
-    finished: <DownloadTask>[],
-  );
-  for (final task in tasks) {
-    switch (downloadSectionOf(task, now)) {
-      case DownloadSection.inProgress:
-        sections.inProgress.add(task);
-      case DownloadSection.needsAttention:
-        sections.needsAttention.add(task);
-      case DownloadSection.finished:
-        sections.finished.add(task);
-      case null:
-        break;
-    }
-  }
-  // The newest finished first, as the canvas lists them.
-  sections.finished.sort(
-    (a, b) =>
-        (b.completedAt ?? b.createdAt).compareTo(a.completedAt ?? a.createdAt),
-  );
-  return sections;
-}
 
 /// Library → Downloads (canvas `Library · Downloads`): IN PROGRESS with
 /// what each download is doing, NEEDS ATTENTION with the reason and what
@@ -190,30 +155,6 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     }
   }
 
-  Future<void> _changeFolder() async {
-    final notices = ref.read(appNoticesProvider);
-    final change = ref.read(changeDownloadFolderProvider);
-    final home = ref.read(homeFolderProvider);
-    final chosen = await ref.read(folderPickerProvider)();
-    if (chosen == null) return;
-    switch (await change(chosen)) {
-      case Ok():
-        notices.show(
-          AppNotice(
-            'New downloads go to ${displayFolderPath(chosen, home)}. What '
-            'you downloaded stays where it is.',
-          ),
-        );
-      case Err(:final failure):
-        notices.show(
-          AppNotice(
-            "Couldn't change the folder. ${failureMessage(failure)}",
-            tone: NoticeTone.error,
-          ),
-        );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -263,7 +204,10 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
       children: [
         Expanded(child: body),
         SizedBox(height: tokens.spacing.s12),
-        _Storage(onChangeFolder: () => unawaited(_changeFolder())),
+        _Storage(
+          onChangeFolder: () =>
+              unawaited(pickDownloadFolder(ProviderScope.containerOf(context))),
+        ),
       ],
     );
   }

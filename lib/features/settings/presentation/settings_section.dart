@@ -9,7 +9,7 @@ enum SettingsSection {
   sources('Sources'),
   playback('Playback'),
   casting('Casting'),
-  downloads('Downloads & library', phase: 8),
+  downloads('Downloads & library'),
   guide('Guide'),
   categories('Categories'),
   appearance('Appearance', phase: 9),

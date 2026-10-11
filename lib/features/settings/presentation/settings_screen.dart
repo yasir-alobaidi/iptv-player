@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_settings_section.dart';
+import 'package:iptv_player/features/downloads/presentation/download_settings_section.dart';
 import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
@@ -53,6 +54,8 @@ class SettingsScreen extends ConsumerWidget {
                     SettingsSection.playback => const PlaybackSettingsSection(),
                     SettingsSection.guide => const GuideSettingsSection(),
                     SettingsSection.casting => const CastSettingsSection(),
+                    SettingsSection.downloads =>
+                      const DownloadSettingsSection(),
                     _ => _ComingLater(section: section),
                   },
                 ),
@@ -233,9 +236,6 @@ class _ComingLater extends StatelessWidget {
       SettingsSection.playback =>
         'Buffering, hardware decoding, deinterlacing, preferred audio and '
             'subtitle languages.',
-      SettingsSection.downloads =>
-        'Download folder, downloads at a time, speed limit and library '
-            'folders.',
       SettingsSection.appearance =>
         'Accent colour, density, reduce motion and the clock format.',
       SettingsSection.shortcuts => 'Every keyboard shortcut in one place.',
@@ -245,6 +245,7 @@ class _ComingLater extends StatelessWidget {
       SettingsSection.sources ||
       SettingsSection.categories ||
       SettingsSection.casting ||
+      SettingsSection.downloads ||
       SettingsSection.guide => '',
     };
     return SettingsPanel(
