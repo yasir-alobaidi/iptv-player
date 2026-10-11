@@ -141,11 +141,12 @@ final class SeriesHit {
 /// Something of the library (Phase 8 step 6): a video on this computer,
 /// or a show of them.
 ///
-/// **A title is found once.** A download its provider still lists is the
-/// movie or the series MOVIES and SERIES find, with its page there; the
-/// library group holds what they don't: the user's own files, a download
-/// the provider dropped or the user hid the category of, and an episode
-/// found by its own title.
+/// **A title is found once.** A download its provider still lists, under
+/// the name it has here, is the movie or the series MOVIES and SERIES
+/// find, with its page there; the library group holds what they don't:
+/// the user's own files, a download the provider dropped or the user
+/// renamed or hid the category of, and an episode found by its own
+/// title.
 @immutable
 sealed class LibraryHit {
   const new({this.folderLabel});

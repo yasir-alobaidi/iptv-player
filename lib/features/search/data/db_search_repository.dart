@@ -391,9 +391,13 @@ final class DbSearchRepository implements SearchRepository {
   /// are left out. Names that start with the text first, then a word that
   /// does, then the index's rank.
   ///
-  /// **A download MOVIES or SERIES finds is left to them** (the same
-  /// match, the same visibility): one title, one row. What the provider
-  /// dropped, and what sits in a category the user hid, is found here.
+  /// **A download MOVIES or SERIES finds is left to them:** one title,
+  /// one row. That is a download still listed under the name it was
+  /// found by here, and visible there — looked up by its key, never
+  /// through the catalogue's index (a lookup per download would cost a
+  /// one-letter search its budget). What the provider dropped or renamed,
+  /// what the user renamed, and what sits in a category the user hid, is
+  /// found here.
   Future<SearchGroup<LibraryHit>> _library(_Query query) async {
     const shown = 'CASE WHEN m.as_show THEN m.show_title ELSE m.title END';
     // ?2, the browsed source, has no say here: the library has no source.
@@ -410,6 +414,8 @@ final class DbSearchRepository implements SearchRepository {
           'FROM (SELECT i.id AS id, i.title AS title, '
           'i.show_title AS show_title, '
           "${LibraryDao.showKeySql('i.')} AS show_key, "
+          'i.provider_source_id AS source_id, '
+          'i.provider_series_key AS series_key, '
           "i.kind = 'episode' AND i.show_title IS NOT NULL "
           'AND i.id IN (SELECT id FROM by_show) AS as_show, '
           'library_fts.rank AS score '
@@ -421,18 +427,14 @@ final class DbSearchRepository implements SearchRepository {
           'AND f.source_id = t.source_id AND f.remote_key = t.remote_key '
           "WHERE i.provider_item_type = 'movie' "
           'AND t.source_id = i.provider_source_id '
-          'AND t.remote_key = i.provider_remote_key AND $_visibleTitle '
-          'AND EXISTS (SELECT 1 FROM movies_fts '
-          'WHERE movies_fts MATCH ?1 AND rowid = t.id)) '
-          'AND NOT EXISTS (SELECT 1 FROM series t '
+          'AND t.remote_key = i.provider_remote_key '
+          'AND t.name = i.title AND $_visibleTitle)) m '
+          'WHERE NOT (m.as_show AND EXISTS (SELECT 1 FROM series t '
           'LEFT JOIN categories k ON k.id = t.category_id '
           "LEFT JOIN favorites f ON f.item_type = 'series' "
           'AND f.source_id = t.source_id AND f.remote_key = t.remote_key '
-          "WHERE i.provider_item_type = 'episode' "
-          'AND t.source_id = i.provider_source_id '
-          'AND t.remote_key = i.provider_series_key AND $_visibleTitle '
-          'AND EXISTS (SELECT 1 FROM series_fts '
-          'WHERE series_fts MATCH ?1 AND rowid = t.id))) m), '
+          'WHERE t.source_id = m.source_id AND t.remote_key = m.series_key '
+          'AND t.name = m.show_title AND $_visibleTitle))), '
           'hit AS ( '
           'SELECT MIN(id) AS id, show_key, MIN(closeness) AS closeness, '
           'MIN(score) AS score, MIN(sort_name) AS sort_name '

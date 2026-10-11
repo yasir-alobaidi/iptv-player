@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
@@ -23,8 +25,8 @@ import 'package:logger/logger.dart';
 /// for its first 2,150 channels, 7 days ahead and 1 behind (about 600,000
 /// programmes), on a file database as the app has. Each text from 1 to 20
 /// characters is searched several times; the time is the whole
-/// `search()`, all four groups. The fake panel runs in its own process.
-/// Skipped unless asked for:
+/// `search()`, all five groups (the library holds 5,500 videos). The fake
+/// panel runs in its own process. Skipped unless asked for:
 ///
 ///     flutter test --tags benchmark --run-skipped \
 ///       test/features/search/search_benchmark_test.dart
@@ -93,8 +95,59 @@ void main() {
       final fill = ChannelNameFill(database: db, log: log);
       expect((await fill.run()).valueOrNull, 0);
 
-      final repo = DbSearchRepository(db, SettingsRepository(db));
+      // A library beside it (Phase 8): 5,000 videos of the user's own —
+      // movies, the episodes of 100 shows, loose videos — and 500 of the
+      // catalogue's movies downloaded, which the library group must tell
+      // from the ones MOVIES already finds.
       final now = DateTime.now().toUtc();
+      final folder = await db.libraryDao.addFolder(
+        path: '/library',
+        label: 'Movies HDD',
+        at: now,
+      );
+      const words = ['Compass', 'Silent', 'Harbour', 'Arena', 'Cobalt', 'News'];
+      LibraryItemsCompanion video(
+        int n,
+        String title, {
+        LibraryKind kind = LibraryKind.movie,
+        String? show,
+        MovieRow? of,
+      }) => LibraryItemsCompanion.insert(
+        folderId: folder,
+        relPath: 'video-$n.mkv',
+        sizeBytes: 1,
+        mtime: 0,
+        quickHash: 'hash-$n',
+        kind: kind,
+        title: title,
+        showTitle: Value(show),
+        season: Value(show == null ? null : 1 + n % 4),
+        episode: Value(show == null ? null : 1 + n % 25),
+        providerSourceId: Value(of?.sourceId),
+        providerItemType: Value(of == null ? null : VodType.movie),
+        providerRemoteKey: Value(of?.remoteKey),
+        addedAt: now,
+      );
+      final downloaded = await (db.select(db.movies)..limit(500)).get();
+      await db.batch(
+        (batch) => batch.insertAll(db.libraryItems, [
+          for (var n = 0; n < 2000; n++)
+            video(n, 'The ${words[n % 6]} ${words[(n ~/ 6) % 6]} $n'),
+          for (var n = 2000; n < 4500; n++)
+            video(
+              n,
+              'Tonight ${words[n % 6]} $n',
+              kind: LibraryKind.episode,
+              show: '${words[n % 6]} ${words[(n ~/ 6) % 6]} ${n % 100}',
+            ),
+          for (var n = 4500; n < 5000; n++)
+            video(n, '${words[n % 6]} clip $n', kind: LibraryKind.unsorted),
+          for (final (n, movie) in downloaded.indexed)
+            video(5000 + n, movie.name, of: movie),
+        ]),
+      );
+
+      final repo = DbSearchRepository(db, SettingsRepository(db));
       const phrases = [
         'compass tonight special',
         'the silent harbour',
@@ -167,7 +220,8 @@ void main() {
         '  "compass": ${sample.channels.hits.length} channels, '
         '${sample.programmes.hits.length} programmes, '
         '${sample.movies.hits.length} movies, '
-        '${sample.series.hits.length} series',
+        '${sample.series.hits.length} series, '
+        '${sample.library.hits.length} of the library',
       );
       // The benchmark's output is its result, read by whoever runs it.
       // ignore: avoid_print
