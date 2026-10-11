@@ -239,7 +239,7 @@ final class DownloadSpaceNeededProvider
 }
 
 String _$downloadSpaceNeededHash() =>
-    r'43b95267a82a0dc7c9bbccc12c6d1be5ff957140';
+    r'ad7c26183c0dbe11e02187db92ba2b6515dbd3d9';
 
 /// What the queue last said it lacks on the drive, for the Downloads
 /// tab's banner (sketch G: "Free up 3.2 GB or choose another download
