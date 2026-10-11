@@ -1,25 +1,22 @@
-# Handoff — 2026-10-11 (Phase 8 steps 1–5 done; step 6, the UI, nearly done; the TV runs wait)
+# Handoff — 2026-10-11 (Phase 8 steps 1–6 done; step 7, casting library files, is next; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
-docs/decisions.md (Phase 8, step by step — its step 6 section, parts 1–8,
-is the latest), docs/plans/phase-8-downloads-and-library.md (step 6's list,
-then steps 7 and 8), docs/09-downloads-and-library.md, and docs/05's Library
-section ("As built").
+docs/decisions.md (Phase 8, step by step — its step 6 section, parts 1–11,
+is the latest), docs/plans/phase-8-downloads-and-library.md (steps 7 and 8,
+and decision 12), docs/09-downloads-and-library.md, docs/04-casting.md's
+library matrix, and docs/05's Library and Search sections ("As built").
 
 ## Before you start the next session (user)
-1. **Push** the 10 local commits when you like: 48fcca2 (the CI fixes),
-   1a876fa and cdac765 (the Library screen, its pages, their goldens),
-   b473ab9 (Downloads), 50325d2 (downloading from the provider's pages),
-   cb0fd27 (the item menu, Edit details, Delete), ba981ff (Settings →
-   Downloads & library), 4f8b0e7 (the banners), 2ad9cd0 (a generated
-   hash) and the docs commit.
-2. **CI on 56fa00c failed on both systems; both are addressed** (ADR-015,
-   "CI (2026-10-11)"): Windows' six path tests are fixed; the seventh, the
-   sync cancel timeout, is still unexplained but now says which stage of
-   the sync after the cancel it waited in. Linux hit the job's 45-minute
-   limit with nothing failing: the job has 75 minutes now, each integration
-   file 10. The next push shows whether both are green.
+1. **Push** the local commits when you like: 3f20022 (Search's Library
+   group), 80a20f3 (the Windows test fix), 364cc2b (the Downloaded mark,
+   D on Home, Ctrl+D in Search), then the keyboard walk and the docs.
+2. **CI on 2bcbdd7** (run 38122010610): **Windows failed 4 tests**, all new
+   UI tests that compared a path written with `/` to one the app joined as
+   Windows does; fixed in 80a20f3. The sync cancel timeout did not come
+   back in that run. **Linux** passed its unit tests and goldens; check
+   how its integration step ended (it was still running at the session's
+   end), and the next push for both systems.
 3. **One budget to look at** (ADR-015 step 3, unchanged): docs/06's
    "download speed ≥ 90 % of curl" is checked at network rates (99.6 %);
    over loopback it measures Dart's HTTP stack (35 %). Say if you want it
@@ -33,77 +30,66 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md and
-docs/09-downloads-and-library.md first. Check CI on the last push, then finish
-Phase 8 step 6 (Search's Library group next) and go on to step 7, step by step.
+docs/09-downloads-and-library.md first. Check CI on the last push, then go on with
+Phase 8 step 7 (casting library items), step by step.
 <The TV runs wait | The TV is on the network: ask first>.
 ```
 
 ## Where things stand
 - **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
   exit) waits for the TV.**
-- **Phase 8: steps 1–5 committed. Step 6 (the UI): parts 1–8 committed**
-  — the Library screen with its five tabs, a movie and a show of the
-  library, Library → Downloads, downloading from the provider's pages (the
-  button, Download season, D, the top bar's indicator, the toasts), the
-  item menu with Edit details and Delete file, Settings → Downloads &
-  library with Hidden videos, and the offline and disk-space banners.
+- **Phase 8: steps 1–6 committed.** Step 6, the UI, is whole: the Library
+  screen and its pages, Library → Downloads, downloading from the
+  provider's pages, the item menu with Edit details and Delete file,
+  Settings → Downloads & library, the banners, Search's Library group, the
+  Downloaded mark with D on Home and Ctrl+D in Search, and the keyboard
+  walk on the real app.
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,304 app tests** (18 skipped) under `TZ=UTC`, the fake
-  provider's 146 and the fake receiver's 35. Integration tests run this
-  session: every file with CI's samples before the UI work (all green),
-  and after it the eleven that touch what changed (see docs/progress.md).
-- **CI:** run 37193276058 (56fa00c) failed on both systems; fixed in
-  48fcca2 (see above). Nothing pushed since.
+  diff, **3,332 app tests** (18 skipped) under `TZ=UTC`, the fake
+  provider's and the fake receiver's. Integration tests run this session,
+  each under Xvfb with `IPTV_PLAYER_VIDEO=0`, all green: the new
+  `library_walk` (three times), `search_keyboard`, `home_continue`,
+  `vod_walk`, `library_playback`, `favorites_walk`, `app_launch`,
+  `poster_grid_scroll`, `hiding_walk`. The search benchmark with a
+  5,500-video library: worst 40 ms of its 50.
+- **CI:** run 38122010610 (2bcbdd7): Windows red on four path tests
+  (fixed, not pushed); Linux see above.
 
-## Step 6: what is left, in order
-1. **Search's Library group** (the canvas: "Harbor Walk (2021) · Home
-   videos · 12 min"): a LIBRARY group in the overlay after SERIES — the
-   library has its own search index (schema v9, `LibraryDao`'s FTS query
-   at `ORDER BY f.rank`); `DbSearchRepository` gets a group, `SearchActions`
-   opens a movie or show as the Library screen does (`_openMovie` /
-   `_openShow` in `library_screen.dart` — lift them into
-   `library_actions.dart`) and plays a video; hidden items are left out;
-   "Show all in Library" isn't needed (the Library has no text filter).
-2. **The Downloaded mark on posters** (canvas `Movies`, `Home`: a 26 px
-   dark circle with the green download arrow at the poster's top right):
-   a `downloadedMovieKeysProvider(sourceId)` from the library's rows with a
-   provider link, read by `MovieCard` (it already has `cornerBadge` for the
-   favorite — the canvas puts the star top-left? check the artboard) and
-   Home's posters; **D on Home's posters and in Search** with
-   `startDownloads`.
-3. **The keyboard walk on the real app** (the plan's Verify):
-   `integration_test/library_walk_test.dart` with the fake panel and a
-   `library_tree.sh` folder: D on a movie → the top bar's indicator →
-   Ctrl+7 → Downloads → it finishes → Play → Esc → Movies → a local
-   movie's page → Resume → Esc → its menu → Edit details → Save → Delete
-   file → Keep. `PanelApp` gives the real queue; the download folder must
-   be a temp folder (`downloadFolderProvider` override, or the settings
-   row), never the user's Videos.
-4. Then **step 7** (casting library items: `cast_items.dart` answers "A
-   file from the library can't be cast yet" today; when it works, add Cast
-   to the library movie page, the show page and `showLibraryItemMenu`, and
-   let a downloaded movie cast from its file) and **step 8**.
+## Step 7: casting library items (the plan's list, and where it starts)
+1. **The fake TV learns** (tools/fake_receiver): text tracks in LOAD,
+   `EDIT_TRACKS_INFO`, fetching and checking the WebVTT file, a SEEK on a
+   direct file read as a new Range request at the right offset.
+2. **Decision 12:** direct with Range (the relay's `/f/` already serves a
+   file with Range, 206, suffixes and 416); the continuous relay at once,
+   then the MP4 made beside it for native seeks; WebVTT subtitles, with S
+   in the casting view; a downloaded movie casts from its file.
+3. **Where the app says no today:** `cast_items.dart` answers "A file from
+   the library can't be cast yet"; the cast still asks for a download's
+   provider stream (`downloaded: false`). When it works, add **Cast** to
+   the library movie page, the show page and `showLibraryItemMenu` (sketch
+   D has it with C), and to the casting view's S for subtitles.
+4. **Verify:** end to end against the fake TV for every row of docs/04's
+   library matrix; the casting view and bar for a library item (widget
+   tests); the matrix runner (`cast_matrix_tv_test.dart`) gains the
+   library rows, checked against the fake TV first.
+5. Then **step 8**: the integration tests (download → kill → relaunch →
+   resume → play offline; library scan → play → resume; no FFmpeg left
+   after SIGKILL + relaunch), the library matrix on the TV with the user
+   watching, the docs, ADR-015 Accepted.
 
-## Done this session (2026-10-11)
-- **CI:** the Windows path tests, the cancel test's finer marks, the
-  Linux job's time (48fcca2).
-- **Step 6 parts 3–8** (ADR-015 has each part's decisions; docs/05 "As
-  built" has what the user sees):
-  - the Library screen, a movie and a show of the library, their routes,
-    goldens;
-  - Library → Downloads;
-  - the Download button, Download season, D, the top bar's indicator, the
-    toasts, Delete download;
-  - the item menu, Edit details, Delete file;
-  - Settings → Downloads & library, Hidden videos;
-  - the offline banner on Home and the disk-space banner and toast.
-- **Fixed on the way:** ← on the provider's Series page left for the nav
-  rail (Play was unreachable by keys once left); `PlaceholderScreen` is
-  gone.
+## Done this session (2026-10-11, the second)
+- **Search's Library group** (3f20022): `LibraryHit`, the query in
+  `DbSearchRepository._library`, the rows, Enter and the menu; the
+  Library's openers lifted into `library_actions.dart`.
+- **CI:** four Windows path tests (80a20f3).
+- **The Downloaded mark** on posters, Home's Continue cards and Search's
+  movie rows; **D on Home**; **Ctrl+D** and Download in Search (364cc2b).
+- **The keyboard walk** (`integration_test/library_walk_test.dart`), and
+  `PanelApp` shutting the queue down as the app's quit does.
 
 ## What's next
-1. **The rest of Phase 8 step 6** (the list above), then steps 7 and 8,
-   stopping only where the user asks or a step needs the TV.
+1. **Phase 8 step 7** (the list above), then step 8, stopping only where
+   the user asks or a step needs the TV.
 2. **The TV runs, only when the user says the TV is back, after asking and
    with the user watching:** Phase 7's (check `ip -4 addr` shows 192.168.1.x;
    `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
@@ -121,6 +107,8 @@ Phase 8 step 6 (Search's Library group next) and go on to step 7, step by step.
   once the marks are read: copy that).
 - The Windows sync cancel timeout (intermittent; it waits in the sync
   after the cancel; the next failure names the stage).
+- A series' poster has no Downloaded mark (it downloads by its episodes;
+  its page says which); Search's "Remind me" is Phase 9.
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
 - Tab coming round into Live TV's categories pane lands on its first item,
   not the chosen category.
@@ -135,15 +123,15 @@ Phase 8 step 6 (Search's Library group next) and go on to step 7, step by step.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- ~~**CI green on both systems.**~~ Done on abd0c1a; keep it so (6ebff8e
-  fixes the step 5 push's Windows failures).
-- **Phase 7 — Casting**: ~~our own Cast v2 client, the ffprobe-based
-  planner, the FFmpeg relay with its supervisor, the coordinator, the
-  UI~~ (steps 2–7), and the casting matrix on the user's TV (step 8).
-- **Phase 8 — Downloads and the local library:** resumable downloads
-  (`.part` + verify + rename; they yield to playback — `SourceConnections`
-  has their holder), the library scanner, offline playback, library
-  casting, the SIGKILL-safety tests.
+- **CI green on both systems:** it was on abd0c1a; the last three pushes
+  each left a few Windows path tests to fix. Keep to `p.join` for every
+  path a test expects.
+- **Phase 7 — Casting**: built (steps 2–7); the casting matrix on the
+  user's TV (step 8).
+- **Phase 8 — Downloads and the local library:** built through the UI
+  (steps 1–6); library casting (step 7); the integration tests, the
+  SIGKILL-safety tests end to end and the library matrix on the TV (step
+  8).
 - **Phase 9 — Settings, diagnostics, polish:** every Settings section, the
   log viewer and Copy diagnostics (redacted); **"Remind me"** on upcoming
   programmes as a system notification (Search and the Guide's sheet; the
@@ -248,7 +236,46 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (Phase 8 step 6, parts 3–8):
+New this session (Phase 8 step 6, parts 9–11):
+- **Search's library group:** `DbSearchRepository._library` is one
+  statement over `library_fts` — `by_show` (the rows whose show's name
+  matches), `found` (each match, an episode found by its show standing for
+  the show's key), `hit` (one row per show or item, ranked, six read) —
+  then the shows by key (`LibraryDao.showsKeyed`) and the folders for
+  their labels. `LibraryDao.showKeySql('i.')` is the show key with a table
+  alias: `library_fts` has `title` and `show_title` columns too, so a join
+  with it must qualify them.
+- **What Enter does from anywhere:** `libraryMovieLocation`,
+  `libraryShowLocation` and `playLibraryItem` in `library_actions.dart`
+  take the `ProviderContainer` (search's overlay is gone by then, the
+  Library screen passes its own).
+- **`showLibraryItemMenu(beforePlay:, onChanged:, onGone:)`:** a caller
+  that isn't a library page says what follows a Play, an edit, a leave.
+- **The Downloaded mark:** `downloadedKeysProvider(type, sourceId)` (one
+  watched set per source) and `isDownloaded(ref, type, sourceId, key)` in
+  `download_actions.dart`; `DownloadedMark` / `DownloadedPill` in
+  `lib/design/components/downloaded_mark.dart`; `PosterMarks` in
+  `title_cards.dart`. `MovieCard` is a `ConsumerWidget` now. Tests mark a
+  movie downloaded with `VodFakes.downloadMovie(key, title)`.
+- **Home's cards take their keys from `_cardKeys(card, favorite:,
+  download:)`:** F and D in one place; a card with nothing to download
+  passes no request.
+- **In the search overlay the keyboard stays in the field:** a plain
+  letter can't be a shortcut there. Ctrl+D is handled in `_onKey`, beside
+  the arrows.
+- **The walk** (`integration_test/library_walk_test.dart`): `PanelApp`
+  with `downloadShellOverrides`, `systemVideosProvider` pointed into a
+  temp folder (the download folder is its `IPTV Player`), FFmpeg from
+  `castBinaries()`; after the app is pumped it does what `bootstrap()`
+  does after launch (`registerDownloadFolder`, `downloadToastsProvider`,
+  `downloadQueueProvider.startUp()`). A Downloads row's label carries its
+  progress ("<title>, 6%"): find it by what it starts with. The tabs'
+  labels carry their counts ("Downloads, 1", "Movies, 2").
+- **Windows trap, again:** a test that expects a path the app shows or
+  hands on must build it with `p.join` / `p.joinAll` — also the `~` form
+  (`p.join('~', 'Videos', 'IPTV Player')`).
+
+From the session before (Phase 8 step 6, parts 3–8):
 - **Where the Library's UI is:** `lib/features/library/presentation/` —
   `library_screen.dart` (the tabs; `_items` and `_shows` are the grids),
   `library_movie_page.dart`, `library_show_page.dart`,
@@ -314,7 +341,7 @@ New this session (Phase 8 step 6, parts 3–8):
   each file builds the app from the working tree and fails on a half-made
   change.
 
-From the session before (Phase 8 step 6, parts 1–2):
+From two sessions before (Phase 8 step 6, parts 1–2):
 - **The Library's data:** `LibraryRepository.watchCount/range/watchShows/
   watchShowEpisodes/watchFolderTotals` (`DbLibraryRepository`; the DAO's
   `itemWindow`, `watchTotals`, `watchShows`, `watchShowEpisodes` share one
