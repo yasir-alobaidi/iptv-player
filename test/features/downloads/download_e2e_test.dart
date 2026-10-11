@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:fake_provider/generator.dart' show vodSamples;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
@@ -96,6 +97,52 @@ void main() {
       expect(rig.titles.asked, greaterThanOrEqualTo(2));
     },
   );
+
+  test('a movie the panel serves as MKV is kept as MP4: the same picture '
+      'and sound, in the container most players open', () async {
+    // Movie 100002's file, as a real Matroska file.
+    final mkv = File(p.join(temp.path, 'samples', vodSamples[2]));
+    final made = await Process.run(binaries.ffmpeg, [
+      ...['-hide_banner', '-loglevel', 'error', '-y'],
+      ...['-i', p.join(temp.path, 'samples', vodSamples[0])],
+      ...['-c', 'copy', '-f', 'matroska', '${mkv.path}.tmp'],
+    ]);
+    expect(made.exitCode, 0, reason: '${made.stderr}');
+    File('${mkv.path}.tmp').renameSync(mkv.path);
+
+    await rig.queue.enqueue([
+      DownloadE2E.movie('100002', title: 'Salt Road', extension: 'mkv'),
+    ]);
+    final id = rig.queue.current.single.id;
+    expect(
+      rig.queue.current.single.targetPath,
+      endsWith('Salt Road (2025).mkv'),
+    );
+    final done = await rig.until(id, {DownloadTaskState.completed});
+
+    final folder = p.join(rig.downloads, 'Movies', 'Salt Road (2025)');
+    expect(done.targetPath, p.join(folder, 'Salt Road (2025).mp4'));
+    expect(
+      Directory(folder).listSync().map((e) => p.basename(e.path)).toSet(),
+      {'Salt Road (2025).mp4', 'poster.jpg'},
+      reason: 'no MKV and no .part left beside it',
+    );
+    final file = File(done.targetPath);
+    expect(done.totalBytes, file.lengthSync());
+
+    final item = (await rig.db.libraryDao.itemById(done.libraryItemId!))!;
+    expect(item.relPath, 'Movies/Salt Road (2025)/Salt Road (2025).mp4');
+    expect(item.sizeBytes, file.lengthSync());
+    expect(item.quickHash, await quickHash(file));
+    expect(item.durationMs, closeTo(6000, 300));
+    expect(item.providerRemoteKey, '100002');
+    final media = jsonDecode(item.probeJson!) as Map;
+    expect(media['container'], 'mov');
+    expect((media['video'] as Map)['codec'], 'h264');
+    expect(((media['audio'] as List).single as Map)['codec'], 'aac');
+    expect((await rig.db.downloadsDao.byId(id))!.targetPath, done.targetPath);
+    expect(rig.supervisor.runningCount, 0);
+  });
 
   test('a damaged file never takes its final name', () async {
     await rig.queue.enqueue([DownloadE2E.movie('100001', title: 'Broken')]);

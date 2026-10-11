@@ -9,6 +9,7 @@ import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/downloads/db_download_store.dart';
+import 'package:iptv_player/data/downloads/download_remux.dart';
 import 'package:iptv_player/data/downloads/file_download_finisher.dart';
 import 'package:iptv_player/data/downloads/isolate_download_runner.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
@@ -92,6 +93,7 @@ DownloadRunner downloadRunner(Ref ref) => IsolateDownloadRunner(
 DownloadQueue downloadQueue(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   final pictures = ref.watch(castPicturesProvider);
+  final binaries = ref.watch(ffmpegBinariesProvider);
   final queue = DownloadQueue(
     store: DbDownloadStore(db),
     titles: CatalogueDownloadTitles(
@@ -105,6 +107,17 @@ DownloadQueue downloadQueue(Ref ref) {
       probe: ref.watch(streamProbeProvider),
       pictureFile: pictures.fileFor,
       log: ref.watch(appLogProvider),
+      // docs/09 "Format": kept as MP4 when that loses nothing. Without
+      // FFmpeg a download stays as it came.
+      remux: binaries == null
+          ? null
+          : FfmpegDownloadRemux(
+              supervisor: ref.watch(processSupervisorProvider),
+              ffmpeg: binaries.ffmpeg,
+              ffprobe: binaries.ffprobe,
+              log: ref.watch(appLogProvider),
+              freeSpace: freeBytes,
+            ),
     ),
     connections: ref.watch(playbackCoordinatorProvider).connections,
     sleep: ref.watch(sharedSleepProvider).view('downloads'),

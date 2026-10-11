@@ -252,7 +252,7 @@ final class DownloadQueueProvider
   }
 }
 
-String _$downloadQueueHash() => r'96b4b28f6fe8a8971d2b79f376fc70d21238c871';
+String _$downloadQueueHash() => r'0b33aee4a4ea177065dcf1d66189ce8677afb06a';
 
 /// The queue as the screens use it.
 

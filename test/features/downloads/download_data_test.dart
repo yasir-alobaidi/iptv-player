@@ -7,11 +7,13 @@ import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/downloads/db_download_store.dart';
+import 'package:iptv_player/data/downloads/download_remux.dart';
 import 'package:iptv_player/data/downloads/file_download_finisher.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/features/downloads/data/catalogue_download_titles.dart';
@@ -424,6 +426,187 @@ void main() {
       expect(File(t.targetPath).existsSync(), isTrue);
     });
 
+    group('kept as MP4 (docs/09 "Format")', () {
+      late _Remux remux;
+      late FileDownloadFinisher converting;
+
+      setUp(() {
+        remux = _Remux();
+        converting = FileDownloadFinisher(
+          db: db,
+          probe: probe,
+          pictureFile: (_) async => null,
+          log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
+          remux: remux,
+          now: () => t0,
+        );
+      });
+
+      String mp4Of(DownloadTask t) =>
+          '${t.targetPath.substring(0, t.targetPath.length - 4)}.mp4';
+
+      test("remade: the MP4 takes the final name, the download's own "
+          '.part goes, and the library holds the MP4 with what was read in '
+          'it', () async {
+        final t = task(total: 1000);
+        part(t);
+        final finish = await converting.finish(t) as DownloadFinished;
+
+        expect(remux.asked, [('${t.targetPath}.part', '${mp4Of(t)}.part')]);
+        expect(finish.path, mp4Of(t));
+        expect(finish.bytes, 1200, reason: "the MP4's size, not the MKV's");
+        expect(File(mp4Of(t)).lengthSync(), 1200);
+        expect(File(t.targetPath).existsSync(), isFalse);
+        expect(File('${t.targetPath}.part').existsSync(), isFalse);
+        expect(File('${mp4Of(t)}.part').existsSync(), isFalse);
+        final item = (await db.libraryDao.itemById(finish.libraryItemId))!;
+        expect(
+          item.relPath,
+          'Movies/Copper Hollow (2025)/Copper Hollow (2025).mp4',
+        );
+        expect(item.sizeBytes, 1200);
+        expect(item.durationMs, const Duration(minutes: 42).inMilliseconds);
+        expect(jsonDecode(item.probeJson!), {
+          'container': 'mov',
+          'duration_ms': 2520000,
+          'video': {'codec': 'h264'},
+          'audio': [
+            {'codec': 'aac'},
+          ],
+        });
+      });
+
+      test('a name taken by another MP4 gets a number', () async {
+        final t = task();
+        part(t);
+        File(mp4Of(t)).writeAsStringSync('someone else');
+        final finish = await converting.finish(t) as DownloadFinished;
+        expect(
+          finish.path,
+          p.join(p.dirname(t.targetPath), 'Copper Hollow (2025) (2).mp4'),
+        );
+        expect(File(mp4Of(t)).readAsStringSync(), 'someone else');
+      });
+
+      test(
+        'not remade: it keeps the name and the container it came with',
+        () async {
+          remux.next = const RemuxKept(
+            'a sound track is dts',
+            media: LibraryMedia(container: 'matroska'),
+          );
+          final t = task(total: 1000);
+          part(t);
+          final finish = await converting.finish(t) as DownloadFinished;
+          expect(finish.path, t.targetPath);
+          expect(File(t.targetPath).lengthSync(), 1000);
+          expect(File(mp4Of(t)).existsSync(), isFalse);
+          final item = (await db.libraryDao.itemById(finish.libraryItemId))!;
+          expect(jsonDecode(item.probeJson!), {'container': 'matroska'});
+        },
+      );
+
+      test("the provider's own MP4 is left alone", () async {
+        final t = task(
+          target: p.join(temp.path, 'IPTV Player', 'Movies', 'F', 'F.mp4'),
+        );
+        part(t);
+        final finish = await converting.finish(t) as DownloadFinished;
+        expect(remux.asked, isEmpty);
+        expect(finish.path, t.targetPath);
+      });
+
+      test('a damaged download is never remade', () async {
+        final t = task(total: 2000);
+        part(t);
+        expect(await converting.finish(t), isA<DownloadDamaged>());
+        expect(remux.asked, isEmpty);
+      });
+
+      test('stopped while it was being remade: nothing decided, and the '
+          "download's .part is still whole", () async {
+        remux.next = const RemuxStopped();
+        final t = task(total: 1000);
+        part(t);
+        expect(await converting.finish(t), isA<DownloadFinishStopped>());
+        expect(File('${t.targetPath}.part').lengthSync(), 1000);
+        expect(await converting.whole(t), isFalse, reason: 'needs its turn');
+        expect((await db.libraryDao.folders()).single.id, isNotNull);
+        expect(await db.libraryDao.itemsIn(1), isEmpty);
+      });
+
+      test('the app stopped between the last steps: what is on disk says '
+          'how far it got', () async {
+        // 1. Mid-copy: both .parts. The copy is made again.
+        var t = task(total: 1000);
+        part(t);
+        File('${mp4Of(t)}.part').writeAsStringSync('half');
+        expect(await converting.whole(t), isFalse);
+        var finish = await converting.finish(t) as DownloadFinished;
+        expect(File(finish.path!).lengthSync(), 1200);
+        File(finish.path!).deleteSync();
+        remux.asked.clear();
+
+        // 2. The copy checked and the download's own .part deleted, the
+        // rename still to do: the copy is whole by then.
+        t = task(total: 1000);
+        File('${mp4Of(t)}.part')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(List.filled(1200, 7));
+        expect(await converting.whole(t), isTrue);
+        finish = await converting.finish(t) as DownloadFinished;
+        expect(remux.asked, isEmpty, reason: 'not made twice');
+        expect(finish.path, mp4Of(t));
+        expect(File(mp4Of(t)).lengthSync(), 1200);
+        expect(File('${mp4Of(t)}.part').existsSync(), isFalse);
+
+        // 3. Renamed, the library still to tell: the same file, one row.
+        expect(await converting.whole(t), isTrue);
+        final again = await converting.finish(t) as DownloadFinished;
+        expect(again.path, mp4Of(t));
+        expect(again.libraryItemId, finish.libraryItemId);
+        expect(await db.libraryDao.itemsIn(1), hasLength(1));
+        expect(remux.asked, isEmpty);
+      });
+
+      test('discard stops the copy and deletes both .parts; quitting stops '
+          'it too', () async {
+        final t = task();
+        part(t);
+        File('${mp4Of(t)}.part').writeAsStringSync('half');
+        await converting.discard(t);
+        expect(remux.stopped, ['${mp4Of(t)}.part']);
+        expect(File('${t.targetPath}.part').existsSync(), isFalse);
+        expect(File('${mp4Of(t)}.part').existsSync(), isFalse);
+        await converting.close();
+        expect(remux.closed, isTrue);
+      });
+    });
+
+    test("an episode whose title only says its code: the library's row "
+        'has no title, as the scanner reads its file', () async {
+      final target = p.join(
+        temp.path,
+        'IPTV Player',
+        'Series',
+        'Glass Tide',
+        'Season 02',
+        'Glass Tide - S02E05.mkv',
+      );
+      final t = task(
+        type: VodType.episode,
+        key: 'e5',
+        seriesKey: 's1',
+        target: target,
+      ).copyWith(title: 'S02E05');
+      part(t);
+      final finish = await finisher.finish(t) as DownloadFinished;
+      final item = (await db.libraryDao.itemById(finish.libraryItemId))!;
+      expect(item.title, '');
+      expect(item.showTitle, 'Glass Tide');
+      expect((item.season, item.episode), (2, 5));
+    });
+
     test("discard and the .part's size", () async {
       final t = task();
       expect(await finisher.partSize(t), 0);
@@ -434,6 +617,35 @@ void main() {
       await finisher.discard(t);
     });
   });
+}
+
+/// A remux that writes 1,200 bytes for an MP4, or answers [next].
+final class _Remux implements DownloadRemux {
+  RemuxOutcome? next;
+  final asked = <(String, String)>[];
+  final stopped = <String>[];
+  bool closed = false;
+
+  @override
+  Future<RemuxOutcome> toMp4(String input, String output) async {
+    asked.add((input, output));
+    if (next case final answer?) return answer;
+    File(output).writeAsBytesSync(List.filled(1200, 9));
+    return const RemuxDone(
+      LibraryMedia(
+        container: 'mov',
+        duration: Duration(minutes: 42),
+        video: LibraryVideo(codec: 'h264'),
+        audio: [LibraryAudio(codec: 'aac')],
+      ),
+    );
+  }
+
+  @override
+  Future<void> stop(String output) async => stopped.add(output);
+
+  @override
+  Future<void> close() async => closed = true;
 }
 
 final class _Probe implements StreamProbe {

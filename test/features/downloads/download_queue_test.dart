@@ -510,6 +510,76 @@ void main() {
     });
   });
 
+  test('a file remade as MP4: the download keeps the name it ended with', () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1', title: 'Copper Hollow')]);
+      final id = r.latest.single.id;
+      const mp4 =
+          '$downloadFolder/Movies/Copper Hollow (2020)/Copper Hollow (2020).mp4';
+      r.finisher.answer = const DownloadFinished(77, bytes: 10400, path: mp4);
+      r
+        ..runs(id)
+        ..say(DownloadDone(id, bytes: 10000, total: 10000));
+      expect(r.state(id), DownloadTaskState.completed);
+      expect(r.task(id).targetPath, mp4);
+      expect(r.task(id).totalBytes, 10400);
+      expect(r.store.rows[id]!.targetPath, mp4);
+    });
+  });
+
+  test('at launch: a download whose every byte is on disk is finished with '
+      'no connection', () {
+    fakeAsync((async) {
+      final r = Rig(async)
+        ..store.seed(DownloadTaskState.verifying, downloaded: 10000)
+        ..finisher.wholeOnDisk.add(1);
+      unawaited(r.queue.startUp());
+      r.settle();
+      expect(r.finisher.finished, [1]);
+      expect(r.runner.started, isEmpty);
+      expect(r.state(1), DownloadTaskState.completed);
+      expect(r.task(1).libraryItemId, 77);
+    });
+  });
+
+  test('a cancel while the file is being checked or remade: the work stops '
+      'and the download goes', () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1')]);
+      final id = r.latest.single.id;
+      r.finisher.working = Completer();
+      r
+        ..runs(id)
+        ..say(DownloadDone(id, bytes: 10000, total: 10000));
+      expect(r.state(id), DownloadTaskState.verifying);
+
+      unawaited(r.queue.cancel(id));
+      r.settle();
+      expect(r.finisher.discarded, contains(id));
+      expect(r.latest, isEmpty);
+      expect(r.store.rows, isEmpty);
+    });
+  });
+
+  test('at quit while the file is being remade: the work stops, and the '
+      'download stays as it was for the next launch', () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1')]);
+      final id = r.latest.single.id;
+      r.finisher.working = Completer();
+      r
+        ..runs(id)
+        ..say(DownloadDone(id, bytes: 10000, total: 10000));
+      expect(r.store.rows[id]!.state, DownloadTaskState.verifying);
+
+      unawaited(r.queue.shutdown());
+      r.settle();
+      expect(r.finisher.closed, isTrue);
+      expect(r.store.rows[id]!.state, DownloadTaskState.verifying);
+      expect(r.store.rows[id]!.downloadedBytes, 10000);
+    });
+  });
+
   test('the speed limit and the validators reach the runner', () {
     fakeAsync((async) {
       final r = rig(
@@ -666,14 +736,41 @@ final class ScriptedFinisher implements DownloadFinisher {
   final discarded = <int>[];
   final partSizes = <int, int>{};
 
+  /// The downloads whose every byte is on disk already.
+  final wholeOnDisk = <int>{};
+
+  /// When set, a finish waits for it (the MP4 being made); a discard or
+  /// a close completes it as stopped.
+  Completer<DownloadFinish>? working;
+  bool closed = false;
+
   @override
   Future<DownloadFinish> finish(DownloadTask task) async {
     finished.add(task.id);
-    return answer;
+    return await working?.future ?? answer;
   }
 
   @override
-  Future<void> discard(DownloadTask task) async => discarded.add(task.id);
+  Future<bool> whole(DownloadTask task) async => wholeOnDisk.contains(task.id);
+
+  @override
+  Future<void> discard(DownloadTask task) async {
+    discarded.add(task.id);
+    _stop();
+  }
+
+  @override
+  Future<void> close() async {
+    closed = true;
+    _stop();
+  }
+
+  void _stop() {
+    final busy = working;
+    if (busy != null && !busy.isCompleted) {
+      busy.complete(const DownloadFinishStopped());
+    }
+  }
 
   @override
   Future<int> partSize(DownloadTask task) async => partSizes[task.id] ?? 0;

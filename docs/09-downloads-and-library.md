@@ -12,7 +12,7 @@ Library items play offline in the desktop player and cast to Chromecast / Google
 | Xtream movie | `{server}/movie/{u}/{p}/{stream_id}.{container_extension}` | HTTP download with resume |
 | Xtream episode | `{server}/series/{u}/{p}/{episode_id}.{container_extension}` | HTTP download with resume |
 | M3U movie or episode entry | the entry URL | HTTP download with resume |
-| Any of these that returns an HLS playlist (content type, or a body starting with `#EXTM3U`) | same | bundled FFmpeg `-c copy` to `.mkv`; no resume (starts over after a failure) |
+| Any of these that returns an HLS playlist (content type, or a body starting with `#EXTM3U`) | same | bundled FFmpeg `-c copy` into Matroska; no resume (starts over after a failure); then kept as MP4 like any other download (Format, below) |
 | Live channel | — | not offered |
 
 URLs contain credentials: rebuild them from the source at every start and resume; never store or log them.
@@ -33,11 +33,27 @@ States: `queued → connecting → downloading ⇄ paused → verifying → comp
 - **Writing:** stream chunks straight to disk, never a whole file in memory; flush every 8 MB and on pause. After a crash, the `.part` size on disk is the truth.
 - **Disk space:** check before starting (expected size + 1 GB) and every 256 MB; below that, pause all downloads and show a banner.
 - **Errors** (the watchdog's classes): network → retry after 2, 4, 8, 15, 30, 60 s, then every 60 s, `failed` after 30 min without progress · 401/403 → pause that source's downloads and show the account message · 404 → `failed`, "No longer available from your provider" · 429 or connection limit → `waiting_for_connection`, retry after 60 s · disk write error → `failed` with Details.
-- **Verification:** the size matches Content-Length (when sent) and ffprobe reads a duration → rename to the final name. Otherwise `failed` ("The download is damaged") and the `.part` is deleted. A file under a final name is always complete.
+- **Verification:** the size matches Content-Length (when sent) and ffprobe reads a duration → the format step below → rename to the final name. Otherwise `failed` ("The download is damaged") and the `.part` is deleted. A file under a final name is always complete.
 - **Speed limit:** Unlimited (default) · 50 · 20 · 10 Mbps.
 - **App lifecycle:** quitting pauses and flushes; launching resumes unfinished downloads (setting, default on). Keep the system awake while downloads run (setting, default on; same inhibitor as casting).
 - **Series:** "Download season" queues every episode not yet downloaded, in episode order.
 - **Download folder:** defaults to the OS Videos folder + `IPTV Player`. Changing it affects new downloads only; existing files stay where they are and stay in the Library.
+
+### Format: MP4 whenever nothing is lost
+A download should open in whatever the user has: another player, a phone, a TV's USB port. MP4 is the container nearly all of them read; MKV is not. So a finished download is **remade as MP4 when MP4 holds everything in the file as it is**, and otherwise stays exactly as the provider sent it.
+
+- **Never encoded again.** The picture and sound are copied (`-c copy`): the same bits, so nothing about the quality changes, and it takes seconds (a 235 MB episode: 0.5 s here).
+- **Remade** when all of these hold:
+  - it came as Matroska (`.mkv`), MPEG-TS (`.ts`) or FLV;
+  - the picture is H.264 or HEVC (HEVC is tagged `hvc1`, which Apple's players need);
+  - every sound track is AAC, MP3, AC-3 or E-AC-3;
+  - its subtitles, if any, are plain text (SubRip, WebVTT); they become MP4's own text tracks, with their languages.
+- **Kept as it came:** an MP4 already; AVI; a picture in another codec (MPEG-4/XviD, VP9, AV1, MPEG-2); DTS, TrueHD, Opus or FLAC sound (MP4 can hold some of these, but few players read them from it); styled ASS or picture subtitles (PGS, DVD, DVB), which MP4 can't keep; Dolby Vision; a drive without room for the copy; a copy that fails or comes out different.
+- **Checked before it replaces anything.** The MP4 is written beside the download as `<name>.mp4.part`, then read by ffprobe: the same picture, the same sound tracks, the same number of subtitles, the same length within 2 s. Only then is the download's own `.part` deleted and the MP4 renamed to `<name>.mp4`. Any doubt, and the copy is deleted and the original kept.
+- **The index is at the front** (`+faststart`), so the file starts at once over a network share, and on a TV (docs/04: an MP4 with AAC or MP3 casts directly, with native seeks).
+- **Supervised** (hard rule 8): the finisher owns the FFmpeg, a copy that stops writing for 60 s is killed, its PID file is the supervisor's, and a half-made `.mp4.part` is deleted by the next try. Quitting or canceling stops it; nothing is decided, and the next launch does it again from the whole `.part`.
+- **No re-encoding to "fix" the rest:** turning DTS into AAC or XviD into H.264 would take minutes to hours a file and lose quality. Those files stay as they came.
+- **Files downloaded before this** stay as they are; the app never remakes a file already in the library.
 
 ### File layout
 Plex/Jellyfin-style, so other apps can read the folder too:
@@ -45,6 +61,7 @@ Plex/Jellyfin-style, so other apps can read the folder too:
 <download folder>/Movies/<Title> (<Year>)/<Title> (<Year>).<ext>                 + poster.jpg
 <download folder>/Series/<Show>/Season 02/<Show> - S02E04 - <Episode title>.<ext>  + <Show>/poster.jpg
 ```
+`<ext>` is `mp4` for a download remade as MP4 (Format, above), else the provider's. An episode title that says nothing beyond the number is left out: a stand-in ("Episode 4"), the code alone ("S02E04"), or a release name around it ("The.Show.S02E04.1080p.WEB.H264-GRP"). A title after the code is the title ("Show - S02E04 - Undertow" → "Undertow").
 Filenames: remove characters Windows rejects (`< > : " / \ | ? *`, control characters), trailing dots and spaces, and reserved names (CON, NUL, COM1 …); cap each path part at 120 characters and the full path at 240 on Windows; add ` (2)` on a name collision.
 
 ### As built (Phase 8 step 3; ADR-015)
@@ -55,6 +72,9 @@ Filenames: remove characters Windows rejects (`< > : " / \ | ? *`, control chara
 - **Cancel** deletes the `.part` and takes the download off the list.
 - **ffprobe that can't run** leaves the size check alone; only ffprobe reading nothing, or no length, makes a file damaged.
 - **HLS** goes through a loopback proxy in the downloads isolate (no credentials in FFmpeg's arguments) into Matroska.
+- **The format step** is `FfmpegDownloadRemux` (`lib/data/downloads/download_remux.dart`), the rule `mp4Obstacle` (`lib/core/downloads/download_format.dart`). The download's row keeps the name the file ended with (`.mp4`, or a numbered name), which Show in folder uses.
+- **The app stopping mid-finish:** what is on disk says how far it got (`DownloadFinisher.whole`). Both `.part`s: the copy is made again. Only `<name>.mp4.part`: it was checked, so it is renamed. A final file and no `.part`: it only needs its library row. In the last two cases the launch finishes it with no connection.
+- **The download folder isn't "not connected" before its first download:** it is made by the first download, and a scan before that leaves it alone. A file that is on disk plays whatever the folder's row says (the mark is as old as the last scan), and a download landing in a folder marked away marks it present.
 - **Measured:** 99.6 % of curl at 1 Gbps and 100 Mbps; memory over 4 GB at 1 Gbps +20–31 MB, flat across the file.
 
 ## Local library (lib/data/library/)

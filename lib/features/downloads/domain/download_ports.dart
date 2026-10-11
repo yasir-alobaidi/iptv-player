@@ -73,10 +73,15 @@ sealed class DownloadFinish {
 
 /// Verified and renamed; it is the library item [libraryItemId].
 final class DownloadFinished extends DownloadFinish {
-  const new(this.libraryItemId, {required this.bytes});
+  const new(this.libraryItemId, {required this.bytes, this.path});
 
   final int libraryItemId;
   final int bytes;
+
+  /// The file's final name when it isn't the one planned: a name that
+  /// was taken got a number, a file remade as MP4 its extension (docs/09
+  /// "Format").
+  final String? path;
 }
 
 /// The file failed its check (docs/09: "The download is damaged"); its
@@ -94,15 +99,33 @@ final class DownloadNotFinished extends DownloadFinish {
   final String detail;
 }
 
+/// Stopped before it was done (the app is quitting, the download was
+/// canceled meanwhile): nothing is decided, and the files are as far as
+/// they got.
+final class DownloadFinishStopped extends DownloadFinish {
+  const new();
+}
+
 /// The files' side of downloads: verification, the final name, the
 /// library item (docs/09 "DownloadFinalizer").
 abstract interface class DownloadFinisher {
-  /// Checks [task]'s `.part`, renames it, saves its artwork and details,
-  /// and adds it to the library.
+  /// Checks [task]'s `.part`, remakes it as MP4 when that loses nothing
+  /// (docs/09 "Format"), renames it, saves its artwork and details, and
+  /// adds it to the library.
   Future<DownloadFinish> finish(DownloadTask task);
 
-  /// Deletes [task]'s `.part`, if any (a cancel, a damaged file).
+  /// Whether every byte of [task] is on disk under a name that says so
+  /// (the app stopped between the last steps of a finish): it only needs
+  /// finishing again, with no connection.
+  Future<bool> whole(DownloadTask task);
+
+  /// Deletes [task]'s `.part`, if any (a cancel, a damaged file), and
+  /// stops a finish that is still working on it.
   Future<void> discard(DownloadTask task);
+
+  /// The app is quitting: a finish still working answers
+  /// [DownloadFinishStopped].
+  Future<void> close();
 
   /// What [task]'s `.part` holds on disk now: the truth after a crash
   /// (docs/09).

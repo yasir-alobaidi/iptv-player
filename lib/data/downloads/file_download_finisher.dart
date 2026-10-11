@@ -3,13 +3,16 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
+import 'package:iptv_player/core/downloads/download_format.dart';
 import 'package:iptv_player/core/downloads/download_paths.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/library/library_media.dart';
 import 'package:iptv_player/core/library/name_parser.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/downloads/download_remux.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/library/quick_hash.dart';
 import 'package:iptv_player/features/downloads/domain/download_ports.dart';
@@ -20,17 +23,24 @@ const _tag = 'downloads';
 /// [DownloadFinisher] on the files and the library (docs/09
 /// "DownloadFinalizer"): the size matches what the provider said and
 /// ffprobe reads a length, or the file is damaged and its `.part` goes;
+/// then it is remade as MP4 when that loses nothing (docs/09 "Format");
 /// then the `.part` becomes the final name — **a file under a final name
 /// is always complete** (hard rule 11) — `poster.jpg` is written from the
 /// app's picture cache, the title's details are copied (Phase 8 decision
 /// 5), and the file joins the library, linked to its title so progress is
 /// shared with streaming.
+///
+/// The MP4 is written beside the `.part` as `<name>.mp4.part`. The
+/// download's own `.part` is deleted only once that copy is whole and
+/// checked, and the copy takes its final name last: whatever is on disk
+/// when the app stops says how far it got ([whole]).
 final class FileDownloadFinisher implements DownloadFinisher {
   new({
     required this._db,
     required this._probe,
     required this._pictureFile,
     required this._log,
+    this._remux,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -41,29 +51,63 @@ final class FileDownloadFinisher implements DownloadFinisher {
   /// null when there is none.
   final Future<String?> Function(String url) _pictureFile;
   final AppLog _log;
+
+  /// Null keeps every download in the container it came in.
+  final DownloadRemux? _remux;
   final DateTime Function() _now;
+
+  /// The `.part` of the MP4 [task]'s file is remade as; null when the
+  /// provider's file is named `.mp4` already.
+  static File? _copyOf(DownloadTask task) {
+    final mp4 = mp4PathFor(task.targetPath);
+    return mp4 == task.targetPath ? null : File('$mp4.part');
+  }
+
+  /// What an earlier try left under a name that says it is whole: the
+  /// file itself, the MP4 it was remade as, or that MP4 still to be
+  /// renamed. Null while the `.part` is there (it is the truth, docs/09).
+  static File? _left(DownloadTask task) {
+    if (File('${task.targetPath}.part').existsSync()) return null;
+    final file = File(task.targetPath);
+    if (file.existsSync()) return file;
+    final copy = _copyOf(task);
+    if (copy == null) return null;
+    if (copy.existsSync()) return copy;
+    final mp4 = File(mp4PathFor(task.targetPath));
+    return mp4.existsSync() ? mp4 : null;
+  }
+
+  @override
+  Future<bool> whole(DownloadTask task) async {
+    try {
+      return _left(task) != null;
+    } on FileSystemException {
+      return false;
+    }
+  }
 
   @override
   Future<DownloadFinish> finish(DownloadTask task) async {
     final part = File('${task.targetPath}.part');
-    var file = File(task.targetPath);
-    final int size;
-    // After a crash between the rename and the database: already final.
-    final renamed = !part.existsSync() && file.existsSync();
+    final copy = _copyOf(task);
+    // After a stop between the last steps: whole already, under the name
+    // it has.
+    final File? left;
+    final int partSize;
     try {
-      size = renamed ? file.lengthSync() : part.lengthSync();
+      left = _left(task);
+      partSize = (left ?? part).lengthSync();
     } on FileSystemException catch (error) {
       return DownloadNotFinished(redact('No file to finish: ${error.message}'));
     }
-    final checked = renamed ? file : part;
     final total = task.totalBytes;
-    if (total != null && size != total) {
+    if (left == null && total != null && partSize != total) {
       return _damaged(
         task,
-        'It has $size bytes of the $total the provider said.',
+        'It has $partSize bytes of the $total the provider said.',
       );
     }
-    final probed = await _probe.probe(checked.path);
+    final probed = await _probe.probe((left ?? part).path);
     final Duration? duration;
     switch (probed) {
       case StreamProbed(:final facts)
@@ -83,12 +127,40 @@ final class FileDownloadFinisher implements DownloadFinisher {
         return _damaged(task, 'ffprobe could not read it ($why).');
     }
 
-    if (!renamed) {
+    // docs/09 "Format": as MP4 when that loses nothing.
+    var ready = left ?? part;
+    var name = task.targetPath;
+    LibraryMedia? media;
+    if (left != null) {
+      if (left.path != task.targetPath) name = mp4PathFor(task.targetPath);
+    } else if (_remux != null && copy != null) {
+      switch (await _remux.toMp4(part.path, copy.path)) {
+        case RemuxDone(media: final made):
+          try {
+            part.deleteSync();
+          } on FileSystemException catch (error) {
+            return DownloadNotFinished(
+              redact('Could not replace it with its MP4: ${error.message}'),
+            );
+          }
+          ready = copy;
+          name = mp4PathFor(task.targetPath);
+          media = made;
+          _log.info(_tag, 'Download ${task.id} is kept as MP4');
+        case RemuxKept(:final why, media: final read):
+          media = read;
+          _log.info(_tag, 'Download ${task.id} stays as it came: $why');
+        case RemuxStopped():
+          return const DownloadFinishStopped();
+      }
+    }
+
+    var file = ready;
+    if (ready.path.endsWith('.part')) {
       try {
-        file = File(
-          freeName(task.targetPath, (path) => File(path).existsSync()),
+        file = await ready.rename(
+          freeName(name, (path) => File(path).existsSync()),
         );
-        file = await part.rename(file.path);
       } on FileSystemException catch (error) {
         return DownloadNotFinished(
           redact('Could not rename it: ${error.message}'),
@@ -97,15 +169,17 @@ final class FileDownloadFinisher implements DownloadFinisher {
     }
 
     try {
+      final size = file.lengthSync();
       final poster = await _poster(task, file);
       final itemId = await _addToLibrary(
         task,
         file,
         size: size,
-        duration: duration,
+        duration: media?.duration ?? duration,
+        media: media,
         poster: poster,
       );
-      return DownloadFinished(itemId, bytes: size);
+      return DownloadFinished(itemId, bytes: size, path: file.path);
     } on Object catch (error) {
       _log.warning(
         _tag,
@@ -120,23 +194,30 @@ final class FileDownloadFinisher implements DownloadFinisher {
 
   DownloadDamaged _damaged(DownloadTask task, String detail) {
     _log.warning(_tag, 'Download ${task.id} is damaged: $detail');
-    try {
-      final part = File('${task.targetPath}.part');
-      if (part.existsSync()) part.deleteSync();
-    } on FileSystemException catch (error) {
-      _log.warning(_tag, 'Could not delete a damaged .part', error: error);
-    }
+    _deleteParts(task);
     return DownloadDamaged(detail);
+  }
+
+  /// The `.part`, and the MP4 being made from it.
+  void _deleteParts(DownloadTask task) {
+    for (final file in [File('${task.targetPath}.part'), ?_copyOf(task)]) {
+      try {
+        if (file.existsSync()) file.deleteSync();
+      } on FileSystemException catch (error) {
+        _log.warning(_tag, 'Could not delete a .part', error: error);
+      }
+    }
   }
 
   @override
   Future<void> discard(DownloadTask task) async {
-    try {
-      final part = File('${task.targetPath}.part');
-      if (part.existsSync()) await part.delete();
-    } on FileSystemException catch (error) {
-      _log.warning(_tag, 'Could not delete a .part', error: error);
-    }
+    if (_copyOf(task) case final copy?) await _remux?.stop(copy.path);
+    _deleteParts(task);
+  }
+
+  @override
+  Future<void> close() async {
+    await _remux?.close();
   }
 
   @override
@@ -215,6 +296,7 @@ final class FileDownloadFinisher implements DownloadFinisher {
     File file, {
     required int size,
     required Duration? duration,
+    required LibraryMedia? media,
     required String? poster,
   }) async {
     final folderId = await _folderOf(task, file);
@@ -241,6 +323,8 @@ final class FileDownloadFinisher implements DownloadFinisher {
       season: Value(task.season),
       episode: Value(task.episode),
       durationMs: Value(duration?.inMilliseconds),
+      // Read already: the quality line shows without waiting for a scan.
+      probeJson: Value(media == null ? null : jsonEncode(media.toJson())),
       artworkPath: Value(poster),
       detailsJson: Value(details == null ? null : jsonEncode(details)),
       providerSourceId: Value(task.sourceId),

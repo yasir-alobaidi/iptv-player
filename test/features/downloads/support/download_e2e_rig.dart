@@ -16,6 +16,7 @@ import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/downloads/db_download_store.dart';
+import 'package:iptv_player/data/downloads/download_remux.dart';
 import 'package:iptv_player/data/downloads/file_download_finisher.dart';
 import 'package:iptv_player/data/downloads/http_download.dart';
 import 'package:iptv_player/data/downloads/isolate_download_runner.dart';
@@ -139,6 +140,12 @@ final class DownloadE2E {
         ),
         pictureFile: (_) async => poster.path,
         log: log,
+        remux: FfmpegDownloadRemux(
+          supervisor: supervisor,
+          ffmpeg: binaries.ffmpeg,
+          ffprobe: binaries.ffprobe,
+          log: log,
+        ),
       ),
       connections: connections,
       sleep: const NoSleepInhibitor(),
@@ -194,16 +201,19 @@ final class DownloadE2E {
       .then((t) => t!)
       .timeout(within);
 
-  static DownloadRequest movie(String key, {String title = 'Copper Hollow'}) =>
-      DownloadRequest(
-        sourceId: 'src',
-        type: VodType.movie,
-        remoteKey: key,
-        title: title,
-        year: 2025,
-        artworkUrl: 'http://art.test/poster.jpg',
-        extension: 'mp4',
-      );
+  static DownloadRequest movie(
+    String key, {
+    String title = 'Copper Hollow',
+    String extension = 'mp4',
+  }) => DownloadRequest(
+    sourceId: 'src',
+    type: VodType.movie,
+    remoteKey: key,
+    title: title,
+    year: 2025,
+    artworkUrl: 'http://art.test/poster.jpg',
+    extension: extension,
+  );
 }
 
 /// The fake panel's movies as download sources; [queries] adds faults

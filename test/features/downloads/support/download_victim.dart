@@ -88,7 +88,13 @@ final class _NeverFinished implements DownloadFinisher {
       const DownloadNotFinished('the victim never finishes');
 
   @override
+  Future<bool> whole(DownloadTask task) async => false;
+
+  @override
   Future<void> discard(DownloadTask task) async {}
+
+  @override
+  Future<void> close() async {}
 
   @override
   Future<int> partSize(DownloadTask task) async {

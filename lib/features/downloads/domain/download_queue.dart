@@ -132,6 +132,10 @@ final class DownloadQueue implements DownloadService {
   bool _noSpace = false;
   bool _started = false;
   bool _closed = false;
+
+  /// The finishes at work, and those of them canceled meanwhile.
+  final _finishing = <int, Future<DownloadFinish>>{};
+  final _unwanted = <int>{};
   bool _sleepHeld = false;
   StreamSubscription<DownloadNews>? _news;
   StreamSubscription<void>? _connectionChanges;
@@ -166,9 +170,14 @@ final class DownloadQueue implements DownloadService {
     _news = _runner.news.listen(_onNews);
     _connectionChanges = _connections.changes.listen((_) => _onConnections());
     final resume = _settings().resumeOnLaunch;
+    final whole = <DownloadTask>[];
     for (final stored in await _store.all()) {
       var task = stored;
-      if (!task.state.isFinished) {
+      if (!task.state.isFinished && await _finisher.whole(task)) {
+        // The app stopped between the last steps of its finish: every
+        // byte is here, and no connection is needed.
+        whole.add(task);
+      } else if (!task.state.isFinished) {
         final size = await _finisher.partSize(task);
         final interrupted =
             task.state != DownloadTaskState.paused &&
@@ -185,6 +194,11 @@ final class DownloadQueue implements DownloadService {
     }
     _onConnections();
     _emit();
+    for (final task in whole) {
+      unawaited(
+        _finish(task, bytes: task.downloadedBytes, total: task.totalBytes),
+      );
+    }
     _pump();
   }
 
@@ -205,6 +219,12 @@ final class DownloadQueue implements DownloadService {
         .timeout(const Duration(seconds: 5), onTimeout: () => const []);
     unawaited(_news?.cancel());
     unawaited(_connectionChanges?.cancel());
+    // A finish still at work (the MP4 being made) stops where it is; the
+    // next launch does it again.
+    await _finisher.close().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {},
+    );
     await _runner.close();
     for (final source in {for (final r in _runs.values) r.sourceId}) {
       _connections.set(source, StreamHolder.download, 0);
@@ -303,7 +323,20 @@ final class DownloadQueue implements DownloadService {
       await _stopRun(run, _Stop.cancel);
       return;
     }
+    if (await _stopFinish(task)) return;
     await _drop(task, discard: true);
+  }
+
+  /// A cancel or a removal while [task]'s file is being checked or remade
+  /// as MP4: that work stops, and the download goes once it has. False
+  /// when nothing was at work on it.
+  Future<bool> _stopFinish(DownloadTask task) async {
+    final finishing = _finishing[task.id];
+    if (finishing == null) return false;
+    _unwanted.add(task.id);
+    await _finisher.discard(task);
+    await finishing;
+    return true;
   }
 
   @override
@@ -314,6 +347,7 @@ final class DownloadQueue implements DownloadService {
       await _stopRun(run, _Stop.removal);
       return;
     }
+    if (await _stopFinish(task)) return;
     await _drop(task, discard: task.state != DownloadTaskState.completed);
   }
 
@@ -579,13 +613,25 @@ final class DownloadQueue implements DownloadService {
       ),
       save: true,
     );
-    final finish = await _finisher.finish(task);
+    final finishing = _finisher.finish(task);
+    _finishing[task.id] = finishing;
+    final finish = await finishing;
+    unawaited(_finishing.remove(task.id));
+    // Quitting: as it was, and the next launch finishes it.
+    if (_closed) return;
     task = _tasks[task.id] ?? task;
+    if (_unwanted.remove(task.id)) {
+      // Canceled meanwhile. What already reached the library stays there.
+      await _drop(task, discard: finish is! DownloadFinished);
+      return;
+    }
     switch (finish) {
-      case DownloadFinished(:final libraryItemId, :final bytes):
+      case DownloadFinished(:final libraryItemId, :final bytes, :final path):
         task = _update(
           task.copyWith(
             state: DownloadTaskState.completed,
+            // Its name as it ended: numbered, or remade as MP4.
+            targetPath: path ?? task.targetPath,
             downloadedBytes: bytes,
             totalBytes: bytes,
             libraryItemId: libraryItemId,
@@ -623,6 +669,9 @@ final class DownloadQueue implements DownloadService {
           ),
           save: true,
         );
+      case DownloadFinishStopped():
+        // Nobody asked for the stop: its turn comes again.
+        _update(task.copyWith(state: DownloadTaskState.queued), save: true);
     }
     _pump();
   }
