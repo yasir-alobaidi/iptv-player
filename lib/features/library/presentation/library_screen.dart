@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:iptv_player/features/downloads/presentation/downloads_panel.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_cards.dart';
 import 'package:iptv_player/features/library/presentation/library_folders.dart';
@@ -183,6 +186,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final labels = {for (final folder in folders) folder.id: folder.label};
     final scan = ref.watch(libraryScanStateProvider).value?.progress;
     final firstRun = everything.value?.count == 0;
+    // What is still on its way: the Downloads tab's count, lit while any
+    // is, and what Pause all and Resume all act on.
+    final downloading = downloadSections(
+      ref.watch(downloadTasksProvider).value ?? const [],
+      ref.watch(appClockProvider)(),
+    ).inProgress;
+    final allPaused =
+        downloading.isNotEmpty &&
+        downloading.every((task) => task.state == DownloadTaskState.paused);
+    // Movies, Series and Videos list the library; the other two tabs have
+    // their own lists.
+    final listsLibrary =
+        tab != LibraryTab.folders && tab != LibraryTab.downloads;
 
     return DropTarget(
       onDragEntered: (_) => setState(() => _dropping = true),
@@ -220,11 +236,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         (LibraryTab.movies, movies.value?.count),
                         (LibraryTab.series, shows.value?.length),
                         (LibraryTab.videos, videos.value?.count),
+                        (
+                          LibraryTab.downloads,
+                          downloading.isEmpty ? null : downloading.length,
+                        ),
                         (LibraryTab.folders, null),
                       ]) ...[
                         CountTab(
                           label: libraryTabLabel(each),
                           count: count,
+                          highlightCount: each == LibraryTab.downloads,
                           selected: tab == each,
                           onPressed: () => ref
                               .read(libraryViewProvider.notifier)
@@ -233,27 +254,47 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         SizedBox(width: spacing.s16),
                       ],
                       const Spacer(),
-                      AppButton(
-                        label: 'Add folder',
-                        icon: AppIcons.plus,
-                        variant: AppButtonVariant.secondary,
-                        size: AppButtonSize.s,
-                        onPressed: () => unawaited(addLibraryFolder(ref)),
-                      ),
+                      if (tab != LibraryTab.downloads)
+                        AppButton(
+                          label: 'Add folder',
+                          icon: AppIcons.plus,
+                          variant: AppButtonVariant.secondary,
+                          size: AppButtonSize.s,
+                          onPressed: () => unawaited(addLibraryFolder(ref)),
+                        )
+                      else if (downloading.isNotEmpty)
+                        AppButton(
+                          label: allPaused ? 'Resume all' : 'Pause all',
+                          icon: allPaused ? AppIcons.play : AppIcons.pause,
+                          variant: AppButtonVariant.secondary,
+                          size: AppButtonSize.s,
+                          onPressed: () {
+                            final downloads = ref.read(downloadServiceProvider);
+                            unawaited(
+                              allPaused
+                                  ? downloads.resumeAll()
+                                  : downloads.pauseAll(),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
                 SizedBox(height: spacing.s16),
-                _Header(
-                  line: _countLine(tab, origin),
-                  scanning: scan == null ? null : libraryScanLine(scan.found),
-                  origin: chips && !firstRun ? origin : null,
-                  onOrigin: (origin) =>
-                      ref.read(libraryViewProvider.notifier).showOrigin(origin),
-                ),
-                SizedBox(height: spacing.s16),
+                // Downloads go straight to their sections (canvas).
+                if (tab != LibraryTab.downloads) ...[
+                  _Header(
+                    line: _countLine(tab, origin),
+                    scanning: scan == null ? null : libraryScanLine(scan.found),
+                    origin: chips && !firstRun ? origin : null,
+                    onOrigin: (origin) => ref
+                        .read(libraryViewProvider.notifier)
+                        .showOrigin(origin),
+                  ),
+                  SizedBox(height: spacing.s16),
+                ],
                 Expanded(
-                  child: firstRun && tab != LibraryTab.folders
+                  child: firstRun && listsLibrary
                       ? EmptyState(
                           icon: AppIcons.library,
                           title: libraryFirstRunTitle,
@@ -265,6 +306,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           LibraryTab.movies ||
                           LibraryTab.videos => _items(tab, origin, labels),
                           LibraryTab.series => _shows(origin, labels),
+                          LibraryTab.downloads => const DownloadsPanel(),
                           LibraryTab.folders => const SingleChildScrollView(
                             child: LibraryFolderList(),
                           ),
@@ -297,6 +339,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             bytes: shows.fold(0, (sum, show) => sum + show.bytes),
           ),
         );
+      case LibraryTab.downloads:
+        return null;
       case LibraryTab.folders:
         final folders = ref.watch(libraryFoldersProvider).value;
         final totals = ref.watch(libraryFolderTotalsProvider).value;

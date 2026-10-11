@@ -131,3 +131,30 @@ Stream<List<DownloadTask>> downloadTasks(Ref ref) =>
 @Riverpod(keepAlive: true)
 Stream<DownloadNotice> downloadNotices(Ref ref) =>
     ref.watch(downloadQueueProvider).notices;
+
+/// The drive the download folder is on: what is free on it and its size,
+/// read again whenever the downloads move (the Downloads tab's meter).
+@riverpod
+Future<({int free, int total})?> downloadDiskSpace(Ref ref) async {
+  ref.watch(downloadTasksProvider);
+  return diskSpace(await ref.watch(downloadFolderProvider.future));
+}
+
+/// Changes where new downloads go (docs/09: what was downloaded stays
+/// where it is, and stays in the Library): the choice is stored, and the
+/// folder becomes the library's download folder.
+typedef DownloadFolderChange = Future<Result<void>> Function(String path);
+
+@Riverpod(keepAlive: true)
+DownloadFolderChange changeDownloadFolder(Ref ref) => (path) async {
+  final settings = ref.read(downloadSettingsControllerProvider);
+  final stored = await ref
+      .read(downloadSettingsControllerProvider.notifier)
+      .update(settings.copyWith(folder: path));
+  if (stored case Err()) return stored;
+  return await registerDownloadFolder(
+    ref.read(appDatabaseProvider).libraryDao,
+    path,
+    now: ref.read(appClockProvider)().toUtc(),
+  );
+};

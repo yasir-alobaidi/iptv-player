@@ -452,16 +452,17 @@ void main() {
       await tester.pump();
       walked.add(focusedLabel());
     }
-    expect(walked.take(6), [
+    expect(walked.take(7), [
       'Movies, 4',
       'Series, 2',
       'Videos, 2',
+      'Downloads',
       'Folders',
       'Add folder',
       'All',
     ]);
     final grid = walked.indexWhere((label) => label == 'Coldwater (2020)');
-    expect(grid, greaterThan(5), reason: '$walked');
+    expect(grid, greaterThan(6), reason: '$walked');
 
     // Back in the grid by Shift+Tab from past it; the arrows move by card.
     tester

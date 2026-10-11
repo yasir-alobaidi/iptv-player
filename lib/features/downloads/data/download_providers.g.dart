@@ -390,3 +390,100 @@ final class DownloadNoticesProvider
 }
 
 String _$downloadNoticesHash() => r'fc0a0358dfa1b2bb927774dda5598cc1323778e0';
+
+/// The drive the download folder is on: what is free on it and its size,
+/// read again whenever the downloads move (the Downloads tab's meter).
+
+@ProviderFor(downloadDiskSpace)
+final downloadDiskSpaceProvider = DownloadDiskSpaceProvider._();
+
+/// The drive the download folder is on: what is free on it and its size,
+/// read again whenever the downloads move (the Downloads tab's meter).
+
+final class DownloadDiskSpaceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<({int free, int total})?>,
+          ({int free, int total})?,
+          FutureOr<({int free, int total})?>
+        >
+    with
+        $FutureModifier<({int free, int total})?>,
+        $FutureProvider<({int free, int total})?> {
+  /// The drive the download folder is on: what is free on it and its size,
+  /// read again whenever the downloads move (the Downloads tab's meter).
+  DownloadDiskSpaceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'downloadDiskSpaceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$downloadDiskSpaceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<({int free, int total})?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<({int free, int total})?> create(Ref ref) {
+    return downloadDiskSpace(ref);
+  }
+}
+
+String _$downloadDiskSpaceHash() => r'cd03b8466541cfa6850f1bdbf1fbe7f06189954c';
+
+@ProviderFor(changeDownloadFolder)
+final changeDownloadFolderProvider = ChangeDownloadFolderProvider._();
+
+final class ChangeDownloadFolderProvider
+    extends
+        $FunctionalProvider<
+          DownloadFolderChange,
+          DownloadFolderChange,
+          DownloadFolderChange
+        >
+    with $Provider<DownloadFolderChange> {
+  ChangeDownloadFolderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'changeDownloadFolderProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$changeDownloadFolderHash();
+
+  @$internal
+  @override
+  $ProviderElement<DownloadFolderChange> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DownloadFolderChange create(Ref ref) {
+    return changeDownloadFolder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DownloadFolderChange value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DownloadFolderChange>(value),
+    );
+  }
+}
+
+String _$changeDownloadFolderHash() =>
+    r'8dc07ba69b75ab395e9271e38df95554d18528e3';

@@ -11,7 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'library_state.g.dart';
 
 /// The Library's tabs (canvas `Library`).
-enum LibraryTab { movies, series, videos, folders }
+enum LibraryTab { movies, series, videos, downloads, folders }
 
 /// The tab and the chip the Library shows: kept while the app runs, so
 /// coming back finds them, and other screens can open a tab.

@@ -9,12 +9,17 @@ import 'package:win32/win32.dart';
 /// or folder, which need not exist yet: its nearest existing parent is
 /// asked); null when the system won't say. docs/09: a download checks it
 /// before it starts and every 256 MB.
-int? freeBytes(String path) {
+int? freeBytes(String path) => diskSpace(path)?.free;
+
+/// The drive holding [path]: what the user can still write on it, and its
+/// size (the Downloads tab's "118 GB free of 512 GB"); null when the
+/// system won't say.
+({int free, int total})? diskSpace(String path) {
   final existing = _nearestExisting(path);
   if (existing == null) return null;
   try {
-    if (Platform.isWindows) return _windowsFree(existing);
-    if (Platform.isLinux) return _linuxFree(existing);
+    if (Platform.isWindows) return _windowsSpace(existing);
+    if (Platform.isLinux) return _linuxSpace(existing);
   } on Object {
     // A call the system refused: unknown, not zero.
   }
@@ -39,18 +44,20 @@ typedef _Statvfs = int Function(Pointer<Utf8>, Pointer<Uint8>);
 final _Statvfs _statvfs = DynamicLibrary.process()
     .lookupFunction<_StatvfsNative, _Statvfs>('statvfs');
 
-/// `statvfs`: `f_bavail` (blocks free to an unprivileged user) ×
-/// `f_frsize`. glibc's struct on 64-bit Linux is eleven 8-byte fields
-/// then six ints; the two read here are the 2nd and the 5th.
-int? _linuxFree(String path) {
+/// `statvfs`: `f_bavail` (blocks free to an unprivileged user) and
+/// `f_blocks`, × `f_frsize`. glibc's struct on 64-bit Linux is eleven
+/// 8-byte fields then six ints; the three read here are the 2nd, the 3rd
+/// and the 5th.
+({int free, int total})? _linuxSpace(String path) {
   final name = path.toNativeUtf8();
   final buffer = calloc<Uint8>(256);
   try {
     if (_statvfs(name, buffer) != 0) return null;
     final fields = buffer.cast<Uint64>();
     final fragment = fields[1];
+    final blocks = fields[2];
     final available = fields[4];
-    return fragment * available;
+    return (free: fragment * available, total: fragment * blocks);
   } finally {
     calloc
       ..free(name)
@@ -58,15 +65,17 @@ int? _linuxFree(String path) {
   }
 }
 
-int? _windowsFree(String path) {
+({int free, int total})? _windowsSpace(String path) {
   final name = path.toNativeUtf16();
   final available = calloc<Uint64>();
+  final total = calloc<Uint64>();
   try {
-    final answered = GetDiskFreeSpaceEx(PCWSTR(name), available, null, null);
-    return answered.value ? available.value : null;
+    final answered = GetDiskFreeSpaceEx(PCWSTR(name), available, total, null);
+    return answered.value ? (free: available.value, total: total.value) : null;
   } finally {
     calloc
       ..free(name)
-      ..free(available);
+      ..free(available)
+      ..free(total);
   }
 }

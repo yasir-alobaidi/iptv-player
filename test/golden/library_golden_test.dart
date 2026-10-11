@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/design/components.dart';
@@ -211,6 +212,81 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/library_folders.png'),
+      );
+    });
+
+    testWidgets('downloads', (tester) async {
+      await open(
+        tester,
+        before: (ui) async {
+          await _canvas(ui);
+          ui.queue.set([
+            download(
+              1,
+              'Copper Hollow',
+              year: 2025,
+              state: DownloadTaskState.downloading,
+              downloaded: (1.03 * gb).round(),
+              total: (2.1 * gb).round(),
+              speed: 8.4 * 1024 * 1024,
+            ),
+            download(
+              2,
+              'Northbound',
+              type: VodType.episode,
+              show: 'Glass Tide',
+              season: 2,
+              episode: 5,
+              total: (0.9 * gb).round(),
+            ),
+            download(
+              3,
+              'Tidelines',
+              type: VodType.episode,
+              show: 'Harbor Nine',
+              season: 1,
+              episode: 2,
+              state: DownloadTaskState.failed,
+              problem: DownloadProblem.notFound,
+            ),
+            download(
+              4,
+              'Northwind Hotel',
+              state: DownloadTaskState.completed,
+              total: (3.4 * gb).round(),
+              completedAt: goldenNow().subtract(const Duration(minutes: 46)),
+            ),
+            download(
+              5,
+              'Undertow',
+              type: VodType.episode,
+              show: 'Glass Tide',
+              season: 2,
+              episode: 4,
+              state: DownloadTaskState.completed,
+              total: (1.1 * gb).round(),
+              completedAt: goldenNow().subtract(const Duration(hours: 2)),
+            ),
+          ]);
+        },
+      );
+      await tester.tap(find.widgetWithText(CountTab, 'Downloads'));
+      await settle(tester);
+      tester
+          .widget<FocusableSurface>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is FocusableSurface &&
+                  (widget.semanticLabel?.startsWith('Copper Hollow') ?? false),
+            ),
+          )
+          .focusNode!
+          .requestFocus();
+      await settle(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/library_downloads.png'),
       );
     });
 

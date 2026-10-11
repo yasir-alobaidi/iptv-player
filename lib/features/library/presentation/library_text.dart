@@ -36,6 +36,7 @@ String libraryCountLine(LibraryTab tab, LibraryCount count) {
     LibraryTab.movies => _plural(count.count, 'movie'),
     LibraryTab.series => _plural(count.count, 'show'),
     LibraryTab.videos => _plural(count.count, 'video'),
+    LibraryTab.downloads => _plural(count.count, 'download'),
     LibraryTab.folders => _plural(count.count, 'folder'),
   };
   return '$what · ${librarySize(count.bytes)} on this computer';
@@ -46,6 +47,7 @@ String libraryTabLabel(LibraryTab tab) => switch (tab) {
   LibraryTab.movies => 'Movies',
   LibraryTab.series => 'Series',
   LibraryTab.videos => 'Videos',
+  LibraryTab.downloads => 'Downloads',
   LibraryTab.folders => 'Folders',
 };
 

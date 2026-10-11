@@ -14,6 +14,7 @@ import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/theme.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:logger/logger.dart';
@@ -106,6 +107,7 @@ final List<Override> emptyLibraryOverrides = [
   libraryScanStateProvider.overrideWith(
     (ref) => Stream.value(const LibraryScanState()),
   ),
+  downloadTasksProvider.overrideWith((ref) => Stream.value(const [])),
 ];
 
 final class _EmptyLibrary implements LibraryRepository {
