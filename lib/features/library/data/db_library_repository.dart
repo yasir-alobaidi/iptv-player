@@ -181,6 +181,10 @@ final class DbLibraryRepository implements LibraryRepository {
     return row == null ? null : await _withFolder(row);
   }
 
+  @override
+  Stream<Set<String>> watchDownloadedKeys(VodType type, String sourceId) =>
+      _db.libraryDao.watchTitleKeys(sourceId, type);
+
   Future<LibraryItem> _withFolder(LibraryItemRow row) async =>
       libraryItemFromRow(row, await _db.libraryDao.folderById(row.folderId));
 

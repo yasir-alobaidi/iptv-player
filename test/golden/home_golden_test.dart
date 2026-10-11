@@ -28,7 +28,12 @@ void main() {
         await tester.runAsync(() async {
           await home.seed();
           await home.vod.seedMany(12);
-          if (history) await home.seedHistory();
+          if (history) {
+            await home.seedHistory();
+            // On this computer (canvas): DOWNLOADED on its Continue
+            // card, the mark on its poster.
+            await home.vod.downloadMovie('501', 'The Quiet Harbor');
+          }
         });
         await pumpApp(
           tester,

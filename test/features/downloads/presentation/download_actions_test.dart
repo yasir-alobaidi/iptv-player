@@ -13,6 +13,7 @@ import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/data/library/system_trash.dart';
 import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/design/components.dart';
@@ -22,6 +23,7 @@ import 'package:iptv_player/features/downloads/presentation/download_actions.dar
 import 'package:iptv_player/features/library/data/db_library_repository.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_state.dart';
+import 'package:iptv_player/features/vod/presentation/title_cards.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../app/app_harness.dart';
@@ -282,6 +284,49 @@ void main() {
     await settle(tester);
     expect(ui.queue.calls, ['enqueue 502']);
     expect(find.text('Downloading Copper Hollow'), findsOneWidget);
+  });
+
+  testWidgets('a movie on this computer has the Downloaded mark on its '
+      'poster; a favorite keeps its star beside it', (tester) async {
+    await open(
+      tester,
+      '/movies',
+      before: (ui) async {
+        await ui.add(
+          ui.downloads,
+          'The Quiet Harbor.mkv',
+          'The Quiet Harbor',
+          provider: '501',
+        );
+        await ui.add(
+          ui.downloads,
+          'Ember Road.mkv',
+          'Ember Road',
+          provider: '504',
+        );
+        await ui.db.favoritesDao.add(
+          UserItemType.movie,
+          'src-1',
+          '504',
+          ui.now,
+        );
+      },
+    );
+
+    Finder on(String title, Type mark) => find.descendant(
+      of: find.widgetWithText(PosterCard, title),
+      matching: find.byType(mark),
+    );
+    expect(on('The Quiet Harbor', DownloadedMark), findsOneWidget);
+    expect(on('The Quiet Harbor', FavoriteMark), findsNothing);
+    expect(on('Copper Hollow', DownloadedMark), findsNothing);
+    expect(on('Ember Road', DownloadedMark), findsOneWidget);
+    expect(on('Ember Road', FavoriteMark), findsOneWidget);
+    // The Downloaded mark sits in the corner, the star to its left.
+    expect(
+      tester.getTopRight(on('Ember Road', DownloadedMark)).dx,
+      greaterThan(tester.getTopRight(on('Ember Road', FavoriteMark)).dx),
+    );
   });
 
   testWidgets('the top bar: how many are on their way and how far, and a '

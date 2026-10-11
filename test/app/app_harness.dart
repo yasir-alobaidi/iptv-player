@@ -126,6 +126,10 @@ final class _EmptyLibrary implements LibraryRepository {
   Stream<List<LibraryFolder>> watchFolders() => Stream.value(const []);
 
   @override
+  Stream<Set<String>> watchDownloadedKeys(VodType type, String sourceId) =>
+      Stream.value(const {});
+
+  @override
   Stream<Map<int, LibraryFolderTotals>> watchFolderTotals() =>
       Stream.value(const {});
 

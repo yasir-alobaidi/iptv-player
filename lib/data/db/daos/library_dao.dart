@@ -148,6 +148,23 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
             ..limit(1))
           .getSingleOrNull();
 
+  /// The keys of [sourceId]'s titles of [type] that have a downloaded
+  /// file, kept current.
+  Stream<Set<String>> watchTitleKeys(String sourceId, VodType type) =>
+      (selectOnly(libraryItems, distinct: true)
+            ..addColumns([libraryItems.providerRemoteKey])
+            ..where(
+              libraryItems.providerSourceId.equals(sourceId) &
+                  libraryItems.providerItemType.equalsValue(type) &
+                  libraryItems.providerRemoteKey.isNotNull(),
+            ))
+          .watch()
+          .map(
+            (rows) => {
+              for (final row in rows) ?row.read(libraryItems.providerRemoteKey),
+            },
+          );
+
   /// The items of [kind] (every kind when null) by title, episodes by
   /// show, season and episode; hidden ones only when [hidden]; only
   /// downloads or only the user's files when [downloaded] says.

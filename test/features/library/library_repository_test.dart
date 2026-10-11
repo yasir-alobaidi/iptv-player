@@ -383,6 +383,41 @@ void main() {
         );
       });
 
+      test("a source's downloaded titles by key, kept current: one read "
+          'for every Downloaded mark', () async {
+        final seen = <Set<String>>[];
+        final watching = library
+            .watchDownloadedKeys(VodType.movie, 'src')
+            .listen(seen.add);
+        addTearDown(watching.cancel);
+        await pumpEventQueue();
+        expect(seen.last, {'100000'});
+        expect(
+          await library.watchDownloadedKeys(VodType.episode, 'src').first,
+          {'724', '725'},
+        );
+        expect(
+          await library.watchDownloadedKeys(VodType.movie, 'other').first,
+          isEmpty,
+        );
+
+        // A second movie comes down; a second file of the first changes
+        // nothing; a hidden download is still on this computer.
+        await add(dl, 'Ember Road', remoteKey: '100001', hidden: true);
+        await add(dl, 'Copper Hollow (copy)', remoteKey: '100000');
+        await pumpEventQueue();
+        expect(seen.last, {'100000', '100001'});
+
+        final copper = (await db.libraryDao.itemForTitle(
+          'src',
+          VodType.movie,
+          '100001',
+        ))!;
+        await db.libraryDao.removeItem(copper.id);
+        await pumpEventQueue();
+        expect(seen.last, {'100000'});
+      });
+
       test("every folder's videos and size, hidden ones too", () async {
         final totals = await library.watchFolderTotals().first;
         expect(totals[hdd], (items: 7, bytes: 161));

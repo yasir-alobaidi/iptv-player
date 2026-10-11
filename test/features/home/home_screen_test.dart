@@ -268,6 +268,73 @@ void main() {
       expect(_focused(), 'Play');
     });
 
+    testWidgets('D on a poster downloads its movie; on a Continue card, '
+        'what it continues', (tester) async {
+      final (home, _) = await open(
+        tester,
+        history: true,
+        before: (home) async {
+          final series = (await home.db.seriesDao.byRemoteKey('src-1', '77'))!;
+          await addEpisodes(home.db, series.id, [(2, 4)]);
+          await home.db.watchHistoryDao.touch(
+            UserItemType.episode,
+            'src-1',
+            'e2-4',
+            home.now,
+            positionMs: 19 * 60000,
+            durationMs: 50 * 60000,
+            completed: false,
+            seriesKey: '77',
+          );
+        },
+      );
+
+      _node(tester, 'Copper Hollow').requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+      await settle(tester);
+      expect(home.vod.queue.calls, ['enqueue 502']);
+      expect(find.text('Downloading Copper Hollow'), findsOneWidget);
+
+      // The episode to continue, on its Continue card.
+      _node(tester, 'Glass Tide').requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+      await settle(tester);
+      expect(home.vod.queue.calls, ['enqueue 502', 'enqueue e2-4']);
+
+      // A channel has nothing to download: D does nothing there.
+      _node(tester, 'Arena Sports 1').requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+      await settle(tester);
+      expect(home.vod.queue.calls, hasLength(2));
+    });
+
+    testWidgets('what is on this computer says so: DOWNLOADED on its '
+        'Continue card, the mark on its poster', (tester) async {
+      await open(
+        tester,
+        history: true,
+        before: (home) => home.vod.downloadMovie('501', 'The Quiet Harbor'),
+      );
+
+      Finder on(Type card, String title, Type mark) => find.descendant(
+        of: find.widgetWithText(card, title),
+        matching: find.byType(mark),
+      );
+      expect(
+        on(LandscapeCard, 'The Quiet Harbor', DownloadedPill),
+        findsOneWidget,
+      );
+      expect(find.text('DOWNLOADED'), findsOneWidget);
+      expect(
+        on(PosterCard, 'The Quiet Harbor', DownloadedMark),
+        findsOneWidget,
+      );
+      expect(on(PosterCard, 'Copper Hollow', DownloadedMark), findsNothing);
+    });
+
     testWidgets('Enter on a channel plays it full screen; back on Home it '
         'stops', (tester) async {
       final (home, app) = await open(tester, history: true);

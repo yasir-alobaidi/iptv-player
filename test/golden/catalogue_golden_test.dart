@@ -32,6 +32,9 @@ void main() {
             '504',
             vod.now,
           );
+          // On this computer (canvas): one alone, one a favorite too.
+          await vod.downloadMovie('501', 'The Quiet Harbor');
+          await vod.downloadMovie('504', 'Ember Road');
           await vod.db.watchHistoryDao.touch(
             UserItemType.movie,
             'src-1',

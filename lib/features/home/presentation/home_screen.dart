@@ -8,11 +8,13 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/catalogue_kind.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/home/presentation/home_rows.dart';
 import 'package:iptv_player/features/home/presentation/home_state.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
@@ -446,8 +448,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardHeight: posterWidth * 3 / 2 + HomeScreen.captionHeight,
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.movie),
-                  card: (context, i, focus) => _favoriteKey(
-                    () => _toggleMovie(movies[i]),
+                  card: (context, i, focus) => _cardKeys(
+                    favorite: () => _toggleMovie(movies[i]),
+                    download: movieDownloadRequest(movies[i]),
                     MovieCard(
                       movie: movies[i],
                       focus: focus,
@@ -467,8 +470,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardHeight: posterWidth * 3 / 2 + HomeScreen.captionHeight,
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.series),
-                  card: (context, i, focus) => _favoriteKey(
-                    () => _toggleSeries(series[i]),
+                  card: (context, i, focus) => _cardKeys(
+                    favorite: () => _toggleSeries(series[i]),
                     SeriesCard(
                       series: series[i],
                       focus: focus,
@@ -510,6 +513,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _continueCard(ContinueItem item, FocusNode focus, double width) {
+    // What D asks the queue for: a movie or an episode of the provider's;
+    // a file of the library is here already.
+    final download = switch (item) {
+      ContinueMovie(:final movie) => movieDownloadRequest(movie),
+      ContinueEpisode(:final series, :final episode) => episodeDownloadRequest(
+        series,
+        episode,
+      ),
+      ContinueLibraryFile() => null,
+    };
     final (title, image, line, progress, toggle) = switch (item) {
       ContinueMovie(:final movie, :final mark, :final backdropUrl) => (
         movie.name,
@@ -553,14 +566,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         () => ref.read(libraryFavoritesProvider).toggle(item),
       ),
     };
-    return _favoriteKey(
-      toggle,
-      Builder(
-        builder: (anchor) => LandscapeCard(
+    return _cardKeys(
+      favorite: toggle,
+      download: download,
+      Consumer(
+        builder: (anchor, ref, _) => LandscapeCard(
           title: title,
           image: artworkFor(anchor, image, width: width),
           subtitle: line,
           progress: progress,
+          // On this computer (canvas): it plays offline.
+          cornerBadge:
+              switch (item) {
+                ContinueLibraryFile(:final item) => item.isDownload,
+                _ when download != null => isDownloaded(
+                  ref,
+                  download.type,
+                  download.sourceId,
+                  download.remoteKey,
+                ),
+                _ => false,
+              }
+              ? const DownloadedPill()
+              : null,
           width: width,
           focusNode: focus,
           onPressed: () => _resume(item),
@@ -571,15 +599,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// F on a card toggles its favorite.
-Widget _favoriteKey(Future<void> Function() toggle, Widget card) =>
-    CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF): () =>
-            unawaited(toggle()),
-      },
-      child: card,
-    );
+/// A card's keys: F toggles its favorite, and D downloads a movie or an
+/// episode ([download]; docs/05's shortcut table).
+Widget _cardKeys(
+  Widget card, {
+  required Future<void> Function() favorite,
+  DownloadRequest? download,
+}) => Builder(
+  builder: (context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.keyF): () =>
+          unawaited(favorite()),
+      if (download != null)
+        const SingleActivator(LogicalKeyboardKey.keyD): () =>
+            unawaited(startDownloads(context, [download])),
+    },
+    child: card,
+  ),
+);
 
 /// A row of channel tiles, each with what is on now: warmed from the
 /// guide in one lookup, and moved on every minute.
@@ -636,8 +673,8 @@ class _ChannelRowState extends ConsumerState<_ChannelRow> {
       onSeeAll: widget.onSeeAll,
       card: (context, i, focus) {
         final channel = widget.channels[i];
-        return _favoriteKey(
-          () => widget.onToggle(channel),
+        return _cardKeys(
+          favorite: () => widget.onToggle(channel),
           _Tile(
             channel: channel,
             focus: focus,

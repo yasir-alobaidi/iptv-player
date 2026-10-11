@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
@@ -93,6 +94,31 @@ final class VodFakes {
     await addMovie(db, '503', 'Kestrel Point', source: 'src-1', category: kids);
     await addMovie(db, '504', 'Ember Road', source: 'src-1', rating: 6.7);
     await addSeries(db, '77', 'Glass Tide', source: 'src-1', rating: 8.4);
+  }
+
+  /// Puts the movie keyed [key] on this computer: a file of it in the
+  /// library's download folder.
+  Future<void> downloadMovie(String key, String title) async {
+    final folder = await db.libraryDao.makeDownloadFolder(
+      '/home/me/Videos/IPTV Player',
+      label: 'Downloads',
+      at: now,
+    );
+    await db.libraryDao.insertItem(
+      LibraryItemsCompanion.insert(
+        folderId: folder.id,
+        relPath: '$title.mkv',
+        sizeBytes: 1,
+        mtime: 0,
+        quickHash: 'download:$key',
+        kind: LibraryKind.movie,
+        title: title,
+        addedAt: now,
+        providerSourceId: const Value('src-1'),
+        providerItemType: const Value(VodType.movie),
+        providerRemoteKey: Value(key),
+      ),
+    );
   }
 
   /// [count] more movies, uncategorized, named "Movie 001"… and each a

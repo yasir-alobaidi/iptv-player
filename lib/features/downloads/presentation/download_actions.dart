@@ -66,6 +66,27 @@ Stream<LibraryItem?> downloadedFile(
   }
 }
 
+/// The titles of [type] at [sourceId] that are on this computer, by key:
+/// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+/// `Movies`, `Home`, `Search`). One read for a source, kept current.
+@riverpod
+Stream<Set<String>> downloadedKeys(Ref ref, VodType type, String sourceId) =>
+    ref.watch(libraryRepositoryProvider).watchDownloadedKeys(type, sourceId);
+
+/// Whether the provider's title keyed [remoteKey] is on this computer;
+/// false until the library has said.
+bool isDownloaded(
+  WidgetRef ref,
+  VodType type,
+  String sourceId,
+  String remoteKey,
+) =>
+    ref
+        .watch(downloadedKeysProvider(type, sourceId))
+        .value
+        ?.contains(remoteKey) ??
+    false;
+
 /// A title's download, live (the Download button, sketch E).
 @riverpod
 TitleDownload titleDownload(

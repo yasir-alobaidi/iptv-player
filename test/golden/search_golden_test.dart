@@ -4,10 +4,12 @@
 @Tags(['golden'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -135,7 +137,30 @@ void main() {
     final live = LiveTvFakes();
     live.fakes.now = goldenNow();
     addTearDown(() => tester.runAsync(live.db.close));
-    await tester.runAsync(live.seed);
+    await tester.runAsync(() async {
+      await live.seed();
+      // The canvas's movie is on this computer: its row says DOWNLOADED.
+      final folder = await live.db.libraryDao.makeDownloadFolder(
+        '/home/me/Videos/IPTV Player',
+        label: 'Downloads',
+        at: goldenNow(),
+      );
+      await live.db.libraryDao.insertItem(
+        LibraryItemsCompanion.insert(
+          folderId: folder.id,
+          relPath: 'The Quiet Harbor.mkv',
+          sizeBytes: 1,
+          mtime: 0,
+          quickHash: 'quiet-harbor',
+          kind: LibraryKind.movie,
+          title: 'The Quiet Harbor',
+          addedAt: goldenNow(),
+          providerSourceId: const Value('src-1'),
+          providerItemType: const Value(VodType.movie),
+          providerRemoteKey: const Value('m1'),
+        ),
+      );
+    });
     await pumpApp(
       tester,
       size: size,

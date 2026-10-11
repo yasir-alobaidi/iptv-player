@@ -199,6 +199,49 @@ void main() {
     expect(rows(tester), ['The Quiet Harbor']);
   });
 
+  testWidgets('a movie on this computer says DOWNLOADED in its row; one '
+      "that isn't downloads with Ctrl+D or from its menu", (tester) async {
+    await open(tester);
+    await type(tester, 'quiet');
+    expect(rows(tester), ['The Quiet Harbor']);
+    expect(find.byType(DownloadedPill), findsOneWidget);
+    // Nothing left to download: the menu has the favorite alone.
+    await key(tester, LogicalKeyboardKey.contextMenu);
+    await settle(tester);
+    expect(find.text('Add to favorites'), findsOneWidget);
+    expect(find.text('Download'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+
+    await type(tester, 'copper');
+    expect(rows(tester), ['Copper Hollow']);
+    expect(find.byType(DownloadedPill), findsNothing);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await settle(tester);
+    expect(ui.queue.calls, ['enqueue 502']);
+    expect(find.text('Downloading Copper Hollow'), findsOneWidget);
+    expect(find.text('MOVIES'), findsOneWidget, reason: 'search stays open');
+
+    await key(tester, LogicalKeyboardKey.contextMenu);
+    await settle(tester);
+    expect(find.text('Ctrl+D'), findsOneWidget);
+    await tester.tap(find.text('Download'));
+    await settle(tester);
+    await settle(tester);
+    expect(ui.queue.calls, ['enqueue 502', 'enqueue 502']);
+
+    // Ctrl+D on a series does nothing: it downloads by its episodes.
+    await type(tester, 'glass');
+    expect(rows(tester), ['Glass Tide']);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await settle(tester);
+    expect(ui.queue.calls, hasLength(2));
+  });
+
   testWidgets('an episode found by its own title names its show', (
     tester,
   ) async {

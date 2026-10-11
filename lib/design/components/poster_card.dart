@@ -340,6 +340,7 @@ class LandscapeCard extends StatelessWidget {
     this.subtitle,
     this.progress,
     this.badge,
+    this.cornerBadge,
     this.onPressed,
     this.onMenu,
     this.width = 280,
@@ -363,6 +364,9 @@ class LandscapeCard extends StatelessWidget {
   final bool dimmed;
   final double? progress;
   final Widget? badge;
+
+  /// Downloaded, pinned to the top-right (canvas `Home`).
+  final Widget? cornerBadge;
   final VoidCallback? onPressed;
   final VoidCallback? onMenu;
   final double width;
@@ -410,6 +414,12 @@ class LandscapeCard extends StatelessWidget {
                           top: tokens.spacing.s8,
                           left: tokens.spacing.s8,
                           child: badge!,
+                        ),
+                      if (cornerBadge != null)
+                        Positioned(
+                          top: tokens.spacing.s8 + 2,
+                          right: tokens.spacing.s8 + 2,
+                          child: cornerBadge!,
                         ),
                       if (progress != null)
                         Positioned(

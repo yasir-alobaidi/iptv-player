@@ -12,6 +12,7 @@ import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -26,6 +27,7 @@ import 'package:iptv_player/features/search/presentation/search_text.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
 
 /// The Ctrl+K / `/` search overlay (canvas `Search`, Phase 6 step 4): a
 /// scrim over the shell and a 760 px panel — the query, the results in
@@ -34,8 +36,9 @@ import 'package:iptv_player/features/sources/presentation/current_source.dart';
 /// **The keyboard's focus stays in the field** (as in the Match… picker):
 /// ↑/↓ move a cursor through every result, PageUp/PageDown by a screen,
 /// Tab and Shift+Tab to the next or previous group, Enter opens, the Menu
-/// key opens the result's menu, Esc closes. The mouse highlights on hover
-/// and opens on a click.
+/// key opens the result's menu, Esc closes. D is a letter here, so a
+/// movie downloads with Ctrl+D or from its menu. The mouse highlights on
+/// hover and opens on a click.
 class SearchOverlay extends ConsumerStatefulWidget {
   const new({this.onClose, super.key});
 
@@ -101,6 +104,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         return _moveBy(-_pageRows, selectable);
       case LogicalKeyboardKey.tab:
         return _jumpGroup(forward: !shift, selectable: selectable);
+      case LogicalKeyboardKey.keyD
+          when HardwareKeyboard.instance.isControlPressed:
+        return _download(selectable);
       case LogicalKeyboardKey.contextMenu:
         return _menu(selectable);
       case LogicalKeyboardKey.f10 when shift:
@@ -228,6 +234,17 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     }
   }
 
+  /// Ctrl+D on a movie: downloads it, or says it already is (the toast
+  /// shows over search).
+  KeyEventResult _download(List<_Entry> selectable) {
+    final entry = _at(selectable);
+    if (entry case _HitEntry(hit: MovieHit(:final movie))) {
+      unawaited(startDownloads(context, [movieDownloadRequest(movie)]));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   KeyEventResult _menu(List<_Entry> selectable) {
     final entry = _at(selectable);
     final anchor = _cursorRow.currentContext;
@@ -285,6 +302,18 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       SeriesHit(:final series) => series.isFavorite,
       _ => false,
     };
+    // A movie that isn't on this computer yet can be downloaded from
+    // here; a series downloads by its episodes, on its page.
+    final toDownload = switch (hit) {
+      MovieHit(:final movie)
+          when !(ref
+                  .read(downloadedKeysProvider(VodType.movie, movie.sourceId))
+                  .value
+                  ?.contains(movie.remoteKey) ??
+              false) =>
+        movie,
+      _ => null,
+    };
     return showAppMenu(
       anchor,
       items: [
@@ -296,6 +325,15 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
             searchAgain();
           }()),
         ),
+        if (toDownload != null)
+          AppMenuItem(
+            label: 'Download',
+            icon: AppIcons.download,
+            shortcut: 'Ctrl+D',
+            onPressed: () => unawaited(
+              startDownloads(context, [movieDownloadRequest(toDownload)]),
+            ),
+          ),
       ],
     );
   }
@@ -917,14 +955,17 @@ class _EntryRowState extends State<_EntryRow> {
         programmeHitLine(programme, now: widget.now, sources: widget.sources),
         _logo(context, programme.channel),
         programme.isOnAt(widget.now)
-            ? const AppBadge('LIVE', tone: AppBadgeTone.live)
+            ? Padding(
+                padding: EdgeInsets.only(left: tokens.spacing.s12),
+                child: const AppBadge('LIVE', tone: AppBadgeTone.live),
+              )
             : null,
       ),
       MovieHit(:final movie) => (
         movie.name,
         movieHitLine(hit, sources: widget.sources),
         _poster(context, movie.name, movie.posterUrl),
-        null,
+        _DownloadedIf(movie),
       ),
       SeriesHit(:final series) => (
         series.name,
@@ -1010,10 +1051,7 @@ class _EntryRowState extends State<_EntryRow> {
             ],
           ),
         ),
-        if (trailing != null) ...[
-          SizedBox(width: tokens.spacing.s12),
-          trailing,
-        ],
+        ?trailing,
         ..._enterKey(context),
       ],
     );
@@ -1103,6 +1141,23 @@ class _EntryRowState extends State<_EntryRow> {
     if (at < text.length) spans.add((text.substring(at), false));
     return spans;
   }
+}
+
+/// The DOWNLOADED badge at the end of a movie's row while the movie is
+/// on this computer (canvas).
+class _DownloadedIf extends ConsumerWidget {
+  const new(this.movie);
+
+  final MovieItem movie;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      isDownloaded(ref, VodType.movie, movie.sourceId, movie.remoteKey)
+      ? Padding(
+          padding: EdgeInsets.only(left: context.tokens.spacing.s12),
+          child: const DownloadedPill(onArtwork: false),
+        )
+      : const SizedBox.shrink();
 }
 
 /// A library row's picture: a show's or a movie's poster; with none, the

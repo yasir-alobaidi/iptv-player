@@ -189,6 +189,10 @@ abstract interface class LibraryRepository {
     String remoteKey,
   );
 
+  /// The keys of [sourceId]'s titles of [type] that have a downloaded
+  /// file, kept current: one read for every poster's Downloaded mark.
+  Stream<Set<String>> watchDownloadedKeys(VodType type, String sourceId);
+
   Future<Result<LibraryFolder>> addFolder(String path);
 
   /// Takes the folder and its items out of the library; the files stay.

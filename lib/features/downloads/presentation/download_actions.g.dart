@@ -107,6 +107,100 @@ final class DownloadedFileFamily extends $Family
   String toString() => r'downloadedFileProvider';
 }
 
+/// The titles of [type] at [sourceId] that are on this computer, by key:
+/// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+/// `Movies`, `Home`, `Search`). One read for a source, kept current.
+
+@ProviderFor(downloadedKeys)
+final downloadedKeysProvider = DownloadedKeysFamily._();
+
+/// The titles of [type] at [sourceId] that are on this computer, by key:
+/// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+/// `Movies`, `Home`, `Search`). One read for a source, kept current.
+
+final class DownloadedKeysProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Set<String>>,
+          Set<String>,
+          Stream<Set<String>>
+        >
+    with $FutureModifier<Set<String>>, $StreamProvider<Set<String>> {
+  /// The titles of [type] at [sourceId] that are on this computer, by key:
+  /// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+  /// `Movies`, `Home`, `Search`). One read for a source, kept current.
+  DownloadedKeysProvider._({
+    required DownloadedKeysFamily super.from,
+    required (VodType, String) super.argument,
+  }) : super(
+         retry: null,
+         name: r'downloadedKeysProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$downloadedKeysHash();
+
+  @override
+  String toString() {
+    return r'downloadedKeysProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<Set<String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Set<String>> create(Ref ref) {
+    final argument = this.argument as (VodType, String);
+    return downloadedKeys(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DownloadedKeysProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$downloadedKeysHash() => r'7d6892cd59f726d61a889fe3f325929c48201316';
+
+/// The titles of [type] at [sourceId] that are on this computer, by key:
+/// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+/// `Movies`, `Home`, `Search`). One read for a source, kept current.
+
+final class DownloadedKeysFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<Set<String>>, (VodType, String)> {
+  DownloadedKeysFamily._()
+    : super(
+        retry: null,
+        name: r'downloadedKeysProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The titles of [type] at [sourceId] that are on this computer, by key:
+  /// the Downloaded mark on posters, Home's cards and Search's rows (canvas
+  /// `Movies`, `Home`, `Search`). One read for a source, kept current.
+
+  DownloadedKeysProvider call(VodType type, String sourceId) =>
+      DownloadedKeysProvider._(argument: (type, sourceId), from: this);
+
+  @override
+  String toString() => r'downloadedKeysProvider';
+}
+
 /// A title's download, live (the Download button, sketch E).
 
 @ProviderFor(titleDownload)

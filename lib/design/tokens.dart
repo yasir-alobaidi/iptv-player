@@ -536,6 +536,16 @@ class AppLibraryTokens {
   /// An item on a drive that isn't connected.
   double get unavailableOpacity => 0.45;
 
+  /// The Downloaded mark on a poster (canvas `Movies`): a 26 px circle
+  /// over the artwork, its arrow 14. On a landscape card and in a search
+  /// row it is a pill with the word, 24 tall over artwork, its arrow 12.
+  double get markSize => 26;
+  double get markIconSize => 14;
+  double get markScrimOpacity => 0.75;
+  double get pillHeight => 24;
+  double get pillIconSize => 12;
+  double get pillIconGap => 5;
+
   /// The landscape grid of Videos: its narrowest card.
   double get videoCardMinWidth => 280;
 
