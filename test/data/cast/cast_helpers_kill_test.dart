@@ -114,6 +114,13 @@ void main() {
         log: log,
       ).sweep();
       expect(killed, 2);
+      // The sweep sends the kill and goes on: a process ends when it is
+      // next scheduled, which under the whole suite's load isn't at once.
+      final clock = Stopwatch()..start();
+      while (pids.values.any(_alive) &&
+          clock.elapsed < const Duration(seconds: 10)) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
       expect(pids.values.any(_alive), isFalse, reason: 'FFmpeg left running');
       expect(processes.listSync(), isEmpty, reason: 'no PID file');
       expect(await sweepRelayFolders(relayRoot, log: log), 1);
