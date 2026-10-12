@@ -1,16 +1,19 @@
-# Handoff — 2026-10-12 (Phase 8 step 7 is built: a file's subtitles on the TV, the MP4 beside the relay, the matrix's library rows, the Library cast walk; step 8 is next; the TV runs wait)
+# Handoff — 2026-10-12 (Phase 8 steps 1–7 are built and step 8's tests are written: subtitles on the TV, the MP4 beside the relay, the matrix's library rows, three exit tests; Phases 7 and 8 wait for one sitting at the TV; Phase 9's plan is next)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
-docs/decisions.md (its last four sections are this session's: step 7 parts
-2b, 3 and 4), docs/plans/phase-8-downloads-and-library.md (step 8),
+docs/decisions.md (its last five sections are this session's: step 7 parts
+2b, 3 and 4, and the exit's tests), docs/plans/phase-8-downloads-and-library.md
+(step 8), docs/08-phases-and-prompts.md (Phase 9),
 docs/04-casting.md ("Local files and downloads", "As built", the library
 matrix), docs/09-downloads-and-library.md and docs/06-quality.md.
 
 ## Before you start the next session (user)
-1. **Push** the local commits when you like (4): 932c33d (the two CI
+1. **Push** the local commits when you like (6): 932c33d (the two CI
    fixes), dc6e419 (subtitles on the TV), bad1b8f (the MP4 beside the
-   relay), and the matrix rows with the Library cast walk and the docs.
+   relay), 0b303f7 (the matrix rows and the Library cast walk), 6abc84e
+   (two of the exit's tests) and the last (the scan test and the docs).
+   CI runs two more integration files from this push on.
 2. **CI on bf739be** (run 38130192642) is the last run: the four Windows
    path tests are green; one test failed on each system, both fixed in
    932c33d (a race in a SIGKILL test; the Windows sync cancel test, which
@@ -37,65 +40,53 @@ Open Claude Code in this folder and paste:
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md,
 docs/09-downloads-and-library.md, docs/04-casting.md and docs/06-quality.md first.
-Check CI on the last push, then go on with Phase 8 step 8 (the integration tests
-first — the handoff lists them — then the docs), step by step.
-<The TV runs wait | The TV is on the network: ask first>.
+Check CI on the last push and fix what it names. Then:
+<The TV is on the network: ask first, then run Phase 7's and Phase 8's matrices
+with me watching, and finish both exits | The TV runs wait: write Phase 9's plan
+for my approval (docs/08, Phase 9), as for every phase>.
 ```
 
 ## Where things stand
 - **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
   exit) waits for the TV.**
-- **Phase 8: steps 1–7 built and committed.** A library file or a
-  downloaded title casts: directly when the TV plays it as it is, else
+- **Phase 8: steps 1–7 built; step 8's tests written.** A library file or
+  a downloaded title casts: directly when the TV plays it as it is, else
   through the relay — with its text subtitles as WebVTT (S in the casting
   view), and with an MP4 made beside the relay that the TV moves onto at
-  the next seek once it is whole. Step 8 is next.
+  the next seek once it is whole. The exit waits for the library matrix
+  on the TV (rows 17–23).
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,439 app tests** (18 skipped) under `TZ=UTC`, the fake
+  diff, **3,440 app tests** (18 skipped) under `TZ=UTC`, the fake
   provider's 146 and the fake receiver's 41. Integration, each under Xvfb
-  with `IPTV_PLAYER_VIDEO=0`, green: `library_cast_walk` (also twice with
-  `RELAY_FFMPEG_DIR=/usr/bin`), `cast_walk`, `library_walk`,
-  `library_playback`. The matrix runner's library rows on the fake TV: 7
-  of 7.
+  with `IPTV_PLAYER_VIDEO=0`, green: `library_cast_walk` and
+  `library_scan` (each also with `RELAY_FFMPEG_DIR=/usr/bin`),
+  `cast_walk`, `library_walk`, `library_playback`. The matrix runner's
+  library rows on the fake TV: 7 of 7.
 - **CI:** run 38130192642 (bf739be): one failed test per system, fixed
   locally, not pushed.
 
-## Step 8: what is left (the plan's list, and where each starts)
-1. **Integration tests** (docs/06), each a file of its own under
-   `integration_test/` or a `dart run` victim under `test/`:
-   - **download → kill the app → relaunch → resume → play offline.** The
-     pieces exist apart: `test/features/downloads/download_kill_test.dart`
-     (a `dart run` victim killed with SIGKILL, the `.part` resumed),
-     `integration_test/library_walk_test.dart` (the download through the
-     app) and `library_playback_test.dart` (the file played with the panel
-     stopped). What is missing is one run that does all of it through the
-     app's own launch path.
-   - **library scan → play → resume**: the walks write their library rows
-     themselves; the scanner's run end to end on a real folder
-     (`library_tree.sh`, or the samples copied) through to Resume is
-     missing. `LibraryScans` (`lib/features/library/data/`) is what
-     `bootstrap()` starts.
-   - **after SIGKILL + relaunch, no FFmpeg left** from the HLS downloader,
-     the thumbnails, **or the cast's subtitles and MP4** (owners
-     `cast-subtitles`, `cast-start`, `cast-mp4`): they are the
-     `ProcessSupervisor`'s like the rest, so the launch sweep
-     (`supervisor.sweep()` then `sweepRelayFolders`) takes them and their
-     files (`<relay>/<pid>/subtitles-<n>`, `mp4-<n>`); a test should
-     prove it. `relay_kill_test.dart` is the model.
-2. **A provider's relayed file** still counts its place from the place
-   asked for (progress.md, Known issues). Decide: leave it (a few
-   seconds), or have the relay's isolate report where FFmpeg started.
-3. **With the user's go-ahead and them watching, on Living Room TV:**
-   rows 17–23 (`CAST_ROWS=17,18,19,20,21,22,23`), with Phase 7's sitting
-   if that hasn't happened. What only the TV can say: whether it fetches
-   and shows a side-loaded WebVTT track and how it looks; whether
-   `EDIT_TRACKS_INFO` works while it buffers; whether it plays the MP4
-   made for it (row 18) and seeks in it.
-4. **If the user wants it, with its own pop-up:** one real download from
+## What is left of Phases 7 and 8 (all of it needs the TV)
+1. **With the user's go-ahead and them watching, on Living Room TV**
+   (about 35 minutes; check `ip -4 addr` shows 192.168.1.x first):
+   - `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
+     test/tools/cast_tv_test.dart` (half a minute);
+   - `…cast_matrix_tv_test.dart`: rows 1–5, 7–15 (Phase 7) and 17–23
+     (Phase 8's library matrix) in one run;
+   - `CAST_ROWS=6` with Input Signal Plus off, `CAST_ROWS=16` with the
+     remote in hand.
+   What only the TV can say about this session's work: whether it fetches
+   and shows a side-loaded WebVTT track and how it looks (rows 19–21);
+   whether `EDIT_TRACKS_INFO` works while it buffers; whether it plays the
+   MP4 made for it and seeks in it (row 18); whether a relayed subtitle
+   is on its second after a seek (row 21: each line names its second).
+2. **If the user wants it, with its own pop-up:** one real download from
    their provider.
-5. **Docs:** ADR-015 Accepted; docs/09 and docs/04 "As built"; docs/05
-   (the Library as built); docs/06's library budgets and fakes; docs/02's
-   schema v9; progress and the handoff.
+3. **Then both exits:** ADR-014 and ADR-015 Accepted; docs/04's "Verify"
+   notes filled in with what the TV did; progress and the handoff.
+4. **Looked at and left:** a provider's relayed file counts its place
+   from the place asked for, not from its key frame (asking FFmpeg would
+   take a connection); the cast's helper FFmpegs run on after a SIGKILL
+   until done or the next launch (ADR-015, "The phase exit's tests").
 
 ## Done this session (2026-10-12)
 - **CI's two failures** (932c33d): `_running` in `download_kill_test.dart`
@@ -112,18 +103,23 @@ first — the handoff lists them — then the docs), step by step.
   (`lib/core/cast/cast_mp4_copies.dart`), `FfmpegCastMp4Copies`, the
   coordinator's `_makeMp4`, `_moveToMp4`, `_backToRelay`, `_tvReads`.
 - **The matrix runner's rows 17–23** and
-  `integration_test/library_cast_walk_test.dart`.
+  `integration_test/library_cast_walk_test.dart` (0b303f7).
+- **Step 8's tests** (6abc84e and the last commit):
+  `test/data/cast/cast_helpers_kill_test.dart` with
+  `support/cast_helpers_victim.dart` and the plain-Dart
+  `lib/data/cast/cast_file_jobs.dart`; `download_kill_test.dart` through
+  to playing offline; `integration_test/library_scan_test.dart`.
 
 ## What's next
-1. **Phase 8 step 8** (the list above), stopping only where the user asks
-   or a step needs the TV.
-2. **The TV runs, only when the user says the TV is back, after asking and
-   with the user watching:** check `ip -4 addr` shows 192.168.1.x;
-   `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
-   test/tools/cast_tv_test.dart`, then `…cast_matrix_tv_test.dart` (rows
-   1–5, 7–15, 17–23), then `CAST_ROWS=6` with Input Signal Plus off and
-   `CAST_ROWS=16` with the remote in hand; then Phase 7's exit (ADR-014
-   Accepted) and Phase 8's.
+1. **Whatever CI names after the push** (two new integration files run
+   there for the first time, with FFmpeg 4.4 and 120-second samples).
+2. **If the user says the TV is back:** the sitting above, after asking,
+   then both phase exits.
+3. **Otherwise Phase 9** (settings, diagnostics, polish): read its prompt
+   in docs/08, write `docs/plans/phase-9-….md` as the earlier phases'
+   plans are written (context, decisions with a recommendation first,
+   steps with their verification, sketches for what the canvas lacks),
+   and stop for the user's approval before building.
 
 **Loose ends, small:**
 - The casting view says nothing when a subtitle the user chose is
@@ -304,6 +300,14 @@ matrix rows, the walk):
   how `startOf` reads the picture's and the sound's first packets. An
   unmapped picture changes where FFmpeg seeks (it seeks by the sound
   then), so the picture is always mapped.
+- **A `dart run` victim can't import the cast's makers** (the plan's
+  types bring Flutter in): what it must run lives in
+  `cast_file_jobs.dart`, plain Dart, which the makers use too.
+- **`integration_test/library_scan_test.dart` is the model for a test
+  that uses the real scanner:** override `folderPickerProvider` with the
+  folder, and call `libraryScansProvider.startUp()` after the app is
+  pumped, as `bootstrap()` does. Files under 20 MB are not videos to the
+  scanner: use the samples.
 - **Test fakes:** `FakeSubtitles` (`ready`, `late` + `last.finish()`,
   `keyFrameBefore`, each set's `moves`) and `FakeMp4Copies`
   (`last.whole()` / `failed()`) in `cast_fakes.dart`; `FakeTv.onTextTrack`
