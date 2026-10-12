@@ -312,9 +312,15 @@ Future<void> _runAndKill(
   expect(code, anyOf(-9, 137));
 }
 
-bool _running(int pid) =>
-    Directory('/proc/$pid').existsSync() &&
-    !File('/proc/$pid/stat').readAsStringSync().contains(') Z ');
+/// Whether [pid] runs. A zombie counts as gone, and so does a process
+/// that goes while its entry is being read.
+bool _running(int pid) {
+  try {
+    return !File('/proc/$pid/stat').readAsStringSync().contains(') Z ');
+  } on FileSystemException {
+    return false;
+  }
+}
 
 String? _whyNot(FfmpegBinaries? binaries) {
   if (!Platform.isLinux) return 'SIGKILL and /proc: Linux';

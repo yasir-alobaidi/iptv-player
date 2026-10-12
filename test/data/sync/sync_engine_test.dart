@@ -696,8 +696,10 @@ void main() {
   });
 
   test('cancel stops the run and leaves a consistent catalogue', () async {
-    // Where it waited, should it time out (it does on Windows CI now and
-    // then: docs/progress.md, Known issues).
+    // Where it waited, should it time out. On Windows CI the second sync
+    // has run 15 times slower now and then (run 38130192642: 2.5 s for a
+    // thousand channels, 0.1 s here), slow and not stuck, so it has two
+    // minutes: docs/progress.md, Known issues.
     final clock = Stopwatch()..start();
     void mark(String what) =>
         printOnFailure('$what at ${clock.elapsedMilliseconds} ms');
@@ -753,7 +755,7 @@ void main() {
     await again.cancel();
     mark('synced again');
     expect(await env.db.channelsDao.countFor(id), 20000);
-  });
+  }, timeout: const Timeout(Duration(minutes: 2)));
 
   test('removing a source mid-sync stops the sync first', () async {
     final env = await _Env.open();
