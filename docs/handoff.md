@@ -1,19 +1,30 @@
-# Handoff — 2026-10-12 (Phase 8 steps 1–7 are built and step 8's tests are written: subtitles on the TV, the MP4 beside the relay, the matrix's library rows, three exit tests; Phases 7 and 8 wait for one sitting at the TV; Phase 9's plan is next)
+# Handoff — 2026-10-12 (Phase 9's plan is written and waits for approval; Phases 7 and 8 are built and wait for one sitting at the TV)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
-docs/decisions.md (its last five sections are this session's: step 7 parts
-2b, 3 and 4, and the exit's tests), docs/plans/phase-8-downloads-and-library.md
-(step 8), docs/08-phases-and-prompts.md (Phase 9),
-docs/04-casting.md ("Local files and downloads", "As built", the library
-matrix), docs/09-downloads-and-library.md and docs/06-quality.md.
+it. Read this file whole, then CLAUDE.md, docs/progress.md,
+**docs/plans/phase-9-settings-diagnostics-polish.md** (the plan this
+session wrote), docs/08-phases-and-prompts.md (Phase 9),
+docs/05-design-system.md (§12 Settings, Accessibility, the shortcut table),
+docs/06-quality.md (the budgets, the soak) and ADR-013 decision 5 in
+docs/decisions.md. For the TV sitting: ADR-015's last five sections,
+docs/plans/phase-8-downloads-and-library.md (step 8) and docs/04-casting.md
+(the library matrix).
 
 ## Before you start the next session (user)
-1. **Push** the local commits when you like (6): 932c33d (the two CI
+0. **Read Phase 9's plan and say yes, or what to change:**
+   `docs/plans/phase-9-settings-diagnostics-polish.md` — sixteen
+   decisions with a recommendation each, nine steps, nine sketches (A–I)
+   for what the canvas doesn't draw. The three most worth your eye:
+   decision 6 (Export holds your settings and choices, never a password,
+   and adds no source), decision 10 (a reminder shows only while the app
+   is open; Windows untried) and decision 15 (the 8-hour soak takes your
+   laptop for a night, screen on).
+1. **Push** the local commits when you like (8): 932c33d (the two CI
    fixes), dc6e419 (subtitles on the TV), bad1b8f (the MP4 beside the
    relay), 0b303f7 (the matrix rows and the Library cast walk), 6abc84e
-   (two of the exit's tests) and the last (the scan test and the docs).
-   CI runs two more integration files from this push on.
+   (two of the exit's tests), a930ba1 (the scan test and the docs), and
+   this session's two: a race fixed in a SIGKILL test, and Phase 9's
+   plan. CI runs two more integration files from this push on.
 2. **CI on bf739be** (run 38130192642) is the last run: the four Windows
    path tests are green; one test failed on each system, both fixed in
    932c33d (a race in a SIGKILL test; the Windows sync cancel test, which
@@ -26,7 +37,7 @@ matrix), docs/09-downloads-and-library.md and docs/06-quality.md.
    "download speed ≥ 90 % of curl" is checked at network rates (99.6 %);
    over loopback it measures Dart's HTTP stack (35 %). Say if you want it
    otherwise.
-5. **Two things this session decided for you** (say if you want them
+5. **Two things the building session decided for you** (say if you want them
    otherwise): which subtitle shows first on the TV (what the player
    showed at hand-over; else your Preferred subtitles; else a subtitle
    file beside the video; else none), and that the timeline of a relayed
@@ -38,12 +49,11 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md,
-docs/09-downloads-and-library.md, docs/04-casting.md and docs/06-quality.md first.
-Check CI on the last push and fix what it names. Then:
-<The TV is on the network: ask first, then run Phase 7's and Phase 8's matrices
-with me watching, and finish both exits | The TV runs wait: write Phase 9's plan
-for my approval (docs/08, Phase 9), as for every phase>.
+docs/plans/phase-9-settings-diagnostics-polish.md, docs/05-design-system.md and
+docs/06-quality.md first. Check CI on the last push and fix what it names. Then:
+<Phase 9's plan is approved [with these changes: …]: record that in the plan's status
+line and start ADR-016, then build step 1 | The TV is on the network: ask first, then
+run Phase 7's and Phase 8's matrices with me watching, and finish both exits>.
 ```
 
 ## Where things stand
@@ -55,6 +65,9 @@ for my approval (docs/08, Phase 9), as for every phase>.
   view), and with an MP4 made beside the relay that the TV moves onto at
   the next seek once it is whole. The exit waits for the library matrix
   on the TV (rows 17–23).
+- **Phase 9: planned, not approved, nothing built.** The plan is
+  `docs/plans/phase-9-settings-diagnostics-polish.md`; ADR-016 doesn't
+  exist yet (start it when the plan is approved, as ADR-015 was).
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
   diff, **3,440 app tests** (18 skipped) under `TZ=UTC`, the fake
   provider's 146 and the fake receiver's 41. Integration, each under Xvfb
@@ -88,7 +101,14 @@ for my approval (docs/08, Phase 9), as for every phase>.
    take a connection); the cast's helper FFmpegs run on after a SIGKILL
    until done or the next launch (ADR-015, "The phase exit's tests").
 
-## Done this session (2026-10-12)
+## Done on 2026-10-12 (two sessions)
+- **Phase 9's plan** (the second session): the plan file, progress and
+  this handoff. No app code changed.
+- **A race in `cast_helpers_kill_test.dart`** (the second session): the
+  whole suite failed it once ("FFmpeg left running"). `ProcessSupervisor
+  .sweep()` sends SIGKILL and returns; the test read `/proc` at once.
+  It now waits up to 10 s, as the other kill tests do. **Any new test
+  that checks a process after a sweep or a kill must wait for it.**
 - **CI's two failures** (932c33d): `_running` in `download_kill_test.dart`
   reads `/proc/<pid>/stat` alone; the sync cancel test has two minutes.
 - **Subtitles on the TV** (dc6e419): `CastTextTrack`, `CastLoad.textTracks`
@@ -115,11 +135,40 @@ for my approval (docs/08, Phase 9), as for every phase>.
    there for the first time, with FFmpeg 4.4 and 120-second samples).
 2. **If the user says the TV is back:** the sitting above, after asking,
    then both phase exits.
-3. **Otherwise Phase 9** (settings, diagnostics, polish): read its prompt
-   in docs/08, write `docs/plans/phase-9-….md` as the earlier phases'
-   plans are written (context, decisions with a recommendation first,
-   steps with their verification, sketches for what the canvas lacks),
-   and stop for the user's approval before building.
+3. **Otherwise Phase 9, once its plan is approved:** write the approval
+   into the plan's status line (with the user's words, as the Phase 8
+   plan has them), start ADR-016 in docs/decisions.md, and build step 1
+   (Appearance: `AppearanceSettings` read before the first frame, the
+   theme built from it, the text-scale wrapper capped at 130 %, the
+   `TimeStyle` for the clock, the text helper in `lib/design/`, density
+   on the long lists, the page). **Don't build before the approval.**
+   What the plan's research found, so it needn't be found again:
+   - `IptvPlayerApp` calls `buildAppTheme()` with no arguments; only the
+     gallery changes accent, density or reduce motion.
+   - Nothing in `lib/` reads the text scale, and no test sets one. Flutter's
+     Linux embedder does pass the desktop's `text-scaling-factor`,
+     `clock-format` and `enable-animations` (`fl_gnome_settings.cc`,
+     `fl_settings_portal.cc` in the SDK's engine source), so the app
+     already scales with the desktop, unchecked.
+   - `tokens.density` is read in `channel_row.dart`, `skeleton.dart` and
+     `channel_list_pane.dart` only.
+   - `formatClock` / `formatTimeRange` (`lib/core/text/format.dart`) are
+     12-hour, called from 24 places in 11 files.
+   - `SettingsSection` marks appearance, shortcuts, data and about with
+     `phase: 9`; the settings keys are in one class (`playback.settings`,
+     `guide.settings`, `cast.settings`, `downloads.settings`).
+   - `ArtworkCache` has `forget(url)` and `sweep()` but no "clear all";
+     `EpgRepository.clearGuide(sourceId)` exists.
+   - The canvas draws "Remind me" on Search's upcoming row
+     (`design/Search.dc.html`, 12 px, weight 700, `textSecondary`); the
+     sheet is `guide_programme_sheet.dart`.
+   - pub.dev, 2026-10-12: `flutter_local_notifications` 22.3.1 (Linux and
+     Windows; Flutter ≥ 3.38.1; on Windows without a package identity
+     `cancel` does nothing); `local_notifier` 0.1.6, two years old.
+   - This desktop: GNOME Shell 42.9 on Wayland; clock 12h, text scale 1.0,
+     animations on. Whether it emits the notification spec's
+     `ActivationToken`, and whether GTK 3 can use it to raise the window,
+     is the spike that opens step 5.
 
 **Loose ends, small:**
 - The casting view says nothing when a subtitle the user chose is
