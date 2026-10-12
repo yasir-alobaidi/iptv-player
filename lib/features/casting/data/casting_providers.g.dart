@@ -688,6 +688,58 @@ final class CastSubtitlesProvider
 
 String _$castSubtitlesHash() => r'd7c54940da6255c6a865158250b1f8f14441e977';
 
+/// The MP4 made beside a relayed file, for the TV to seek in by itself
+/// (Phase 8 decision 12): in the relay's folder for this run, like the
+/// subtitles, and only with the file's size and 1 GB free there.
+
+@ProviderFor(castMp4Copies)
+final castMp4CopiesProvider = CastMp4CopiesProvider._();
+
+/// The MP4 made beside a relayed file, for the TV to seek in by itself
+/// (Phase 8 decision 12): in the relay's folder for this run, like the
+/// subtitles, and only with the file's size and 1 GB free there.
+
+final class CastMp4CopiesProvider
+    extends $FunctionalProvider<CastMp4Copies, CastMp4Copies, CastMp4Copies>
+    with $Provider<CastMp4Copies> {
+  /// The MP4 made beside a relayed file, for the TV to seek in by itself
+  /// (Phase 8 decision 12): in the relay's folder for this run, like the
+  /// subtitles, and only with the file's size and 1 GB free there.
+  CastMp4CopiesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castMp4CopiesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castMp4CopiesHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastMp4Copies> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastMp4Copies create(Ref ref) {
+    return castMp4Copies(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastMp4Copies value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastMp4Copies>(value),
+    );
+  }
+}
+
+String _$castMp4CopiesHash() => r'c68f8a370976e71b2c3ca0d76b432a3862ccc9b5';
+
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
 /// Smooth interlaced. The defaults at once, the stored choices as soon as
 /// they are read; a change is saved and applies to the next cast.
@@ -950,7 +1002,7 @@ final class CastCoordinatorProvider
   }
 }
 
-String _$castCoordinatorHash() => r'565d88eb93a440eb896bc54a17e69cf1b5493476';
+String _$castCoordinatorHash() => r'89fdc44249b98e9784e714165a2d34ba0b94da92';
 
 /// Whether Windows' firewall prompt has been explained before the first
 /// relay start (Phase 7 step 7): once is enough.

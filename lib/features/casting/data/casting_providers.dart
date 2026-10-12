@@ -5,6 +5,7 @@ import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
+import 'package:iptv_player/core/cast/cast_mp4_copies.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
@@ -18,6 +19,7 @@ import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/db_cast_device_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_mp4_copies.dart';
 import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
 import 'package:iptv_player/data/cast/ffmpeg_encoder_detector.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
@@ -25,6 +27,7 @@ import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
 import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
 import 'package:iptv_player/data/cast/unicast_address_check.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/data/platform/disk_space.dart';
 import 'package:iptv_player/data/platform/platform_providers.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
@@ -168,6 +171,22 @@ CastSubtitles castSubtitles(Ref ref) {
   );
 }
 
+/// The MP4 made beside a relayed file, for the TV to seek in by itself
+/// (Phase 8 decision 12): in the relay's folder for this run, like the
+/// subtitles, and only with the file's size and 1 GB free there.
+@Riverpod(keepAlive: true)
+CastMp4Copies castMp4Copies(Ref ref) {
+  final binaries = ref.watch(ffmpegBinariesProvider);
+  if (binaries == null) return const NoCastMp4Copies();
+  return FfmpegCastMp4Copies(
+    supervisor: ref.watch(processSupervisorProvider),
+    binaries: binaries,
+    folder: Directory(p.join(ref.watch(relayFolderProvider).path, '$pid')),
+    log: ref.watch(appLogProvider),
+    freeSpace: freeBytes,
+  );
+}
+
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
 /// Smooth interlaced. The defaults at once, the stored choices as soon as
 /// they are read; a change is saved and applies to the next cast.
@@ -249,6 +268,7 @@ CastCoordinator castCoordinator(Ref ref) {
     sleep: ref.watch(sharedSleepProvider).view('cast'),
     pictures: ref.watch(castPicturesProvider),
     subtitles: ref.watch(castSubtitlesProvider),
+    mp4s: ref.watch(castMp4CopiesProvider),
     settings: () => ref.read(castSettingsControllerProvider),
     audioLanguages: () =>
         ref.read(playbackSettingsControllerProvider).audioLanguages,

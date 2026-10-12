@@ -146,7 +146,7 @@ void main() {
       expect(rig.tv.checks.last.audioCodec, 'aac');
       expect(rig.resolver.resolved, isEmpty);
       expect(rig.panel.state.activeStreams, 0);
-      expect(rig.running, hasLength(1));
+      expect(rig.relaying, hasLength(1));
 
       final first = rig.tv.loaded!['contentId'];
       await rig.playback.seek(seekTo);
@@ -219,6 +219,96 @@ void main() {
     },
     skip: skipWithout('vod_h264_aac_10min.mp4'),
     timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  test(
+    'the MP4 made beside a relayed film: once it is whole, a seek loads '
+    'it and the relay stops; the TV seeks in it by itself after that, to '
+    'the very place, and its subtitles keep their own times',
+    () async {
+      const mkv = 'vod_h264_ac3_10min.mkv';
+      rig = await CastE2E.start();
+      final item = own(mkv);
+      rig.resolver
+        ..files[item.quickHash] = item.path!
+        ..beside[item.path!] = [
+          p.join(samples.path, 'vod_h264_ac3_10min.en.srt'),
+        ];
+      await rig.coordinator.connect(rig.device);
+      await rig.phase(CastPhase.idle);
+
+      unawaited(rig.playback.playVod(PlayableLibraryItem(item)));
+      await rig.tvPlaying(checks: 1);
+      await rig.phase(CastPhase.playing);
+      expect(rig.state.plan!.delivery, CastDelivery.relayContinuous);
+      final relayed = rig.tv.loaded!['contentId']! as String;
+      expect(Uri.parse(relayed).path, startsWith('/p/'));
+      // Its sound is converted at some 50 times its speed: a 10-minute
+      // sample in about 11 s here.
+      await until(
+        () => rig.mp4Ready,
+        within: const Duration(seconds: 90),
+        what: 'the MP4',
+      );
+      expect(rig.tv.loaded!['contentId'], relayed, reason: 'not interrupted');
+
+      // 67 s is between two key frames (66 and 68 s).
+      const first = Duration(seconds: 67);
+      await rig.playback.seek(first);
+      await until(
+        () => (rig.tv.loaded?['contentId'] ?? relayed) != relayed,
+        what: 'the LOAD of the MP4',
+      );
+      final mp4 = Uri.parse(rig.tv.loaded!['contentId']! as String);
+      expect(mp4.path, matches(r'^/f/[^/]+/media\.mp4$'));
+      expect(rig.tv.loaded!['contentType'], 'video/mp4');
+      final checked = rig.tv.checks.length;
+      await rig.tvPlaying(after: checked, checks: 1);
+      await rig.phase(CastPhase.playing);
+      expect(rig.tv.checks.last.videoCodec, 'h264');
+      expect(rig.tv.checks.last.audioCodec, 'aac');
+      await until(() => rig.running.isEmpty, what: 'the relay stopped');
+      // The place asked for itself, not the key frame before it.
+      expect(rig.coordinator.timeline.position, greaterThanOrEqualTo(first));
+      await until(
+        () => rig.tv.textTracks.isNotEmpty,
+        what: 'its subtitle read by the TV',
+      );
+      final track = rig.tv.textTracks.single;
+      expect(track.problem, isNull, reason: '$track');
+      expect(track.firstCue, Duration.zero);
+      expect(track.cues, greaterThan(50));
+      expect(rig.tv.activeTrackIds, [1]);
+
+      // A second seek is the TV's own: a Range request, no LOAD.
+      final loads = rig.tv.requests('LOAD').length;
+      final fetches = ranges().length;
+      await rig.playback.seek(const Duration(seconds: 200));
+      await until(
+        () => ranges().length > fetches,
+        what: "the TV's own seek in the MP4",
+      );
+      expect(rig.tv.requests('SEEK'), hasLength(1));
+      expect(rig.tv.requests('LOAD'), hasLength(loads));
+      expect(rig.running, isEmpty, reason: 'no FFmpeg for a seek');
+      await until(
+        () => rig.tv.playerState == 'PLAYING',
+        what: 'playing after the seek',
+      );
+      expect(
+        rig.coordinator.timeline.position,
+        greaterThanOrEqualTo(const Duration(seconds: 200)),
+      );
+
+      await rig.coordinator.disconnect();
+      expect(
+        rig.progress.lastPosition,
+        greaterThanOrEqualTo(const Duration(seconds: 200)),
+      );
+      expect(rig.sessionFolders, isEmpty, reason: 'the MP4 went with the cast');
+    },
+    skip: skipWithout('vod_h264_ac3_10min.mkv'),
+    timeout: const Timeout(Duration(minutes: 3)),
   );
 
   group('subtitles (docs/04 "Subtitles")', () {

@@ -16,6 +16,7 @@ import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_mp4_copies.dart';
 import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
@@ -201,6 +202,12 @@ final class CastE2E {
         folder: Directory(p.join(temp.path, 'relay', '$pid')),
         log: log,
       ),
+      mp4s: FfmpegCastMp4Copies(
+        supervisor: supervisor,
+        binaries: binaries,
+        folder: Directory(p.join(temp.path, 'relay', '$pid')),
+        log: log,
+      ),
       subtitleLanguages: () => subtitleLanguages,
       encoderDetection: _X264Only(),
       devices: devices,
@@ -281,6 +288,17 @@ final class CastE2E {
         ? folder.listSync().whereType<File>().toList()
         : const [];
   }
+
+  /// The relay's own FFmpegs among them: not the one making a file's MP4
+  /// beside it (Phase 8 decision 12).
+  List<File> get relaying => [
+    for (final file in running)
+      if (!p.basename(file.path).startsWith('cast-mp4-')) file,
+  ];
+
+  /// Whether the MP4 made beside a relayed file is whole.
+  bool get mp4Ready =>
+      logLines.any((line) => line.contains('The MP4 for seeking on the TV'));
 
   /// This run's relay sessions' folders.
   List<FileSystemEntity> get sessionFolders {

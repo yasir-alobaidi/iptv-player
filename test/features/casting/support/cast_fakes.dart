@@ -4,6 +4,7 @@ import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
+import 'package:iptv_player/core/cast/cast_mp4_copies.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
@@ -658,6 +659,60 @@ final class FakeSubtitleSet implements CastSubtitleSet {
   }
 }
 
+/// The MP4s made beside relayed files, without FFmpeg: each is in the
+/// making until its test says it is `whole` or `failed`.
+final class FakeMp4Copies implements CastMp4Copies {
+  final copies = <FakeMp4Copy>[];
+
+  FakeMp4Copy get last => copies.last;
+
+  @override
+  CastMp4Copy make(
+    String video, {
+    required CastPlan plan,
+    required StreamFacts facts,
+  }) {
+    final copy = FakeMp4Copy(video, plan);
+    copies.add(copy);
+    return copy;
+  }
+}
+
+final class FakeMp4Copy implements CastMp4Copy {
+  new(this.video, this.plan);
+
+  final String video;
+  final CastPlan plan;
+  final _ready = Completer<String?>();
+  bool deleted = false;
+
+  static const path = '/cast/mp4-1/media.mp4';
+
+  /// FFmpeg is done: the MP4 is there.
+  Future<void> whole() async {
+    if (!_ready.isCompleted) _ready.complete(path);
+    await pumpEventQueueOnce();
+  }
+
+  /// No MP4: no room, or FFmpeg failed.
+  Future<void> failed() async {
+    if (!_ready.isCompleted) _ready.complete(null);
+    await pumpEventQueueOnce();
+  }
+
+  @override
+  Future<String?> get ready => _ready.future;
+
+  @override
+  Future<void> delete() async {
+    deleted = true;
+    if (!_ready.isCompleted) _ready.complete(null);
+  }
+}
+
+/// Lets what waits on a future that just completed run.
+Future<void> pumpEventQueueOnce() => Future<void>.delayed(Duration.zero);
+
 /// A cast coordinator on fakes, beside a playback coordinator on fakes.
 final class CastRig {
   new({CastTimings timings = fastTimings, this.beforeFirstRelay, Rig? playback})
@@ -677,6 +732,7 @@ final class CastRig {
       sleep: sleep,
       pictures: FakePictures(),
       subtitles: subtitles,
+      mp4s: mp4s,
       subtitleLanguages: () => subtitleLanguages,
       beforeFirstRelay: beforeFirstRelay,
       timings: timings,
@@ -694,6 +750,7 @@ final class CastRig {
   final devices = MemoryCastDevices();
   final sleep = FakeSleep();
   final subtitles = FakeSubtitles();
+  final mp4s = FakeMp4Copies();
 
   /// Settings → Playback's "Preferred subtitles".
   List<String> subtitleLanguages = const [];

@@ -5,6 +5,7 @@ import 'package:iptv_player/core/cast/cast_device_profile.dart';
 import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
+import 'package:iptv_player/core/cast/cast_mp4_copies.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
@@ -119,8 +120,10 @@ final class CastTimings {
 /// again there (decision 1); its place is saved like local playback. A
 /// file on this computer brings its text subtitles as WebVTT the relay
 /// serves, named in the LOAD and switched with [setSubtitle] (Phase 8
-/// decision 12). The computer is kept awake while something is cast
-/// (decision 7).
+/// decision 12). While such a file is relayed with its picture copied, an
+/// MP4 of it is made beside the relay; once it is whole, the next seek
+/// loads it, and the TV seeks in it by itself from then on. The computer
+/// is kept awake while something is cast (decision 7).
 final class CastCoordinator implements RemotePlayback {
   new({
     required this._receivers,
@@ -137,6 +140,7 @@ final class CastCoordinator implements RemotePlayback {
     this._sleep = const NoSleepInhibitor(),
     this._pictures = const NoCastPictures(),
     this._subtitles = const NoCastSubtitles(),
+    this._mp4s = const NoCastMp4Copies(),
     CastSettings Function()? settings,
     List<String> Function()? audioLanguages,
     List<String> Function()? subtitleLanguages,
@@ -162,6 +166,7 @@ final class CastCoordinator implements RemotePlayback {
   final SleepInhibitor _sleep;
   final CastPictures _pictures;
   final CastSubtitles _subtitles;
+  final CastMp4Copies _mp4s;
   final CastSettings Function() _settings;
   final List<String> Function() _languages;
 
@@ -304,7 +309,8 @@ final class CastCoordinator implements RemotePlayback {
 
   /// Moves the file on the TV to [position]: the TV seeks a direct file
   /// itself; the relay starts again there (decision 1), with "Preparing…"
-  /// meanwhile.
+  /// meanwhile — unless the MP4 made beside it is ready, which is loaded
+  /// there instead, for the TV to seek in from then on.
   @override
   Future<void> seek(Duration position) async {
     final cast = _cast;
@@ -320,12 +326,13 @@ final class CastCoordinator implements RemotePlayback {
       ..running = false;
     _publishTimeline(cast);
     unawaited(_save(cast));
-    if (plan.delivery == CastDelivery.directFile) {
+    if (_tvReads(cast)) {
       await _tv?.seek(to);
       return;
     }
     final session = cast.relay;
     if (session == null) return;
+    if (cast.mp4Path != null) return await _moveToMp4(cast, to);
     final generation = _restart(cast);
     cast
       ..from = to
@@ -758,9 +765,12 @@ final class CastCoordinator implements RemotePlayback {
     final stream = cast.stream!;
     if (cast.relay != null) await _stopRelay(cast);
     if (!_fresh(cast, generation)) return;
-    if (plan.delivery.direct && stream.upstream.file != null) {
-      return await _deliverFile(cast, generation, stream.upstream.file!);
-    }
+    // A file on this computer the TV reads by itself: the file as it is,
+    // or the MP4 made of it.
+    final own = cast.onMp4
+        ? cast.mp4Path
+        : (plan.delivery.direct ? stream.upstream.file : null);
+    if (own != null) return await _deliverFile(cast, generation, own);
     if (plan.delivery.direct) {
       final tv = await _joined;
       if (tv == null || !_fresh(cast, generation)) return;
@@ -818,6 +828,7 @@ final class CastCoordinator implements RemotePlayback {
         cast.relayEvents = session.events.listen(
           (event) => _onRelay(cast, session, event),
         );
+        _makeMp4(cast);
         // A failure comes as the session's CastRelayFailed too.
         final failure = await session.ready;
         if (failure != null || !_current(cast, session, generation)) return;
@@ -836,9 +847,9 @@ final class CastCoordinator implements RemotePlayback {
   }
 
   /// A file on this computer the TV plays as it is (docs/04 "Direct
-  /// file"): the relay's server gives it to the TV with Range, so the TV
-  /// seeks in it by itself. No provider connection is asked for or
-  /// counted.
+  /// file"), or the MP4 made of one it can't: the relay's server gives it
+  /// to the TV with Range, so the TV seeks in it by itself. No provider
+  /// connection is asked for or counted.
   Future<void> _deliverFile(_Cast cast, int generation, String file) async {
     final plan = cast.plan!;
     final local = await _local?.future;
@@ -927,7 +938,7 @@ final class CastCoordinator implements RemotePlayback {
     switch (result) {
       case CastDone(:final media):
         if (media != null) cast.mediaSession = media.sessionId;
-        if (!plan.delivery.direct) _watchReach(cast);
+        if (!_tvReads(cast)) _watchReach(cast);
       case CastRefused(:final reason, :final detail):
         _log.info(_tag, 'The TV refused the LOAD: ${reason.name}');
         if (reason != CastRefusal.loadCancelled) {
@@ -936,7 +947,7 @@ final class CastCoordinator implements RemotePlayback {
       case CastUnanswered():
         // Its status says how it went.
         _log.info(_tag, 'The TV did not answer the LOAD');
-        if (!plan.delivery.direct) _watchReach(cast);
+        if (!_tvReads(cast)) _watchReach(cast);
       case CastDisconnected():
         // Loaded again once the connection is back.
         cast.loadPending = true;
@@ -988,7 +999,7 @@ final class CastCoordinator implements RemotePlayback {
     final subtitles = set.subtitles;
     if (subtitles.isEmpty || !_fresh(cast, generation)) return const [];
     final files = await set.files(
-      by: plan.delivery.direct ? Duration.zero : cast.offset,
+      by: _tvReads(cast) ? Duration.zero : cast.offset,
     );
     final served = <CastServedFile>[];
     final tracks = <CastTextTrack>[];
@@ -1137,6 +1148,82 @@ final class CastCoordinator implements RemotePlayback {
     }
   }
 
+  // The MP4 made beside a relayed file (Phase 8 decision 12).
+
+  /// The TV fetches what plays by itself and seeks in it: the provider's
+  /// own stream, a file as it is, or the MP4 made of one.
+  bool _tvReads(_Cast cast) =>
+      cast.onMp4 || (cast.plan?.delivery.direct ?? false);
+
+  /// Starts the MP4 of a file on this computer that is relayed with its
+  /// picture copied: once per cast and plan.
+  void _makeMp4(_Cast cast) {
+    final file = cast.stream?.upstream.file;
+    final plan = cast.plan;
+    final facts = cast.facts;
+    if (file == null ||
+        plan == null ||
+        facts == null ||
+        cast.mp4 != null ||
+        cast.mp4Refused ||
+        plan.live ||
+        plan.video is! CastVideoCopy ||
+        plan.delivery != CastDelivery.relayContinuous) {
+      return;
+    }
+    final copy = cast.mp4 = _mp4s.make(file, plan: plan, facts: facts);
+    unawaited(
+      copy.ready.then((path) {
+        if (identical(cast.mp4, copy)) cast.mp4Path = path;
+      }),
+    );
+  }
+
+  /// The MP4 is whole and the file is being moved anyway: the relay
+  /// stops, and the TV loads the MP4 at [at]. Its time is the file's own
+  /// from then on, and it seeks by itself.
+  Future<void> _moveToMp4(_Cast cast, Duration at) async {
+    _log.info(_tag, 'The MP4 is ready: $deviceName reads it by itself now');
+    final generation = _restart(cast);
+    cast
+      ..onMp4 = true
+      ..from = at
+      ..offset = Duration.zero;
+    _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
+    await _stopRelay(cast);
+    if (!_fresh(cast, generation)) return;
+    await _deliver(cast, generation);
+  }
+
+  /// The TV wouldn't play the MP4 made for it: the relay again, where it
+  /// was, and no MP4 for this cast any more. Nothing is learned: the
+  /// file itself was never offered to the TV.
+  Future<void> _backToRelay(_Cast cast) async {
+    _log.info(_tag, '$deviceName refused the MP4: the relay again');
+    final at = cast.played ? _position(cast) : cast.from ?? Duration.zero;
+    final generation = _restart(cast);
+    cast
+      ..mp4Refused = true
+      ..from = at
+      ..offset = at;
+    _dropMp4(cast);
+    _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
+    // The MP4's URL goes with it.
+    await _stopRelay(cast);
+    if (!_fresh(cast, generation)) return;
+    await _deliver(cast, generation);
+  }
+
+  /// Stops the MP4's making and deletes it. Not waited for: FFmpeg is
+  /// killed, which nothing that follows needs to wait on.
+  void _dropMp4(_Cast cast) {
+    unawaited(cast.mp4?.delete());
+    cast
+      ..mp4 = null
+      ..mp4Path = null
+      ..onMp4 = false;
+  }
+
   /// Where the TV's time 0 is in a relayed file asked to start at [at]:
   /// the key frame before it when the picture is copied (docs/04). The
   /// timeline, the saved place and the subtitles' times all count from
@@ -1169,6 +1256,13 @@ final class CastCoordinator implements RemotePlayback {
   /// once the connection to it is back.
   Future<void> _reload(_Cast cast) async {
     final plan = cast.plan;
+    if (plan != null &&
+        !plan.live &&
+        cast.relay != null &&
+        cast.mp4Path != null) {
+      // A file that is loaded again anyway takes its MP4 once it is made.
+      return await _moveToMp4(cast, cast.from ?? Duration.zero);
+    }
     final generation = _restart(cast);
     final tv = await _joined;
     if (plan == null || tv == null || !_fresh(cast, generation)) return;
@@ -1335,6 +1429,7 @@ final class CastCoordinator implements RemotePlayback {
     // A LOAD_FAILED and the IDLE/ERROR after it are one refusal.
     if (cast.refusedLoad == cast.loads) return;
     cast.refusedLoad = cast.loads;
+    if (cast.onMp4) return await _backToRelay(cast);
     final since = _clock.elapsed - loadedAt;
     final window = plan.delivery.direct
         ? timings.directWithin
@@ -1402,6 +1497,8 @@ final class CastCoordinator implements RemotePlayback {
   /// connection first), and the new plan is carried out.
   Future<void> _replan(_Cast cast, CastPlan plan) async {
     final generation = _restart(cast);
+    // An MP4 made for the old plan isn't what the new one sends.
+    _dropMp4(cast);
     await _stopRelay(cast);
     if (!_fresh(cast, generation)) return;
     _log.info(_tag, 'The new plan: $plan');
@@ -1589,6 +1686,7 @@ final class CastCoordinator implements RemotePlayback {
     // stopped, which the next play needn't wait on.
     unawaited(cast.subtitleSet?.delete());
     cast.subtitleSet = null;
+    _dropMp4(cast);
     final picture = await cast.picture?.timeout(
       timings.picture,
       onTimeout: () => null,
@@ -1878,6 +1976,13 @@ final class _Cast {
 
   /// What the laptop's player showed when it handed this over.
   ({bool on, String? language})? playerSubtitle;
+
+  /// The MP4 being made of a relayed file, its path once it is whole,
+  /// whether the TV reads it now, and whether the TV refused it.
+  CastMp4Copy? mp4;
+  String? mp4Path;
+  bool onMp4 = false;
+  bool mp4Refused = false;
 
   /// LOADs made, the URL of the last, and its media session on the TV.
   int loads = 0;

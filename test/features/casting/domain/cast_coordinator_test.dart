@@ -1255,6 +1255,151 @@ void main() {
           expect(rig.state.subtitle, isNull);
         });
       });
+
+      group('the MP4 made beside the relay (decision 12)', () {
+        /// The Matroska file relayed and playing, a minute in.
+        Future<void> relayed() async {
+          await castDownloaded(facts: mkvFacts);
+          rig.tv.playing(position: const Duration(minutes: 1));
+          await rig.phase(CastPhase.playing);
+        }
+
+        test('made for a relayed file whose picture is copied; a seek '
+            'before it is whole starts the relay again', () async {
+          await relayed();
+          final copy = rig.mp4s.copies.single;
+          expect(copy.video, file);
+          expect(copy.plan, rig.state.plan);
+          expect(copy.plan.video, isA<CastVideoCopy>());
+          await rig.playback.coordinator.seek(const Duration(minutes: 30));
+          await rig.loaded(2);
+          expect(
+            rig.relay.last.renews.single.startAt,
+            const Duration(minutes: 30),
+          );
+          expect(rig.tv.loads.last.url, rig.relay.last.url);
+          expect(rig.mp4s.copies, hasLength(1), reason: 'made once');
+        });
+
+        test('none for a file the TV plays itself, a re-encode, or a '
+            "provider's own file", () async {
+          await castDownloaded();
+          expect(rig.mp4s.copies, isEmpty);
+          // MPEG-2, which no TV takes as it is: re-encoded.
+          rig.probe.next = StreamProbed(
+            mkvFacts.copyWith(
+              video: mkvFacts.video!.copyWith(codec: 'mpeg2video'),
+            ),
+          );
+          rig.playback.resolver.downloads['m8'] = '/downloads/Film 8.mkv';
+          unawaited(rig.playback.coordinator.playVod(PlayableMovie(movie(8))));
+          await rig.loaded(2);
+          expect(rig.relay.last.request.source.file, '/downloads/Film 8.mkv');
+          expect(rig.relay.last.request.plan.video, isA<CastVideoTranscode>());
+          expect(rig.mp4s.copies, isEmpty);
+          rig.probe.next = const StreamProbed(mkvFacts);
+          unawaited(rig.playback.coordinator.playVod(PlayableMovie(movie(9))));
+          await rig.loaded(3);
+          expect(rig.relay.last.request.source.file, isNull);
+          expect(rig.mp4s.copies, isEmpty);
+        });
+
+        test('once it is whole, the next seek loads it there: the relay '
+            "stops, and every seek after is the TV's own", () async {
+          rig.subtitles
+            ..ready = [const CastSubtitle(language: 'en', beside: true)]
+            ..keyFrameBefore = const Duration(seconds: 4);
+          await relayed();
+          await rig.mp4s.last.whole();
+          expect(rig.tv.loads, hasLength(1), reason: 'nothing is interrupted');
+          expect(rig.relay.last.stopped, isFalse);
+
+          await rig.playback.coordinator.seek(const Duration(minutes: 30));
+          await rig.loaded(2);
+          expect(rig.relay.last.stopped, isTrue);
+          expect(rig.relay.last.renews, isEmpty);
+          expect(rig.relay.files, contains(FakeMp4Copy.path));
+          final load = rig.tv.loads.last;
+          expect(load.url, endsWith('/media.mp4'));
+          expect(load.url, isNot(rig.relay.last.url));
+          expect(load.contentType, 'video/mp4');
+          expect(load.start, const Duration(minutes: 30));
+          // Its subtitles keep the file's own times now.
+          expect(rig.subtitles.last.moves.last, Duration.zero);
+          expect(load.activeTextTrack, 1);
+          expect(rig.state.phase, CastPhase.preparing);
+          expect(rig.state.plan!.delivery, CastDelivery.relayContinuous);
+
+          // The TV's time is the file's.
+          rig.tv.playing(position: const Duration(minutes: 30, seconds: 3));
+          await rig.phase(CastPhase.playing);
+          expect(
+            rig.coordinator.timeline.position,
+            _between(
+              const Duration(minutes: 30, seconds: 3),
+              const Duration(minutes: 31),
+            ),
+          );
+          await rig.playback.coordinator.seek(const Duration(minutes: 50));
+          expect(rig.tv.calls, contains('seek:3000000'));
+          expect(rig.tv.loads, hasLength(2), reason: 'no new LOAD');
+          expect(rig.relay.sessions, hasLength(1), reason: 'no relay again');
+          expect(rig.state.phase, CastPhase.playing);
+
+          await rig.coordinator.disconnect();
+          expect(rig.mp4s.last.deleted, isTrue);
+          expect(rig.relay.unserved, contains(load.url));
+        });
+
+        test('a TV that refuses the MP4: the relay again where it was, no '
+            'MP4 for this cast any more, and nothing learned', () async {
+          await relayed();
+          await rig.mp4s.last.whole();
+          await rig.playback.coordinator.seek(const Duration(minutes: 30));
+          await rig.loaded(2);
+          final refused = rig.tv.loads.last.url;
+          rig.tv.idle(CastIdleReason.error);
+          await rig.loaded(3);
+          expect(rig.relay.sessions, hasLength(2));
+          expect(rig.relay.last.request.startAt, const Duration(minutes: 30));
+          expect(rig.tv.loads.last.url, rig.relay.last.url);
+          expect(rig.relay.unserved, contains(refused));
+          expect(rig.mp4s.copies.single.deleted, isTrue);
+          expect(
+            rig.devices.devices.values.single.learned.directRefusedSources,
+            isEmpty,
+          );
+          rig.relay.last.emit(const CastRelayFetched());
+          rig.tv.playing(position: const Duration(seconds: 1));
+          await rig.phase(CastPhase.playing);
+          // Seeks are the relay's from here on.
+          await rig.playback.coordinator.seek(const Duration(minutes: 40));
+          await rig.loaded(4);
+          expect(
+            rig.relay.last.renews.single.startAt,
+            const Duration(minutes: 40),
+          );
+          expect(rig.mp4s.copies, hasLength(1));
+        });
+
+        test('an MP4 that could not be made: the relay goes on as it '
+            'was', () async {
+          await relayed();
+          await rig.mp4s.last.failed();
+          await rig.playback.coordinator.seek(const Duration(minutes: 30));
+          await rig.loaded(2);
+          expect(rig.relay.last.renews, hasLength(1));
+          expect(rig.relay.files, isEmpty);
+        });
+
+        test('the end of the cast stops its making and deletes it', () async {
+          await relayed();
+          expect(rig.mp4s.last.deleted, isFalse);
+          unawaited(rig.playback.coordinator.playLive(channel(1)));
+          await rig.loaded(2);
+          expect(rig.mp4s.copies.single.deleted, isTrue);
+        });
+      });
     });
 
     test('Stop casting saves where the TV was', () async {
