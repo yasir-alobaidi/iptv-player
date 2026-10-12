@@ -9,6 +9,7 @@ import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/result.dart';
@@ -17,6 +18,7 @@ import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/db_cast_device_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
 import 'package:iptv_player/data/cast/ffmpeg_encoder_detector.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/merged_cast_discovery.dart';
@@ -149,6 +151,23 @@ CastRelay castRelay(Ref ref) {
   return relay;
 }
 
+/// A file's subtitles as WebVTT for the TV (Phase 8 decision 12), made by
+/// the bundled FFmpeg in the relay's folder for this run: what a crash
+/// leaves there goes with the relay's own at the next launch.
+@Riverpod(keepAlive: true)
+CastSubtitles castSubtitles(Ref ref) {
+  final binaries = ref.watch(ffmpegBinariesProvider);
+  if (binaries == null) return const NoCastSubtitles();
+  return FfmpegCastSubtitles(
+    supervisor: ref.watch(processSupervisorProvider),
+    binaries: binaries,
+    folder: Directory(p.join(ref.watch(relayFolderProvider).path, '$pid')),
+    log: ref.watch(appLogProvider),
+    languages: () =>
+        ref.read(playbackSettingsControllerProvider).subtitleLanguages,
+  );
+}
+
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
 /// Smooth interlaced. The defaults at once, the stored choices as soon as
 /// they are read; a change is saved and applies to the next cast.
@@ -229,9 +248,12 @@ CastCoordinator castCoordinator(Ref ref) {
     history: ref.watch(playbackHistoryProvider),
     sleep: ref.watch(sharedSleepProvider).view('cast'),
     pictures: ref.watch(castPicturesProvider),
+    subtitles: ref.watch(castSubtitlesProvider),
     settings: () => ref.read(castSettingsControllerProvider),
     audioLanguages: () =>
         ref.read(playbackSettingsControllerProvider).audioLanguages,
+    subtitleLanguages: () =>
+        ref.read(playbackSettingsControllerProvider).subtitleLanguages,
     beforeFirstRelay: ref.watch(relayFirewallNoticeProvider),
   );
   ref.onDispose(coordinator.dispose);

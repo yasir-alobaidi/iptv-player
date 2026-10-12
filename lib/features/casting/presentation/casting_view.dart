@@ -27,7 +27,8 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 /// screen while it is open: what plays on the TV, its programme or its
 /// timeline, the quality badge with its details line and sentence, and
 /// the controls. ↑/↓ change channel, Space and ←/→ play, pause and seek a
-/// file, M mutes, Esc goes back while the cast carries on.
+/// file, S goes through its subtitles (off, each in turn, off), M mutes,
+/// Esc goes back while the cast carries on.
 class CastingView extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -141,6 +142,18 @@ class _CastingViewState extends ConsumerState<CastingView> {
   Future<void> _toggleMute(CastingState state) =>
       ref.read(castCoordinatorProvider).setMuted(muted: !state.volume.muted);
 
+  /// Off, then each of the file's subtitles in turn, as S does in the
+  /// player.
+  Future<void> _nextSubtitle(CastingState state) {
+    final choices = <int?>[
+      null,
+      for (var id = 1; id <= state.subtitles.length; id++) id,
+    ];
+    final next =
+        choices[(choices.indexOf(state.subtitle) + 1) % choices.length];
+    return ref.read(castCoordinatorProvider).setSubtitle(next);
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final keyboard = HardwareKeyboard.instance;
@@ -173,6 +186,10 @@ class _CastingViewState extends ConsumerState<CastingView> {
         return KeyEventResult.handled;
       case LogicalKeyboardKey.space when !live && event is KeyDownEvent:
         unawaited(_togglePause(state));
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyS
+          when !live && state.subtitles.isNotEmpty && event is KeyDownEvent:
+        unawaited(_nextSubtitle(state));
         return KeyEventResult.handled;
       case LogicalKeyboardKey.keyM when event is KeyDownEvent:
         unawaited(_toggleMute(state));
@@ -393,6 +410,13 @@ class _CastingViewState extends ConsumerState<CastingView> {
                         color: colors.textTertiary,
                       ),
                     ),
+                  if (castSubtitlesLine(state) case final subtitles?)
+                    Text(
+                      subtitles,
+                      style: tokens.text.caption
+                          .withWeight(400)
+                          .copyWith(color: colors.textSecondary),
+                    ),
                 ],
               ),
               SizedBox(height: tokens.spacing.s8 + 2),
@@ -476,6 +500,19 @@ class _CastingViewState extends ConsumerState<CastingView> {
                 : null,
           ),
           SizedBox(width: tokens.spacing.s12),
+          if (castSubtitlesLine(state) case final subtitles?) ...[
+            AppIconButton(
+              icon: AppIcons.subtitles,
+              tooltip: subtitles,
+              shortcut: 'S',
+              filled: true,
+              bordered: true,
+              selected: state.subtitle != null,
+              size: cast.controlSize,
+              onPressed: () => unawaited(_nextSubtitle(state)),
+            ),
+            SizedBox(width: tokens.spacing.s12),
+          ],
         ],
         _Volume(
           volume: volume,

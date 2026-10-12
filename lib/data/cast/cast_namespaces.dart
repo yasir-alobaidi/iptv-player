@@ -73,7 +73,7 @@ final class MediaChannel {
     Duration timeout = const Duration(seconds: 10),
   }) => _request(loadPayload(load), timeout);
 
-  /// PLAY, PAUSE, STOP or SEEK on [mediaSessionId].
+  /// PLAY, PAUSE, STOP, SEEK or EDIT_TRACKS_INFO on [mediaSessionId].
   Future<CastMessageIn?> command(
     String type,
     int mediaSessionId, {
@@ -105,7 +105,9 @@ final class MediaChannel {
 }
 
 /// LOAD with the fields verified on the device (ADR-004): no segment
-/// format fields, `autoplay`, and `currentTime` where a file starts.
+/// format fields, `autoplay`, and `currentTime` where a file starts. Its
+/// subtitles are side-loaded WebVTT text tracks (`media.tracks`), the one
+/// showing in `activeTrackIds`.
 Map<String, Object?> loadPayload(CastLoad load) => {
   'type': 'LOAD',
   'media': {
@@ -123,9 +125,23 @@ Map<String, Object?> loadPayload(CastLoad load) => {
           {'url': url},
         ],
     },
+    if (load.textTracks.isNotEmpty)
+      'tracks': [
+        for (final track in load.textTracks)
+          {
+            'trackId': track.id,
+            'type': 'TEXT',
+            'subtype': 'SUBTITLES',
+            'trackContentId': track.url,
+            'trackContentType': 'text/vtt',
+            'language': ?track.language,
+            'name': ?track.name,
+          },
+      ],
   },
   'autoplay': true,
   'currentTime': load.start.inMilliseconds / 1000,
+  if (load.textTracks.isNotEmpty) 'activeTrackIds': [?load.activeTextTrack],
 };
 
 /// What an answer to a command means. [open] says whether the channel was

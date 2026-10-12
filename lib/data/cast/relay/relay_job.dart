@@ -62,6 +62,16 @@ enum RelayOutput {
   continuous,
 }
 
+/// How the relay's FFmpeg reads any input. Whatever asks where a relayed
+/// file starts reads it the same way (`FfmpegCastSubtitles.startOf`).
+const relayInputFlags = [
+  ...['-fflags', '+genpts+discardcorrupt'],
+  // 2 s of the stream, as the probe reads (ADR-014 step 3): every stream
+  // of every sample found right, and the first segments a second sooner
+  // than FFmpeg's own 5 s.
+  ...['-analyzeduration', '2000000', '-probesize', '5000000'],
+];
+
 /// The whole command line for [job]: docs/04's input options, [input]
 /// (the proxy's URL, never the provider's), the job's own arguments, and
 /// the muxer. [folder] is an HLS session's; [append] continues its
@@ -86,11 +96,7 @@ List<String> relayArguments(
     ...['-reconnect', '1', '-reconnect_streamed', '1'],
     ...['-reconnect_on_network_error', '1', '-reconnect_delay_max', '1'],
   ],
-  ...['-fflags', '+genpts+discardcorrupt'],
-  // 2 s of the stream, as the probe reads (ADR-014 step 3): every stream
-  // of every sample found right, and the first segments a second sooner
-  // than FFmpeg's own 5 s.
-  ...['-analyzeduration', '2000000', '-probesize', '5000000'],
+  ...relayInputFlags,
   ...job.inputArgs,
   ...['-i', input],
   ...job.outputArgs,

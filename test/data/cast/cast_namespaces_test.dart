@@ -62,8 +62,53 @@ void main() {
         });
         expect(payload['currentTime'], 2530.5);
         expect(media.keys, isNot(contains('hlsSegmentFormat')));
+        // Nothing about subtitles when it has none.
+        expect(media.keys, isNot(contains('tracks')));
+        expect(payload.keys, isNot(contains('activeTrackIds')));
       },
     );
+
+    test('subtitles: side-loaded WebVTT text tracks, and the one that '
+        'shows', () {
+      CastLoad load({int? showing}) => CastLoad(
+        url: 'http://192.168.1.254:38400/f/token/media.mp4',
+        contentType: 'video/mp4',
+        live: false,
+        title: 'Blue Water',
+        textTracks: const [
+          CastTextTrack(
+            id: 1,
+            url: 'http://192.168.1.254:38400/f/a/media.vtt',
+            language: 'en',
+            name: 'English',
+          ),
+          CastTextTrack(id: 2, url: 'http://192.168.1.254:38400/f/b/media.vtt'),
+        ],
+        activeTextTrack: showing,
+      );
+      final payload = loadPayload(load(showing: 2));
+      expect((payload['media']! as Map<String, Object?>)['tracks'], [
+        {
+          'trackId': 1,
+          'type': 'TEXT',
+          'subtype': 'SUBTITLES',
+          'trackContentId': 'http://192.168.1.254:38400/f/a/media.vtt',
+          'trackContentType': 'text/vtt',
+          'language': 'en',
+          'name': 'English',
+        },
+        {
+          'trackId': 2,
+          'type': 'TEXT',
+          'subtype': 'SUBTITLES',
+          'trackContentId': 'http://192.168.1.254:38400/f/b/media.vtt',
+          'trackContentType': 'text/vtt',
+        },
+      ]);
+      expect(payload['activeTrackIds'], [2]);
+      // None showing is said too: an empty list.
+      expect(loadPayload(load())['activeTrackIds'], isEmpty);
+    });
   });
 
   group('answers', () {

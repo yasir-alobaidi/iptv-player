@@ -1,6 +1,7 @@
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/library/library_names.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
@@ -78,6 +79,18 @@ String? castPhaseLine(CastingState state) => switch (state.phase) {
   CastPhase.failed => "Couldn't play",
   CastPhase.playing || CastPhase.off => null,
 };
+
+/// Which of the file's subtitles shows on the TV: "Subtitles: English",
+/// "Subtitles: English · SDH", "Subtitles: off". Null when what plays has
+/// none to show.
+String? castSubtitlesLine(CastingState state) {
+  if (state.subtitles.isEmpty) return null;
+  final shown = state.subtitle;
+  if (shown == null || shown < 1 || shown > state.subtitles.length) {
+    return 'Subtitles: off';
+  }
+  return 'Subtitles: ${castSubtitleLabel(state.subtitles[shown - 1], shown)}';
+}
 
 /// Sketch D's message for [problem] on [deviceName]; a stream's problem
 /// in the same words as playing here.

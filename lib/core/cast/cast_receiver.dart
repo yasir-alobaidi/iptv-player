@@ -92,6 +92,10 @@ abstract interface class CastReceiverSession {
   /// Stops the media; the receiver stays on the TV.
   Future<CastCommandResult> stopMedia();
 
+  /// Shows the text track [id] of what is loaded ([CastLoad.textTracks]),
+  /// or none for null (EDIT_TRACKS_INFO).
+  Future<CastCommandResult> showTextTrack(int? id);
+
   /// The device's volume, 0–1. A device whose volume is fixed (the TV's
   /// own remote sets it, [CastVolume.fixed]) keeps its own.
   Future<CastCommandResult> setVolume(double level);
@@ -224,6 +228,8 @@ final class CastLoad {
     this.imageUrl,
     this.start = Duration.zero,
     this.duration,
+    this.textTracks = const [],
+    this.activeTextTrack,
   });
 
   /// Where the device fetches it: the relay, or a file the relay serves.
@@ -249,10 +255,40 @@ final class CastLoad {
   /// A file's length, when known.
   final Duration? duration;
 
+  /// Its subtitles, each a WebVTT file the relay serves (docs/04
+  /// "Subtitles").
+  final List<CastTextTrack> textTracks;
+
+  /// The one of [textTracks] that shows from the start; null for none.
+  final int? activeTextTrack;
+
   @override
   String toString() =>
       'CastLoad($contentType, ${live ? 'live' : 'file'}'
-      '${start == Duration.zero ? '' : ', start: $start'})';
+      '${start == Duration.zero ? '' : ', start: $start'}'
+      '${textTracks.isEmpty ? '' : ', ${textTracks.length} text track(s)'})';
+}
+
+/// A subtitle the device can show with what it plays: a WebVTT file,
+/// its times counted from the media's own start.
+@immutable
+final class CastTextTrack {
+  const new({required this.id, required this.url, this.language, this.name});
+
+  /// What LOAD and EDIT_TRACKS_INFO call it: from 1, unique in its LOAD.
+  final int id;
+
+  /// Where the device fetches it: a file the relay serves.
+  final String url;
+
+  /// Its language as a short tag (`en`), when known.
+  final String? language;
+
+  /// What the device's own menu would call it.
+  final String? name;
+
+  @override
+  String toString() => 'CastTextTrack($id, ${language ?? 'no language'})';
 }
 
 /// How a command to the device went.

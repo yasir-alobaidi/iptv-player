@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
@@ -62,6 +63,14 @@ abstract class CastingState with _$CastingState {
 
     /// Why it failed, for [CastPhase.failed].
     CastProblem? problem,
+
+    /// The subtitles the TV can show with what plays, in its order (S
+    /// goes through them): a file's on this computer, as they are made.
+    /// Empty for a channel, a provider's stream, or a file with none.
+    @Default(<CastSubtitle>[]) List<CastSubtitle> subtitles,
+
+    /// Which of [subtitles] shows, counted from 1; null for none.
+    int? subtitle,
   }) = _CastingState;
 
   const new _();

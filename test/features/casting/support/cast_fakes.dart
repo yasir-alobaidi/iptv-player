@@ -7,6 +7,7 @@ import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -113,7 +114,8 @@ final class FakeTv implements CastReceiverSession {
   final loads = <CastLoad>[];
 
   /// Every command but LOAD: `play`, `pause`, `seek:<ms>`, `stopMedia`,
-  /// `stop`, `leave`, `volume:<level>`, `muted:<bool>`.
+  /// `textTrack:<id or none>`, `stop`, `leave`, `volume:<level>`,
+  /// `muted:<bool>`.
   final calls = <String>[];
 
   /// What a LOAD answers; by default (or null) the TV took it.
@@ -194,6 +196,15 @@ final class FakeTv implements CastReceiverSession {
   Future<CastCommandResult> stopMedia() async {
     calls.add('stopMedia');
     return const CastDone();
+  }
+
+  /// What showing a text track answers; by default the TV does it.
+  CastCommandResult Function(int? id)? onTextTrack;
+
+  @override
+  Future<CastCommandResult> showTextTrack(int? id) async {
+    calls.add('textTrack:${id ?? 'none'}');
+    return onTextTrack?.call(id) ?? const CastDone();
   }
 
   @override
@@ -405,8 +416,10 @@ final class FakeRelay implements CastRelay {
     if (!canServeFiles) return null;
     files.add(path);
     log.add('file');
+    final dot = path.lastIndexOf('.');
     return FakeServed(
-      'http://$localAddress:38400/f/file${files.length}/media.mp4',
+      'http://$localAddress:38400/f/file${files.length}/'
+      'media${dot < 0 ? '' : path.substring(dot)}',
       unserved,
     );
   }
@@ -563,9 +576,87 @@ const fastTimings = CastTimings(
   learnWithin: Duration(seconds: 2),
   directWithin: Duration(seconds: 2),
   picture: Duration(milliseconds: 200),
+  subtitles: Duration(milliseconds: 200),
   saveEvery: Duration(seconds: 1),
   quit: Duration(seconds: 1),
 );
+
+/// The subtitles of files on this computer, without FFmpeg: every file
+/// has [ready] at once, and [late] once its set is told to `finish` (a
+/// file's own tracks, read from a slow drive).
+final class FakeSubtitles implements CastSubtitles {
+  List<CastSubtitle> ready = const [];
+  List<CastSubtitle>? late;
+
+  /// How far before the place asked for a relayed stream really starts:
+  /// its key frame.
+  Duration keyFrameBefore = Duration.zero;
+
+  final sets = <FakeSubtitleSet>[];
+  final starts = <({Duration at, CastCopiedStreams copied})>[];
+
+  FakeSubtitleSet get last => sets.last;
+
+  @override
+  CastSubtitleSet prepare(String video, {List<String> beside = const []}) {
+    final set = FakeSubtitleSet(video, beside, [...ready], late);
+    sets.add(set);
+    return set;
+  }
+
+  @override
+  Future<Duration> startOf(
+    String video, {
+    required Duration at,
+    required CastCopiedStreams copied,
+  }) async {
+    starts.add((at: at, copied: copied));
+    final start = at - keyFrameBefore;
+    return start < Duration.zero ? Duration.zero : start;
+  }
+}
+
+final class FakeSubtitleSet implements CastSubtitleSet {
+  new(this.video, this.beside, this.subtitles, this._late) {
+    if (_late == null) _done.complete();
+  }
+
+  final String video;
+  final List<String> beside;
+  final List<CastSubtitle>? _late;
+  final _done = Completer<void>();
+
+  /// How far back each call of [files] moved the cues.
+  final moves = <Duration>[];
+  bool deleted = false;
+
+  @override
+  final List<CastSubtitle> subtitles;
+
+  @override
+  Future<void> get done => _done.future;
+
+  /// The file's own tracks have been read.
+  void finish() {
+    subtitles.addAll(_late ?? const []);
+    if (!_done.isCompleted) _done.complete();
+  }
+
+  @override
+  Future<List<String>> files({Duration by = Duration.zero}) async {
+    moves.add(by);
+    return [
+      for (var i = 0; i < subtitles.length; i++)
+        '/cast/subtitles/from-${by.inSeconds}/$i.vtt',
+    ];
+  }
+
+  @override
+  Future<void> delete() async {
+    deleted = true;
+    if (!_done.isCompleted) _done.complete();
+  }
+}
 
 /// A cast coordinator on fakes, beside a playback coordinator on fakes.
 final class CastRig {
@@ -585,6 +676,8 @@ final class CastRig {
       history: this.playback.history,
       sleep: sleep,
       pictures: FakePictures(),
+      subtitles: subtitles,
+      subtitleLanguages: () => subtitleLanguages,
       beforeFirstRelay: beforeFirstRelay,
       timings: timings,
     );
@@ -600,6 +693,10 @@ final class CastRig {
   final encoders = FakeEncoderDetection();
   final devices = MemoryCastDevices();
   final sleep = FakeSleep();
+  final subtitles = FakeSubtitles();
+
+  /// Settings → Playback's "Preferred subtitles".
+  List<String> subtitleLanguages = const [];
   final logged = MemoryOutput(bufferSize: 10000);
   late final CastCoordinator coordinator;
   final states = <CastingState>[];

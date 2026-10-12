@@ -197,6 +197,44 @@ void main() {
       expect(joined.state.link, CastLink.connected);
     });
 
+    test('subtitles: the LOAD says which shows, and EDIT_TRACKS_INFO '
+        'changes it', () async {
+      await startFake();
+      final joined = await join();
+      final load = CastLoad(
+        url: _mp4.url,
+        contentType: _mp4.contentType,
+        live: false,
+        title: _mp4.title,
+        textTracks: const [
+          CastTextTrack(id: 1, url: 'http://192.0.2.1/a.vtt', language: 'en'),
+          CastTextTrack(id: 2, url: 'http://192.0.2.1/b.vtt', language: 'de'),
+        ],
+        activeTextTrack: 1,
+      );
+      expect(await joined.load(load), isA<CastDone>());
+      await _until(joined, _playing);
+      expect(fake.activeTrackIds, [1]);
+
+      expect(await joined.showTextTrack(2), isA<CastDone>());
+      expect(fake.activeTrackIds, [2]);
+      final edit = fake.requests('EDIT_TRACKS_INFO').single.payload;
+      expect(edit['activeTrackIds'], [2]);
+      expect(edit['mediaSessionId'], joined.state.media!.sessionId);
+
+      expect(await joined.showTextTrack(null), isA<CastDone>());
+      expect(fake.activeTrackIds, isEmpty);
+      expect(
+        fake.requests('EDIT_TRACKS_INFO').last.payload['activeTrackIds'],
+        isEmpty,
+      );
+
+      // A track the LOAD didn't name.
+      final refused = await joined.showTextTrack(9) as CastRefused;
+      expect(refused.reason, CastRefusal.invalidRequest);
+      expect(fake.activeTrackIds, isEmpty);
+    });
+
     test('a LOAD the TV cannot play: taken, then IDLE with an error', () async {
       await startFake();
       fake.refuseLoads((_) => true);

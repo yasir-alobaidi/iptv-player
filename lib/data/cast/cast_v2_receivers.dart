@@ -429,6 +429,14 @@ final class _CastV2Session implements CastReceiverSession {
   @override
   Future<CastCommandResult> stopMedia() => _command('STOP');
 
+  @override
+  Future<CastCommandResult> showTextTrack(int? id) => _command(
+    'EDIT_TRACKS_INFO',
+    extra: {
+      'activeTrackIds': [?id],
+    },
+  );
+
   Future<CastCommandResult> _command(
     String type, {
     Map<String, Object?> extra = const {},

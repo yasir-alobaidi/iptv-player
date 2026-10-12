@@ -741,6 +741,16 @@ final class _Quiet extends LogOutput {
   void output(OutputEvent event) {}
 }
 
+/// What the name of [subtitle], a file beside the video at [video], says
+/// of it (`Movie.eng.forced.srt`): null when it isn't that video's
+/// subtitle file.
+ExternalSubtitle? subtitleBeside(String video, String subtitle) {
+  final stem = p.basenameWithoutExtension(video);
+  final name = p.basename(subtitle);
+  if (!name.toLowerCase().startsWith('${stem.toLowerCase()}.')) return null;
+  return _Scan._subtitle(name, name.substring(stem.length + 1));
+}
+
 /// The scanner's `subtitles_json`, read tolerantly.
 List<ExternalSubtitle> subtitlesFromJson(String? text) {
   if (text == null) return const [];

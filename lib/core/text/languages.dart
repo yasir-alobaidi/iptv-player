@@ -8,6 +8,20 @@ String languageName(String code) {
   return _names[key] ?? code.toUpperCase();
 }
 
+/// The short tag (ISO 639-1) for [code], as a TV's player wants a
+/// track's language: `en` for `eng` or `en-US`. A code not listed is
+/// given as it is, lower case.
+String languageTag(String code) {
+  final key = code.toLowerCase().split(RegExp('[-_]')).first;
+  if (key.length == 2) return key;
+  final name = _names[key];
+  if (name == null) return key;
+  for (final entry in _names.entries) {
+    if (entry.key.length == 2 && entry.value == name) return entry.key;
+  }
+  return key;
+}
+
 const _names = {
   'en': 'English', 'eng': 'English', //
   'fr': 'French', 'fre': 'French', 'fra': 'French',

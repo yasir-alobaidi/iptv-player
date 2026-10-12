@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
@@ -234,6 +235,54 @@ void main() {
     await settleCast(tester);
     expect(ui.cast.tv.calls.where((c) => c == 'pause'), hasLength(2));
     await stopCasting(tester);
+  });
+
+  castTest("a file's subtitles: S goes through them (off, each in turn, "
+      'off), and the line and the button say which', (tester) async {
+    await pump(tester);
+    ui.live.rig.resolver.downloads['m7'] = '/downloads/Film (2025).mp4';
+    ui.cast.probe.next = const StreamProbed(mp4Facts);
+    ui.cast.subtitles.ready = const [
+      CastSubtitle(language: 'en', beside: true),
+      CastSubtitle(language: 'ger', title: 'SDH'),
+    ];
+    await cast(tester, PlayableMovie(movie(7)));
+    Iterable<String> switches() =>
+        ui.cast.tv.calls.where((call) => call.startsWith('textTrack:'));
+
+    // The file beside the video shows from the start.
+    expect(find.text('Subtitles: English'), findsOneWidget);
+    expect(findByLabel('Subtitles: English'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await settleCast(tester);
+    expect(switches(), ['textTrack:2']);
+    expect(find.text('Subtitles: German · SDH'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await settleCast(tester);
+    expect(switches().last, 'textTrack:none');
+    expect(find.text('Subtitles: off'), findsOneWidget);
+
+    // The button is the same key.
+    await tester.tap(findByLabel('Subtitles: off'));
+    await settleCast(tester);
+    expect(switches().last, 'textTrack:1');
+    expect(find.text('Subtitles: English'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  castTest('nothing with subtitles: no line, no button, and S does '
+      'nothing', (tester) async {
+    await pump(tester);
+    ui.cast.probe.next = const StreamProbed(mkvFacts);
+    await cast(tester, PlayableMovie(movie(7)));
+    expect(find.textContaining('Subtitles'), findsNothing);
+    expect(findByLabel('Subtitles: off'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await settleCast(tester);
+    expect(ui.cast.tv.calls.where((c) => c.startsWith('textTrack')), isEmpty);
+    expect(ui.cast.tv.loads, hasLength(1));
   });
 
   castTest('Esc goes back while the cast goes on; the bar opens the view '

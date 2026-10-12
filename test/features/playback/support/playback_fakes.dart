@@ -92,6 +92,9 @@ final class FakeResolver implements StreamResolver {
   /// asked for the provider's.
   final Map<String, String> downloads = {};
 
+  /// The subtitle files beside a downloaded title's file, by remote key.
+  final Map<String, List<String>> downloadSubtitles = {};
+
   @override
   Future<Result<ResolvedStream>> movie(
     MovieItem movie, {
@@ -101,7 +104,14 @@ final class FakeResolver implements StreamResolver {
     final path = downloaded ? downloads[movie.remoteKey] : null;
     if (path != null) {
       return Future.value(
-        Ok(ResolvedStream(url: path, maxConnections: 1, local: true)),
+        Ok(
+          ResolvedStream(
+            url: path,
+            maxConnections: 1,
+            local: true,
+            subtitleFiles: downloadSubtitles[movie.remoteKey] ?? const [],
+          ),
+        ),
       );
     }
     return _answer('movie/u/p/${movie.remoteKey}.${movie.ext}');

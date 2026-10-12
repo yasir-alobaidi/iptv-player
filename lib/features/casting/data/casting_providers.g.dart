@@ -636,6 +636,58 @@ final class CastRelayProvider
 
 String _$castRelayHash() => r'05adf9ebd69f6808860eec67bf511256ca46bbc7';
 
+/// A file's subtitles as WebVTT for the TV (Phase 8 decision 12), made by
+/// the bundled FFmpeg in the relay's folder for this run: what a crash
+/// leaves there goes with the relay's own at the next launch.
+
+@ProviderFor(castSubtitles)
+final castSubtitlesProvider = CastSubtitlesProvider._();
+
+/// A file's subtitles as WebVTT for the TV (Phase 8 decision 12), made by
+/// the bundled FFmpeg in the relay's folder for this run: what a crash
+/// leaves there goes with the relay's own at the next launch.
+
+final class CastSubtitlesProvider
+    extends $FunctionalProvider<CastSubtitles, CastSubtitles, CastSubtitles>
+    with $Provider<CastSubtitles> {
+  /// A file's subtitles as WebVTT for the TV (Phase 8 decision 12), made by
+  /// the bundled FFmpeg in the relay's folder for this run: what a crash
+  /// leaves there goes with the relay's own at the next launch.
+  CastSubtitlesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castSubtitlesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castSubtitlesHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastSubtitles> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastSubtitles create(Ref ref) {
+    return castSubtitles(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastSubtitles value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastSubtitles>(value),
+    );
+  }
+}
+
+String _$castSubtitlesHash() => r'd7c54940da6255c6a865158250b1f8f14441e977';
+
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
 /// Smooth interlaced. The defaults at once, the stored choices as soon as
 /// they are read; a change is saved and applies to the next cast.
@@ -898,7 +950,7 @@ final class CastCoordinatorProvider
   }
 }
 
-String _$castCoordinatorHash() => r'e3d744cd624ea3d7305e19b10a7e0c27a5d5cbd9';
+String _$castCoordinatorHash() => r'565d88eb93a440eb896bc54a17e69cf1b5493476';
 
 /// Whether Windows' firewall prompt has been explained before the first
 /// relay start (Phase 7 step 7): once is enough.

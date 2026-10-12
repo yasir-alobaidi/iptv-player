@@ -6,6 +6,7 @@ import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -18,6 +19,10 @@ import 'package:iptv_player/features/playback/domain/source_connections.dart';
 
 import '../../playback/support/playback_fakes.dart';
 import '../support/cast_fakes.dart';
+
+/// From [low] to [high], both included.
+Matcher _between(Duration low, Duration high) =>
+    allOf(greaterThanOrEqualTo(low), lessThanOrEqualTo(high));
 
 void main() {
   late CastRig rig;
@@ -964,6 +969,290 @@ void main() {
         expect(rig.relay.unserved, hasLength(1), reason: 'its URL is gone');
         expect(rig.devices.devices.values.single.learned.directRefusedSources, {
           'file:$file',
+        });
+      });
+
+      test('cut short while the TV reads it itself: it carries on there, '
+          "and its place is still the TV's own time", () async {
+        await castDownloaded();
+        rig.tv.playing(position: const Duration(minutes: 40));
+        await rig.phase(CastPhase.playing);
+        rig.tv.idle(
+          CastIdleReason.finished,
+          position: const Duration(minutes: 40),
+        );
+        await rig.loaded(2);
+        expect(rig.tv.loads.last.start, const Duration(minutes: 40));
+        expect(rig.tv.loads.last.url, rig.tv.loads.first.url);
+        rig.tv.playing(position: const Duration(minutes: 40, seconds: 5));
+        await rig.phase(CastPhase.playing);
+        expect(
+          rig.coordinator.timeline.position,
+          _between(
+            const Duration(minutes: 40, seconds: 5),
+            const Duration(minutes: 41),
+          ),
+        );
+      });
+
+      group('its subtitles (docs/04 "Subtitles")', () {
+        const english = CastSubtitle(language: 'en', beside: true);
+        const german = CastSubtitle(language: 'ger', title: 'SDH');
+        const srt = '/downloads/Movies/Film (2025)/Film (2025).en.srt';
+
+        Iterable<String> switches() =>
+            rig.tv.calls.where((call) => call.startsWith('textTrack:'));
+
+        test('the LOAD names each as a WebVTT file the relay serves; a '
+            'file beside the video shows from the start', () async {
+          rig.subtitles.ready = [english, german];
+          rig.playback.resolver.downloadSubtitles['m7'] = [srt];
+          await castDownloaded();
+          expect(rig.subtitles.last.video, file);
+          expect(rig.subtitles.last.beside, [srt]);
+          final load = rig.tv.loads.single;
+          expect(
+            [for (final t in load.textTracks) (t.id, t.language, t.name)],
+            [(1, 'en', 'English'), (2, 'de', 'German · SDH')],
+          );
+          // The first file served is the video.
+          expect(
+            [for (final t in load.textTracks) t.url],
+            [
+              'http://192.168.1.20:38400/f/file2/media.vtt',
+              'http://192.168.1.20:38400/f/file3/media.vtt',
+            ],
+          );
+          expect(load.activeTextTrack, 1);
+          // The TV plays the file itself: the cues keep their times.
+          expect(rig.subtitles.last.moves, [Duration.zero]);
+          expect(rig.subtitles.starts, isEmpty);
+          expect(rig.state.subtitles, [english, german]);
+          expect(rig.state.subtitle, 1);
+        });
+
+        test('Preferred subtitles decide which shows first: the most '
+            'wanted language that has one', () async {
+          rig
+            ..subtitleLanguages = ['fr', 'de', 'en']
+            ..subtitles.ready = [english, german];
+          await castDownloaded();
+          expect(rig.tv.loads.single.activeTextTrack, 2);
+          expect(rig.state.subtitle, 2);
+        });
+
+        test("only the file's own tracks, none preferred: listed, and "
+            'off', () async {
+          rig.subtitles.ready = [german];
+          await castDownloaded();
+          expect(rig.tv.loads.single.textTracks, hasLength(1));
+          expect(rig.tv.loads.single.activeTextTrack, isNull);
+          expect(rig.state.subtitles, [german]);
+          expect(rig.state.subtitle, isNull);
+        });
+
+        test('a file with none, a channel, a movie from the provider: no '
+            'tracks', () async {
+          await castDownloaded();
+          expect(rig.tv.loads.single.textTracks, isEmpty);
+          expect(rig.state.subtitles, isEmpty);
+          rig.subtitles.ready = [english];
+          unawaited(rig.playback.coordinator.playVod(PlayableMovie(movie(8))));
+          await rig.loaded(2);
+          unawaited(rig.playback.coordinator.playLive(channel(1)));
+          await rig.loaded(3);
+          expect(rig.subtitles.sets, hasLength(1), reason: 'only the file');
+          expect(rig.subtitles.sets.single.deleted, isTrue);
+          expect(rig.tv.loads.last.textTracks, isEmpty);
+          expect(rig.state.subtitles, isEmpty);
+        });
+
+        test('choosing one tells the TV, and so does none', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          rig.tv.playing();
+          await rig.phase(CastPhase.playing);
+          await rig.coordinator.setSubtitle(2);
+          expect(switches(), ['textTrack:2']);
+          expect(rig.state.subtitle, 2);
+          await rig.coordinator.setSubtitle(null);
+          expect(switches(), ['textTrack:2', 'textTrack:none']);
+          expect(rig.state.subtitle, isNull);
+          // One that isn't there is no choice.
+          await rig.coordinator.setSubtitle(3);
+          expect(rig.state.subtitle, isNull);
+          expect(switches(), hasLength(2));
+          expect(rig.tv.loads, hasLength(1));
+        });
+
+        test('a TV that refuses the switch: what it shows is what is '
+            'said', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          rig.tv.playing();
+          await rig.phase(CastPhase.playing);
+          rig.tv.onTextTrack = (_) =>
+              const CastRefused(CastRefusal.invalidRequest);
+          await rig.coordinator.setSubtitle(2);
+          expect(rig.state.subtitle, 1);
+        });
+
+        test('chosen while it loads: the TV is told once it plays', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          await rig.coordinator.setSubtitle(2);
+          expect(switches(), isEmpty);
+          expect(rig.state.subtitle, 2);
+          rig.tv.playing();
+          await rig.until(() => switches().isNotEmpty);
+          expect(switches(), ['textTrack:2']);
+        });
+
+        test("the file's own tracks read after the LOAD: listed when "
+            'they are ready, and choosing one loads the file again where '
+            'it is', () async {
+          rig.subtitles.late = [german];
+          await castDownloaded(from: const Duration(minutes: 5));
+          final first = rig.tv.loads.single;
+          expect(first.textTracks, isEmpty);
+          rig.tv.playing(position: const Duration(minutes: 5));
+          await rig.phase(CastPhase.playing);
+          expect(rig.state.subtitles, isEmpty);
+
+          rig.subtitles.last.finish();
+          await rig.until(() => rig.state.subtitles.isNotEmpty);
+          expect(rig.state.subtitles, [german]);
+          expect(rig.state.subtitle, isNull);
+          expect(rig.tv.loads, hasLength(1), reason: 'nothing was asked yet');
+
+          rig.tv.playing(position: const Duration(minutes: 12));
+          await rig.until(
+            () =>
+                rig.coordinator.timeline.position >=
+                const Duration(minutes: 12),
+          );
+          unawaited(rig.coordinator.setSubtitle(1));
+          await rig.loaded(2);
+          final again = rig.tv.loads.last;
+          expect(again.url, first.url);
+          expect(
+            again.start,
+            _between(const Duration(minutes: 12), const Duration(minutes: 13)),
+          );
+          expect(again.textTracks.single.id, 1);
+          expect(again.activeTextTrack, 1);
+          expect(rig.state.phase, CastPhase.preparing);
+          rig.tv.playing(position: const Duration(minutes: 12));
+          await rig.phase(CastPhase.playing);
+          expect(rig.state.subtitle, 1);
+          expect(switches(), isEmpty, reason: 'the LOAD carried it');
+          expect(rig.tv.loads, hasLength(2));
+        });
+
+        test('through the relay: the cues, the timeline and the saved '
+            'place count from the key frame the stream really starts '
+            'at, and again after a seek', () async {
+          rig.subtitles
+            ..ready = [english]
+            ..keyFrameBefore = const Duration(seconds: 4);
+          await castDownloaded(
+            from: const Duration(minutes: 10),
+            facts: mkvFacts,
+          );
+          expect(rig.relay.last.request.startAt, const Duration(minutes: 10));
+          final asked = rig.subtitles.starts.single;
+          expect(asked.at, const Duration(minutes: 10));
+          expect(asked.copied, (video: true, audioTrack: null));
+          const start = Duration(minutes: 9, seconds: 56);
+          expect(rig.subtitles.last.moves, [start]);
+          final load = rig.tv.loads.single;
+          expect(load.textTracks.single.url, endsWith('/media.vtt'));
+          expect(load.activeTextTrack, 1);
+
+          rig.tv.playing(position: const Duration(seconds: 2));
+          await rig.phase(CastPhase.playing);
+          expect(
+            rig.coordinator.timeline.position,
+            _between(
+              start + const Duration(seconds: 2),
+              const Duration(minutes: 10),
+            ),
+          );
+
+          await rig.playback.coordinator.seek(const Duration(minutes: 30));
+          await rig.loaded(2);
+          expect(
+            rig.relay.last.renews.single.startAt,
+            const Duration(minutes: 30),
+          );
+          expect(
+            rig.subtitles.last.moves.last,
+            const Duration(minutes: 29, seconds: 56),
+          );
+          final again = rig.tv.loads.last;
+          expect(again.activeTextTrack, 1, reason: 'the choice is kept');
+          expect(
+            again.textTracks.single.url,
+            isNot(load.textTracks.single.url),
+          );
+          expect(rig.relay.unserved, contains(load.textTracks.single.url));
+        });
+
+        test('the end of the cast stops serving them and deletes '
+            'them', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          rig.tv.playing();
+          await rig.phase(CastPhase.playing);
+          final urls = [for (final t in rig.tv.loads.single.textTracks) t.url];
+          await rig.coordinator.disconnect();
+          expect(rig.relay.unserved, containsAll(urls));
+          expect(rig.subtitles.last.deleted, isTrue);
+          expect(rig.state.subtitles, isEmpty);
+        });
+
+        Future<void> handOver({required String? showing}) async {
+          final playback = rig.playback;
+          playback.resolver.downloads['m7'] = file;
+          rig.subtitles.ready = [english, german];
+          await playback.coordinator.playVod(PlayableMovie(movie(7)));
+          playback.engine
+            ..info = const StreamInfo(
+              videoCodec: 'h264 (H.264 / AVC)',
+              width: 1920,
+              height: 1080,
+              fps: 24,
+              audioCodec: 'aac',
+              audioChannels: 2,
+            )
+            ..firstFrame()
+            ..emit(
+              PlayerTracks(
+                audio: const [MediaTrack(id: '1', codec: 'aac')],
+                subtitles: const [
+                  MediaTrack(id: '2', language: 'deu'),
+                  MediaTrack(id: '3', language: 'en'),
+                ],
+                subtitleId: showing,
+              ),
+            );
+          await rig.coordinator.connect(tvDevice);
+          await rig.loaded();
+        }
+
+        test("handed over from the laptop's player: the subtitle in the "
+            'language it showed', () async {
+          await handOver(showing: '2');
+          expect(rig.tv.loads.single.activeTextTrack, 2);
+        });
+
+        test("handed over with the player's subtitles off: off, whatever "
+            'is beside the file', () async {
+          rig.subtitleLanguages = ['en'];
+          await handOver(showing: null);
+          expect(rig.tv.loads.single.textTracks, hasLength(2));
+          expect(rig.tv.loads.single.activeTextTrack, isNull);
+          expect(rig.state.subtitle, isNull);
         });
       });
     });

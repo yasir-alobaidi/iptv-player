@@ -9,10 +9,12 @@ import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/sleep_inhibitor.dart';
+import 'package:iptv_player/core/text/languages.dart';
 import 'package:iptv_player/features/casting/domain/cast_items.dart';
 import 'package:iptv_player/features/casting/domain/cast_learning.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
@@ -46,6 +48,7 @@ final class CastTimings {
     this.lessons = 4,
     this.encoderTries = 4,
     this.picture = const Duration(seconds: 3),
+    this.subtitles = const Duration(seconds: 2),
     this.saveEvery = const Duration(seconds: 10),
     this.earlyEnd = const Duration(seconds: 10),
     this.quit = const Duration(seconds: 3),
@@ -78,6 +81,11 @@ final class CastTimings {
   /// How long the TV's picture may take; the LOAD goes without it after.
   final Duration picture;
 
+  /// How long a file's LOAD waits for its subtitles, from the moment the
+  /// cast began. Those made later are there for the asking: choosing one
+  /// loads the file again where it is.
+  final Duration subtitles;
+
   /// How often a file's place is saved while it plays.
   final Duration saveEvery;
 
@@ -108,8 +116,11 @@ final class CastTimings {
 /// (ADR-004), a codec change is planned again, a TV that never fetches
 /// the stream "couldn't reach this computer". A file's place is the TV's
 /// time plus where the relay started; seeking a relayed file starts it
-/// again there (decision 1); its place is saved like local playback. The
-/// computer is kept awake while something is cast (decision 7).
+/// again there (decision 1); its place is saved like local playback. A
+/// file on this computer brings its text subtitles as WebVTT the relay
+/// serves, named in the LOAD and switched with [setSubtitle] (Phase 8
+/// decision 12). The computer is kept awake while something is cast
+/// (decision 7).
 final class CastCoordinator implements RemotePlayback {
   new({
     required this._receivers,
@@ -125,12 +136,15 @@ final class CastCoordinator implements RemotePlayback {
     this._history,
     this._sleep = const NoSleepInhibitor(),
     this._pictures = const NoCastPictures(),
+    this._subtitles = const NoCastSubtitles(),
     CastSettings Function()? settings,
     List<String> Function()? audioLanguages,
+    List<String> Function()? subtitleLanguages,
     this._beforeFirstRelay,
     this.timings = const CastTimings(),
   }) : _settings = settings ?? (() => const CastSettings()),
-       _languages = audioLanguages ?? (() => const []) {
+       _languages = audioLanguages ?? (() => const []),
+       _subtitleLanguages = subtitleLanguages ?? (() => const []) {
     _relayConnections = _relay.connections.listen(_onRelayConnections);
   }
 
@@ -147,8 +161,12 @@ final class CastCoordinator implements RemotePlayback {
   final PlaybackHistory? _history;
   final SleepInhibitor _sleep;
   final CastPictures _pictures;
+  final CastSubtitles _subtitles;
   final CastSettings Function() _settings;
   final List<String> Function() _languages;
+
+  /// Settings → Playback's "Preferred subtitles", most wanted first.
+  final List<String> Function() _subtitleLanguages;
   final CastTimings timings;
 
   /// Before the first relay start: Windows' firewall asks about it, and
@@ -313,10 +331,13 @@ final class CastCoordinator implements RemotePlayback {
       ..from = to
       ..offset = to;
     _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
+    final begins = _startOf(cast, to);
     final failure = await session.renew(startAt: to);
     if (failure != null || !_current(cast, session, generation)) return;
     final tv = await _joined;
     if (tv == null || !_current(cast, session, generation)) return;
+    cast.offset = await begins;
+    if (!_current(cast, session, generation)) return;
     await _load(
       cast,
       tv,
@@ -324,6 +345,24 @@ final class CastCoordinator implements RemotePlayback {
       url: session.url,
       contentType: session.contentType,
     );
+  }
+
+  /// Shows the [id]th of [CastingState.subtitles] on the TV (from 1), or
+  /// none for null. One the TV already has is switched to at once. One
+  /// that was made after the TV loaded the file needs the file loaded
+  /// again where it is, with "Preparing…" meanwhile: a LOAD is the only
+  /// way to hand a subtitle over.
+  Future<void> setSubtitle(int? id) async {
+    final cast = _cast;
+    if (cast == null || cast.item.live) return;
+    if (id != null && (id < 1 || id > _state.subtitles.length)) return;
+    cast
+      ..textTrack = id
+      ..subtitleChosen = true;
+    _set(_state.copyWith(subtitle: id));
+    // Before it plays, the LOAD to come carries the choice; one already
+    // on its way is followed once it plays.
+    await _showChosenSubtitle(cast);
   }
 
   @override
@@ -540,7 +579,20 @@ final class CastCoordinator implements RemotePlayback {
       }
       if (handover.tracks case final tracks?) {
         cast.audioTrack = playerAudioIndex(tracks);
+        // The TV carries on as the laptop showed it: with its subtitle's
+        // language, or with none.
+        final shown = tracks.subtitles
+            .where((t) => t.id == tracks.subtitleId)
+            .firstOrNull;
+        cast.playerSubtitle = (on: shown != null, language: shown?.language);
       }
+    } else if (previous != null &&
+        previous.item == item &&
+        previous.subtitleChosen) {
+      // Tried again: the same file, the same choice.
+      cast
+        ..textTrack = previous.textTrack
+        ..subtitleChosen = true;
     }
     if (previous != null) await _endCast(previous, save: true);
     if (!identical(cast, _cast)) return;
@@ -558,6 +610,8 @@ final class CastCoordinator implements RemotePlayback {
         problem: null,
         paused: false,
         buffering: false,
+        subtitles: const [],
+        subtitle: null,
       ),
     );
     _playback.castShows(item);
@@ -585,6 +639,15 @@ final class CastCoordinator implements RemotePlayback {
       ..stream = stream
       ..metadata = _items.metadataFor(cast.item);
     cast.picture = _servePicture(cast);
+    if (stream.upstream.file case final file?) {
+      // Made beside everything else; the LOAD waits a moment for them.
+      final set = cast.subtitleSet = _subtitles.prepare(
+        file,
+        beside: stream.stream.subtitleFiles,
+      );
+      cast.subtitlesSince = _clock.elapsed;
+      unawaited(set.done.then((_) => _publishSubtitles(cast)));
+    }
     final facts = await _factsFor(cast, generation);
     if (facts == null || !_fresh(cast, generation)) return;
     cast.facts = facts;
@@ -705,7 +768,10 @@ final class CastCoordinator implements RemotePlayback {
       // Built again: a redirect's token may have expired meanwhile.
       final fresh = await stream.upstream.resolve();
       if (!_fresh(cast, generation)) return;
-      cast.directOnTv = true;
+      cast
+        ..directOnTv = true
+        // The TV's own time is the file's.
+        ..offset = Duration.zero;
       _countCast(stream.info.sourceId);
       await _load(
         cast,
@@ -727,6 +793,7 @@ final class CastCoordinator implements RemotePlayback {
     if (plan.video is CastVideoTranscode) {
       cast.encoder ??= (await _encoders).best;
     }
+    final begins = _startOf(cast, cast.from ?? Duration.zero);
     final started = await _relay.start(
       CastRelayRequest(
         plan: plan,
@@ -756,6 +823,8 @@ final class CastCoordinator implements RemotePlayback {
         if (failure != null || !_current(cast, session, generation)) return;
         final tv = await _joined;
         if (tv == null || !_current(cast, session, generation)) return;
+        if (!plan.live) cast.offset = await begins;
+        if (!_current(cast, session, generation)) return;
         await _load(
           cast,
           tv,
@@ -795,7 +864,10 @@ final class CastCoordinator implements RemotePlayback {
         ),
       );
     }
-    cast.served = served;
+    cast
+      ..served = served
+      // The TV's own time is the file's.
+      ..offset = Duration.zero;
     final tv = await _joined;
     if (tv == null || !_fresh(cast, generation)) return;
     await _load(
@@ -823,11 +895,18 @@ final class CastCoordinator implements RemotePlayback {
       onTimeout: () => null,
     );
     if (!_fresh(cast, generation)) return;
+    final tracks = await _textTracks(cast, tv, generation);
+    if (!_fresh(cast, generation)) return;
+    final shown = tracks.any((t) => t.id == cast.textTrack)
+        ? cast.textTrack
+        : null;
     final serial = ++cast.loads;
     cast
       ..loadedUrl = url
       ..mediaSession = null
       ..fetched = false
+      ..tracksLoaded = tracks.length
+      ..shownTrack = shown
       ..loadedAt = _clock.elapsed;
     cast.reachTimer?.cancel();
     final result = await tv.load(
@@ -840,6 +919,8 @@ final class CastCoordinator implements RemotePlayback {
         imageUrl: picture?.url,
         start: start,
         duration: plan.live ? null : _length(cast),
+        textTracks: tracks,
+        activeTextTrack: shown,
       ),
     );
     if (!_fresh(cast, generation) || cast.loads != serial) return;
@@ -882,6 +963,208 @@ final class CastCoordinator implements RemotePlayback {
     });
   }
 
+  // A file's subtitles.
+
+  /// The file's subtitles for a LOAD: each WebVTT file served by the
+  /// relay, its cues counted from where the TV's time 0 is (a relayed
+  /// stream's start; a file the TV plays itself keeps its own times).
+  /// What the first LOAD names decides which shows from the start.
+  Future<List<CastTextTrack>> _textTracks(
+    _Cast cast,
+    CastReceiverSession tv,
+    int generation,
+  ) async {
+    final set = cast.subtitleSet;
+    final plan = cast.plan!;
+    if (set == null || plan.live) return const [];
+    final left =
+        timings.subtitles -
+        (_clock.elapsed - (cast.subtitlesSince ?? _clock.elapsed));
+    if (left > Duration.zero) {
+      await set.done.timeout(left, onTimeout: () {});
+      if (!_fresh(cast, generation)) return const [];
+    }
+    await _closeTracks(cast);
+    final subtitles = set.subtitles;
+    if (subtitles.isEmpty || !_fresh(cast, generation)) return const [];
+    final files = await set.files(
+      by: plan.delivery.direct ? Duration.zero : cast.offset,
+    );
+    final served = <CastServedFile>[];
+    final tracks = <CastTextTrack>[];
+    for (final (index, subtitle) in subtitles.indexed) {
+      if (index >= files.length || !_fresh(cast, generation)) break;
+      final file = await _relay.serveFile(
+        files[index],
+        localAddress: tv.localAddress,
+      );
+      if (file == null) continue;
+      served.add(file);
+      tracks.add(
+        CastTextTrack(
+          id: index + 1,
+          url: file.url,
+          language: switch (subtitle.language) {
+            final language? => languageTag(language),
+            null => null,
+          },
+          name: castSubtitleLabel(subtitle, index + 1),
+        ),
+      );
+    }
+    if (!_fresh(cast, generation)) {
+      for (final file in served) {
+        await file.close();
+      }
+      return const [];
+    }
+    cast.servedTracks = served;
+    if (!cast.subtitleChosen && tracks.isNotEmpty) {
+      cast
+        ..subtitleChosen = true
+        ..textTrack = _firstSubtitle(cast, subtitles);
+    }
+    // A choice the TV can't be given is none.
+    if (!tracks.any((t) => t.id == cast.textTrack)) cast.textTrack = null;
+    _set(_state.copyWith(subtitles: subtitles, subtitle: cast.textTrack));
+    return tracks;
+  }
+
+  /// Which subtitle shows from the start. Handed over from the laptop's
+  /// player: the one in the language it showed, or none if it showed
+  /// none. Otherwise as the player starts a file: the first in the most
+  /// wanted of Settings' "Preferred subtitles" that has one, else a
+  /// subtitle file the user put beside the video, else none.
+  int? _firstSubtitle(_Cast cast, List<CastSubtitle> subtitles) {
+    int? first(bool Function(CastSubtitle subtitle) test) {
+      final index = subtitles.indexWhere(test);
+      return index < 0 ? null : index + 1;
+    }
+
+    if (cast.playerSubtitle case final shown?) {
+      if (!shown.on) return null;
+      final same = first(
+        (s) => shown.language == null
+            ? s.language == null
+            : sameLanguage(s.language, shown.language),
+      );
+      if (same != null) return same;
+    }
+    for (final wanted in _subtitleLanguages()) {
+      final preferred = first(
+        (s) => !s.forced && sameLanguage(s.language, wanted),
+      );
+      if (preferred != null) return preferred;
+    }
+    return first((s) => s.beside && !s.forced);
+  }
+
+  /// The subtitles are all made: the view lists them. Those the TV
+  /// wasn't given with its LOAD are handed over when one is chosen.
+  void _publishSubtitles(_Cast cast) {
+    final set = cast.subtitleSet;
+    if (set == null || !identical(cast, _cast) || cast.failed) return;
+    _set(_state.copyWith(subtitles: set.subtitles));
+  }
+
+  /// Tells the TV which subtitle to show, when it isn't the one chosen.
+  /// A TV that isn't ready to be told is told again once it plays. One
+  /// made after the TV loaded the file comes with a new LOAD of it.
+  Future<void> _showChosenSubtitle(_Cast cast) async {
+    final tv = _tv;
+    final wanted = cast.textTrack;
+    if (tv == null ||
+        !identical(cast, _cast) ||
+        !cast.played ||
+        cast.loadedUrl == null ||
+        cast.mediaSession == null ||
+        wanted == cast.shownTrack) {
+      return;
+    }
+    if (wanted != null && wanted > cast.tracksLoaded) {
+      // What that LOAD names decides again whether it can show: this
+      // can't go round twice.
+      _log.info(_tag, 'Loading the file again for a subtitle made since');
+      return await _loadAgainHere(cast);
+    }
+    final serial = cast.loads;
+    final result = await tv.showTextTrack(wanted);
+    // A LOAD made meanwhile carried the choice itself.
+    if (!identical(cast, _cast) || cast.loads != serial) return;
+    switch (result) {
+      case CastDone():
+        cast.shownTrack = wanted;
+        // Chosen again meanwhile.
+        if (cast.textTrack != wanted) await _showChosenSubtitle(cast);
+      case CastRefused(reason: CastRefusal.noMedia || CastRefusal.invalidState):
+      case CastUnanswered():
+      case CastDisconnected():
+        // Not now: the next time it plays.
+        break;
+      case CastRefused(:final reason):
+        _log.warning(_tag, 'The TV refused the subtitle: ${reason.name}');
+        if (cast.textTrack == wanted) {
+          cast.textTrack = cast.shownTrack;
+          _set(_state.copyWith(subtitle: cast.shownTrack));
+        }
+    }
+  }
+
+  /// The file loaded again where it is.
+  Future<void> _loadAgainHere(_Cast cast) async {
+    final plan = cast.plan;
+    if (plan == null) return;
+    final position = _position(cast);
+    cast
+      ..from = position
+      ..offset = position
+      ..anchor = position
+      ..running = false;
+    _publishTimeline(cast);
+    unawaited(_save(cast));
+    _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
+    if (plan.delivery.direct || cast.relay == null) {
+      return await _deliver(cast, _restart(cast));
+    }
+    await _reload(cast);
+  }
+
+  Future<void> _closeTracks(_Cast cast) async {
+    final served = cast.servedTracks;
+    cast.servedTracks = const [];
+    for (final file in served) {
+      await file.close();
+    }
+  }
+
+  /// Where the TV's time 0 is in a relayed file asked to start at [at]:
+  /// the key frame before it when the picture is copied (docs/04). The
+  /// timeline, the saved place and the subtitles' times all count from
+  /// there. [at] itself for anything but a file on this computer.
+  Future<Duration> _startOf(_Cast cast, Duration at) async {
+    final file = cast.stream?.upstream.file;
+    final plan = cast.plan;
+    if (file == null || plan == null || plan.live || at <= Duration.zero) {
+      return at;
+    }
+    try {
+      return await _subtitles.startOf(
+        file,
+        at: at,
+        copied: (
+          video: plan.video is CastVideoCopy,
+          audioTrack: switch (plan.audio) {
+            CastAudioCopy(:final track) => track,
+            _ => null,
+          },
+        ),
+      );
+    } on Object catch (error) {
+      _log.info(_tag, 'Where the file starts is not known: $error');
+      return at;
+    }
+  }
+
   /// The same stream loaded again: after the TV dropped a live one, or
   /// once the connection to it is back.
   Future<void> _reload(_Cast cast) async {
@@ -894,11 +1177,14 @@ final class CastCoordinator implements RemotePlayback {
       return await _deliver(cast, generation);
     }
     if (plan.delivery == CastDelivery.relayContinuous) {
-      // A continuous stream that ended needs a new one (ADR-004).
-      final failure = await session.renew(
-        startAt: plan.live ? null : cast.offset,
-      );
+      // A continuous stream that ended needs a new one (ADR-004), from
+      // the place this one was asked for.
+      final at = cast.from ?? Duration.zero;
+      final begins = _startOf(cast, at);
+      final failure = await session.renew(startAt: plan.live ? null : at);
       if (failure != null || !_current(cast, session, generation)) return;
+      if (!plan.live) cast.offset = await begins;
+      if (!_current(cast, session, generation)) return;
     }
     await _load(
       cast,
@@ -951,6 +1237,9 @@ final class CastCoordinator implements RemotePlayback {
         problem: null,
       ),
     );
+    if (cast.shownTrack != cast.textTrack) {
+      unawaited(_showChosenSubtitle(cast));
+    }
   }
 
   /// IDLE/FINISHED: a live stream dropped (on a continuous stream that is
@@ -1004,7 +1293,14 @@ final class CastCoordinator implements RemotePlayback {
     }
     cast.played = false;
     await _endCast(cast, save: false);
-    _set(_state.copyWith(phase: CastPhase.ended, paused: false));
+    _set(
+      _state.copyWith(
+        phase: CastPhase.ended,
+        paused: false,
+        subtitles: const [],
+        subtitle: null,
+      ),
+    );
   }
 
   /// IDLE/CANCELLED: the TV's remote, or another sender, stopped it.
@@ -1021,6 +1317,8 @@ final class CastCoordinator implements RemotePlayback {
         plan: null,
         paused: false,
         buffering: false,
+        subtitles: const [],
+        subtitle: null,
       ),
     );
     _notice(CastStoppedOnDevice(deviceName));
@@ -1273,18 +1571,24 @@ final class CastCoordinator implements RemotePlayback {
         phase: CastPhase.failed,
         problem: problem,
         buffering: false,
+        subtitles: const [],
+        subtitle: null,
       ),
     );
   }
 
   /// Lets go of what [cast] holds: its relay session and provider
-  /// connection, its picture, its timers. A file's place is saved first
-  /// when [save].
+  /// connection, its picture, its subtitles, its timers. A file's place
+  /// is saved first when [save].
   Future<void> _endCast(_Cast cast, {required bool save}) async {
     cast.tick?.cancel();
     cast.tick = null;
     if (save) await _save(cast);
     await _stopRelay(cast);
+    // Not waited for: a subtitle still being read from a slow drive is
+    // stopped, which the next play needn't wait on.
+    unawaited(cast.subtitleSet?.delete());
+    cast.subtitleSet = null;
     final picture = await cast.picture?.timeout(
       timings.picture,
       onTimeout: () => null,
@@ -1308,6 +1612,7 @@ final class CastCoordinator implements RemotePlayback {
     final served = cast.served;
     cast.served = null;
     await served?.close();
+    await _closeTracks(cast);
   }
 
   /// One more automatic LOAD of [cast]; false once
@@ -1555,6 +1860,24 @@ final class _Cast {
 
   /// A file on this computer the TV reads from the relay's server.
   CastServedFile? served;
+
+  /// Its subtitles as WebVTT files, and since when they are being made.
+  CastSubtitleSet? subtitleSet;
+  Duration? subtitlesSince;
+
+  /// The ones the last LOAD named, as the relay serves them, and how
+  /// many they were.
+  List<CastServedFile> servedTracks = const [];
+  int tracksLoaded = 0;
+
+  /// Which subtitle should show (from 1; null for none), whether that
+  /// was decided yet, and which the TV was last told.
+  int? textTrack;
+  bool subtitleChosen = false;
+  int? shownTrack;
+
+  /// What the laptop's player showed when it handed this over.
+  ({bool on, String? language})? playerSubtitle;
 
   /// LOADs made, the URL of the last, and its media session on the TV.
   int loads = 0;

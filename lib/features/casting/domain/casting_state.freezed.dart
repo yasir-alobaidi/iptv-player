@@ -24,7 +24,11 @@ mixin _$CastingState {
  bool get buffering;/// The connection to the device broke and is being made again; the TV
 /// plays on meanwhile (the pill).
  bool get reconnecting; CastVolume get volume;/// Why it failed, for [CastPhase.failed].
- CastProblem? get problem;
+ CastProblem? get problem;/// The subtitles the TV can show with what plays, in its order (S
+/// goes through them): a file's on this computer, as they are made.
+/// Empty for a channel, a provider's stream, or a file with none.
+ List<CastSubtitle> get subtitles;/// Which of [subtitles] shows, counted from 1; null for none.
+ int? get subtitle;
 /// Create a copy of CastingState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -36,20 +40,20 @@ $CastingStateCopyWith<CastingState> get copyWith => _$CastingStateCopyWithImpl<C
 @override
 bool operator ==(Object other) {
   final _this = this as CastingState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastingState&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.device, _this.device) || other.device == _this.device)&&(identical(other.item, _this.item) || other.item == _this.item)&&(identical(other.plan, _this.plan) || other.plan == _this.plan)&&(identical(other.paused, _this.paused) || other.paused == _this.paused)&&(identical(other.buffering, _this.buffering) || other.buffering == _this.buffering)&&(identical(other.reconnecting, _this.reconnecting) || other.reconnecting == _this.reconnecting)&&(identical(other.volume, _this.volume) || other.volume == _this.volume)&&(identical(other.problem, _this.problem) || other.problem == _this.problem));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastingState&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.device, _this.device) || other.device == _this.device)&&(identical(other.item, _this.item) || other.item == _this.item)&&(identical(other.plan, _this.plan) || other.plan == _this.plan)&&(identical(other.paused, _this.paused) || other.paused == _this.paused)&&(identical(other.buffering, _this.buffering) || other.buffering == _this.buffering)&&(identical(other.reconnecting, _this.reconnecting) || other.reconnecting == _this.reconnecting)&&(identical(other.volume, _this.volume) || other.volume == _this.volume)&&(identical(other.problem, _this.problem) || other.problem == _this.problem)&&const DeepCollectionEquality().equals(other.subtitles, _this.subtitles)&&(identical(other.subtitle, _this.subtitle) || other.subtitle == _this.subtitle));
 }
 
 
 @override
 int get hashCode {
   final _this = this as CastingState;
-  return Object.hash(runtimeType,_this.phase,_this.device,_this.item,_this.plan,_this.paused,_this.buffering,_this.reconnecting,_this.volume,_this.problem);
+  return Object.hash(runtimeType,_this.phase,_this.device,_this.item,_this.plan,_this.paused,_this.buffering,_this.reconnecting,_this.volume,_this.problem,const DeepCollectionEquality().hash(_this.subtitles),_this.subtitle);
 }
 
 @override
 String toString() {
   final _this = this as CastingState;
-  return 'CastingState(phase: ${_this.phase}, device: ${_this.device}, item: ${_this.item}, plan: ${_this.plan}, paused: ${_this.paused}, buffering: ${_this.buffering}, reconnecting: ${_this.reconnecting}, volume: ${_this.volume}, problem: ${_this.problem})';
+  return 'CastingState(phase: ${_this.phase}, device: ${_this.device}, item: ${_this.item}, plan: ${_this.plan}, paused: ${_this.paused}, buffering: ${_this.buffering}, reconnecting: ${_this.reconnecting}, volume: ${_this.volume}, problem: ${_this.problem}, subtitles: ${_this.subtitles}, subtitle: ${_this.subtitle})';
 }
 
 
@@ -60,7 +64,7 @@ abstract mixin class $CastingStateCopyWith<$Res>  {
   factory $CastingStateCopyWith(CastingState value, $Res Function(CastingState) _then) = _$CastingStateCopyWithImpl;
 @useResult
 $Res call({
- CastPhase phase, CastDevice? device, Playable? item, CastPlan? plan, bool paused, bool buffering, bool reconnecting, CastVolume volume, CastProblem? problem
+ CastPhase phase, CastDevice? device, Playable? item, CastPlan? plan, bool paused, bool buffering, bool reconnecting, CastVolume volume, CastProblem? problem, List<CastSubtitle> subtitles, int? subtitle
 });
 
 
@@ -77,7 +81,7 @@ class _$CastingStateCopyWithImpl<$Res>
 
 /// Create a copy of CastingState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? phase = null,Object? device = freezed,Object? item = freezed,Object? plan = freezed,Object? paused = null,Object? buffering = null,Object? reconnecting = null,Object? volume = null,Object? problem = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? phase = null,Object? device = freezed,Object? item = freezed,Object? plan = freezed,Object? paused = null,Object? buffering = null,Object? reconnecting = null,Object? volume = null,Object? problem = freezed,Object? subtitles = null,Object? subtitle = freezed,}) {
   return _then(CastingState(
 phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as CastPhase,device: freezed == device ? _self.device : device // ignore: cast_nullable_to_non_nullable
@@ -88,7 +92,9 @@ as bool,buffering: null == buffering ? _self.buffering : buffering // ignore: ca
 as bool,reconnecting: null == reconnecting ? _self.reconnecting : reconnecting // ignore: cast_nullable_to_non_nullable
 as bool,volume: null == volume ? _self.volume : volume // ignore: cast_nullable_to_non_nullable
 as CastVolume,problem: freezed == problem ? _self.problem : problem // ignore: cast_nullable_to_non_nullable
-as CastProblem?,
+as CastProblem?,subtitles: null == subtitles ? _self.subtitles : subtitles // ignore: cast_nullable_to_non_nullable
+as List<CastSubtitle>,subtitle: freezed == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 /// Create a copy of CastingState
@@ -194,10 +200,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem,  List<CastSubtitle> subtitles,  int? subtitle)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CastingState() when $default != null:
-return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem);case _:
+return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem,_that.subtitles,_that.subtitle);case _:
   return orElse();
 
 }
@@ -215,10 +221,10 @@ return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem,  List<CastSubtitle> subtitles,  int? subtitle)  $default,) {final _that = this;
 switch (_that) {
 case _CastingState():
-return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem);case _:
+return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem,_that.subtitles,_that.subtitle);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -235,10 +241,10 @@ return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CastPhase phase,  CastDevice? device,  Playable? item,  CastPlan? plan,  bool paused,  bool buffering,  bool reconnecting,  CastVolume volume,  CastProblem? problem,  List<CastSubtitle> subtitles,  int? subtitle)?  $default,) {final _that = this;
 switch (_that) {
 case _CastingState() when $default != null:
-return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem);case _:
+return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_that.buffering,_that.reconnecting,_that.volume,_that.problem,_that.subtitles,_that.subtitle);case _:
   return null;
 
 }
@@ -250,7 +256,7 @@ return $default(_that.phase,_that.device,_that.item,_that.plan,_that.paused,_tha
 
 
 class _CastingState extends CastingState {
-  const _CastingState({this.phase = CastPhase.off, this.device, this.item, this.plan, this.paused = false, this.buffering = false, this.reconnecting = false, this.volume = const CastVolume(), this.problem}): super._();
+  const _CastingState({this.phase = CastPhase.off, this.device, this.item, this.plan, this.paused = false, this.buffering = false, this.reconnecting = false, this.volume = const CastVolume(), this.problem,  List<CastSubtitle> subtitles = const <CastSubtitle>[], this.subtitle}): _subtitles = subtitles,super._();
   
 
 @override@JsonKey() final  CastPhase phase;
@@ -271,6 +277,21 @@ class _CastingState extends CastingState {
 @override@JsonKey() final  CastVolume volume;
 /// Why it failed, for [CastPhase.failed].
 @override final  CastProblem? problem;
+/// The subtitles the TV can show with what plays, in its order (S
+/// goes through them): a file's on this computer, as they are made.
+/// Empty for a channel, a provider's stream, or a file with none.
+ final  List<CastSubtitle> _subtitles;
+/// The subtitles the TV can show with what plays, in its order (S
+/// goes through them): a file's on this computer, as they are made.
+/// Empty for a channel, a provider's stream, or a file with none.
+@override@JsonKey() List<CastSubtitle> get subtitles {
+  if (_subtitles is EqualUnmodifiableListView) return _subtitles;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_subtitles);
+}
+
+/// Which of [subtitles] shows, counted from 1; null for none.
+@override final  int? subtitle;
 
 /// Create a copy of CastingState
 /// with the given fields replaced by the non-null parameter values.
@@ -282,18 +303,18 @@ _$CastingStateCopyWith<_CastingState> get copyWith => __$CastingStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastingState&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.device, device) || other.device == device)&&(identical(other.item, item) || other.item == item)&&(identical(other.plan, plan) || other.plan == plan)&&(identical(other.paused, paused) || other.paused == paused)&&(identical(other.buffering, buffering) || other.buffering == buffering)&&(identical(other.reconnecting, reconnecting) || other.reconnecting == reconnecting)&&(identical(other.volume, volume) || other.volume == volume)&&(identical(other.problem, problem) || other.problem == problem));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastingState&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.device, device) || other.device == device)&&(identical(other.item, item) || other.item == item)&&(identical(other.plan, plan) || other.plan == plan)&&(identical(other.paused, paused) || other.paused == paused)&&(identical(other.buffering, buffering) || other.buffering == buffering)&&(identical(other.reconnecting, reconnecting) || other.reconnecting == reconnecting)&&(identical(other.volume, volume) || other.volume == volume)&&(identical(other.problem, problem) || other.problem == problem)&&const DeepCollectionEquality().equals(other.subtitles, _subtitles)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,phase,device,item,plan,paused,buffering,reconnecting,volume,problem);
+    return Object.hash(runtimeType,phase,device,item,plan,paused,buffering,reconnecting,volume,problem,const DeepCollectionEquality().hash(_subtitles),subtitle);
 }
 
 @override
 String toString() {
-    return 'CastingState(phase: $phase, device: $device, item: $item, plan: $plan, paused: $paused, buffering: $buffering, reconnecting: $reconnecting, volume: $volume, problem: $problem)';
+    return 'CastingState(phase: $phase, device: $device, item: $item, plan: $plan, paused: $paused, buffering: $buffering, reconnecting: $reconnecting, volume: $volume, problem: $problem, subtitles: $subtitles, subtitle: $subtitle)';
 }
 
 
@@ -304,7 +325,7 @@ abstract mixin class _$CastingStateCopyWith<$Res> implements $CastingStateCopyWi
   factory _$CastingStateCopyWith(_CastingState value, $Res Function(_CastingState) _then) = __$CastingStateCopyWithImpl;
 @override @useResult
 $Res call({
- CastPhase phase, CastDevice? device, Playable? item, CastPlan? plan, bool paused, bool buffering, bool reconnecting, CastVolume volume, CastProblem? problem
+ CastPhase phase, CastDevice? device, Playable? item, CastPlan? plan, bool paused, bool buffering, bool reconnecting, CastVolume volume, CastProblem? problem, List<CastSubtitle> subtitles, int? subtitle
 });
 
 
@@ -321,7 +342,7 @@ class __$CastingStateCopyWithImpl<$Res>
 
 /// Create a copy of CastingState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? phase = null,Object? device = freezed,Object? item = freezed,Object? plan = freezed,Object? paused = null,Object? buffering = null,Object? reconnecting = null,Object? volume = null,Object? problem = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? phase = null,Object? device = freezed,Object? item = freezed,Object? plan = freezed,Object? paused = null,Object? buffering = null,Object? reconnecting = null,Object? volume = null,Object? problem = freezed,Object? subtitles = null,Object? subtitle = freezed,}) {
   return _then(_CastingState(
 phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as CastPhase,device: freezed == device ? _self.device : device // ignore: cast_nullable_to_non_nullable
@@ -332,7 +353,9 @@ as bool,buffering: null == buffering ? _self.buffering : buffering // ignore: ca
 as bool,reconnecting: null == reconnecting ? _self.reconnecting : reconnecting // ignore: cast_nullable_to_non_nullable
 as bool,volume: null == volume ? _self.volume : volume // ignore: cast_nullable_to_non_nullable
 as CastVolume,problem: freezed == problem ? _self.problem : problem // ignore: cast_nullable_to_non_nullable
-as CastProblem?,
+as CastProblem?,subtitles: null == subtitles ? _self._subtitles : subtitles // ignore: cast_nullable_to_non_nullable
+as List<CastSubtitle>,subtitle: freezed == subtitle ? _self.subtitle : subtitle // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

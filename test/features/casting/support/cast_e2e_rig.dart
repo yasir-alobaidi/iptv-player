@@ -16,6 +16,7 @@ import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
@@ -80,8 +81,17 @@ final class PanelResolver implements StreamResolver {
   /// library item's by its quick hash.
   final Map<String, String> files = {};
 
-  static Result<ResolvedStream> _file(String path) =>
-      Ok(ResolvedStream(url: path, maxConnections: 1, local: true));
+  /// The subtitle files beside a file, by the file's path.
+  final Map<String, List<String>> beside = {};
+
+  Result<ResolvedStream> _file(String path) => Ok(
+    ResolvedStream(
+      url: path,
+      maxConnections: 1,
+      local: true,
+      subtitleFiles: beside[path] ?? const [],
+    ),
+  );
 
   @override
   Future<Result<ResolvedStream>> movie(
@@ -124,6 +134,7 @@ final class CastE2E {
     required this.progress,
     required this.logged,
     required this.binaries,
+    required this.subtitleLanguages,
   });
 
   static Future<CastE2E> start({
@@ -171,16 +182,26 @@ final class CastE2E {
       log: log,
     );
     final devices = MemoryCastDevices();
+    final supervisor = ProcessSupervisor(folder: processes, log: log);
+    final subtitleLanguages = <String>[];
     final coordinator = CastCoordinator(
       receivers: CastV2Receivers(log: log),
       relay: relay,
       lookup: StreamFactsLookup(
         probe: FfprobeStreamProbe(
           ffprobe: binaries.ffprobe,
-          supervisor: ProcessSupervisor(folder: processes, log: log),
+          supervisor: supervisor,
           log: log,
         ),
       ),
+      // As the app wires it: in the relay's folder for this run.
+      subtitles: FfmpegCastSubtitles(
+        supervisor: supervisor,
+        binaries: binaries,
+        folder: Directory(p.join(temp.path, 'relay', '$pid')),
+        log: log,
+      ),
+      subtitleLanguages: () => subtitleLanguages,
       encoderDetection: _X264Only(),
       devices: devices,
       items: CastItems(resolver: resolver),
@@ -205,6 +226,7 @@ final class CastE2E {
       progress: progress,
       logged: logged,
       binaries: binaries,
+      subtitleLanguages: subtitleLanguages,
     );
   }
 
@@ -220,6 +242,9 @@ final class CastE2E {
   final FakeWatchProgress progress;
   final MemoryOutput logged;
   final FfmpegBinaries binaries;
+
+  /// Settings → Playback's "Preferred subtitles": add to it.
+  final List<String> subtitleLanguages;
 
   /// The fake TV, as the app sees it: added by its address.
   CastDevice get device => CastDevice(

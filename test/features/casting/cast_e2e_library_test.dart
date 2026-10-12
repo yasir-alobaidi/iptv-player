@@ -16,7 +16,7 @@ import 'support/cast_e2e_rig.dart';
 /// app, with no provider in it. An MP4 the TV can play is served to it as
 /// it is, and the TV seeks in it by itself; anything else goes through
 /// the relay, whose FFmpeg reads the file; a title that was downloaded
-/// casts from its file.
+/// casts from its file. A file's text subtitles reach the TV as WebVTT.
 void main() {
   setUpAll(() => HttpOverrides.global = null);
 
@@ -157,10 +157,19 @@ void main() {
       final checked = rig.tv.checks.length;
       await rig.tvPlaying(after: checked, checks: 1);
       await rig.phase(CastPhase.playing);
-      expect(rig.coordinator.timeline.position, greaterThanOrEqualTo(seekTo));
+      // Its place is where the picture is: the copied stream starts at
+      // the key frame at or before the place asked for (every 2 s here).
+      const keyFrame = Duration(seconds: 2, milliseconds: 200);
+      expect(
+        rig.coordinator.timeline.position,
+        greaterThanOrEqualTo(seekTo - keyFrame),
+      );
 
       await rig.coordinator.disconnect();
-      expect(rig.progress.lastPosition, greaterThanOrEqualTo(seekTo));
+      expect(
+        rig.progress.lastPosition,
+        greaterThanOrEqualTo(seekTo - keyFrame),
+      );
       await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
       expect(rig.resolver.resolved, isEmpty);
     },
@@ -211,4 +220,165 @@ void main() {
     skip: skipWithout('vod_h264_aac_10min.mp4'),
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  group('subtitles (docs/04 "Subtitles")', () {
+    const srt = 'vod_h264_ac3_10min.en.srt';
+
+    /// Until the TV has fetched and read [count] text tracks.
+    Future<void> tracksRead(int count) => until(
+      () => rig.tv.textTracks.length >= count,
+      what: '$count text track(s) read by the TV (${rig.tv.textTracks})',
+    );
+
+    test(
+      'a subtitle file beside a Matroska film, through the relay: the TV '
+      'reads it as WebVTT and shows it from the start; after a seek its '
+      'cues count from the key frame the stream starts at; S turns it off',
+      () async {
+        const mkv = 'vod_h264_ac3_10min.mkv';
+        rig = await CastE2E.start();
+        final item = own(mkv);
+        rig.resolver
+          ..files[item.quickHash] = item.path!
+          ..beside[item.path!] = [p.join(samples.path, srt)];
+        await rig.coordinator.connect(rig.device);
+        await rig.phase(CastPhase.idle);
+
+        unawaited(rig.playback.playVod(PlayableLibraryItem(item)));
+        await rig.tvPlaying(checks: 1);
+        await rig.phase(CastPhase.playing);
+        expect(rig.state.plan!.delivery, CastDelivery.relayContinuous);
+        await tracksRead(1);
+        final whole = rig.tv.textTracks.single;
+        expect(whole.problem, isNull, reason: '$whole');
+        expect(whole.id, 1);
+        expect(whole.language, 'en');
+        expect(whole.name, 'English');
+        expect(whole.url.path, matches(r'^/f/[^/]+/media\.vtt$'));
+        expect(whole.cues, greaterThan(50));
+        expect(whole.firstCue, Duration.zero);
+        expect(whole.firstText, 'External English subtitle 1 at 0 s');
+        expect(rig.tv.activeTrackIds, [1], reason: 'a file beside the video');
+        expect(rig.state.subtitle, 1);
+        expect(rig.state.subtitles.single.beside, isTrue);
+
+        // A seek to 67 s: this file has a key frame every 2 s, so the
+        // copied stream starts at 66 s, and the cue of 70 s is 4 s in. The
+        // cue of 60–64 s is over by then.
+        final first = rig.tv.loaded!['contentId'];
+        await rig.playback.seek(const Duration(seconds: 67));
+        await until(
+          () => (rig.tv.loaded?['contentId'] ?? first) != first,
+          what: 'the LOAD after the seek',
+        );
+        await tracksRead(1);
+        final moved = rig.tv.textTracks.single;
+        expect(moved.problem, isNull, reason: '$moved');
+        expect(moved.url, isNot(whole.url));
+        expect(moved.firstText, 'External English subtitle 8 at 70 s');
+        expect(
+          moved.firstCue!.inMilliseconds,
+          inInclusiveRange(4000, 4200),
+          reason: 'from the key frame at 66 s, not from 67 s',
+        );
+        expect(moved.cues, whole.cues - 7);
+        expect(rig.tv.activeTrackIds, [1], reason: 'the choice is kept');
+        await until(
+          () => rig.tv.playerState == 'PLAYING',
+          what: 'playing after the seek',
+        );
+        await rig.phase(CastPhase.playing);
+        expect(
+          rig.coordinator.timeline.position,
+          greaterThanOrEqualTo(const Duration(seconds: 65, milliseconds: 800)),
+        );
+
+        await rig.coordinator.setSubtitle(null);
+        expect(rig.tv.activeTrackIds, isEmpty);
+        expect(rig.state.subtitle, isNull);
+        expect(rig.tv.requests('EDIT_TRACKS_INFO'), hasLength(1));
+
+        await rig.coordinator.disconnect();
+        await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
+        expect(rig.sessionFolders, isEmpty, reason: 'its WebVTT files too');
+      },
+      skip: skipWithout('vod_h264_ac3_10min.mkv'),
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
+
+    test(
+      "a film's own text tracks: each reaches the TV, and Preferred "
+      'subtitles decide which shows; another is a switch away',
+      () async {
+        const mkv = 'vod_hevc_eac3_subs.mkv';
+        rig = await CastE2E.start();
+        rig.subtitleLanguages.addAll(['fr', 'de']);
+        final item = own(mkv);
+        rig.resolver.files[item.quickHash] = item.path!;
+        await rig.coordinator.connect(rig.device);
+        await rig.phase(CastPhase.idle);
+
+        unawaited(rig.playback.playVod(PlayableLibraryItem(item)));
+        await rig.tvPlaying(checks: 1);
+        await rig.phase(CastPhase.playing);
+        await tracksRead(2);
+        final tracks = [...rig.tv.textTracks]
+          ..sort((a, b) => a.id.compareTo(b.id));
+        expect([for (final t in tracks) t.problem], [null, null]);
+        expect(
+          [for (final t in tracks) (t.id, t.language, t.name)],
+          [(1, 'en', 'English'), (2, 'de', 'German')],
+        );
+        expect(tracks.every((t) => t.cues > 0), isTrue);
+        expect(rig.tv.activeTrackIds, [2], reason: 'German is preferred');
+        expect(rig.state.subtitle, 2);
+
+        await rig.coordinator.setSubtitle(1);
+        expect(rig.tv.activeTrackIds, [1]);
+        expect(rig.tv.requests('LOAD'), hasLength(1), reason: 'no new LOAD');
+        await rig.coordinator.disconnect();
+        await until(() => rig.running.isEmpty, what: 'no FFmpeg left');
+      },
+      skip: skipWithout('vod_hevc_eac3_subs.mkv'),
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
+
+    test(
+      'an MP4 the TV plays itself, from its place: the cues keep the '
+      "file's own times",
+      () async {
+        const mp4 = 'vod_h264_aac_10min.mp4';
+        rig = await CastE2E.start();
+        final item = own(mp4);
+        rig.resolver
+          ..files[item.quickHash] = item.path!
+          // Not named after the video: it says no language.
+          ..beside[item.path!] = [p.join(samples.path, srt)];
+        await rig.coordinator.connect(rig.device);
+        await rig.phase(CastPhase.idle);
+
+        unawaited(
+          rig.playback.playVod(
+            PlayableLibraryItem(item),
+            from: const Duration(seconds: 30),
+          ),
+        );
+        await rig.tvPlaying(checks: 1);
+        await rig.phase(CastPhase.playing);
+        expect(rig.state.plan!.delivery, CastDelivery.directFile);
+        await tracksRead(1);
+        final track = rig.tv.textTracks.single;
+        expect(track.problem, isNull, reason: '$track');
+        expect(track.language, isNull);
+        expect(track.name, 'Subtitles 1');
+        expect(track.firstCue, Duration.zero);
+        expect(track.cues, greaterThan(50));
+        expect(rig.tv.activeTrackIds, [1]);
+        expect(rig.running, isEmpty, reason: 'the WebVTT is made by then');
+        await rig.coordinator.disconnect();
+      },
+      skip: skipWithout('vod_h264_aac_10min.mp4'),
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
+  });
 }
