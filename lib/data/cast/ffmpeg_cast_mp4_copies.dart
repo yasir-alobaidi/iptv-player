@@ -6,6 +6,7 @@ import 'package:iptv_player/core/cast/cast_mp4_copies.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
+import 'package:iptv_player/data/cast/cast_file_jobs.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/relay/relay_args.dart';
 import 'package:iptv_player/data/library/library_probe.dart';
@@ -143,15 +144,8 @@ final class _Copy implements CastMp4Copy {
     try {
       process = _process = await _owner._supervisor.start(
         _owner._binaries.ffmpeg,
-        [
-          ...['-hide_banner', '-v', 'error', '-nostdin', '-y'],
-          ...['-i', video],
-          ...job.outputArgs,
-          ...['-max_muxing_queue_size', '1024'],
-          ...['-movflags', '+faststart'],
-          ...['-f', 'mp4', part],
-        ],
-        owner: 'cast-mp4',
+        castMp4Arguments(video: video, streams: job.outputArgs, output: part),
+        owner: castMp4Owner,
       );
     } on Object catch (error) {
       return (null, "FFmpeg couldn't start: $error");

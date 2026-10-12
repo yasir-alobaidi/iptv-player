@@ -14,6 +14,8 @@ import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/sleep_inhibitor.dart';
+import 'package:iptv_player/core/player/fake_player_engine.dart';
+import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -25,12 +27,19 @@ import 'package:iptv_player/data/platform/disk_space.dart';
 import 'package:iptv_player/data/process/process_supervisor.dart';
 import 'package:iptv_player/features/downloads/domain/download_ports.dart';
 import 'package:iptv_player/features/downloads/domain/download_queue.dart';
+import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
+import 'package:iptv_player/features/playback/domain/playable.dart';
+import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
+import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/domain/source_connections.dart';
+import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../../data/cast/relay/relay_rig.dart' show relayBinaries;
+import '../playback/support/playback_fakes.dart';
 import 'support/download_e2e_rig.dart' show makeClip;
 
 /// docs/08's Phase 8 exit: a download killed with SIGKILL leaves no
@@ -89,7 +98,12 @@ void main() {
   });
 
   tearDown(() async {
-    await panel.close();
+    // Closed already by a test that goes offline.
+    try {
+      await panel.close();
+    } on Object {
+      // Nothing listens any more.
+    }
     temp.deleteSync(recursive: true);
   });
 
@@ -104,7 +118,8 @@ void main() {
   );
 
   test('killed part-way: nothing under the final name; the next launch '
-      'resumes from the .part and finishes it whole', () async {
+      'resumes from the .part and finishes it whole; then it plays with '
+      'the provider gone', () async {
     const size = 40 << 20;
     await _runAndKill(
       [
@@ -167,6 +182,42 @@ void main() {
       expect(bytes[at], fakePaddingByte(at), reason: '$at');
     }
     expect(part.existsSync(), isFalse);
+
+    // Offline: the provider is gone, and Play plays the file. Nothing
+    // is asked of the provider, whose address answers nothing now.
+    await panel.close();
+    final store = InMemoryCredentialStore();
+    final coordinator = PlaybackCoordinator(
+      engine: FakePlayerEngine(),
+      resolver: DbStreamResolver(
+        db,
+        DbSourceRepository(
+          database: db,
+          store: store,
+          secrets: SecretRegistry(),
+          log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
+        ),
+      ),
+      prober: FakeProber(),
+      history: FakeHistory(),
+      channels: FakeChannels(),
+      progress: FakeWatchProgress(),
+      log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
+    );
+    addTearDown(coordinator.dispose);
+    const movie = MovieItem(
+      id: 1,
+      sourceId: 'src',
+      remoteKey: '100000',
+      name: 'Copper Hollow',
+      ext: 'mp4',
+    );
+    await coordinator.playVod(const PlayableMovie(movie));
+    final engine = coordinator.engine as FakePlayerEngine;
+    expect(engine.opened.single.url, target());
+    expect(coordinator.local, isTrue);
+    expect(coordinator.state, isNot(isA<PlaybackFailed>()));
+    expect(coordinator.connections.held('src'), 0);
   }, timeout: const Timeout(Duration(minutes: 3)));
 
   test("a playlist's FFmpeg ends without its app, and the next launch's "

@@ -6,6 +6,7 @@ import 'dart:isolate';
 import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/text/languages.dart';
+import 'package:iptv_player/data/cast/cast_file_jobs.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/relay/relay_job.dart';
 import 'package:iptv_player/data/cast/webvtt.dart';
@@ -97,7 +98,7 @@ final class FfmpegCastSubtitles implements CastSubtitles {
           ...['-f', 'framecrc', 'pipe:2'],
         ],
       ],
-      owner: 'cast-start',
+      owner: castStartOwner,
       timeout: _timings.start,
     );
     if (run.exitCode != 0 || run.timedOut) {
@@ -123,7 +124,6 @@ final class FfmpegCastSubtitles implements CastSubtitles {
   Future<(int?, String)> _run(
     _Set set,
     List<String> arguments, {
-    required String owner,
     required Duration timeout,
   }) async {
     if (set._deleted) return (null, 'stopped');
@@ -131,8 +131,8 @@ final class FfmpegCastSubtitles implements CastSubtitles {
     try {
       process = await _supervisor.start(
         _binaries.ffmpeg,
-        ['-hide_banner', '-v', 'error', '-nostdin', '-y', ...arguments],
-        owner: owner,
+        arguments,
+        owner: castSubtitlesOwner,
         timeout: timeout,
       );
     } on Object catch (error) {
@@ -317,12 +317,7 @@ final class _Set implements CastSubtitleSet {
     final output = p.join(_folder.path, 'beside-$index.vtt');
     final (code, said) = await _owner._run(
       this,
-      [
-        if (page != null) ...['-sub_charenc', page],
-        ...['-i', file],
-        ...['-map', '0:s:0', '-c:s', 'webvtt', '-f', 'webvtt', output],
-      ],
-      owner: 'cast-subtitles',
+      castSubtitleFileArguments(file: file, output: output, codePage: page),
       timeout: _owner._timings.beside,
     );
     if (code != 0 || !await _hasCues(output)) {
@@ -366,14 +361,7 @@ final class _Set implements CastSubtitleSet {
     String output(int index) => p.join(_folder.path, 'own-$index.vtt');
     Future<(int?, String)> read(List<int> indexes) => _owner._run(
       this,
-      [
-        ...['-i', video],
-        for (final index in indexes) ...[
-          ...['-map', '0:s:$index', '-c:s', 'webvtt'],
-          ...['-f', 'webvtt', output(index)],
-        ],
-      ],
-      owner: 'cast-subtitles',
+      castOwnSubtitlesArguments(video: video, tracks: indexes, output: output),
       timeout: _owner._timings.own,
     );
     final (code, said) = await read([for (final (index, _) in tracks) index]);
