@@ -1,32 +1,34 @@
-# Handoff — 2026-10-11 (Phase 8 step 7: library files cast (part 1); the fake TV reads text tracks (part 2a); the app's side of subtitles is next; the TV runs wait)
+# Handoff — 2026-10-12 (Phase 8 step 7 is built: a file's subtitles on the TV, the MP4 beside the relay, the matrix's library rows, the Library cast walk; step 8 is next; the TV runs wait)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, ADR-015 in
-docs/decisions.md (its last three sections are this session's: the download
-that wouldn't play with downloads kept as MP4, step 7 part 1, and part 2a),
-docs/plans/phase-8-downloads-and-library.md (steps 7 and 8, decision 12),
-docs/09-downloads-and-library.md ("Format"), docs/04-casting.md ("Local
-files and downloads", "As built"), and docs/05's Library section.
+docs/decisions.md (its last four sections are this session's: step 7 parts
+2b, 3 and 4), docs/plans/phase-8-downloads-and-library.md (step 8),
+docs/04-casting.md ("Local files and downloads", "As built", the library
+matrix), docs/09-downloads-and-library.md and docs/06-quality.md.
 
 ## Before you start the next session (user)
-1. **Push** the local commits when you like (11 now): the three from the
-   session before (Search's Library group, the Windows test fix, the
-   Downloaded mark, the walk, the docs), then 4678a12 (the first download
-   plays; names), fb4327a (downloads kept as MP4), a8d7695 (step 7 part 1
-   with its docs), and the fake TV's text tracks.
-2. **CI on 2bcbdd7** (run 38122010610) is still the last run: Windows
-   failed 4 path tests (fixed in 80a20f3), Linux green. The next push
-   shows whether Windows is.
-3. **The episode downloaded before the fixes** is still
-   `The Simpsons - S01E01 - S01E01.mkv`. It plays in the app again from the
-   next launch. To have it as MP4 under its new name: Delete file… in the
-   Library, then download it again.
+1. **Push** the local commits when you like (4): 932c33d (the two CI
+   fixes), dc6e419 (subtitles on the TV), bad1b8f (the MP4 beside the
+   relay), and the matrix rows with the Library cast walk and the docs.
+2. **CI on bf739be** (run 38130192642) is the last run: the four Windows
+   path tests are green; one test failed on each system, both fixed in
+   932c33d (a race in a SIGKILL test; the Windows sync cancel test, which
+   is slow there now and then, not stuck). The next push shows both.
+3. **The TV runs still wait** until you say Living Room TV is back (you,
+   2026-10-11: "no living room tv for now till I say so"). The sitting is
+   about 35 minutes now: Phase 7's matrix and Phase 8's library rows
+   (17–23) in one.
 4. **One budget to look at** (ADR-015 step 3, unchanged): docs/06's
    "download speed ≥ 90 % of curl" is checked at network rates (99.6 %);
    over loopback it measures Dart's HTTP stack (35 %). Say if you want it
    otherwise.
-5. **The TV runs still wait** until you say Living Room TV is back (you,
-   2026-10-11: "no living room tv for now till I say so").
+5. **Two things this session decided for you** (say if you want them
+   otherwise): which subtitle shows first on the TV (what the player
+   showed at hand-over; else your Preferred subtitles; else a subtitle
+   file beside the video; else none), and that the timeline of a relayed
+   file now shows where the picture really is after a seek (the key frame
+   before the place you chose, a few seconds earlier at most).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -34,143 +36,107 @@ Open Claude Code in this folder and paste:
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
 ADR-015 in docs/decisions.md, docs/plans/phase-8-downloads-and-library.md,
-docs/09-downloads-and-library.md and docs/04-casting.md first. Check CI on the last
-push, then go on with the rest of Phase 8 step 7 (the app's side of subtitles on the
-TV — the handoff has its design — then the MP4 for native seeks and the matrix
-runner's library rows), step by step.
+docs/09-downloads-and-library.md, docs/04-casting.md and docs/06-quality.md first.
+Check CI on the last push, then go on with Phase 8 step 8 (the integration tests
+first — the handoff lists them — then the docs), step by step.
 <The TV runs wait | The TV is on the network: ask first>.
 ```
 
 ## Where things stand
 - **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
   exit) waits for the TV.**
-- **Phase 8: steps 1–6 committed; step 7 parts 1 and 2a committed.** The
-  fake TV reads text tracks (part 2a); nothing in `lib/` uses them yet. A library
-  file or a downloaded title casts: directly when the TV plays it as it is
-  (served with Range, the TV seeks by itself), else through the relay
-  whose FFmpeg reads the file; no provider connection either way. Cast is
-  in the Library's item menu (C), on the movie page (button and C) and
-  beside Continue on the show page.
-- **Downloads are kept as MP4 whenever nothing is lost** (docs/09
-  "Format"), and the first download plays (the folder's "not there" mark).
+- **Phase 8: steps 1–7 built and committed.** A library file or a
+  downloaded title casts: directly when the TV plays it as it is, else
+  through the relay — with its text subtitles as WebVTT (S in the casting
+  view), and with an MP4 made beside the relay that the TV moves onto at
+  the next seek once it is whole. Step 8 is next.
 - **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,377 app tests** (18 skipped) under `TZ=UTC`, the fake
+  diff, **3,439 app tests** (18 skipped) under `TZ=UTC`, the fake
   provider's 146 and the fake receiver's 41. Integration, each under Xvfb
-  with `IPTV_PLAYER_VIDEO=0`, green: `cast_walk`, `library_walk`,
-  `library_playback`.
-- **CI:** run 38122010610 (2bcbdd7): Linux green; Windows red on four
-  path tests (fixed, not pushed).
+  with `IPTV_PLAYER_VIDEO=0`, green: `library_cast_walk` (also twice with
+  `RELAY_FFMPEG_DIR=/usr/bin`), `cast_walk`, `library_walk`,
+  `library_playback`. The matrix runner's library rows on the fake TV: 7
+  of 7.
+- **CI:** run 38130192642 (bf739be): one failed test per system, fixed
+  locally, not pushed.
 
-## Step 7: what is left (the plan's list, and where each starts)
-1. **Subtitles on the TV (decision 12), the app's side.** The fake TV is
-   ready (part 2a) and FFmpeg is measured; nothing in `lib/` is written.
-   The design this session settled on, bottom up:
-   - **Scope:** files on this computer only (a library file, a download):
-     external subtitle files beside the file
-     (`ResolvedStream.subtitleFiles`) and the file's own text tracks
-     (`subrip`, `ass`, `ssa`, `webvtt`, `mov_text`, `text`; a download
-     kept as MP4 has `mov_text`). Picture subtitles (PGS, DVD, DVB) aren't
-     cast in v1 (docs/04).
-   - **The domain** (`lib/core/cast/cast_receiver.dart`): a
-     `CastTextTrack` (id from 1, URL, language, name);
-     `CastLoad.textTracks` and `activeTextTrack`;
-     `CastReceiverSession.showTextTrack(int? id)`.
-   - **The wire** (where LOAD's JSON is built, `lib/data/cast/`): each
-     track as `{trackId, type: 'TEXT', subtype: 'SUBTITLES',
-     trackContentId: <url>, trackContentType: 'text/vtt', language,
-     name}` in `media.tracks`; `activeTrackIds` beside `media`;
-     `EDIT_TRACKS_INFO` with `mediaSessionId` and `activeTrackIds` (`[]`
-     is off). The fake TV checks exactly these fields.
-   - **Which tracks a file has:** `StreamFacts` carries no subtitles, and
-     the player's facts (a hand-over) carry none either. For a local file
-     read them with the library's probe (`readLibraryProbe` gives
-     `LibraryMedia.subtitles` in stream order: FFmpeg's `0:s:<n>`), or
-     add them to `StreamFacts` and always ffprobe a local file.
-   - **Making the files** (a port in the domain, FFmpeg through the
-     `ProcessSupervisor` in data, hard rule 8): into the cast's cache,
-     one `.vtt` a track; external: `[-ss <offset>] -i <file>.srt -f
-     webvtt`; embedded: `[-ss <offset>] -i <video> -map 0:s:<n> -f
-     webvtt`. **`-ss` before `-i` moves the cues back by exactly the
-     offset** (measured), which a relayed stream that started past 0:00
-     needs. Deleted when the cast ends.
-   - **The coordinator:** make and serve them (`CastRelay.serveFile`;
-     `relayMimeType` knows `.vtt`, and every answer has the CORS headers)
-     before the LOAD. A direct play makes them once, unshifted. A relayed
-     play makes them again at every seek (its LOAD is new anyway) with
-     the new offset. The chosen track survives re-LOADs
-     (`activeTextTrack`). `CastingState` gains the tracks and the one
-     showing; `setSubtitle(int? id)` calls `showTextTrack`.
-   - **The screens:** **S** in the casting view cycles Off → each track
-     → Off, as S does in the player, and says which ("Subtitles:
-     English"); every sentence in `cast_text.dart`.
-   - **Tests:** the wire's JSON; the receiver's command against the fake
-     TV; the maker with the real FFmpeg (an SRT, shifted; an embedded
-     track); the coordinator on fakes (`FakeTv`, `FakeRelay.serveFile`);
-     end to end in `cast_e2e_library_test.dart` (the samples have
-     `vod_h264_ac3_10min.en.srt` beside the Matroska file and two SubRip
-     tracks in `vod_hevc_eac3_subs.mkv`: `rig.tv.textTracks` says what
-     the TV read, `rig.tv.activeTrackIds` what shows); the view's S.
-2. **The MP4 beside a relayed file (decision 12):** when the video is
-   copied, FFmpeg writes a whole MP4 into the cast's cache at full speed
-   (video copied, `hvc1`, audio to AAC, `+faststart`); once ready, the
-   next seek LOADs it as a direct file (`CastRelay.serveFile`) and every
-   later seek is native. Deleted when casting ends; not made without its
-   size + 1 GB free. `FfmpegDownloadRemux` (`lib/data/downloads/
-   download_remux.dart`) is the same kind of supervised copy, with a
-   stall watch on the file: its shape can be reused.
-3. **The matrix runner** (`test/tools/cast_matrix_tv_test.dart`) gains the
-   library rows (docs/04's library matrix), checked with `CAST_HOST=fake`.
-4. **A keyboard walk** that casts from the Library to the fake TV
-   (`integration_test/cast_walk_test.dart` and `support/cast_tv.dart` are
-   the model; `library_walk_test.dart` has the library set up).
-5. Then **step 8**: the integration tests (download → kill → relaunch →
-   resume → play offline; library scan → play → resume; no FFmpeg left
-   after SIGKILL + relaunch, now also from the download's MP4 step), the
-   library matrix on the TV with the user watching, the docs, ADR-015
-   Accepted.
+## Step 8: what is left (the plan's list, and where each starts)
+1. **Integration tests** (docs/06), each a file of its own under
+   `integration_test/` or a `dart run` victim under `test/`:
+   - **download → kill the app → relaunch → resume → play offline.** The
+     pieces exist apart: `test/features/downloads/download_kill_test.dart`
+     (a `dart run` victim killed with SIGKILL, the `.part` resumed),
+     `integration_test/library_walk_test.dart` (the download through the
+     app) and `library_playback_test.dart` (the file played with the panel
+     stopped). What is missing is one run that does all of it through the
+     app's own launch path.
+   - **library scan → play → resume**: the walks write their library rows
+     themselves; the scanner's run end to end on a real folder
+     (`library_tree.sh`, or the samples copied) through to Resume is
+     missing. `LibraryScans` (`lib/features/library/data/`) is what
+     `bootstrap()` starts.
+   - **after SIGKILL + relaunch, no FFmpeg left** from the HLS downloader,
+     the thumbnails, **or the cast's subtitles and MP4** (owners
+     `cast-subtitles`, `cast-start`, `cast-mp4`): they are the
+     `ProcessSupervisor`'s like the rest, so the launch sweep
+     (`supervisor.sweep()` then `sweepRelayFolders`) takes them and their
+     files (`<relay>/<pid>/subtitles-<n>`, `mp4-<n>`); a test should
+     prove it. `relay_kill_test.dart` is the model.
+2. **A provider's relayed file** still counts its place from the place
+   asked for (progress.md, Known issues). Decide: leave it (a few
+   seconds), or have the relay's isolate report where FFmpeg started.
+3. **With the user's go-ahead and them watching, on Living Room TV:**
+   rows 17–23 (`CAST_ROWS=17,18,19,20,21,22,23`), with Phase 7's sitting
+   if that hasn't happened. What only the TV can say: whether it fetches
+   and shows a side-loaded WebVTT track and how it looks; whether
+   `EDIT_TRACKS_INFO` works while it buffers; whether it plays the MP4
+   made for it (row 18) and seeks in it.
+4. **If the user wants it, with its own pop-up:** one real download from
+   their provider.
+5. **Docs:** ADR-015 Accepted; docs/09 and docs/04 "As built"; docs/05
+   (the Library as built); docs/06's library budgets and fakes; docs/02's
+   schema v9; progress and the handoff.
 
-## Done this session (2026-10-11, the third)
-- **The first download that wouldn't play** (4678a12): the resolver goes
-  by the disk; the finisher marks the folder present; the scan leaves a
-  download folder that has held nothing alone. Found by reading the
-  user's own database read-only (`~/.local/share/
-  io.github.yasiralobaidi.iptvplayer/iptv_player.sqlite`, Python's
-  sqlite3 with `mode=ro`) and the app's log.
-- **Names:** `providerEpisodeTitle` (`lib/core/library/name_parser.dart`,
-  moved from `lib/data/library/`).
-- **Downloads kept as MP4** (fb4327a): `mp4Obstacle`
-  (`lib/core/downloads/download_format.dart`), `FfmpegDownloadRemux`,
-  the finisher's steps and `DownloadFinisher.whole`/`close`,
-  `DownloadFinishStopped`, `DownloadFinished.path`.
-- **Step 7 part 1** (a8d7695): `CastUpstreamSource.file`,
-  `CastRelay.serveFile`, `RelayJob.localInput`, `CastItems`, the
-  coordinator's `_deliverFile`, `library_names.dart`, `castLibraryItem`,
-  the fake TV's file playback.
-- **Step 7 part 2a:** the fake TV's text tracks (`fetchFakeTextTrack`,
-  `FakeReceiver.textTracks` / `activeTrackIds`, `EDIT_TRACKS_INFO`).
-  The session stopped here at the user's word, before the app's side.
+## Done this session (2026-10-12)
+- **CI's two failures** (932c33d): `_running` in `download_kill_test.dart`
+  reads `/proc/<pid>/stat` alone; the sync cancel test has two minutes.
+- **Subtitles on the TV** (dc6e419): `CastTextTrack`, `CastLoad.textTracks`
+  / `activeTextTrack`, `CastReceiverSession.showTextTrack`; the port
+  `CastSubtitles` / `CastSubtitleSet` (`lib/core/cast/cast_subtitles.dart`)
+  and `FfmpegCastSubtitles` (`lib/data/cast/`), `shiftWebVtt`
+  (`lib/data/cast/webvtt.dart`); the coordinator's `_textTracks`,
+  `setSubtitle`, `_showChosenSubtitle`, `_loadAgainHere`, `_startOf`;
+  `CastingState.subtitles` / `subtitle`; S and the button in
+  `casting_view.dart`, `castSubtitlesLine` in `cast_text.dart`.
+- **The MP4 beside the relay** (bad1b8f): the port `CastMp4Copies`
+  (`lib/core/cast/cast_mp4_copies.dart`), `FfmpegCastMp4Copies`, the
+  coordinator's `_makeMp4`, `_moveToMp4`, `_backToRelay`, `_tvReads`.
+- **The matrix runner's rows 17–23** and
+  `integration_test/library_cast_walk_test.dart`.
 
 ## What's next
-1. **The rest of Phase 8 step 7** (the list above, starting with the
-   app's side of subtitles), then step 8, stopping only where the user
-   asks or a step needs the TV.
+1. **Phase 8 step 8** (the list above), stopping only where the user asks
+   or a step needs the TV.
 2. **The TV runs, only when the user says the TV is back, after asking and
-   with the user watching:** Phase 7's (check `ip -4 addr` shows 192.168.1.x;
+   with the user watching:** check `ip -4 addr` shows 192.168.1.x;
    `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
-   test/tools/cast_tv_test.dart`, then `…cast_matrix_tv_test.dart` rows 1–5
-   and 7–15, then `CAST_ROWS=6` with Input Signal Plus off and `CAST_ROWS=16`
-   with the remote in hand), then Phase 7's exit (ADR-014 Accepted). Phase 8's
-   library matrix belongs to its step 8.
+   test/tools/cast_tv_test.dart`, then `…cast_matrix_tv_test.dart` (rows
+   1–5, 7–15, 17–23), then `CAST_ROWS=6` with Input Signal Plus off and
+   `CAST_ROWS=16` with the remote in hand; then Phase 7's exit (ADR-014
+   Accepted) and Phase 8's.
 
 **Loose ends, small:**
+- The casting view says nothing when a subtitle the user chose is
+  refused by the TV beyond going back to what showed; a toast would say
+  why.
+- A subtitle chosen on the TV isn't carried back to the laptop by Play
+  here.
 - Tab on a two-column details page (the provider's Series page, a library
   show's) passes Play: the shell's Tab rule (`FocusPane._leave`) goes by
   position. ← reaches Play.
 - The provider's Series page swaps the season shown when a mark moves
   Continue to another season (the library show's page fixes its season
   once the marks are read: copy that).
-- The Windows sync cancel timeout (intermittent; it waits in the sync
-  after the cancel; the next failure names the stage).
 - A series' poster has no Downloaded mark (it downloads by its episodes;
   its page says which); Search's "Remind me" is Phase 9.
 - Favorites' drag draws Flutter's gap, not the canvas's accent line.
@@ -192,10 +158,10 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   path a test expects.
 - **Phase 7 — Casting**: built (steps 2–7); the casting matrix on the
   user's TV (step 8).
-- **Phase 8 — Downloads and the local library:** built through the UI
-  (steps 1–6); library casting (step 7); the integration tests, the
-  SIGKILL-safety tests end to end and the library matrix on the TV (step
-  8).
+- **Phase 8 — Downloads and the local library:** built (steps 1–7,
+  library casting with subtitles and the MP4 included); the integration
+  tests, the SIGKILL-safety tests end to end and the library matrix on
+  the TV (step 8).
 - **Phase 9 — Settings, diagnostics, polish:** every Settings section, the
   log viewer and Copy diagnostics (redacted); **"Remind me"** on upcoming
   programmes as a system notification (Search and the Guide's sheet; the
@@ -239,6 +205,12 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   https://api.github.com/repos/yasir-alobaidi/iptv-player/check-runs/<job id>/annotations`
   — the message now carries the whole first paragraph (Expected, Actual,
   Which).
+- **CI's FFmpeg is the system's 4.4; this laptop's tests use the bundled
+  8.1.** Before a push, run every test that runs FFmpeg as CI does:
+  `RELAY_FFMPEG_DIR=/usr/bin flutter test test/data/cast test/features/casting
+  test/data/downloads` (and a walk under Xvfb with it). Seen: a clip 4.4
+  makes starts 6 ms off 0, so cue times compared as text failed; it
+  converts sound three times slower.
 - **Windows-only test traps** (seen on CI): paths joined with `\`; a closed
   loopback port refused only after ~2 s (a test's short connect wait reads
   it as a timeout).
@@ -300,7 +272,48 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   this file, and commit.
 
 ## Codebase notes by area
-New this session (the download fixes, MP4, Phase 8 step 7 part 1):
+New this session (Phase 8 step 7, parts 2b–4: subtitles, the MP4, the
+matrix rows, the walk):
+- **A cast's place has two numbers now.** `_Cast.from` is the place asked
+  for (a resume, a seek); `_Cast.offset` is where the TV's time 0 is in
+  the file: 0 whenever the TV reads a file by itself, and for a relayed
+  file on this computer the key frame `CastSubtitles.startOf` found.
+  `_reload` restarts at `from`, never at `offset` (asking FFmpeg for a key
+  frame's own time lands on the key frame before it).
+- **`_tvReads(cast)`, not `plan.delivery.direct`,** says "the TV fetches
+  it itself and seeks in it": it is also true on the MP4 (`cast.onMp4`),
+  while the cast's plan stays the relay's.
+- **Subtitles are made once, moved many times.** `CastSubtitleSet.files(by:)`
+  rewrites cue times in Dart; `by` is 0 when the TV reads the file itself.
+  The set's `subtitles` can grow (a file's own tracks come after the
+  files beside it); `tracksLoaded` on the cast is how many the last LOAD
+  named, and a choice past it means a new LOAD (`_loadAgainHere`).
+- **A subtitle's id is its place in the list, from 1,** in the state, in
+  the LOAD and in `setSubtitle`; `cast.textTrack` is what the user wants,
+  `cast.shownTrack` what the TV was last told. The TV's own status isn't
+  read for it.
+- **Everything the cast writes is under `<relayFolder>/<pid>/`**
+  (`subtitles-<n>`, `mp4-<n>`, the relay's sessions): the relay deletes
+  the lot at quit and `sweepRelayFolders` after a crash. The relay never
+  clears that folder while the app runs.
+- **`castRelayJob(...).outputArgs`** is the one place that says which
+  streams a plan sends and how; the MP4 uses it, so it can't drift from
+  the relay.
+- **FFmpeg's `-frames:v 1 -frames:a 1` in one output prints only one
+  stream's packet**; two outputs (`pipe:1`, `pipe:2`) print both, which is
+  how `startOf` reads the picture's and the sound's first packets. An
+  unmapped picture changes where FFmpeg seeks (it seeks by the sound
+  then), so the picture is always mapped.
+- **Test fakes:** `FakeSubtitles` (`ready`, `late` + `last.finish()`,
+  `keyFrameBefore`, each set's `moves`) and `FakeMp4Copies`
+  (`last.whole()` / `failed()`) in `cast_fakes.dart`; `FakeTv.onTextTrack`
+  and its `textTrack:<id>` calls; `FakeResolver.downloadSubtitles`;
+  `PanelResolver.beside`; `CastE2E.subtitleLanguages`, `relaying`,
+  `mp4Ready`. `FakeRelay.serveFile` names the URL by the file's extension.
+- **Widget tests of the casting view with subtitles:** set
+  `ui.cast.subtitles.ready` and a download's path before `cast(...)`.
+
+From the session before (the download fixes, MP4, Phase 8 step 7 part 1):
 - **A library folder's `is_available` is only as fresh as the last scan.**
   Screens dim by it; nothing that opens a file may trust it
   (`DbStreamResolver._file` goes by the disk). The download folder isn't

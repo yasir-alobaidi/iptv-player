@@ -12,6 +12,12 @@
 // user first and run only when named: 6 (Input Signal Plus off, so the
 // TV's HDMI link is 1080p) and 16 (the TV's remote, in hand).
 //
+// Rows 17–23 are Phase 8's library matrix (docs/04): files on this
+// computer, with no provider in them — read by the TV itself, through
+// the relay, with the MP4 made beside it, with subtitles, a downloaded
+// title, and a resume. About 10 more minutes; CAST_ROWS=17,18,19,20,21,22,23
+// runs them alone.
+//
 // CAST_HOST=fake runs every row against the fake receiver in-process
 // (rows 6 and 16 included, with shorter holds): the runner's own check,
 // nothing on any screen.
@@ -35,12 +41,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_mp4_copies.dart';
+import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
 import 'package:iptv_player/data/cast/ffmpeg_encoder_detector.dart';
 import 'package:iptv_player/data/cast/ffprobe_stream_probe.dart';
 import 'package:iptv_player/data/cast/relay/isolate_cast_relay.dart';
@@ -130,6 +139,36 @@ MovieItem _movie(int id, String ext) => MovieItem(
   ext: ext,
   runtime: const Duration(minutes: 10),
 );
+
+/// A film of the user's own: [sample] of the media samples, with the
+/// subtitle file [beside] it when asked.
+PlayableLibraryItem _own(_Matrix m, String sample, {bool beside = false}) {
+  final file = File(p.join(samples.path, sample));
+  if (!file.existsSync()) {
+    throw StateError('no $sample sample (tools/media_samples/generate.sh)');
+  }
+  final item = LibraryItem(
+    id: sample.hashCode,
+    folderId: 1,
+    relPath: 'Paper Kites (2019)/$sample',
+    sizeBytes: file.lengthSync(),
+    modifiedAt: DateTime.utc(2026),
+    quickHash: 'hash-$sample',
+    kind: LibraryKind.movie,
+    title: 'Paper Kites',
+    year: 2019,
+    duration: const Duration(minutes: 10),
+    addedAt: DateTime.utc(2026),
+    path: file.path,
+  );
+  m.resolver.files[item.quickHash] = file.path;
+  if (beside) {
+    m.resolver.beside[file.path] = [
+      p.join(samples.path, 'vod_h264_ac3_10min.en.srt'),
+    ];
+  }
+  return PlayableLibraryItem(item);
+}
 
 ChannelItem _channel(String sample, _Matrix m) => panelChannel(
   channelOf[sample]!,
@@ -344,8 +383,145 @@ List<_Row> _rows({required bool fake}) {
         });
       },
     ),
+    // Phase 8's library matrix: files on this computer.
+    _Row(
+      17,
+      'Your own MP4 (H.264 + AAC), read by the TV itself, with seeks',
+      'the film at 0:00, then at 1:00, then at 5:00, each within a second',
+      (m, r) async {
+        await m.castFile(r, _own(m, 'vod_h264_aac_10min.mp4'));
+        m.expectPlan(CastDelivery.directFile);
+        await m.hold(r, m.holdFor ~/ 3);
+        r.note('seek to 1:00 ${await m.seekTo(r, const Duration(minutes: 1))}');
+        await m.hold(r, m.holdFor ~/ 3);
+        r.note('seek to 5:00 ${await m.seekTo(r, const Duration(minutes: 5))}');
+        await m.hold(r, m.holdFor ~/ 3);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      18,
+      'Your own MKV (H.264 + AC-3) through the relay: a seek before its '
+          'MP4 is made, and two after',
+      'the film; "Preparing…" for a moment at the first seek only; the '
+          'later seeks quick',
+      (m, r) async {
+        await m.castFile(r, _own(m, 'vod_h264_ac3_10min.mkv'));
+        m.expectPlan(CastDelivery.relayContinuous);
+        await m.hold(r, m.holdFor ~/ 4);
+        final early = await m.seekTo(r, const Duration(minutes: 1));
+        r.note('seek to 1:00 through the relay $early');
+        final clock = Stopwatch()..start();
+        await m.until(
+          () => m.mp4Ready,
+          'the MP4 made beside the relay',
+          within: const Duration(minutes: 4),
+        );
+        r.note('its MP4 ready ${_seconds(clock.elapsed)} after that');
+        await m.hold(r, m.holdFor ~/ 4);
+        final moved = await m.seekTo(r, const Duration(minutes: 5));
+        r.note('seek to 5:00, onto the MP4 $moved');
+        await m.until(() => m.running.isEmpty, 'the relay stopped');
+        await m.hold(r, m.holdFor ~/ 4);
+        final own = await m.seekTo(r, const Duration(minutes: 8));
+        r.note("seek to 8:00, the TV's own $own");
+        await m.hold(r, m.holdFor ~/ 4);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      19,
+      'Your own MKV (HEVC + E-AC-3), with its own two subtitle tracks',
+      'a smooth picture with sound; English subtitles when the run says '
+          'so, then German',
+      (m, r) async {
+        await m.castFile(r, _own(m, 'vod_hevc_eac3_subs.mkv'));
+        await m.hold(r, m.holdFor ~/ 3);
+        await m.subtitle(r, 1, 'English');
+        await m.hold(r, m.holdFor ~/ 3);
+        await m.subtitle(r, 2, 'German');
+        await m.hold(r, m.holdFor ~/ 3);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      20,
+      'A subtitle file beside an MP4 the TV reads itself',
+      'a subtitle line every 10 s from the start, each naming the second '
+          'it belongs to ("… at 20 s" at 0:20); none after the run turns '
+          'them off',
+      (m, r) async {
+        final film = _own(m, 'vod_h264_aac_10min.mp4', beside: true);
+        await m.castFile(r, film);
+        m.expectPlan(CastDelivery.directFile);
+        await m.shows(r, 1);
+        await m.hold(r);
+        await m.subtitle(r, null, 'off');
+        await m.hold(r, m.holdFor ~/ 2);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      21,
+      'A subtitle file beside an MKV, through the relay from 1:00',
+      'the line "… at 70 s" as the film reaches 1:10, and one every 10 s '
+          'after, each on its second',
+      (m, r) async {
+        final film = _own(m, 'vod_h264_ac3_10min.mkv', beside: true);
+        await m.castFile(r, film, from: const Duration(minutes: 1));
+        m.expectPlan(CastDelivery.relayContinuous);
+        await m.shows(r, 1);
+        await m.hold(r);
+        const to = Duration(minutes: 3, seconds: 5);
+        r.note('seek to 3:05 ${await m.seekTo(r, to)}');
+        await m.hold(r);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      22,
+      'A movie that was downloaded, cast from its file',
+      'the movie, at once',
+      (m, r) async {
+        // The provider lists it as Matroska; the download was kept as MP4.
+        m.resolver.files['100001'] = p.join(
+          samples.path,
+          'vod_h264_aac_10min.mp4',
+        );
+        await m.castFile(r, PlayableMovie(_movie(100001, 'mkv')));
+        m.expectPlan(CastDelivery.directFile);
+        await m.hold(r);
+        m.expectNoProvider(r);
+      },
+    ),
+    _Row(
+      23,
+      'Resume on the TV from a place the laptop saved (3:00)',
+      'the film starting at 3:00',
+      (m, r) async {
+        final film = _own(m, 'vod_h264_ac3_10min.mkv');
+        const left = Duration(minutes: 3);
+        await m.progress.save(
+          film.vodRef,
+          position: left,
+          duration: const Duration(minutes: 10),
+        );
+        await m.castFile(r, film, from: m.progress.lastPosition);
+        final at = m.coordinator.timeline.position;
+        r.note('resumed at ${_clock(at)}');
+        if (at < left - _keyFrame || at > left + const Duration(seconds: 20)) {
+          throw StateError('resumed at ${_clock(at)}, left at ${_clock(left)}');
+        }
+        await m.hold(r);
+        m.expectNoProvider(r);
+      },
+    ),
   ];
 }
+
+/// A relayed file whose picture is copied starts at the key frame before
+/// the place asked for: every 2 s in the samples.
+const _keyFrame = Duration(seconds: 3);
 
 final class _Row {
   const new(
@@ -525,6 +701,19 @@ final class _Matrix {
       pictures: ArtworkCastPictures(
         ArtworkCache(directory: Directory(p.join(temp.path, 'art'))),
       ),
+      // As the app wires them: in the relay's folder for this run.
+      subtitles: FfmpegCastSubtitles(
+        supervisor: supervisor,
+        binaries: binaries,
+        folder: Directory(p.join(temp.path, 'relay', '$pid')),
+        log: log,
+      ),
+      mp4s: FfmpegCastMp4Copies(
+        supervisor: supervisor,
+        binaries: binaries,
+        folder: Directory(p.join(temp.path, 'relay', '$pid')),
+        log: log,
+      ),
     );
     return _Matrix._(
       temp: temp,
@@ -601,7 +790,9 @@ final class _Matrix {
     resolver
       ..query = ''
       ..hls = false
-      ..remap.clear();
+      ..remap.clear()
+      ..files.clear()
+      ..beside.clear();
     devices.devices.clear();
     final fakeTv = row.fakeDevice;
     if (fakeTvs.isNotEmpty) {
@@ -614,6 +805,8 @@ final class _Matrix {
       device = _fakeDevice(tv);
     }
     final from = lines.length;
+    _mp4ReadyBefore = _mp4Ready;
+    resolver.resolved.clear();
     final watchPanel = Timer.periodic(const Duration(milliseconds: 50), (_) {
       final open = panel.state.activeStreams;
       if (open > r.mostConnections) r.mostConnections = open;
@@ -695,18 +888,97 @@ final class _Matrix {
     return _seconds(clock.elapsed);
   }
 
+  /// A seek to [to], and how long until the TV plays from there. A
+  /// relayed file plays from the key frame before it.
   Future<String> seekTo(_Result r, Duration to) async {
     final clock = Stopwatch()..start();
     await playback.seek(to);
     await _until(
       () =>
           state.phase == CastPhase.playing &&
-          coordinator.timeline.position >= to &&
+          coordinator.timeline.position >= to - _keyFrame &&
           coordinator.timeline.position < to + const Duration(seconds: 20),
       within: const Duration(seconds: 40),
       what: () => 'playing from ${_clock(to)} (${state.phase.name})',
     );
     return _seconds(clock.elapsed);
+  }
+
+  /// The row's plan is delivered as [delivery], or the row fails.
+  void expectPlan(CastDelivery delivery) {
+    final plan = state.plan;
+    if (plan?.delivery != delivery) {
+      throw StateError('expected ${delivery.name}, the plan is $plan');
+    }
+  }
+
+  /// A file on this computer asks nothing of the provider.
+  void expectNoProvider(_Result r) {
+    if (r.mostConnections > 0 || resolver.resolved.isNotEmpty) {
+      throw StateError(
+        'the provider was asked: ${r.mostConnections} connection(s), '
+        '${resolver.resolved}',
+      );
+    }
+  }
+
+  /// Whether the MP4 made beside the relayed file is whole (the app's
+  /// log says so once a cast).
+  bool get mp4Ready => _mp4Ready > _mp4ReadyBefore;
+  int _mp4ReadyBefore = 0;
+  int get _mp4Ready =>
+      lines.where((l) => l.contains('The MP4 for seeking on the TV')).length;
+
+  /// The fake run's TV for this row; null on the real one.
+  FakeReceiver? get fakeTv => fakeTvs.values
+      .where((tv) => tv.host == device.host && tv.port == device.port)
+      .firstOrNull;
+
+  /// The subtitle [id] shows from the start (a file beside the video).
+  /// The fake TV is asked what it shows and whether it could read it; the
+  /// real one is watched.
+  Future<void> shows(_Result r, int id) async {
+    await _until(
+      () => state.subtitle == id,
+      within: const Duration(seconds: 10),
+      what: () => 'subtitle $id showing (${state.subtitle})',
+    );
+    r.note('subtitles on from the start');
+    await _checkOnFake(id);
+  }
+
+  /// S in the casting view: the subtitle [id], or none.
+  Future<void> subtitle(_Result r, int? id, String name) async {
+    say('   >>> Subtitles: $name');
+    final clock = Stopwatch()..start();
+    await coordinator.setSubtitle(id);
+    if (state.subtitle != id) {
+      throw StateError('subtitles: $name was not taken (${state.subtitle})');
+    }
+    await _until(
+      () => state.phase == CastPhase.playing,
+      within: const Duration(seconds: 40),
+      what: () => 'playing with subtitles: $name ($state)',
+    );
+    r.note('subtitles: $name ${_seconds(clock.elapsed)}');
+    await _checkOnFake(id);
+  }
+
+  Future<void> _checkOnFake(int? id) async {
+    final tv = fakeTv;
+    if (tv == null) return;
+    await _until(
+      () => '${tv.activeTrackIds}' == '${[?id]}',
+      within: const Duration(seconds: 10),
+      what: () => 'the fake TV showing ${[?id]} (${tv.activeTrackIds})',
+    );
+    final unreadable = [
+      for (final track in tv.textTracks)
+        if (track.problem != null) '$track',
+    ];
+    if (unreadable.isNotEmpty) {
+      throw StateError('the TV could not read $unreadable');
+    }
   }
 
   /// After a cut: the cast loads the stream again, then plays. ("Playing

@@ -178,6 +178,38 @@ void main() {
 
     Iterable<String> lines() => logged.buffer.expand((e) => e.lines);
 
+    /// The cues of the WebVTT file at [path]: when each shows and ends,
+    /// in milliseconds, and what it says.
+    List<(int, int, String)> cuesOf(String path) {
+      int ms(String time) {
+        final parts = time.split(RegExp('[:.]')).map(int.parse).toList();
+        final [seconds, millis] = parts.sublist(parts.length - 2);
+        final minutes = parts[parts.length - 3];
+        final hours = parts.length > 3 ? parts[0] : 0;
+        return ((hours * 60 + minutes) * 60 + seconds) * 1000 + millis;
+      }
+
+      final lines = File(path).readAsLinesSync();
+      return [
+        for (final (index, line) in lines.indexed)
+          if (line.split(' --> ') case [final from, final to])
+            (ms(from), ms(to.split(' ').first), lines[index + 1]),
+      ];
+    }
+
+    /// [cues] are [wanted], to a few hundredths of a second: a clip's own
+    /// start is a few milliseconds off 0 with some FFmpegs.
+    void expectCues(
+      List<(int, int, String)> cues,
+      List<(int, int, String)> wanted,
+    ) {
+      expect([for (final cue in cues) cue.$3], [for (final w in wanted) w.$3]);
+      for (final (index, (from, to, _)) in cues.indexed) {
+        expect(from, closeTo(wanted[index].$1, 40), reason: '$cues');
+        expect(to, closeTo(wanted[index].$2, 40), reason: '$cues');
+      }
+    }
+
     test('the files beside the video first, then its own text tracks, '
         'each a WebVTT file', () async {
       final film = await video(
@@ -202,10 +234,16 @@ void main() {
       final texts = [for (final file in files) File(file).readAsStringSync()];
       expect(texts.every((text) => text.startsWith('WEBVTT')), isTrue);
       expect([for (final text in texts) webVttCues(text)], [2, 1, 2, 2]);
-      expect(texts[0], contains('00:01.000 --> 00:02.000\nBeside one'));
+      expectCues(cuesOf(files[0]), [
+        (1000, 2000, 'Beside one'),
+        (3000, 5000, 'Beside <i>two</i>'),
+      ]);
       expect(texts[1], contains('Forcé'));
       expect(texts[2], contains('Own eng one'));
-      expect(texts[3], contains('00:04.000 --> 00:05.000\nOwn ger two'));
+      expectCues(cuesOf(files[3]), [
+        (1000, 3000, 'Own ger one'),
+        (4000, 5000, 'Own ger two'),
+      ]);
       // In the folder it was given, which goes with the relay's.
       expect(files.every((file) => p.isWithin(folder.path, file)), isTrue);
       expect(lines().join('\n'), contains('2 beside the file, 2 of its own'));
@@ -226,11 +264,10 @@ void main() {
         File(moved[0]).readAsStringSync(),
         'WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nLate\n',
       );
-      expect(
-        File(moved[1]).readAsStringSync(),
-        'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nOwn eng one\n\n'
-        '00:00:02.000 --> 00:00:03.000\nOwn eng two\n',
-      );
+      expectCues(cuesOf(moved[1]), [
+        (0, 1000, 'Own eng one'),
+        (2000, 3000, 'Own eng two'),
+      ]);
 
       final again = await set.files(by: const Duration(seconds: 4));
       expect(File(moved[0]).existsSync(), isFalse);
