@@ -68,6 +68,20 @@ void main(List<String> args) {
   }
 
   final root = Directory.current.path.replaceAll(r'\', '/');
+  // GitHub shows ten annotations a step: past that, one names them all
+  // first, so no failure goes unsaid (run 38365432183 had 13).
+  if (failed.length >= _shownPerStep) {
+    String named(int id) {
+      final test = tests[id];
+      final suite = (suites[test?.suite] ?? 'unknown').replaceAll(r'\', '/');
+      return '${_relative(suite, root)}: ${test?.name ?? 'test $id'}';
+    }
+
+    stdout.writeln(
+      '::error title=${failed.length} tests failed::'
+      '${_message(failed.map(named).join('\n'))}',
+    );
+  }
   for (final id in failed) {
     final test = tests[id];
     final path = _relative(
@@ -93,6 +107,9 @@ void main(List<String> args) {
   }
   stdout.writeln('${failed.length} failed of ${tests.length} tests');
 }
+
+/// How many annotations of one step GitHub shows.
+const _shownPerStep = 10;
 
 /// An error's first paragraph: a matcher's Expected, Actual and Which
 /// lines, without the stack under them.

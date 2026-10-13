@@ -1,3 +1,8 @@
+// The session bus is a Linux thing: on Windows a private bus's socket
+// never answers, and every test here timed out on CI (run 38365432183).
+@TestOn('linux')
+library;
+
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';

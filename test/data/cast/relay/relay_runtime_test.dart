@@ -572,8 +572,15 @@ void main() {
         expect(url, endsWith('/media.png'));
         expect((await _get(url!)).status, 200);
         await runtime.unserve(url);
-        // Nothing else served there: the server is closed.
-        await expectLater(_get(url), throwsA(isA<SocketException>()));
+        // Nothing else served there: the server is closed, and nobody
+        // answers. Unless another test file's relay took the freed port
+        // that instant, as it did on CI (run 38365432183): it answers,
+        // and knows nothing of this picture.
+        final after = await _get(url).then<Object>(
+          (answer) => answer.status,
+          onError: (Object error) => error,
+        );
+        expect(after, anyOf(isA<SocketException>(), 404));
       },
     );
 
