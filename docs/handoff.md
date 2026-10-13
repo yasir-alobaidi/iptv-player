@@ -1,229 +1,197 @@
-# Handoff — 2026-10-12 (Phase 9's plan is written and waits for approval; Phases 7 and 8 are built and wait for one sitting at the TV)
+# Handoff — 2026-10-13 (Phase 9: steps 1–5 of 9 are built and committed; step 6, reminders on screen, is next)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-**docs/plans/phase-9-settings-diagnostics-polish.md** (the plan this
-session wrote), docs/08-phases-and-prompts.md (Phase 9),
-docs/05-design-system.md (§12 Settings, Accessibility, the shortcut table),
-docs/06-quality.md (the budgets, the soak) and ADR-013 decision 5 in
-docs/decisions.md. For the TV sitting: ADR-015's last five sections,
-docs/plans/phase-8-downloads-and-library.md (step 8) and docs/04-casting.md
-(the library matrix).
+**docs/plans/phase-9-settings-diagnostics-polish.md** (steps 6–9, decisions
+13–16, sketches F–I), **ADR-016 in docs/decisions.md** (what steps 1–5
+built, and every departure from the plan), docs/05-design-system.md (§12
+Settings "As built", the shortcut tables) and docs/06-quality.md (the
+budgets, the soak).
 
 ## Before you start the next session (user)
-0. **Read Phase 9's plan and say yes, or what to change:**
-   `docs/plans/phase-9-settings-diagnostics-polish.md` — sixteen
-   decisions with a recommendation each, nine steps, nine sketches (A–I)
-   for what the canvas doesn't draw. The three most worth your eye:
-   decision 6 (Export holds your settings and choices, never a password,
-   and adds no source), decision 10 (a reminder shows only while the app
-   is open; Windows untried) and decision 15 (the 8-hour soak takes your
-   laptop for a night, screen on).
-1. **Push** the local commits when you like (8): 932c33d (the two CI
-   fixes), dc6e419 (subtitles on the TV), bad1b8f (the MP4 beside the
-   relay), 0b303f7 (the matrix rows and the Library cast walk), 6abc84e
-   (two of the exit's tests), a930ba1 (the scan test and the docs), and
-   this session's two: a race fixed in a SIGKILL test, and Phase 9's
-   plan. CI runs two more integration files from this push on.
-2. **CI on bf739be** (run 38130192642) is the last run: the four Windows
-   path tests are green; one test failed on each system, both fixed in
-   932c33d (a race in a SIGKILL test; the Windows sync cancel test, which
-   is slow there now and then, not stuck). The next push shows both.
-3. **The TV runs still wait** until you say Living Room TV is back (you,
-   2026-10-11: "no living room tv for now till I say so"). The sitting is
-   about 35 minutes now: Phase 7's matrix and Phase 8's library rows
-   (17–23) in one.
-4. **One budget to look at** (ADR-015 step 3, unchanged): docs/06's
-   "download speed ≥ 90 % of curl" is checked at network rates (99.6 %);
-   over loopback it measures Dart's HTTP stack (35 %). Say if you want it
-   otherwise.
-5. **Two things the building session decided for you** (say if you want them
-   otherwise): which subtitle shows first on the TV (what the player
-   showed at hand-over; else your Preferred subtitles; else a subtitle
-   file beside the video; else none), and that the timeline of a relayed
-   file now shows where the picture really is after a seek (the key frame
-   before the place you chose, a few seconds earlier at most).
+1. **Push** the 6 local commits when you like: b00faa0, 0de1986,
+   7ac8a28, 58fbe54, f1d4f1f (Phase 9 steps 1–5) and the one with this
+   handoff. You pushed the CI fix (7c9cc13) and the approvals (3ba9f6e)
+   during the session.
+2. **CI is green on both systems at 3ba9f6e** (run 38350198031): the
+   fix for the three library cast tests held. **The next push is the
+   first with Phase 9's code, and with the notification package's
+   Windows part** (flutter_local_notifications): if the Windows **Build**
+   step fails, that package is the likely cause, and a build's log needs
+   your rights to read.
+3. **Step 6 needs you once, for about five minutes:** one real reminder
+   set a minute ahead, with the app's window covered. Click the
+   notification's text one time and its Watch button another, and say
+   what the window did. Nothing has been shown on your desktop yet.
+4. **Steps 8 and 9 take your display** for a few minutes at a time
+   (profile runs) and for an hour (the soak's new mix); the session asks
+   first.
+5. **What this session decided for you** (say if you want any otherwise):
+   - "the 7 and 8 are approved" was read as: Phases 7 and 8 are accepted
+     as built, without the TV sitting. The matrix on the real TV stays an
+     open check for a day the TV is reachable.
+   - No 8-hour soak: its exit criterion will be written as unmet by your
+     choice. The soak's new mix still gets a 1-hour run.
+   - About & diagnostics shows the report and the log as two views
+     (Diagnostics · Log), not stacked as sketch D drew them.
+   - In an export file, a source whose name says its server or its
+     username is written "Xtream source 1". Yours was named after its
+     server (the app does that for a source you don't name).
+   - Live TV's category rows stay 40 px in Compact (the smallest size a
+     pointer needs); text size is 100–130 % at both ends.
+   - The notification package is pinned at 22.3.1, the release the plan
+     looked at.
+6. **The Google TV version** (your question, 2026-10-13): yes, it is an
+   APK built here and installed on the Chromecast with `adb`. It is not
+   today's app exported: it is the same data and logic under a new TV
+   shell (docs/07). To start TV-0 (the player spike, the first APK):
+   install the Android SDK, JDK 17 and `adb` (none is installed), add the
+   `android/` project, turn on Developer options and USB debugging on the
+   TV, and have the laptop and the TV on one network (the laptop is on
+   192.168.26.x, the TV was on 192.168.1.x). It doesn't depend on Phase 10.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-9-settings-diagnostics-polish.md, docs/05-design-system.md and
-docs/06-quality.md first. Check CI on the last push and fix what it names. Then:
-<Phase 9's plan is approved [with these changes: …]: record that in the plan's status
-line and start ADR-016, then build step 1 | The TV is on the network: ask first, then
-run Phase 7's and Phase 8's matrices with me watching, and finish both exits>.
+docs/plans/phase-9-settings-diagnostics-polish.md (steps 6–9), ADR-016 in docs/decisions.md,
+docs/05-design-system.md and docs/06-quality.md first. Check CI on the last push and fix
+what it names. Then build Phase 9 step 6 (reminders on screen), and go on to steps 7, 8
+and 9 without the 8-hour soak. <I am at the laptop for the real reminder | I am not: leave
+the real reminder for later and carry on>
 ```
 
 ## Where things stand
-- **Phase 7 (casting): built; step 8 (the matrix on the TV, and the phase
-  exit) waits for the TV.**
-- **Phase 8: steps 1–7 built; step 8's tests written.** A library file or
-  a downloaded title casts: directly when the TV plays it as it is, else
-  through the relay — with its text subtitles as WebVTT (S in the casting
-  view), and with an MP4 made beside the relay that the TV moves onto at
-  the next seek once it is whole. The exit waits for the library matrix
-  on the TV (rows 17–23).
-- **Phase 9: planned, not approved, nothing built.** The plan is
-  `docs/plans/phase-9-settings-diagnostics-polish.md`; ADR-016 doesn't
-  exist yet (start it when the plan is approved, as ADR-015 was).
-- **Checks at the last commit:** analyze, format, `build_runner` leaves no
-  diff, **3,440 app tests** (18 skipped) under `TZ=UTC`, the fake
-  provider's 146 and the fake receiver's 41. Integration, each under Xvfb
-  with `IPTV_PLAYER_VIDEO=0`, green: `library_cast_walk` and
-  `library_scan` (each also with `RELAY_FFMPEG_DIR=/usr/bin`),
-  `cast_walk`, `library_walk`, `library_playback`. The matrix runner's
-  library rows on the fake TV: 7 of 7.
-- **CI:** run 38130192642 (bf739be): one failed test per system, fixed
-  locally, not pushed.
+- **Phases 7 and 8: accepted 2026-10-13 without the TV sitting** (ADR-014,
+  ADR-015). Open, for when the TV is reachable: `test/tools/cast_tv_test.dart`
+  and `test/tools/cast_matrix_tv_test.dart` (rows 1–23), after asking.
+- **Phase 9: steps 1–5 built, each its own commit; steps 6–9 left.**
+  ADR-016 is Proposed and has a section per step.
+- **Checks at the last code commit (f1d4f1f):** analyze, format,
+  `build_runner` leaves no diff, **3,790 app tests** (19 skipped) under
+  `TZ=UTC`. Integration under Xvfb, green: `app_launch` (now also the
+  runner's window channel), `player_engine` (with a picture and with
+  `IPTV_PLAYER_VIDEO=0`), `library_cast_walk` and `library_scan` with
+  CI's 2-minute samples and FFmpeg 4.4. **Not run this session:** the
+  other integration files, the fake panel's and the fake TV's own suites
+  (nothing of theirs changed; run them at the next session's end).
+- **Schema is v10** (`reminders`); `drift_schemas/app/drift_schema_v10.json`
+  and the migration tests are in.
+- **New dependencies:** `crypto` (was a dev dependency) and
+  `flutter_local_notifications: 22.3.1` (Windows only in use; ADR-002's
+  table has both).
 
-## What is left of Phases 7 and 8 (all of it needs the TV)
-1. **With the user's go-ahead and them watching, on Living Room TV**
-   (about 35 minutes; check `ip -4 addr` shows 192.168.1.x first):
-   - `CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped
-     test/tools/cast_tv_test.dart` (half a minute);
-   - `…cast_matrix_tv_test.dart`: rows 1–5, 7–15 (Phase 7) and 17–23
-     (Phase 8's library matrix) in one run;
-   - `CAST_ROWS=6` with Input Signal Plus off, `CAST_ROWS=16` with the
-     remote in hand.
-   What only the TV can say about this session's work: whether it fetches
-   and shows a side-loaded WebVTT track and how it looks (rows 19–21);
-   whether `EDIT_TRACKS_INFO` works while it buffers; whether it plays the
-   MP4 made for it and seeks in it (row 18); whether a relayed subtitle
-   is on its second after a seek (row 21: each line names its second).
-2. **If the user wants it, with its own pop-up:** one real download from
-   their provider.
-3. **Then both exits:** ADR-014 and ADR-015 Accepted; docs/04's "Verify"
-   notes filled in with what the TV did; progress and the handoff.
-4. **Looked at and left:** a provider's relayed file counts its place
-   from the place asked for, not from its key frame (asking FFmpeg would
-   take a connection); the cast's helper FFmpegs run on after a SIGKILL
-   until done or the next launch (ADR-015, "The phase exit's tests").
+## What is left of Phase 9
+**Step 6 — Reminders on screen** (decision 13, sketches F–I). Already
+there to build on:
+- `reminderRepositoryProvider` (`set(ReminderDraft)`, `remove(id)`),
+  `remindersProvider` (a stream, soonest first), `reminderAlertsProvider`
+  (its `watches` stream is every Watch the user chose, from a notice or a
+  toast, with the desktop's token when there is one),
+  `reminderServiceProvider` (started by `bootstrap()`),
+  `reminder_text.dart` (`reminderWhen` is "Tomorrow, 9:30 PM").
+- A `ReminderDraft` needs the source, the channel's **remote key**, the
+  guide channel's **XMLTV id**, the channel's name, the title, start and
+  end. Check what `EpgProgramme.channelId` holds (it should be the XMLTV
+  id) and where Search's `ProgrammeHit` and the Guide's sheet have the
+  channel's remote key.
+To build:
+- **Search:** "Remind me" at the right of an upcoming row, "Reminder set"
+  with a bell once it is; Ctrl+R toggles it (the keyboard stays in the
+  field, as with Ctrl+D), and the menu key has it.
+- **The Guide:** "Remind me" / "Reminder set · Remove" in the programme
+  sheet; **R** on the focused programme in the grid and a bell in a cell
+  that has one; a bell with the count in the toolbar.
+- **Reminders**, a dialog (sketch H): soonest first, Remove, Enter opens
+  the Guide on it, Delete removes with Undo, an empty state; its second
+  door is a row in Settings → Guide.
+- **The toast** "Reminder set · Tomorrow, 9:30 PM" with Undo.
+- **Watch:** a listener near the app's root on `watches`:
+  `windowControls.bringToFront(activationToken:)`, then the channel full
+  screen (find it by source and remote key); while casting, on the TV.
+  A channel that is gone says so.
+- **The shortcut table** (`lib/app/shortcut_table.dart`) gets R and
+  Ctrl+R in the commit that binds them, then
+  `UPDATE_SHORTCUT_DOCS=1 flutter test test/app/shortcut_table_test.dart`.
+- **Tests:** widget tests of each place and state by keyboard;
+  `integration_test/reminder_walk_test.dart` (keys only, the app's clock
+  in the test's hand, a recording notifier); the real reminder with the
+  user.
 
-## Done on 2026-10-12 (two sessions)
-- **Phase 9's plan** (the second session): the plan file, progress and
-  this handoff. No app code changed.
-- **A race in `cast_helpers_kill_test.dart`** (the second session): the
-  whole suite failed it once ("FFmpeg left running"). `ProcessSupervisor
-  .sweep()` sends SIGKILL and returns; the test read `/proc` at once.
-  It now waits up to 10 s, as the other kill tests do. **Any new test
-  that checks a process after a sweep or a kill must wait for it.**
-- **CI's two failures** (932c33d): `_running` in `download_kill_test.dart`
-  reads `/proc/<pid>/stat` alone; the sync cancel test has two minutes.
-- **Subtitles on the TV** (dc6e419): `CastTextTrack`, `CastLoad.textTracks`
-  / `activeTextTrack`, `CastReceiverSession.showTextTrack`; the port
-  `CastSubtitles` / `CastSubtitleSet` (`lib/core/cast/cast_subtitles.dart`)
-  and `FfmpegCastSubtitles` (`lib/data/cast/`), `shiftWebVtt`
-  (`lib/data/cast/webvtt.dart`); the coordinator's `_textTracks`,
-  `setSubtitle`, `_showChosenSubtitle`, `_loadAgainHere`, `_startOf`;
-  `CastingState.subtitles` / `subtitle`; S and the button in
-  `casting_view.dart`, `castSubtitlesLine` in `cast_text.dart`.
-- **The MP4 beside the relay** (bad1b8f): the port `CastMp4Copies`
-  (`lib/core/cast/cast_mp4_copies.dart`), `FfmpegCastMp4Copies`, the
-  coordinator's `_makeMp4`, `_moveToMp4`, `_backToRelay`, `_tvReads`.
-- **The matrix runner's rows 17–23** and
-  `integration_test/library_cast_walk_test.dart` (0b303f7).
-- **Step 8's tests** (6abc84e and the last commit):
-  `test/data/cast/cast_helpers_kill_test.dart` with
-  `support/cast_helpers_victim.dart` and the plain-Dart
-  `lib/data/cast/cast_file_jobs.dart`; `download_kill_test.dart` through
-  to playing offline; `integration_test/library_scan_test.dart`.
+**Step 7 — The audit** (decision 14). Found so far, for its list:
+- The screens' own fixed heights don't grow with the text: the top bar
+  (64), Settings' list (40), Live TV's categories (40), the Guide's rows
+  and cells, Home's `captionHeight`, grids' captions, dialogs' fixed
+  inner heights. The helper is `context.scaled` / `scaledAround`.
+- The Guide's channel column gives a number 26 px
+  (`AppGuideTokens.channelNumberWidth`): four or five digits may not fit.
+- Playback's and the Guide's private `_Setting` rows should become
+  `SettingRow` (it puts the control under the words when they don't fit).
+- A busy button is disabled and drops the focus; Settings → Data gives
+  it back (`_refocus` in `data_section.dart`). Other busy buttons don't.
+- The loose ends in decision 14's list are all still open.
+- Tests reach the look through `pumpApp(withAppearance: true, …)` and
+  `appearanceOverrides(settings: …)`; the goldens at 130 % made so far
+  are the Appearance page and the component sheets.
+
+**Step 8 — Performance in profile mode** (decision 16): unchanged from
+the plan. Say before each run on the display.
+
+**Step 9 — The exit, without the night's soak:** extend the soak's mix
+(cast to the fake TV, a download, a walk of the Guide, Movies and Search
+about every 20 minutes), run it for an hour after asking, then the docs
+and ADR-016 Accepted, **with "8-hour soak" written as unmet by the
+user's choice** in the ADR and in docs/progress.md.
+
+## Done on 2026-10-13
+- **CI's three failures** (7c9cc13): `cast_e2e_library_test.dart` reads
+  its cue count from the sample and seeks inside 2 minutes. Pushed, and
+  green on both systems.
+- **The approvals** (3ba9f6e): the plan's status line, ADR-014 and
+  ADR-015 Accepted, ADR-016 started.
+- **Step 1, Appearance** (b00faa0); **step 2, shortcuts, hardware
+  decoding, About** (0de1986); **step 3, Data** (7ac8a28); **step 4,
+  diagnostics and the log** (58fbe54); **step 5, reminders underneath**
+  (f1d4f1f). What each built, measured and departed from is in ADR-016,
+  one section per step; the codebase notes below say where things are.
+- **Two faults found by checking against real things:** a channel number
+  of four or more digits wrapped in every channel row (found by drawing
+  rows at three text sizes with real-sized numbers), and an export file
+  carried the provider's host as the source's name (found by building
+  the file from a copy of the real database).
 
 ## What's next
-1. **Whatever CI names after the push** (two new integration files run
-   there for the first time, with FFmpeg 4.4 and 120-second samples).
-2. **If the user says the TV is back:** the sitting above, after asking,
-   then both phase exits.
-3. **Otherwise Phase 9, once its plan is approved:** write the approval
-   into the plan's status line (with the user's words, as the Phase 8
-   plan has them), start ADR-016 in docs/decisions.md, and build step 1
-   (Appearance: `AppearanceSettings` read before the first frame, the
-   theme built from it, the text-scale wrapper capped at 130 %, the
-   `TimeStyle` for the clock, the text helper in `lib/design/`, density
-   on the long lists, the page). **Don't build before the approval.**
-   What the plan's research found, so it needn't be found again:
-   - `IptvPlayerApp` calls `buildAppTheme()` with no arguments; only the
-     gallery changes accent, density or reduce motion.
-   - Nothing in `lib/` reads the text scale, and no test sets one. Flutter's
-     Linux embedder does pass the desktop's `text-scaling-factor`,
-     `clock-format` and `enable-animations` (`fl_gnome_settings.cc`,
-     `fl_settings_portal.cc` in the SDK's engine source), so the app
-     already scales with the desktop, unchecked.
-   - `tokens.density` is read in `channel_row.dart`, `skeleton.dart` and
-     `channel_list_pane.dart` only.
-   - `formatClock` / `formatTimeRange` (`lib/core/text/format.dart`) are
-     12-hour, called from 24 places in 11 files.
-   - `SettingsSection` marks appearance, shortcuts, data and about with
-     `phase: 9`; the settings keys are in one class (`playback.settings`,
-     `guide.settings`, `cast.settings`, `downloads.settings`).
-   - `ArtworkCache` has `forget(url)` and `sweep()` but no "clear all";
-     `EpgRepository.clearGuide(sourceId)` exists.
-   - The canvas draws "Remind me" on Search's upcoming row
-     (`design/Search.dc.html`, 12 px, weight 700, `textSecondary`); the
-     sheet is `guide_programme_sheet.dart`.
-   - pub.dev, 2026-10-12: `flutter_local_notifications` 22.3.1 (Linux and
-     Windows; Flutter ≥ 3.38.1; on Windows without a package identity
-     `cancel` does nothing); `local_notifier` 0.1.6, two years old.
-   - This desktop: GNOME Shell 42.9 on Wayland; clock 12h, text scale 1.0,
-     animations on. Whether it emits the notification spec's
-     `ActivationToken`, and whether GTK 3 can use it to raise the window,
-     is the spike that opens step 5.
-
-**Loose ends, small:**
-- The casting view says nothing when a subtitle the user chose is
-  refused by the TV beyond going back to what showed; a toast would say
-  why.
-- A subtitle chosen on the TV isn't carried back to the laptop by Play
-  here.
-- Tab on a two-column details page (the provider's Series page, a library
-  show's) passes Play: the shell's Tab rule (`FocusPane._leave`) goes by
-  position. ← reaches Play.
-- The provider's Series page swaps the season shown when a mark moves
-  Continue to another season (the library show's page fixes its season
-  once the marks are read: copy that).
-- A series' poster has no Downloaded mark (it downloads by its episodes;
-  its page says which); Search's "Remind me" is Phase 9.
-- Favorites' drag draws Flutter's gap, not the canvas's accent line.
-- Tab coming round into Live TV's categories pane lands on its first item,
-  not the chosen category.
-- A guide imported before Phase 6 keeps channel order until its next
-  import (at most a day).
-- `GuideGridController.showProgramme` is lost if the Guide's view is
-  rebuilt for another source before the grid has rows.
-- A provider's own HLS isn't watched for a codec switch (only MPEG-TS
-  channels are).
-- A folder away says "stay listed for 30 days" as the canvas does, not the
-  days left.
+1. **Whatever CI names after the push.**
+2. **Phase 9 step 6**, then 7, 8, 9 (above).
+3. **If the user says the TV is back:** the sitting, after asking; it
+   fills docs/04's "Verify" notes. No phase waits on it any more.
 
 ## The road to v1 (what is still needed to go live)
-Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
-- **CI green on both systems:** it was on abd0c1a; the last three pushes
-  each left a few Windows path tests to fix. Keep to `p.join` for every
-  path a test expects.
-- **Phase 7 — Casting**: built (steps 2–7); the casting matrix on the
-  user's TV (step 8).
-- **Phase 8 — Downloads and the local library:** built (steps 1–7,
-  library casting with subtitles and the MP4 included); the integration
-  tests, the SIGKILL-safety tests end to end and the library matrix on
-  the TV (step 8).
-- **Phase 9 — Settings, diagnostics, polish:** every Settings section, the
-  log viewer and Copy diagnostics (redacted); **"Remind me"** on upcoming
-  programmes as a system notification (Search and the Guide's sheet; the
-  user's choice, 2026-09-29); the keyboard audit at
-  100/115/130 % text scale and with reduce motion; every docs/06 budget in
-  profile mode, and **the 8-hour soak with faults** (memory growth ≤ 50
-  MB).
+Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07);
+its first step (TV-0) doesn't depend on Phase 10.
+- **CI green on both systems:** it is, at 3ba9f6e. Phase 9's five steps
+  haven't been through it yet. Keep to `p.join` for every path a test
+  expects, and don't tie a test to the samples' length (CI's are 30 s
+  live and 2 minutes VOD).
+- **Phases 7 and 8:** accepted. Open only: the matrices on the real TV.
+- **Phase 9 — Settings, diagnostics, reminders, polish:** steps 1–5
+  built; left: reminders on screen, the keyboard and text-size audit,
+  every docs/06 budget in profile mode, the 1-hour soak of the new mix.
+  The 8-hour soak is dropped by the user's choice.
 - **Phase 10 — Packaging:** a Windows installer bundling libmpv and FFmpeg
-  (MSIX vs Inno Setup: recommend, then build); a Linux AppImage tested on
-  clean Ubuntu 22.04 and 24.04 VMs (with the bundled libva); semantic
-  versioning, CHANGELOG.md, docs/release.md, a final regression, and the
-  tag v1.0.0.
+  (MSIX vs Inno Setup: recommend, then build; it also registers the app
+  id the Windows notifications use); a Linux AppImage tested on clean
+  Ubuntu 22.04 and 24.04 VMs (with the bundled libva); **what the
+  installers carry of FFmpeg's and mpv's licences** (the texts are in
+  `assets/licenses/` already); semantic versioning, CHANGELOG.md,
+  docs/release.md, a final regression, and the tag v1.0.0.
 - **Only the user can unblock:** the Windows PC (playback, hardware
-  decoding, the relay and sleep inhibition have never run on real Windows;
-  ADR-007's GO covers Linux only); the app's name and icon; access to
-  their TV for the casting matrices; permission for each real-provider
-  stream.
+  decoding and its Off, the relay, sleep inhibition, the notification,
+  the diagnostics' graphics cards have never run on real Windows; ADR-007's
+  GO covers Linux only); the app's name and icon; access to their TV;
+  permission for each real-provider stream; five minutes at the laptop
+  for the real reminder.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -313,12 +281,120 @@ Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07).
   test integration_test tools`, `TZ=UTC flutter test`, the fake provider's
   and the fake receiver's `dart test`, and the integration tests that
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
-  one file per run. Then add to ADR-014, update docs/progress.md, rewrite
+  one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
+- **Lessons of this session (Phase 9 steps 1–5):**
+  - **Check a "nothing of X leaves the app" rule against the real
+    thing.** The made-up sources had names of their own; the real one
+    was named after its server, and that name was in the export. A copy
+    of `~/.local/share/io.github.yasiralobaidi.iptvplayer/` and the login
+    file in `~/.config/iptv-player-dev/` make that check without any
+    network: never print their values.
+  - **`Isolate.run` inside a method sends `this` with the closure,** and
+    a class holding the database can't be sent ("object is unsendable …
+    FfiDatabase"). Call it from a top-level function that takes only
+    what it needs (`_writeInIsolate`, `_readInIsolate`).
+  - **riverpod_generator drops a trailing "Notifier" from a provider's
+    name:** `systemNotifier` became `systemProvider`. Hence
+    `systemNotifications`.
+  - **A list with `itemExtent` doesn't lay itself out again when rows are
+    added in place:** its scroll extent stays stale until the next
+    scroll. The log view marks its viewport (`_layOutList`).
+  - **A focus ring is drawn the frame after the focus lands:** a golden
+    of something that takes the focus as it opens needs a second
+    `settleApp`.
+  - **A control that is disabled while it works drops the focus,** and
+    Flutter puts it somewhere the user didn't choose.
+  - **`find.descendant(of: x, matching: find.byType(Scrollable))` also
+    finds a text field's.**
+  - **A sliver's children are built a little past each edge:** a test
+    that reads "what is shown" must keep to what is inside the viewport.
+  - **The shortcut tables in docs/05 are written by a test:**
+    `UPDATE_SHORTCUT_DOCS=1 flutter test test/app/shortcut_table_test.dart`.
+  - **To look only at where a re-recorded golden changed,** diff it
+    against `git show HEAD:<file>` with PIL's `ImageChops.difference(…)
+    .getbbox()`; then look at the new ones whole.
 
 ## Codebase notes by area
-New this session (Phase 8 step 7, parts 2b–4: subtitles, the MP4, the
-matrix rows, the walk):
+New this session (Phase 9 steps 1–5):
+- **The look:** `lib/design/appearance.dart` (`AppearanceSettings` →
+  `resolve(SystemAppearance)` → `Appearance`), `lib/design/text_scale.dart`
+  (`context.scaled`, `scaledAround`, `textScale`, `AppTextScale`),
+  `AppDensity.row()`, `tokens.timeStyle`. `IptvPlayerApp` builds the
+  theme from `appearanceProvider`. The store and providers are in
+  `lib/features/settings/{domain,data}/` (`appearanceStoreProvider` is
+  given by `bootstrap()`, already read; `desktopAppearanceProvider`,
+  `appearanceControllerProvider`, `timeStyleProvider` for text made away
+  from a screen).
+- **Settings pages** are in `lib/features/settings/presentation/`:
+  `appearance_section.dart`, `shortcuts_section.dart`, `data_section.dart`
+  (+ `data_text.dart`), `about_section.dart`, `licenses_dialog.dart`,
+  `setting_row.dart` (`SettingRow`: the control goes under the words
+  when they don't fit side by side). `SettingsSection` has no "phase"
+  any more: every section is built.
+- **Shortcuts:** `lib/app/shortcut_table.dart` (the one list),
+  `lib/app/shell/shortcut_list.dart` (`ShortcutList`,
+  `showShortcutsPanel`), F1 in `lib/app/shortcuts.dart`.
+- **`ScrollPane`** (`lib/design/components/scroll_pane.dart`): one Tab
+  stop, keyboard scrolling, `reverse` for a list drawn from the bottom.
+  **`AppDialog`** has `focusSecondary` and keeps 24 px from the window's
+  edges. **`SegmentedControl`** wraps, and an option can have a `swatch`.
+- **Export and import:** the file and its reader in
+  `lib/features/settings/domain/settings_export.dart`; the port, the plan
+  and the summaries in `settings_transfer.dart`; `DbSettingsTransfer`
+  (`data/`), whose `exportedName` keeps a server or a username out of a
+  source's name. Fixtures: `test_fixtures/settings/`. docs/02 has the
+  format.
+- **Pictures:** `ArtworkStore` (`lib/core/images/artwork_store.dart`),
+  `ArtworkCache.size()` / `clear()`.
+- **Diagnostics:** `lib/features/diagnostics/` — `domain/
+  diagnostics_report.dart` (`buildDiagnosticsReport`, `withoutAddresses`),
+  `data/db_diagnostics.dart` (gathers the facts), `data/
+  file_log_reader.dart` (`readLogPage`, `readLogSince`), `domain/
+  log_lines.dart`, `presentation/report_view.dart` and `log_view.dart`.
+  `DecoderNotes` (`lib/core/player/decoder_notes.dart`) is written by the
+  playback coordinator at the first frame. `SystemFactsReader`
+  (`lib/core/platform/system_facts.dart`; Linux and Windows readers in
+  `lib/data/platform/`). `PlayerVersion` is a capability only the real
+  engine has. `FfmpegEncoderDetector.remembered(folder)` reads the last
+  detection without running one.
+- **Hardware decoding:** `PlaybackSettings.hardwareDecoding` →
+  `PlayRequest.hardwareDecoding` → `mpvOptionsFor(request, picture:)`;
+  `MediaKitPlayerEngine.create(hardwareDecoding:)` for the stored choice
+  at launch; `mpvProperty()` for tests.
+- **Reminders:** `lib/features/reminders/` — `domain/reminder.dart`
+  (`Reminder`, `ReminderDraft`, `ReminderRepository`, `ReminderGuide`,
+  `followReminder`), `domain/reminder_scheduler.dart`
+  (`ReminderScheduler`, `ReminderFollower`), `data/
+  db_reminder_repository.dart` (also `DbReminderGuide`,
+  `DbReminderTransfer`), `data/reminder_providers.dart`
+  (`ReminderService`), `presentation/reminder_alerts.dart` and
+  `reminder_text.dart`. The table is `lib/data/db/reminder_tables.dart`,
+  the DAO `remindersDao`.
+- **Notifications and the window:** `SystemNotifier`
+  (`lib/core/platform/system_notifier.dart`, provider
+  `systemNotificationsProvider`), `DbusNotifier` and `WindowsNotifier`
+  (`lib/data/platform/`); `WindowControls.isFocused()` /
+  `bringToFront(activationToken:)`; the runner's channel
+  `iptv_player/window` in `linux/runner/my_application.cc`.
+- **`EpgImporter.wentLive`** is a stream of the sources whose guide was
+  just swapped in.
+- **Settings controllers have `reload()`** (playback, guide, cast,
+  downloads); Appearance's is `retry()`.
+- **Test fakes and harness:** `pumpApp(withAppearance:, settle:)`;
+  `test/features/settings/appearance_fakes.dart` (`appearanceOverrides`,
+  `ScriptedAppearanceStore`), `data_fakes.dart` (`FakeArtworkStore`,
+  `FakeTransfer`, `sketchPlan`); `test/features/diagnostics/
+  diagnostics_fakes.dart` (`FakeDiagnostics`, `FakeLogReader`, `logRow`,
+  `FakeFileReveal`, `diagnosticsOverrides`); `test/features/reminders/
+  reminder_fakes.dart` (`FakeReminders`, `FakeReminderGuide`,
+  `FakeNotifier`); `FakeWindow` has `focused` and `raised`;
+  `FakeEpgRepository.cleared`; `pumpDesign(textScale:)`; the playback
+  `Rig(decoders:)`. A fake notification service on a private bus:
+  `test/data/platform/dbus_notifier_test.dart`.
+
+From the session before (Phase 8 step 7, parts 2b–4: subtitles, the MP4,
+the matrix rows, the walk):
 - **A cast's place has two numbers now.** `_Cast.from` is the place asked
   for (a resume, a seek); `_Cast.offset` is where the TV's time 0 is in
   the file: 0 whenever the TV reads a file by itself, and for a relayed
@@ -1308,6 +1384,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- Phase 9 steps 1–5 (ADR-016): text size held to 100–130 %, and heights that hold text scaled through `context.scaled` (the argument untouched at 100 %, so the goldens stay as they were); Live TV's category rows at 40 px in Compact; the clock's style a required argument of every formatter; the shortcuts as one table with docs/05 written from it; hardware decoding as Automatic (`auto-safe`) or Off (`no`), no list of decoders; the report and the log as two views; a source in an export known by a SHA-256 of type, server and username, never by the server, and named "Xtream source N" when its name says the server or the username; an import as one transaction, a guide-days change taking hold at the next refresh; the report's masking (`<address>`, `<server>`, `Source N`, `~`) before `redact()`; a reminder taken out of the store before it is shown (never twice, at the price of one lost if the app dies in that moment); a reminder following its programme by title and guide channel within 12 hours, a move of 5 minutes or more said; a system notification only while the window is covered; no default action on GNOME Shell's notices (measured on 42.9: it raises the window itself and sends no token); flutter_local_notifications pinned at 22.3.1.
 - Phase 7 step 3 (ADR-014): the probe's 2 s window (measured 0.5–1.7 s); the planner pure in `lib/core/cast/`; only Chromecast Ultra seeded by `md`; HEVC and 4K tried until refused; the user's HEVC "Yes" over a learned refusal; 10-bit/4:2:2/4:4:4 H.264, HEVC beyond Main 10, unknown codecs and VP8/VP9/AV1 re-encoded; an unknown height held at 1080p; deinterlacing one picture per field (≤ 60); bit rates by pixels with floors and ceilings; `aac_latm` converted; direct only without a custom User-Agent, on the first audio track, and not in Low-latency mode; files through the relay as one continuous fMP4; `refusedInterlaced` learned; the process supervisor moved to step 3; the sweep only killing what still runs the recorded executable while its app is gone; facts remembered for the run (LRU 256).
 - Phase 7 step 2 (ADR-014): sealed command and join results rather than `AppFailure`; a LOAD done once taken, a later LOAD_FAILED as IDLE/ERROR; the heartbeat lost after 3 intervals with nothing heard (any message counts); reconnect for 30 s, rejoining by session id; a RECEIVER_STATUS whose `status` isn't an object never ends a session; the fake receiver's own hand-written codec; Add by address's fallback over a Cast connection named by MULTIZONE_STATUS (its id assumed to equal TXT `id` until the TV run checks it).
 - Phase 7 plan (ADR-014): the eight decisions as recommended; step 1: Add by address by a direct DNS-SD query (CONNECT + GET_STATUS as the fallback), the IPv4 address preferred over IPv6, speakers left out by `ca` bit 0 but a device with no readable `ca` listed, found devices not stored, FFmpeg hard-linked into the Linux bundle.
@@ -1421,6 +1498,9 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
+- The Google TV version: start TV-0 (the player spike) right after Phase 9,
+  or after Phase 10's installers? It needs the Android SDK, JDK 17 and
+  `adb` installed, and the TV in Developer mode on the laptop's network.
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
