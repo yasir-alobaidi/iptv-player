@@ -1,6 +1,6 @@
 # Phase 9 — Settings, diagnostics, reminders and polish: plan
 
-**Status: proposed 2026-10-12, for your approval.** What is built and every departure from this plan goes into ADR-016 (docs/decisions.md) as the steps land.
+**Status: approved 2026-10-13, with one change: no 8-hour soak (the user: "the 7 and 8 are apporved and then do the step 9, but not the 8-hour soak").** Read as: Phases 7 and 8 are accepted as built, Phase 9 is approved with every recommendation and the nine sketches, and step 9 keeps its exit and drops the night's run. So decision 15's night is not run and the exit criterion "8-hour soak with faults" is left unmet by your choice; the soak's new mix is still built and run for an hour. What is built and every departure from this plan goes into ADR-016 (docs/decisions.md) as the steps land.
 
 Three decisions are most worth your eye before you approve:
 - **6:** what Export holds (your settings and your choices, never a password);
