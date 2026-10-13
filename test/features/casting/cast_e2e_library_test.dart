@@ -48,6 +48,14 @@ void main() {
           ? null
           : 'no $sample sample');
 
+  /// The cues of a subtitle sample: one every 10 s of the samples' length,
+  /// which is 10 minutes here and 2 on CI.
+  int cuesOf(String sample) =>
+      File(p.join(samples.path, sample))
+          .readAsLinesSync()
+          .where((line) => line.contains('-->'))
+          .length;
+
   /// The requests the TV made for the file itself.
   List<String?> ranges() => [
     for (final fetch in rig.tv.fetches)
@@ -277,13 +285,15 @@ void main() {
       final track = rig.tv.textTracks.single;
       expect(track.problem, isNull, reason: '$track');
       expect(track.firstCue, Duration.zero);
-      expect(track.cues, greaterThan(50));
+      expect(track.cues, cuesOf('vod_h264_ac3_10min.en.srt'));
       expect(rig.tv.activeTrackIds, [1]);
 
-      // A second seek is the TV's own: a Range request, no LOAD.
+      // A second seek is the TV's own: a Range request, no LOAD. (100 s
+      // is inside CI's 2-minute sample too.)
+      const second = Duration(seconds: 100);
       final loads = rig.tv.requests('LOAD').length;
       final fetches = ranges().length;
-      await rig.playback.seek(const Duration(seconds: 200));
+      await rig.playback.seek(second);
       await until(
         () => ranges().length > fetches,
         what: "the TV's own seek in the MP4",
@@ -295,16 +305,10 @@ void main() {
         () => rig.tv.playerState == 'PLAYING',
         what: 'playing after the seek',
       );
-      expect(
-        rig.coordinator.timeline.position,
-        greaterThanOrEqualTo(const Duration(seconds: 200)),
-      );
+      expect(rig.coordinator.timeline.position, greaterThanOrEqualTo(second));
 
       await rig.coordinator.disconnect();
-      expect(
-        rig.progress.lastPosition,
-        greaterThanOrEqualTo(const Duration(seconds: 200)),
-      );
+      expect(rig.progress.lastPosition, greaterThanOrEqualTo(second));
       expect(rig.sessionFolders, isEmpty, reason: 'the MP4 went with the cast');
     },
     skip: skipWithout('vod_h264_ac3_10min.mkv'),
@@ -345,7 +349,7 @@ void main() {
         expect(whole.language, 'en');
         expect(whole.name, 'English');
         expect(whole.url.path, matches(r'^/f/[^/]+/media\.vtt$'));
-        expect(whole.cues, greaterThan(50));
+        expect(whole.cues, cuesOf(srt));
         expect(whole.firstCue, Duration.zero);
         expect(whole.firstText, 'External English subtitle 1 at 0 s');
         expect(rig.tv.activeTrackIds, [1], reason: 'a file beside the video');
@@ -462,7 +466,7 @@ void main() {
         expect(track.language, isNull);
         expect(track.name, 'Subtitles 1');
         expect(track.firstCue, Duration.zero);
-        expect(track.cues, greaterThan(50));
+        expect(track.cues, cuesOf(srt));
         expect(rig.tv.activeTrackIds, [1]);
         expect(rig.running, isEmpty, reason: 'the WebVTT is made by then');
         await rig.coordinator.disconnect();
