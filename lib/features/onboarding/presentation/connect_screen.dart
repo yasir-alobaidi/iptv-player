@@ -590,11 +590,13 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         subtitle: 'Change how this source signs in, or what it is called.',
         body: Semantics(
           label: 'Loading the source',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: SkeletonColumn(
             children: [
               for (var i = 0; i < 3; i++) ...[
-                const Skeleton(width: 620, height: 56),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Skeleton(width: 620, height: 56),
+                ),
                 SizedBox(height: spacing.s16),
               ],
             ],

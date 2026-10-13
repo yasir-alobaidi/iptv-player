@@ -272,10 +272,12 @@ class _Loading extends StatelessWidget {
     final spacing = context.tokens.spacing;
     return Semantics(
       label: 'Loading categories',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: SkeletonColumn(
         children: [
-          const Skeleton(width: 320, height: 40),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Skeleton(width: 320, height: 40),
+          ),
           SizedBox(height: spacing.s16),
           for (var i = 0; i < 5; i++) ...[
             const Skeleton(height: 56),
@@ -408,7 +410,7 @@ class _Picker extends StatelessWidget {
                   sliver: SliverGrid.builder(
                     gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 300,
-                      mainAxisExtent: 44,
+                      mainAxisExtent: context.scaled(44),
                       crossAxisSpacing: spacing.s8,
                       mainAxisSpacing: spacing.s8,
                     ),

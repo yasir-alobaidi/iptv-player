@@ -1148,20 +1148,13 @@ class _ChannelListState extends ConsumerState<_ChannelList> {
       // a short window leaves it.
       return Semantics(
         label: 'Loading the channels',
-        child: ClipRect(
-          child: OverflowBox(
-            alignment: Alignment.topCenter,
-            maxHeight: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < 4; i++) ...[
-                  const SkeletonRow(height: _ChannelList.rowHeight - 8),
-                  SizedBox(height: tokens.spacing.s8),
-                ],
-              ],
-            ),
-          ),
+        child: SkeletonColumn(
+          children: [
+            for (var i = 0; i < 4; i++) ...[
+              const SkeletonRow(height: _ChannelList.rowHeight - 8),
+              SizedBox(height: tokens.spacing.s8),
+            ],
+          ],
         ),
       );
     }
@@ -1322,8 +1315,7 @@ class _Loading extends StatelessWidget {
     final spacing = context.tokens.spacing;
     return Semantics(
       label: 'Loading the guide settings',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: SkeletonColumn(
         children: [
           for (var i = 0; i < 3; i++) ...[
             const Skeleton(height: 56),

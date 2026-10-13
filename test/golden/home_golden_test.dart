@@ -20,7 +20,7 @@ void main() {
       ('1280x800', Size(1280, 800), true),
       ('1920x1080', Size(1920, 1080), true),
     ]) {
-      testWidgets(name, (tester) async {
+      sceneTest(name, audit: size.width == 1280, (tester) async {
         hideDebugBanner();
         final home = HomeFakes();
         home.vod.fakes.now = goldenNow();
@@ -42,10 +42,7 @@ void main() {
         );
         await settle(tester);
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/home_$name.png'),
-        );
+        await golden(tester, 'images/home_$name.png');
       });
     }
   }, skip: goldenSkipReason);

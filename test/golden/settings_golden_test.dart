@@ -5,7 +5,6 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
@@ -76,7 +75,7 @@ void main() {
       return fakes;
     }
 
-    testWidgets('Sources', (tester) async {
+    sceneTest('Sources', (tester) async {
       hideDebugBanner();
       await pumpApp(
         tester,
@@ -84,13 +83,10 @@ void main() {
         overrides: [...sketch().overrides, ...sourceShellOverrides],
       );
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_sources.png'),
-      );
+      await golden(tester, 'images/settings_sources.png');
     });
 
-    testWidgets('Categories', (tester) async {
+    sceneTest('Categories', (tester) async {
       hideDebugBanner();
       final fakes = sketch();
       await fakes.categories.rename(9, 'Radio & music');
@@ -102,13 +98,10 @@ void main() {
       await tester.tap(find.text('Categories').first);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_categories.png'),
-      );
+      await golden(tester, 'images/settings_categories.png');
     });
 
-    testWidgets('Playback', (tester) async {
+    sceneTest('Playback', (tester) async {
       hideDebugBanner();
       final live = LiveTvFakes();
       addTearDown(() => tester.runAsync(live.db.close));
@@ -124,13 +117,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
       }
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_playback.png'),
-      );
+      await golden(tester, 'images/settings_playback.png');
     });
 
-    testWidgets('Guide', (tester) async {
+    sceneTest('Guide', (tester) async {
       hideDebugBanner();
       final base = sketch();
       final fakes = GuideFakes(base);
@@ -180,10 +170,7 @@ void main() {
       await settleApp(tester);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_guide.png'),
-      );
+      await golden(tester, 'images/settings_guide.png');
     });
 
     /// Settings → Appearance with [settings] in use, at 8:05 in the
@@ -210,16 +197,13 @@ void main() {
       await settleApp(tester);
     }
 
-    testWidgets('Appearance', (tester) async {
+    sceneTest('Appearance', (tester) async {
       await appearance(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_appearance.png'),
-      );
+      await golden(tester, 'images/settings_appearance.png');
     });
 
-    testWidgets('Keyboard shortcuts', (tester) async {
+    sceneTest('Keyboard shortcuts', (tester) async {
       hideDebugBanner();
       await pumpApp(
         tester,
@@ -229,13 +213,10 @@ void main() {
       await tester.tap(find.text('Keyboard shortcuts').first);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_shortcuts.png'),
-      );
+      await golden(tester, 'images/settings_shortcuts.png');
     });
 
-    testWidgets('the F1 panel, over Settings in the smallest window', (
+    sceneTest('the F1 panel, over Settings in the smallest window', (
       tester,
     ) async {
       hideDebugBanner();
@@ -251,10 +232,7 @@ void main() {
       // is drawn the frame after.
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/shortcuts_panel_1024x640.png'),
-      );
+      await golden(tester, 'images/shortcuts_panel_1024x640.png');
     });
 
     /// Settings → Data, with 412 MB of pictures and a guide; Import…
@@ -300,25 +278,19 @@ void main() {
       await settleApp(tester);
     }
 
-    testWidgets('Data', (tester) async {
+    sceneTest('Data', (tester) async {
       await data(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_data.png'),
-      );
+      await golden(tester, 'images/settings_data.png');
     });
 
-    testWidgets("Data: an import's preview", (tester) async {
+    sceneTest("Data: an import's preview", (tester) async {
       await data(tester);
       await tester.tap(find.text('Import…'));
       await settleApp(tester);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_data_import.png'),
-      );
+      await golden(tester, 'images/settings_data_import.png');
     });
 
     /// Settings → About & diagnostics, as a 0.1.0 build on Linux.
@@ -393,43 +365,34 @@ void main() {
       await settleApp(tester);
     }
 
-    testWidgets('About', (tester) async {
+    sceneTest('About', (tester) async {
       await about(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_about.png'),
-      );
+      await golden(tester, 'images/settings_about.png');
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('About: the log', (tester) async {
+    sceneTest('About: the log', (tester) async {
       await about(tester);
       await tester.tap(find.text('Log'));
       await settleApp(tester);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_about_log.png'),
-      );
+      await golden(tester, 'images/settings_about_log.png');
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('Licences', (tester) async {
+    sceneTest('Licences', (tester) async {
       await about(tester);
       await tester.tap(find.text('Licences'));
       await settleApp(tester);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_licences.png'),
-      );
+      await golden(tester, 'images/settings_licences.png');
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('Appearance at 130 %, Compact, Rose, 24-hour, in the '
+    sceneTest('Appearance at 130 %, Compact, Rose, 24-hour, in the '
         'smallest window', (tester) async {
       await appearance(
         tester,
@@ -443,10 +406,7 @@ void main() {
         ),
       );
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_appearance_130_1024x640.png'),
-      );
+      await golden(tester, 'images/settings_appearance_130_1024x640.png');
     });
   }, skip: goldenSkipReason);
 }

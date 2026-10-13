@@ -384,10 +384,12 @@ class _Loading extends StatelessWidget {
     final spacing = context.tokens.spacing;
     return Semantics(
       label: 'Loading categories',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: SkeletonColumn(
         children: [
-          const Skeleton(width: 420, height: 36),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Skeleton(width: 420, height: 36),
+          ),
           SizedBox(height: spacing.s16),
           for (var i = 0; i < 6; i++) ...[
             const Skeleton(height: 48),

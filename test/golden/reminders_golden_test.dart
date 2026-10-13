@@ -92,17 +92,14 @@ void main() {
   }
 
   group('reminders', () {
-    testWidgets('the Guide: a bell in each cell that has one, and their '
+    sceneTest('the Guide: a bell in each cell that has one, and their '
         'count in the toolbar', (tester) async {
       await open(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/reminders_guide_1280x800.png'),
-      );
+      await golden(tester, 'images/reminders_guide_1280x800.png');
     });
 
-    testWidgets("a programme's sheet, its reminder set", (tester) async {
+    sceneTest("a programme's sheet, its reminder set", (tester) async {
       await open(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await _settle(tester);
@@ -111,29 +108,23 @@ void main() {
       // The ring is drawn the frame after the focus lands.
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/reminders_sheet.png'),
-      );
+      await golden(tester, 'images/reminders_sheet.png');
     });
 
-    testWidgets('the list', (tester) async {
+    sceneTest('the list', (tester) async {
       await open(tester);
       await tester.tap(findByLabel(remindersButtonLabel(3)));
       await _settle(tester);
       await settleApp(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/reminders_list.png'),
-      );
+      await golden(tester, 'images/reminders_list.png');
     });
 
     // Decision 3: at 130 % a row grows with its text, and the smallest
     // window still holds the list, its hints and Close. Opened by its
     // second door: the Guide's own rows don't grow with the text until
     // the audit (step 7).
-    testWidgets('the list at 130 % in the smallest window, from Settings → '
+    sceneTest('the list at 130 % in the smallest window, from Settings → '
         'Guide', (tester) async {
       await open(
         tester,
@@ -149,10 +140,7 @@ void main() {
       await settleApp(tester);
 
       expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/reminders_list_130_1024x640.png'),
-      );
+      await golden(tester, 'images/reminders_list_130_1024x640.png');
     });
   }, skip: goldenSkipReason);
 }

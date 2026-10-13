@@ -165,57 +165,45 @@ void main() {
   group('library', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      testWidgets('movies $name', (tester) async {
+      sceneTest('movies $name', audit: size.width == 1280, (tester) async {
         await open(tester, size: size);
-        tester
-            .widget<PosterCard>(
-              find.widgetWithText(PosterCard, 'The Quiet Harbor'),
-            )
-            .focusNode!
-            .requestFocus();
+        // The picture's focus is on the canvas's card; the audit's
+        // smaller window may not have it on screen.
+        final card = find.widgetWithText(PosterCard, 'The Quiet Harbor');
+        if (card.evaluate().isNotEmpty) {
+          tester.widget<PosterCard>(card).focusNode!.requestFocus();
+        }
         await settle(tester);
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/library_$name.png'),
-        );
+        await golden(tester, 'images/library_$name.png');
       });
     }
 
-    testWidgets('series', (tester) async {
+    sceneTest('series', (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Series'));
       await settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_series.png'),
-      );
+      await golden(tester, 'images/library_series.png');
     });
 
-    testWidgets('videos', (tester) async {
+    sceneTest('videos', (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Videos'));
       await settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_videos.png'),
-      );
+      await golden(tester, 'images/library_videos.png');
     });
 
-    testWidgets('folders', (tester) async {
+    sceneTest('folders', (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Folders'));
       await settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_folders.png'),
-      );
+      await golden(tester, 'images/library_folders.png');
     });
 
-    testWidgets('downloads', (tester) async {
+    sceneTest('downloads', (tester) async {
       await open(
         tester,
         before: (ui) async {
@@ -284,49 +272,34 @@ void main() {
           .requestFocus();
       await settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_downloads.png'),
-      );
+      await golden(tester, 'images/library_downloads.png');
     });
 
-    testWidgets('settings: downloads and library', (tester) async {
+    sceneTest('settings: downloads and library', (tester) async {
       await open(tester, location: '/settings');
       await tester.tap(find.text('Downloads & library'));
       await settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/settings_downloads.png'),
-      );
+      await golden(tester, 'images/settings_downloads.png');
     });
 
-    testWidgets('the first run', (tester) async {
+    sceneTest('the first run', (tester) async {
       await open(tester, before: (ui) async {});
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_first_run.png'),
-      );
+      await golden(tester, 'images/library_first_run.png');
     });
 
-    testWidgets('a movie of the library', (tester) async {
+    sceneTest('a movie of the library', (tester) async {
       // Paper Kites is the sixth row written.
       await open(tester, location: '/library/movie/6');
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_movie.png'),
-      );
+      await golden(tester, 'images/library_movie.png');
     });
 
-    testWidgets('a show of the library', (tester) async {
+    sceneTest('a show of the library', (tester) async {
       await open(tester, location: '/library/show/l%3Akettle%20bay');
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/library_show.png'),
-      );
+      await golden(tester, 'images/library_show.png');
     });
   }, skip: goldenSkipReason);
 }

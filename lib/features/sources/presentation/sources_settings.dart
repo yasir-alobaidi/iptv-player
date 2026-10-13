@@ -217,7 +217,7 @@ class _Loading extends StatelessWidget {
     final spacing = context.tokens.spacing;
     return Semantics(
       label: 'Loading sources',
-      child: Column(
+      child: SkeletonColumn(
         children: [
           for (var i = 0; i < 2; i++) ...[
             const Skeleton(height: 112),

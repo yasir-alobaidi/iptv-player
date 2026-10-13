@@ -487,7 +487,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     );
   }
 
-  Widget _skeletons() => Column(
+  Widget _skeletons() => SkeletonColumn(
     children: [
       for (var i = 0; i < 8; i++)
         const Padding(

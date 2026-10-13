@@ -23,7 +23,7 @@ void main() {
   group('guide', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      testWidgets(name, (tester) async {
+      sceneTest(name, audit: size.width == 1280, (tester) async {
         hideDebugBanner();
         final fixture = GuideFixture();
         addTearDown(() => tester.runAsync(fixture.db.close));
@@ -45,16 +45,13 @@ void main() {
             .requestFocus();
         await _settle(tester);
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/guide_$name.png'),
-        );
+        await golden(tester, 'images/guide_$name.png');
       });
     }
 
     // Settings → Appearance → Density (Phase 9 decision 2): 60 px rows,
     // and a programme's two lines still inside its cell.
-    testWidgets('Compact, with a 24-hour clock', (tester) async {
+    sceneTest('Compact, with a 24-hour clock', (tester) async {
       hideDebugBanner();
       final fixture = GuideFixture();
       addTearDown(() => tester.runAsync(fixture.db.close));
@@ -78,10 +75,7 @@ void main() {
       await _settle(tester);
 
       expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/guide_compact_24h_1280x800.png'),
-      );
+      await golden(tester, 'images/guide_compact_24h_1280x800.png');
     });
   }, skip: goldenSkipReason);
 }

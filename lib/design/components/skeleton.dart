@@ -75,6 +75,29 @@ class _SkeletonState extends State<Skeleton>
   }
 }
 
+/// Placeholders stacked while a list loads, each as wide as the column.
+///
+/// It shows as many as its room holds and cuts the rest: a plain `Column`
+/// overflows in a short window or at a larger text size, and leaves a
+/// [Skeleton] with no width of its own at no width at all (invisible). A
+/// placeholder that is narrower than the column goes in an `Align`.
+class SkeletonColumn extends StatelessWidget {
+  const new({required this.children, super.key});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    // Nothing to scroll to: the rest is the same again.
+    physics: const NeverScrollableScrollPhysics(),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    ),
+  );
+}
+
 /// Skeleton for a channel or download row: square artwork plus two lines.
 class SkeletonRow extends StatelessWidget {
   const new({this.height, super.key});

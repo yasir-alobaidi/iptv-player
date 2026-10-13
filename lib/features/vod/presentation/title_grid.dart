@@ -73,9 +73,6 @@ class TitleGrid<T extends Object> extends StatefulWidget {
   static const columnGap = 20.0;
   static const rowGap = 24.0;
 
-  /// Under the poster: the gap, the title and the line under it.
-  static const captionHeight = 56.0;
-
   @override
   State<TitleGrid<T>> createState() => _TitleGridState<T>();
 }
@@ -403,7 +400,7 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
             final cardWidth =
                 (width - TitleGrid.columnGap * (_columns - 1)) / _columns;
             final extent =
-                cardWidth * shape.pictureAspect + TitleGrid.captionHeight;
+                cardWidth * shape.pictureAspect + cardCaptionHeight(context);
             _stride = extent + TitleGrid.rowGap;
             _inset = inset;
             final grid = GridView.builder(

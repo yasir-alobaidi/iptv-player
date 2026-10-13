@@ -4,7 +4,6 @@
 @Tags(['golden'])
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
@@ -16,6 +15,13 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import '../app/app_harness.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import 'golden_harness.dart';
+
+/// The player has the focus as a whole and no Tab stops: its keys are its
+/// own (docs/05's shortcut table), and the OSD coming up is how it shows
+/// it is listening.
+const _playerIsOneStop = {
+  'no focus ring on "player"': 'the player is one stop; its keys are its own',
+};
 
 void main() {
   group('player', () {
@@ -52,23 +58,20 @@ void main() {
       return live;
     }
 
-    testWidgets('OSD', (tester) async {
+    sceneTest('OSD', allow: _playerIsOneStop, (tester) async {
       final live = await open(tester);
       live.rig.engine
         ..firstFrame()
         ..emit(const PlayerVideoChanged(width: 1920, height: 1080));
       await _settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/player_osd.png'),
-      );
+      await golden(tester, 'images/player_osd.png');
       await tester.pump(const Duration(seconds: 4));
       await live.rig.coordinator.stop();
       await _settle(tester);
     });
 
-    testWidgets('failure card', (tester) async {
+    sceneTest('failure card', allow: _playerIsOneStop, (tester) async {
       final live = await open(tester);
       live.rig.prober.next = PlaybackProblem(
         PlaybackProblemKind.offline,
@@ -77,10 +80,7 @@ void main() {
       live.rig.engine.fail();
       await _settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/player_failure.png'),
-      );
+      await golden(tester, 'images/player_failure.png');
       await tester.pump(const Duration(seconds: 4));
       await live.rig.coordinator.stop();
       await _settle(tester);

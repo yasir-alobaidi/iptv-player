@@ -47,7 +47,10 @@ class CastingView extends ConsumerStatefulWidget {
 }
 
 class _CastingViewState extends ConsumerState<CastingView> {
-  final _focus = FocusNode(debugLabel: 'casting-view');
+  // It holds the focus so the view's keys work as it opens, and is no
+  // stop of its own: Tab goes on to the controls, and never comes round
+  // to a stop that shows nothing.
+  final _focus = FocusNode(debugLabel: 'casting-view', skipTraversal: true);
   ChannelItem? _zapTarget;
   Timer? _zapTimer;
   Duration? _seekTarget;

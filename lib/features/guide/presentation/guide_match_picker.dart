@@ -241,7 +241,7 @@ class _GuideMatchPickerState extends ConsumerState<GuideMatchPicker> {
     if (candidates == null) {
       return Semantics(
         label: "Loading the guide's channels",
-        child: Column(
+        child: SkeletonColumn(
           children: [
             for (var i = 0; i < 5; i++) ...[
               const SkeletonRow(height: GuideMatchPicker.rowHeight - 8),

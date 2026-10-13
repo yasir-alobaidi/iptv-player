@@ -3,7 +3,15 @@ import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/artwork_image.dart';
 import 'package:iptv_player/design/components/progress_bar.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
+
+/// Under a card's picture: the gap, the title and the line under it. 56 px
+/// at the canvas's size; its two lines of text (36 px of it) grow with
+/// the text size, so a grid or a rail that gives a card its height asks
+/// here (Phase 9 decision 3).
+double cardCaptionHeight(BuildContext context) =>
+    context.scaledAround(56, fixed: 20);
 
 /// A 2:3 poster for a movie or a series (canvas: radius 12, title 14/700,
 /// year and rating below). Focus grows it to 1.03.

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../audit/audit_harness.dart';
+
 /// Why the goldens are skipped, or null when they should run.
 ///
 /// The reference images are recorded on Linux. Windows rasterizes the
@@ -33,3 +35,49 @@ void hideDebugBanner() {
 /// A local 8 AM is the same instant the fakes' 12:00 UTC was when they
 /// were recorded, and 8 AM wherever the test runs.
 DateTime goldenNow() => DateTime(2026, 9, 14, 8);
+
+/// A golden that is also an audit scene (Phase 9 decision 14): [body]
+/// runs once as itself and is compared with its picture, then once in
+/// each of the audit's looks, where its [golden] is the audit's look at
+/// the screen instead of a comparison. So a screen that has a golden is
+/// checked at every text size and by keyboard with nothing more written.
+///
+/// [audit] false for a second size of the same scene (the audit has its
+/// own windows) and for a golden that is about a look of its own.
+/// [allow] and [keyboard] as on an `AuditScene`.
+void sceneTest(
+  String description,
+  Future<void> Function(WidgetTester tester) body, {
+  bool audit = true,
+  Map<String, String> allow = const {},
+  bool keyboard = true,
+}) {
+  testWidgets(description, body);
+  if (!audit) return;
+  for (final look in auditLooks) {
+    testWidgets('$description — audit, ${look.name}', (tester) async {
+      final findings = await auditRun(tester, look, (check) async {
+        _auditCheck = () => check(keyboard: keyboard);
+        try {
+          await body(tester);
+        } finally {
+          _auditCheck = null;
+        }
+      });
+      auditReport(description, look, findings, allow: allow);
+    });
+  }
+}
+
+Future<void> Function()? _auditCheck;
+
+/// The app as drawn now against the picture at [name]; while the audit
+/// runs a scene, the audit's checks of what is drawn.
+Future<void> golden(WidgetTester tester, String name) async {
+  final check = _auditCheck;
+  if (check != null) {
+    await check();
+    return;
+  }
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile(name));
+}

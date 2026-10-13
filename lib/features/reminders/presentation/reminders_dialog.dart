@@ -211,8 +211,7 @@ class _RemindersDialogState extends ConsumerState<RemindersDialog> {
     return Semantics(
       label: 'Reading your reminders',
       container: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: SkeletonColumn(
         children: [
           for (var i = 0; i < 3; i++)
             SkeletonRow(height: context.scaled(_rowHeight)),

@@ -27,6 +27,22 @@ import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/domain/reminder.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
 
+/// A channel's row, as tall as a cell's two lines of text need: the
+/// canvas's 72 px (60 in Compact) at 100 %, and only the text's part of
+/// it more at a larger text size (Phase 9 decision 3).
+double guideRowHeight(BuildContext context) {
+  final guide = context.tokens.guide;
+  // A whole number of pixels: a line of scaled text is laid out a
+  // fraction taller than its font says, and the rows' dividers stay
+  // sharp.
+  return context
+      .scaledAround(
+        guide.rowHeight,
+        fixed: guide.rowHeight - guide.cellTextHeight,
+      )
+      .ceilToDouble();
+}
+
 /// What the Guide's toolbar asks of the grid, and the day the grid shows
 /// (the selected day pill).
 class GuideGridController extends ChangeNotifier {
@@ -323,7 +339,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     _showPending();
     final total = _total;
     if (total == null || total == 0 || _viewHeight <= 0) return;
-    final rowHeight = context.tokens.guide.rowHeight;
+    final rowHeight = guideRowHeight(context);
     final offset = _vertical.hasClients ? _vertical.offset : 0.0;
     final screen = (_viewHeight / rowHeight).ceil();
     final first = math.max(0, (offset / rowHeight).floor() - screen);
@@ -407,7 +423,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
       _anchor = at;
       _setX(_xFor(at), animate: false);
       if (_vertical.hasClients) {
-        final rowHeight = context.tokens.guide.rowHeight;
+        final rowHeight = guideRowHeight(context);
         final position = _vertical.position;
         // The row a little way down the screen, not at its edge.
         _vertical.jumpTo(
@@ -465,7 +481,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   void _placeCursor() {
     final total = _total ?? 0;
     if (total == 0) return;
-    final rowHeight = context.tokens.guide.rowHeight;
+    final rowHeight = guideRowHeight(context);
     if (_vertical.hasClients && _viewHeight > 0) {
       final first = (_vertical.offset / rowHeight).ceil();
       final last = ((_vertical.offset + _viewHeight) / rowHeight).floor() - 1;
@@ -648,7 +664,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   void _page(int direction) {
     final total = _total ?? 0;
     if (total == 0 || !_vertical.hasClients) return;
-    final rowHeight = context.tokens.guide.rowHeight;
+    final rowHeight = guideRowHeight(context);
     final rows = math.max(1, (_viewHeight / rowHeight).floor());
     final row = (_row + direction * rows).clamp(0, total - 1);
     final position = _vertical.position;
@@ -664,7 +680,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
 
   void _revealRow(int row) {
     if (!_vertical.hasClients) return;
-    final rowHeight = context.tokens.guide.rowHeight;
+    final rowHeight = guideRowHeight(context);
     final top = row * rowHeight;
     final offset = _vertical.offset;
     if (top < offset) {
@@ -839,7 +855,6 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   }
 
   Widget _body(BuildContext context, AsyncValue<int> count) {
-    final guide = context.tokens.guide;
     final error = _pageError ?? _cache.failure;
     if (count.hasError || error != null) {
       return ErrorState(
@@ -889,7 +904,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
               _setX(_x.value - details.delta.dx, animate: false),
           child: ListView.builder(
             controller: _vertical,
-            itemExtent: guide.rowHeight,
+            itemExtent: guideRowHeight(context),
             itemCount: total,
             itemBuilder: (context, index) {
               final channel = _channelAt(index);
@@ -985,7 +1000,6 @@ class GuideSkeletonRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final guide = context.tokens.guide;
     return ClipRect(
       child: OverflowBox(
         alignment: Alignment.topCenter,
@@ -993,7 +1007,10 @@ class GuideSkeletonRows extends StatelessWidget {
         child: Column(
           children: [
             for (var i = 0; i < 12; i++)
-              SizedBox(height: guide.rowHeight, child: const _SkeletonRow()),
+              SizedBox(
+                height: guideRowHeight(context),
+                child: const _SkeletonRow(),
+              ),
           ],
         ),
       ),

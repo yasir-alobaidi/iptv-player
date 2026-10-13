@@ -176,12 +176,11 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// height, so its place is a sum.
   void _reveal(int index) {
     if (!_scroll.hasClients) return;
-    final heights = context.tokens.search;
     var top = 0.0;
     var seen = -1;
-    var height = heights.rowHeight;
+    var height = searchRowHeight(context);
     for (final entry in _entries) {
-      height = entry.height(heights);
+      height = entry.height(context);
       if (entry.selectable) seen++;
       if (seen == index) break;
       top += height + _Entry.gap;
@@ -439,16 +438,17 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         explicitChildNodes: true,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // The bars and the rows hold text, and grow with it.
+            final bars =
+                context.scaled(search.queryBarHeight) +
+                context.scaled(search.footerHeight);
+            final rowHeight = searchRowHeight(context);
             final maxHeight = math.max(
-              search.queryBarHeight + search.footerHeight + search.rowHeight,
+              bars + rowHeight,
               constraints.maxHeight - search.panelTop - search.panelBottom,
             );
-            final bodyHeight =
-                maxHeight - search.queryBarHeight - search.footerHeight;
-            _pageRows = math.max(
-              1,
-              (bodyHeight / search.rowHeight).floor() - 1,
-            );
+            final bodyHeight = maxHeight - bars;
+            _pageRows = math.max(1, (bodyHeight / rowHeight).floor() - 1);
             return Stack(
               children: [
                 // The scrim closes on a click but is not a focus stop:
@@ -594,11 +594,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       _entries = const [];
       return Padding(
         padding: padding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: SkeletonColumn(
           children: [
             for (var i = 0; i < 3; i++)
-              SkeletonRow(height: tokens.search.rowHeight),
+              SkeletonRow(height: searchRowHeight(context)),
           ],
         ),
       );
@@ -694,8 +693,15 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
 // ------------------------------------------------------------- entries
 
+/// A result's row: the canvas's 52 px, its two lines of text (38 px of
+/// it) growing with the text size beside a picture that doesn't.
+double searchRowHeight(BuildContext context) {
+  final row = context.tokens.search.rowHeight;
+  return context.scaledAround(row, fixed: row - 38);
+}
+
 /// One line of the body: a heading, a result, "Show all", or a recent
-/// search. Each has a fixed height, so the cursor's place is a sum.
+/// search. Each has a known height, so the cursor's place is a sum.
 sealed class _Entry {
   const new(this.group);
 
@@ -706,7 +712,7 @@ sealed class _Entry {
 
   bool get selectable => true;
 
-  double height(AppSearchTokens search) => search.rowHeight;
+  double height(BuildContext context) => searchRowHeight(context);
 }
 
 final class _HeadingEntry extends _Entry {
@@ -720,7 +726,7 @@ final class _HeadingEntry extends _Entry {
   bool get selectable => false;
 
   @override
-  double height(AppSearchTokens search) => 30;
+  double height(BuildContext context) => context.scaled(30);
 
   String get label => recent
       ? 'RECENT SEARCHES'
@@ -747,7 +753,7 @@ final class _ShowAllEntry extends _Entry {
   final SearchGroupKind kind;
 
   @override
-  double height(AppSearchTokens search) => 40;
+  double height(BuildContext context) => context.scaled(40);
 }
 
 final class _RecentEntry extends _Entry {
@@ -756,7 +762,7 @@ final class _RecentEntry extends _Entry {
   final String text;
 
   @override
-  double height(AppSearchTokens search) => 40;
+  double height(BuildContext context) => context.scaled(40);
 }
 
 // ---------------------------------------------------------------- parts
@@ -785,7 +791,7 @@ class _QueryBar extends StatelessWidget {
     final search = tokens.search;
 
     return Container(
-      height: search.queryBarHeight,
+      height: context.scaled(search.queryBarHeight),
       padding: EdgeInsets.only(
         left: tokens.spacing.s20,
         right: tokens.spacing.s16,
@@ -877,7 +883,7 @@ class _Heading extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     return SizedBox(
-      height: entry.height(tokens.search),
+      height: entry.height(context),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s12,
@@ -973,7 +979,7 @@ class _EntryRowState extends State<_EntryRow> {
             child: AnimatedContainer(
               duration: tokens.motion.fast,
               curve: tokens.motion.fastCurve,
-              height: entry.height(tokens.search),
+              height: entry.height(context),
               padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
               decoration: BoxDecoration(
                 color: selected || _hovered ? colors.surface3 : null,
@@ -1425,7 +1431,7 @@ class _Footer extends StatelessWidget {
     );
     return ExcludeSemantics(
       child: Container(
-        height: tokens.search.footerHeight,
+        height: context.scaled(tokens.search.footerHeight),
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s20),
         decoration: BoxDecoration(
           color: colors.surface1,

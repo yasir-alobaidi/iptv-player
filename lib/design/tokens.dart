@@ -484,6 +484,10 @@ class AppGuideTokens {
   /// Between a cell's title and its time.
   double get cellLineGap => 4;
 
+  /// A cell's two lines of text at the canvas's size (a 20 px title and
+  /// a 16 px time): the part of a row that grows with the text.
+  double get cellTextHeight => 36;
+
   /// Narrower cells drop the AM/PM from their time, then the end time,
   /// then their text.
   double get cellFullTimeWidth => 200;

@@ -188,7 +188,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
               )
             : _sections(sections, all: value, listed: listed);
       default:
-        body = Column(
+        body = SkeletonColumn(
           children: [
             for (var i = 0; i < 3; i++)
               Padding(

@@ -4,7 +4,6 @@
 @Tags(['golden'])
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/router.dart';
 
@@ -14,7 +13,7 @@ import 'golden_harness.dart';
 
 void main() {
   group('onboarding', () {
-    testWidgets('Welcome', (tester) async {
+    sceneTest('Welcome', (tester) async {
       hideDebugBanner();
       await pumpApp(
         tester,
@@ -22,13 +21,10 @@ void main() {
         overrides: OnboardingFakes().overrides,
       );
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/onboarding_welcome.png'),
-      );
+      await golden(tester, 'images/onboarding_welcome.png');
     });
 
-    testWidgets('Pick categories', (tester) async {
+    sceneTest('Pick categories', (tester) async {
       hideDebugBanner();
       final fakes = OnboardingFakes();
       fakes.categories.lists.addAll(sampleCategories());
@@ -38,10 +34,7 @@ void main() {
         overrides: fakes.overrides,
       );
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/onboarding_pick_categories.png'),
-      );
+      await golden(tester, 'images/onboarding_pick_categories.png');
     });
   }, skip: goldenSkipReason);
 }

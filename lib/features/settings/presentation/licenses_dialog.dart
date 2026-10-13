@@ -59,7 +59,7 @@ class _LicensesDialogState extends ConsumerState<LicensesDialog> {
             _ => Semantics(
               label: 'Reading the licences',
               container: true,
-              child: Column(
+              child: SkeletonColumn(
                 children: [
                   for (var i = 0; i < 7; i++)
                     Padding(

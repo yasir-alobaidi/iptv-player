@@ -495,7 +495,7 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
         },
       );
     } else if (channels == null || groups == null) {
-      body = Column(
+      body = SkeletonColumn(
         children: [
           for (var i = 0; i < 6; i++)
             Padding(

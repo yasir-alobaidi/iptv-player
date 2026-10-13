@@ -111,17 +111,14 @@ void main() {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
 
-      testWidgets('view $name', (tester) async {
+      sceneTest('view $name', audit: size.width == 1280, (tester) async {
         await pump(tester, size);
         await castTo(tester, PlayableChannel(arena));
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/casting_view_$name.png'),
-        );
+        await golden(tester, 'images/casting_view_$name.png');
         await end(tester);
       });
 
-      testWidgets('picker $name', (tester) async {
+      sceneTest('picker $name', audit: size.width == 1280, (tester) async {
         await pump(tester, size);
         ui.devices = [tvDevice, _bedroom, _kitchen];
         unawaited(ui.live.rig.coordinator.playLive(arena));
@@ -131,29 +128,23 @@ void main() {
         await tester.tap(findByLabel('Cast'));
         await settleCast(tester);
         await tester.pump(const Duration(milliseconds: 300));
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/casting_picker_$name.png'),
-        );
+        await golden(tester, 'images/casting_picker_$name.png');
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await end(tester);
       });
     }
 
-    testWidgets('a movie (sketch A)', (tester) async {
+    sceneTest('a movie (sketch A)', (tester) async {
       await pump(tester, const Size(1280, 800));
       ui.cast.probe.next = const StreamProbed(mkvFacts);
       await castTo(tester, PlayableMovie(movie(7, runtime: mkvFacts.duration)));
       ui.cast.tv.playing(position: const Duration(minutes: 42, seconds: 10));
       await settleCast(tester);
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/casting_view_movie.png'),
-      );
+      await golden(tester, 'images/casting_view_movie.png');
       await end(tester);
     });
 
-    testWidgets("it failed: the TV couldn't reach this computer (sketch D)", (
+    sceneTest("it failed: the TV couldn't reach this computer (sketch D)", (
       tester,
     ) async {
       await pump(tester, const Size(1280, 800));
@@ -172,10 +163,7 @@ void main() {
         find.text("Living Room TV couldn't reach this computer"),
         findsOneWidget,
       );
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/casting_view_failed.png'),
-      );
+      await golden(tester, 'images/casting_view_failed.png');
       await end(tester);
     });
   }, skip: goldenSkipReason);

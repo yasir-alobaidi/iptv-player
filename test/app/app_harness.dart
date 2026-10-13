@@ -20,6 +20,9 @@ import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:logger/logger.dart';
 
+import '../audit/audit_look.dart';
+import '../features/settings/appearance_fakes.dart';
+
 /// What a pumped app gives a test: the router to assert on and the error
 /// reporter to push a failure through.
 class AppUnderTest {
@@ -44,6 +47,10 @@ class AppUnderTest {
 /// the look through `appearanceStoreProvider` and
 /// `desktopAppearanceProvider`. Without it the default theme is used,
 /// as before Phase 9. [settle] false stops after the first frame.
+///
+/// While the audit draws a scene (`currentAuditLook`), the window is the
+/// look's and the root widget is always pumped, at the look's text size:
+/// every test's own way of opening a screen is then an audit scene.
 Future<AppUnderTest> pumpApp(
   WidgetTester tester, {
   String initialLocation = '/',
@@ -52,9 +59,17 @@ Future<AppUnderTest> pumpApp(
   bool withAppearance = false,
   bool settle = true,
 }) async {
+  final look = currentAuditLook;
+  final rootWidget = withAppearance || look != null;
+  final all = [
+    ...overrides,
+    // A test that brings its own appearance has the look in it already
+    // (`appearanceOverrides` reads it too).
+    if (look != null && !withAppearance) ...appearanceOverrides(),
+  ];
   FocusManager.instance.highlightStrategy =
       FocusHighlightStrategy.alwaysTraditional;
-  tester.view.physicalSize = size;
+  tester.view.physicalSize = look?.size ?? size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
@@ -71,9 +86,9 @@ Future<AppUnderTest> pumpApp(
         secretRegistryProvider.overrideWithValue(SecretRegistry()),
         errorReporterProvider.overrideWithValue(errors),
         routerProvider.overrideWithValue(router),
-        ...overrides,
+        ...all,
       ],
-      child: withAppearance
+      child: rootWidget
           ? const IptvPlayerApp()
           : MaterialApp.router(
               theme: buildAppTheme(),

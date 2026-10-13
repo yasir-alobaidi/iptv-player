@@ -81,6 +81,11 @@ class ChannelRow extends StatelessWidget {
   final bool autofocus;
   final FocusNode? focusNode;
 
+  /// The programme's progress bar, and the narrowest line that still
+  /// shows it: the bar, its gap and a few words of the title.
+  static const double _progressWidth = 72;
+  static const double _progressRoom = _progressWidth + 10 + 56;
+
   String get _noProgramme => switch (upNext) {
     final next? => 'Next $next',
     null when guideKnown => 'No guide information',
@@ -179,32 +184,40 @@ class ChannelRow extends StatelessWidget {
                       ),
                       if (guideKnown || nowTitle != null || upNext != null) ...[
                         SizedBox(height: tokens.spacing.s4 - 2),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                nowTitle ?? _noProgramme,
-                                overflow: TextOverflow.ellipsis,
-                                style: tokens.text.caption.copyWith(
-                                  color: nowTitle == null
-                                      ? colors.textTertiary
-                                      : colors.textSecondary,
+                        // The bar gives way before the title does: a
+                        // narrow list at a large text size has no room
+                        // for both, and a Row that can't shrink a fixed
+                        // child overflows.
+                        LayoutBuilder(
+                          builder: (context, line) => Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  nowTitle ?? _noProgramme,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tokens.text.caption.copyWith(
+                                    color: nowTitle == null
+                                        ? colors.textTertiary
+                                        : colors.textSecondary,
+                                  ),
                                 ),
                               ),
-                            ),
-                            // The canvas puts the programme's progress on
-                            // this line, after the title: a 72 px bar with
-                            // a 10 px gap. It rode the row's bottom edge
-                            // until the step 7 golden showed it striking
-                            // through the title in both densities.
-                            if (progress != null) ...[
-                              SizedBox(width: tokens.spacing.s8 + 2),
-                              SizedBox(
-                                width: 72,
-                                child: ProgressBar(value: progress),
-                              ),
+                              // The canvas puts the programme's progress
+                              // on this line, after the title: a 72 px
+                              // bar with a 10 px gap. It rode the row's
+                              // bottom edge until the step 7 golden
+                              // showed it striking through the title in
+                              // both densities.
+                              if (progress != null &&
+                                  line.maxWidth >= _progressRoom) ...[
+                                SizedBox(width: tokens.spacing.s8 + 2),
+                                SizedBox(
+                                  width: _progressWidth,
+                                  child: ProgressBar(value: progress),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ],
                     ],

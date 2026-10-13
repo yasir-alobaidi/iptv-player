@@ -188,7 +188,7 @@ void main() {
   group('search', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      testWidgets('results $name', (tester) async {
+      sceneTest('results $name', audit: size.width == 1280, (tester) async {
         final search = ScriptedSearch()
           ..recent = ['tennis open', 'cup final']
           ..answers['harbor'] = _harbor(goldenNow());
@@ -212,16 +212,13 @@ void main() {
         await tester.pump(searchDelay);
         await _settle(tester);
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/search_results_$name.png'),
-        );
+        await golden(tester, 'images/search_results_$name.png');
       });
     }
 
     // Phase 9 decision 13, sketch F: the row once it has a reminder, and
     // what the footer says of Ctrl+R with the cursor on it.
-    testWidgets('a reminder set, the cursor on its row', (tester) async {
+    sceneTest('a reminder set, the cursor on its row', (tester) async {
       final harbor = _harbor(goldenNow());
       final pilot = harbor.programmes.hits.last;
       final reminders = FakeReminders()
@@ -244,23 +241,17 @@ void main() {
       }
       await _settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/search_reminder_set_1280x800.png'),
-      );
+      await golden(tester, 'images/search_reminder_set_1280x800.png');
     });
 
-    testWidgets('recent searches 1280x800', (tester) async {
+    sceneTest('recent searches 1280x800', (tester) async {
       final search = ScriptedSearch()..recent = ['tennis open', 'cup final'];
       await open(tester, const Size(1280, 800), search);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/search_recent_1280x800.png'),
-      );
+      await golden(tester, 'images/search_recent_1280x800.png');
     });
 
-    testWidgets('no results 1280x800', (tester) async {
+    sceneTest('no results 1280x800', (tester) async {
       final search = ScriptedSearch()
         ..answers['harbour'] = const SearchResults(
           text: 'harbour',
@@ -271,10 +262,7 @@ void main() {
       await tester.pump(searchDelay);
       await _settle(tester);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('images/search_no_results_1280x800.png'),
-      );
+      await golden(tester, 'images/search_no_results_1280x800.png');
     });
   }, skip: goldenSkipReason);
 }

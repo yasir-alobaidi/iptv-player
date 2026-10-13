@@ -18,7 +18,7 @@ void main() {
   group('live tv', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      testWidgets(name, (tester) async {
+      sceneTest(name, audit: size.width == 1280, (tester) async {
         hideDebugBanner();
         final live = LiveTvFakes();
         live.fakes.now = goldenNow();
@@ -59,10 +59,7 @@ void main() {
         live.rig.engine.firstFrame();
         await tester.pump(const Duration(milliseconds: 300));
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/live_tv_$name.png'),
-        );
+        await golden(tester, 'images/live_tv_$name.png');
         await live.rig.coordinator.stop();
         await tester.pump(const Duration(milliseconds: 400));
       });

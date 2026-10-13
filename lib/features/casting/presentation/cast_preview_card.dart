@@ -30,85 +30,98 @@ class CastPreviewCard extends ConsumerWidget {
         ? null
         : ref.watch(nowNextProvider(channel)).value?.now;
     final secondary = tokens.text.caption.copyWith(color: colors.textSecondary);
-    return Container(
+    final onNow = now == null
+        ? null
+        : '${now.title} · '
+              '${formatTimeRangeShort(now.start, now.end, tokens.timeStyle)}';
+    return ColoredBox(
       color: colors.surface2,
-      padding: EdgeInsets.all(tokens.spacing.s20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
+      // In the middle while it fits. In a short window, or at a larger
+      // text size, the picture's box is lower than these lines: they
+      // scroll then, and the focus brings a button into view.
+      child: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(tokens.spacing.s20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AppIcon(
-                AppIcons.castConnected,
-                size: 18,
-                color: colors.accentBase,
+              Row(
+                children: [
+                  AppIcon(
+                    AppIcons.castConnected,
+                    size: 18,
+                    color: colors.accentBase,
+                  ),
+                  SizedBox(width: tokens.spacing.s8),
+                  Expanded(
+                    child: Text(
+                      channel == null
+                          ? 'Connected to $deviceName'
+                          : 'Playing on $deviceName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.label
+                          .withWeight(700)
+                          .copyWith(color: colors.accentBase),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: tokens.spacing.s8),
-              Expanded(
-                child: Text(
-                  channel == null
-                      ? 'Connected to $deviceName'
-                      : 'Playing on $deviceName',
+              if (channel != null) ...[
+                SizedBox(height: tokens.spacing.s12),
+                Text(
+                  channel.number == null
+                      ? channel.name
+                      : '${channel.number} · ${channel.name}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.text.label
-                      .withWeight(700)
-                      .copyWith(color: colors.accentBase),
+                  style: tokens.text.bodyStrong.copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (channel != null) ...[
-            SizedBox(height: tokens.spacing.s12),
-            Text(
-              channel.number == null
-                  ? channel.name
-                  : '${channel.number} · ${channel.name}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.text.bodyStrong.copyWith(color: colors.textPrimary),
-            ),
-            if (now != null) ...[
-              SizedBox(height: tokens.spacing.s4),
+                if (onNow != null) ...[
+                  SizedBox(height: tokens.spacing.s4),
+                  Text(
+                    onNow,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: secondary,
+                  ),
+                ],
+              ],
+              SizedBox(height: tokens.spacing.s8),
               Text(
-                '${now.title} · '
-                '${formatTimeRangeShort(now.start, now.end, tokens.timeStyle)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: secondary,
+                'Enter on a channel plays it on the TV.',
+                style: tokens.text.caption.copyWith(color: colors.textTertiary),
               ),
-            ],
-          ],
-          SizedBox(height: tokens.spacing.s8),
-          Text(
-            'Enter on a channel plays it on the TV.',
-            style: tokens.text.caption.copyWith(color: colors.textTertiary),
-          ),
-          SizedBox(height: tokens.spacing.s16),
-          Wrap(
-            spacing: tokens.spacing.s8,
-            runSpacing: tokens.spacing.s8,
-            children: [
-              if (channel != null)
-                AppButton(
-                  label: 'Open casting view',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  onPressed: () =>
-                      ref.read(castingViewOpenProvider.notifier).open(),
-                ),
-              AppButton(
-                label: 'Stop casting',
-                icon: AppIcons.stop,
-                variant: AppButtonVariant.dangerOutline,
-                size: AppButtonSize.s,
-                onPressed: () =>
-                    unawaited(ref.read(castCoordinatorProvider).disconnect()),
+              SizedBox(height: tokens.spacing.s16),
+              Wrap(
+                spacing: tokens.spacing.s8,
+                runSpacing: tokens.spacing.s8,
+                children: [
+                  if (channel != null)
+                    AppButton(
+                      label: 'Open casting view',
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.s,
+                      onPressed: () =>
+                          ref.read(castingViewOpenProvider.notifier).open(),
+                    ),
+                  AppButton(
+                    label: 'Stop casting',
+                    icon: AppIcons.stop,
+                    variant: AppButtonVariant.dangerOutline,
+                    size: AppButtonSize.s,
+                    onPressed: () => unawaited(
+                      ref.read(castCoordinatorProvider).disconnect(),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

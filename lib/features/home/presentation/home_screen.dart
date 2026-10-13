@@ -57,9 +57,6 @@ class HomeScreen extends ConsumerStatefulWidget {
   static const postersAcross = 8;
   static const postersGap = 20.0;
 
-  /// Under a card's picture: the gap, the title and the line under it.
-  static const captionHeight = 56.0;
-
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
@@ -406,7 +403,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   controller: _rows[row]!,
                   count: continuing.length,
                   cardWidth: continueWidth,
-                  cardHeight: continueWidth * 9 / 16 + HomeScreen.captionHeight,
+                  cardHeight:
+                      continueWidth * 9 / 16 + cardCaptionHeight(context),
                   gap: HomeScreen.continueGap,
                   card: (context, i, focus) =>
                       _continueCard(continuing[i], focus, continueWidth),
@@ -445,7 +443,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   controller: _rows[row]!,
                   count: movies.length,
                   cardWidth: posterWidth,
-                  cardHeight: posterWidth * 3 / 2 + HomeScreen.captionHeight,
+                  cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.movie),
                   card: (context, i, focus) => _cardKeys(
@@ -467,7 +465,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   controller: _rows[row]!,
                   count: series.length,
                   cardWidth: posterWidth,
-                  cardHeight: posterWidth * 3 / 2 + HomeScreen.captionHeight,
+                  cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.series),
                   card: (context, i, focus) => _cardKeys(

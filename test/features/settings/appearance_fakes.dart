@@ -4,14 +4,21 @@ import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 import 'package:iptv_player/features/settings/domain/appearance_store.dart';
 
+import '../../audit/audit_look.dart';
+
 /// The look a test wants: what is stored, and what the desktop says.
+/// While the audit draws a scene, [settings] take its text size and
+/// motion (`currentAuditLook`).
 List<Override> appearanceOverrides({
   AppearanceStore? store,
   AppearanceSettings settings = const AppearanceSettings(),
   SystemAppearance desktop = const SystemAppearance(),
 }) => [
   appearanceStoreProvider.overrideWithValue(
-    store ?? InMemoryAppearanceStore(settings),
+    store ??
+        InMemoryAppearanceStore(
+          currentAuditLook?.applyTo(settings) ?? settings,
+        ),
   ),
   desktopAppearanceProvider.overrideWithBuild((ref, notifier) => desktop),
 ];

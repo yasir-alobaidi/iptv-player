@@ -21,7 +21,7 @@ void main() {
   group('favorites', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      testWidgets(name, (tester) async {
+      sceneTest(name, audit: size.width == 1280, (tester) async {
         hideDebugBanner();
         final live = LiveTvFakes();
         live.fakes.now = goldenNow();
@@ -69,10 +69,7 @@ void main() {
           await tester.pump(const Duration(milliseconds: 50));
         }
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('images/favorites_$name.png'),
-        );
+        await golden(tester, 'images/favorites_$name.png');
       });
     }
   }, skip: goldenSkipReason);

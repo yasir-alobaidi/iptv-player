@@ -119,7 +119,7 @@ class _HiddenChannelsState extends ConsumerState<HiddenChannelsView> {
         onRetry: () => unawaited(_load()),
       );
     } else if (channels == null) {
-      list = Column(
+      list = SkeletonColumn(
         children: [
           for (var i = 0; i < 4; i++)
             Padding(

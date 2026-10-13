@@ -357,7 +357,7 @@ class _Toolbar extends ConsumerWidget {
         final fit = (room / _pillWidth).floor().clamp(2, 99);
         final shown = days.take(fit).toList();
         return SizedBox(
-          height: AppButtonSize.s.height,
+          height: context.scaled(AppButtonSize.s.height),
           child: Row(
             children: [
               ListenableBuilder(
@@ -559,7 +559,7 @@ class _LoadingCard extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         spacing.s24,
-        spacing.s16 + AppButtonSize.s.height + spacing.s12,
+        spacing.s16 + context.scaled(AppButtonSize.s.height) + spacing.s12,
         spacing.s24,
         spacing.s16,
       ),
