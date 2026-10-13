@@ -181,96 +181,107 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               spacing.s32,
               spacing.s20,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: colors.surface3)),
-                  ),
-                  child: Row(
-                    children: [
-                      for (final (each, count) in [
-                        (LibraryTab.movies, movies.value?.count),
-                        (LibraryTab.series, shows.value?.length),
-                        (LibraryTab.videos, videos.value?.count),
-                        (
-                          LibraryTab.downloads,
-                          downloading.isEmpty ? null : downloading.length,
-                        ),
-                        (LibraryTab.folders, null),
-                      ]) ...[
-                        CountTab(
-                          label: libraryTabLabel(each),
-                          count: count,
-                          highlightCount: each == LibraryTab.downloads,
-                          selected: tab == each,
-                          onPressed: () => ref
-                              .read(libraryViewProvider.notifier)
-                              .showTab(each),
-                        ),
-                        SizedBox(width: spacing.s16),
+            // Downloads and Folders are rows, which have a measure; the
+            // grids fill the window.
+            child: PageMeasure(
+              maxWidth: listsLibrary ? double.infinity : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: colors.surface3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        for (final (each, count) in [
+                          (LibraryTab.movies, movies.value?.count),
+                          (LibraryTab.series, shows.value?.length),
+                          (LibraryTab.videos, videos.value?.count),
+                          (
+                            LibraryTab.downloads,
+                            downloading.isEmpty ? null : downloading.length,
+                          ),
+                          (LibraryTab.folders, null),
+                        ]) ...[
+                          CountTab(
+                            label: libraryTabLabel(each),
+                            count: count,
+                            highlightCount: each == LibraryTab.downloads,
+                            selected: tab == each,
+                            onPressed: () => ref
+                                .read(libraryViewProvider.notifier)
+                                .showTab(each),
+                          ),
+                          SizedBox(width: spacing.s16),
+                        ],
+                        const Spacer(),
+                        if (tab != LibraryTab.downloads)
+                          AppButton(
+                            label: 'Add folder',
+                            icon: AppIcons.plus,
+                            variant: AppButtonVariant.secondary,
+                            size: AppButtonSize.s,
+                            onPressed: () => unawaited(addLibraryFolder(ref)),
+                          )
+                        else if (downloading.isNotEmpty)
+                          AppButton(
+                            label: allPaused ? 'Resume all' : 'Pause all',
+                            icon: allPaused ? AppIcons.play : AppIcons.pause,
+                            variant: AppButtonVariant.secondary,
+                            size: AppButtonSize.s,
+                            onPressed: () {
+                              final downloads = ref.read(
+                                downloadServiceProvider,
+                              );
+                              unawaited(
+                                allPaused
+                                    ? downloads.resumeAll()
+                                    : downloads.pauseAll(),
+                              );
+                            },
+                          ),
                       ],
-                      const Spacer(),
-                      if (tab != LibraryTab.downloads)
-                        AppButton(
-                          label: 'Add folder',
-                          icon: AppIcons.plus,
-                          variant: AppButtonVariant.secondary,
-                          size: AppButtonSize.s,
-                          onPressed: () => unawaited(addLibraryFolder(ref)),
-                        )
-                      else if (downloading.isNotEmpty)
-                        AppButton(
-                          label: allPaused ? 'Resume all' : 'Pause all',
-                          icon: allPaused ? AppIcons.play : AppIcons.pause,
-                          variant: AppButtonVariant.secondary,
-                          size: AppButtonSize.s,
-                          onPressed: () {
-                            final downloads = ref.read(downloadServiceProvider);
-                            unawaited(
-                              allPaused
-                                  ? downloads.resumeAll()
-                                  : downloads.pauseAll(),
-                            );
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: spacing.s16),
-                // Downloads go straight to their sections (canvas).
-                if (tab != LibraryTab.downloads) ...[
-                  _Header(
-                    line: _countLine(tab, origin),
-                    scanning: scan == null ? null : libraryScanLine(scan.found),
-                    origin: chips && !firstRun ? origin : null,
-                    onOrigin: (origin) => ref
-                        .read(libraryViewProvider.notifier)
-                        .showOrigin(origin),
+                    ),
                   ),
                   SizedBox(height: spacing.s16),
+                  // Downloads go straight to their sections (canvas).
+                  if (tab != LibraryTab.downloads) ...[
+                    _Header(
+                      line: _countLine(tab, origin),
+                      scanning: scan == null
+                          ? null
+                          : libraryScanLine(scan.found),
+                      origin: chips && !firstRun ? origin : null,
+                      onOrigin: (origin) => ref
+                          .read(libraryViewProvider.notifier)
+                          .showOrigin(origin),
+                    ),
+                    SizedBox(height: spacing.s16),
+                  ],
+                  Expanded(
+                    child: firstRun && listsLibrary
+                        ? EmptyState(
+                            icon: AppIcons.library,
+                            title: libraryFirstRunTitle,
+                            message: libraryFirstRunMessage,
+                            actionLabel: 'Add folder',
+                            onAction: () => unawaited(addLibraryFolder(ref)),
+                          )
+                        : switch (tab) {
+                            LibraryTab.movies ||
+                            LibraryTab.videos => _items(tab, origin, labels),
+                            LibraryTab.series => _shows(origin, labels),
+                            LibraryTab.downloads => const DownloadsPanel(),
+                            LibraryTab.folders => const SingleChildScrollView(
+                              child: LibraryFolderList(),
+                            ),
+                          },
+                  ),
                 ],
-                Expanded(
-                  child: firstRun && listsLibrary
-                      ? EmptyState(
-                          icon: AppIcons.library,
-                          title: libraryFirstRunTitle,
-                          message: libraryFirstRunMessage,
-                          actionLabel: 'Add folder',
-                          onAction: () => unawaited(addLibraryFolder(ref)),
-                        )
-                      : switch (tab) {
-                          LibraryTab.movies ||
-                          LibraryTab.videos => _items(tab, origin, labels),
-                          LibraryTab.series => _shows(origin, labels),
-                          LibraryTab.downloads => const DownloadsPanel(),
-                          LibraryTab.folders => const SingleChildScrollView(
-                            child: LibraryFolderList(),
-                          ),
-                        },
-                ),
-              ],
+              ),
             ),
           ),
         ),

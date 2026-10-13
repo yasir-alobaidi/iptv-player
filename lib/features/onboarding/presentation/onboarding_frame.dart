@@ -102,29 +102,34 @@ class OnboardingFrame extends StatelessWidget {
               horizontal: narrow ? spacing.s32 : spacing.s64,
               vertical: spacing.s32,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const AppMark.small(),
-                    SizedBox(width: spacing.s24),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: step == null
-                            ? const SizedBox.shrink()
-                            : StepIndicator(
-                                steps: onboardingSteps,
-                                current: step!,
-                              ),
+            // No wider than the canvas draws it, in the middle of a
+            // larger window: a page that stands alone.
+            child: PageMeasure(
+              alignment: Alignment.topCenter,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const AppMark.small(),
+                      SizedBox(width: spacing.s24),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: step == null
+                              ? const SizedBox.shrink()
+                              : StepIndicator(
+                                  steps: onboardingSteps,
+                                  current: step!,
+                                ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: spacing.s24 + 4),
-                Expanded(child: page),
-              ],
+                    ],
+                  ),
+                  SizedBox(height: spacing.s24 + 4),
+                  Expanded(child: page),
+                ],
+              ),
             ),
           ),
         ),

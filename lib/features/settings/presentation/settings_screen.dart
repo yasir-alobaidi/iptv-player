@@ -31,43 +31,48 @@ class SettingsScreen extends ConsumerWidget {
       debugLabel: 'screen-settings',
       child: Padding(
         padding: EdgeInsets.all(tokens.spacing.s16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: navWidth,
-              child: _SettingsNav(
-                current: section,
-                onSelect: ref.read(settingsLocationProvider.notifier).show,
-              ),
-            ),
-            SizedBox(width: tokens.spacing.s16),
-            Expanded(
-              child: _Card(
-                padding: EdgeInsets.fromLTRB(
-                  tokens.spacing.s24 + 4,
-                  tokens.spacing.s20 + 2,
-                  tokens.spacing.s24 + 4,
-                  tokens.spacing.s20,
-                ),
-                child: FocusTraversalGroup(
-                  child: switch (section) {
-                    SettingsSection.sources => const SourcesSettings(),
-                    SettingsSection.categories => const CategoriesManager(),
-                    SettingsSection.playback => const PlaybackSettingsSection(),
-                    SettingsSection.guide => const GuideSettingsSection(),
-                    SettingsSection.casting => const CastSettingsSection(),
-                    SettingsSection.downloads =>
-                      const DownloadSettingsSection(),
-                    SettingsSection.appearance => const AppearanceSection(),
-                    SettingsSection.shortcuts => const ShortcutsSection(),
-                    SettingsSection.about => const AboutSection(),
-                    SettingsSection.data => const DataSection(),
-                  },
+        // A form: in a wide window its rows keep their words and their
+        // controls within reach of each other.
+        child: PageMeasure(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: navWidth,
+                child: _SettingsNav(
+                  current: section,
+                  onSelect: ref.read(settingsLocationProvider.notifier).show,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: tokens.spacing.s16),
+              Expanded(
+                child: _Card(
+                  padding: EdgeInsets.fromLTRB(
+                    tokens.spacing.s24 + 4,
+                    tokens.spacing.s20 + 2,
+                    tokens.spacing.s24 + 4,
+                    tokens.spacing.s20,
+                  ),
+                  child: FocusTraversalGroup(
+                    child: switch (section) {
+                      SettingsSection.sources => const SourcesSettings(),
+                      SettingsSection.categories => const CategoriesManager(),
+                      SettingsSection.playback =>
+                        const PlaybackSettingsSection(),
+                      SettingsSection.guide => const GuideSettingsSection(),
+                      SettingsSection.casting => const CastSettingsSection(),
+                      SettingsSection.downloads =>
+                        const DownloadSettingsSection(),
+                      SettingsSection.appearance => const AppearanceSection(),
+                      SettingsSection.shortcuts => const ShortcutsSection(),
+                      SettingsSection.about => const AboutSection(),
+                      SettingsSection.data => const DataSection(),
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

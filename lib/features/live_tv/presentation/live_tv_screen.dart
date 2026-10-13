@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -155,22 +156,51 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
       child: Padding(
         padding: EdgeInsets.all(gap),
         child: LayoutBuilder(
-          builder: (context, constraints) => _panes(constraints.maxWidth, gap),
+          builder: (context, constraints) => _panes(constraints, gap),
         ),
       ),
     );
   }
 
-  /// The canvas's widths at 1440 px (248 / flexible / 540); the preview
-  /// gives way on a smaller window so the list keeps room for its header.
-  Widget _panes(double width, double gap) {
-    final shared = width - CategoriesPane.width - gap * 2;
-    final preview = (shared * 0.51).clamp(380.0, PreviewPane.width);
+  /// The canvas's widths at 1440 px (248 / flexible / 540), and what each
+  /// pane does in another window (ADR-017):
+  ///
+  /// - **smaller:** the categories and the preview give way, so the list
+  ///   keeps the width at which a channel's name can be read;
+  /// - **larger:** the preview grows with the window, as far as its
+  ///   picture leaves room under it for what is on; the list stops at the
+  ///   width past which a row's name and its star are far apart, and what
+  ///   is left stays empty at the right.
+  Widget _panes(BoxConstraints constraints, double gap) {
+    final layout = context.tokens.layout;
+    final width = constraints.maxWidth;
+    final categories = (width * layout.categoriesShare).clamp(
+      layout.categoriesMinWidth,
+      layout.categoriesWidth,
+    );
+    final shared = width - categories - gap * 2;
+    final previewMax = math.max(
+      PreviewPane.width,
+      (constraints.maxHeight - layout.previewDetailsRoom) * 16 / 9,
+    );
+    var preview = (shared * layout.previewShare).clamp(
+      layout.previewMin,
+      previewMax,
+    );
+    preview = math.min(
+      preview,
+      math.max(layout.previewMin, shared - layout.channelListMin),
+    );
+    var list = shared - preview;
+    if (list > layout.channelListMax) {
+      preview = math.min(shared - layout.channelListMax, previewMax);
+      list = math.min(shared - preview, layout.channelListMax);
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: CategoriesPane.width,
+          width: categories,
           child: CategoriesPane(
             controller: _categories,
             onEnterList: _channels.focusPane,
@@ -178,7 +208,8 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
           ),
         ),
         SizedBox(width: gap),
-        Expanded(
+        SizedBox(
+          width: list,
           child: ChannelListPane(
             controller: _channels,
             focusRequests: _listFocus,

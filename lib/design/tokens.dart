@@ -566,6 +566,61 @@ class AppCastTokens {
   double get barLogo => 40;
 }
 
+/// How a screen uses the window's width (ADR-017): a page of rows or a
+/// form has a measure, a rail shows more cards in a wider window rather
+/// than larger ones, and Live TV's three panes each keep a size at which
+/// they read.
+@immutable
+class AppLayoutTokens {
+  const new();
+
+  /// The widest a page of rows or a form gets: the canvas's widest page
+  /// (Settings in a 1440 px window, less the nav rail and its margins).
+  double get pageMeasure => 1336;
+
+  /// Home's cards at their narrowest: a row holds as many as fit, which
+  /// in the canvas's 1440 px window is what it draws (4, 5 and 8), fewer
+  /// in a smaller window and more in a larger one.
+  double get continueCardMin => 260;
+  double get channelTileMin => 210;
+  double get posterMin => 140;
+
+  /// How many cards at least [narrowest] wide, [gap] apart, fit [width].
+  int across(double width, double narrowest, double gap) {
+    final count = ((width + gap) / (narrowest + gap)).floor();
+    return count < 1 ? 1 : count;
+  }
+
+  /// The width of each of those cards: they share [width] evenly.
+  double cardWidth(double width, double narrowest, double gap) {
+    final count = across(width, narrowest, gap);
+    return (width - gap * (count - 1)) / count;
+  }
+
+  /// Live TV's categories pane: the canvas's width, and what it gives
+  /// way to in the smallest window so the channel list can be read.
+  double get categoriesWidth => 248;
+  double get categoriesMinWidth => 200;
+  double get categoriesShare => 0.22;
+
+  /// Live TV's channel list: narrower than this a channel's name is cut
+  /// to a few letters; wider, a row's name and its star are far apart.
+  double get channelListMin => 340;
+  double get channelListMax => 900;
+
+  /// Live TV's preview pane: its share of what the categories leave, its
+  /// narrowest (Watch full screen and the star, at 130 %), and the room
+  /// kept under its picture for what is on.
+  double get previewShare => 0.51;
+  double get previewMin => 300;
+  double get previewDetailsRoom => 340;
+
+  /// The widest the preview's words and its buttons get under a picture
+  /// wider than that: a line of text to read, not to follow across the
+  /// window.
+  double get previewTextMax => 720;
+}
+
 /// The full-screen player's measures (ADR-017): its controls are larger
 /// than the canvas draws them and grow with the window, so they read from
 /// across a room.
@@ -713,6 +768,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.cast = const AppCastTokens(),
     this.library = const AppLibraryTokens(),
     this.player = const AppPlayerTokens(),
+    this.layout = const AppLayoutTokens(),
     this.timeStyle = TimeStyle.h12,
   });
 
@@ -745,6 +801,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppCastTokens cast;
   final AppLibraryTokens library;
   final AppPlayerTokens player;
+  final AppLayoutTokens layout;
 
   /// How a time of day is written (Settings → Appearance → Clock). Not a
   /// measure, but it changes with the user's choice as the accent does,
@@ -767,6 +824,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppCastTokens? cast,
     AppLibraryTokens? library,
     AppPlayerTokens? player,
+    AppLayoutTokens? layout,
     TimeStyle? timeStyle,
   }) => AppTokens(
     colors: colors ?? this.colors,
@@ -783,6 +841,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     cast: cast ?? this.cast,
     library: library ?? this.library,
     player: player ?? this.player,
+    layout: layout ?? this.layout,
     timeStyle: timeStyle ?? this.timeStyle,
   );
 

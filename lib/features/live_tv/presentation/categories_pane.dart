@@ -287,9 +287,15 @@ class CategoriesPane extends ConsumerWidget {
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: colors.surface3)),
               ),
-              child: Row(
+              // Side by side where the pane has room; in a narrow pane
+              // or at a larger text size Manage goes under the note,
+              // which would otherwise break in the middle of a word.
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4),
                     child: Text(
                       hiddenLine(categories: hidden, channels: hiddenChannels),
                       style: tokens.text.labelSmall.copyWith(

@@ -116,61 +116,66 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
           spacing.s32,
           spacing.s20,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: colors.surface3)),
-              ),
-              child: Row(
-                children: [
-                  for (final (tab, label, count) in [
-                    (_Tab.channels, 'Channels', channelCount),
-                    (_Tab.movies, 'Movies', movies.value?.count),
-                    (_Tab.series, 'Series', series.value?.count),
-                  ]) ...[
-                    CountTab(
-                      label: label,
-                      count: count,
-                      selected: _tab == tab,
-                      onPressed: () => setState(() => _tab = tab),
-                    ),
-                    SizedBox(width: spacing.s16),
-                  ],
-                  const Spacer(),
-                  if (_tab == _Tab.channels) ...[
-                    Text(
-                      'Drag to reorder',
-                      style: tokens.text.caption
-                          .withWeight(600)
-                          .copyWith(color: colors.textTertiary),
-                    ),
-                    SizedBox(width: spacing.s16),
-                    AppButton(
-                      label: 'New group',
-                      icon: AppIcons.plus,
-                      variant: AppButtonVariant.secondary,
-                      size: AppButtonSize.s,
-                      onPressed: () => unawaited(_newGroup(id)),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            SizedBox(height: spacing.s16),
-            Expanded(
-              child: switch (_tab) {
-                _Tab.channels => _ChannelsPanel(
-                  key: ValueKey('favorite-channels-$id'),
-                  sourceId: id,
-                  controller: _list,
+        // The channels are rows, which have a measure; the posters fill
+        // the window.
+        child: PageMeasure(
+          maxWidth: _tab == _Tab.channels ? null : double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: colors.surface3)),
                 ),
-                _Tab.movies => _titleGrid(CatalogueKind.movie, id, movies),
-                _Tab.series => _titleGrid(CatalogueKind.series, id, series),
-              },
-            ),
-          ],
+                child: Row(
+                  children: [
+                    for (final (tab, label, count) in [
+                      (_Tab.channels, 'Channels', channelCount),
+                      (_Tab.movies, 'Movies', movies.value?.count),
+                      (_Tab.series, 'Series', series.value?.count),
+                    ]) ...[
+                      CountTab(
+                        label: label,
+                        count: count,
+                        selected: _tab == tab,
+                        onPressed: () => setState(() => _tab = tab),
+                      ),
+                      SizedBox(width: spacing.s16),
+                    ],
+                    const Spacer(),
+                    if (_tab == _Tab.channels) ...[
+                      Text(
+                        'Drag to reorder',
+                        style: tokens.text.caption
+                            .withWeight(600)
+                            .copyWith(color: colors.textTertiary),
+                      ),
+                      SizedBox(width: spacing.s16),
+                      AppButton(
+                        label: 'New group',
+                        icon: AppIcons.plus,
+                        variant: AppButtonVariant.secondary,
+                        size: AppButtonSize.s,
+                        onPressed: () => unawaited(_newGroup(id)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(height: spacing.s16),
+              Expanded(
+                child: switch (_tab) {
+                  _Tab.channels => _ChannelsPanel(
+                    key: ValueKey('favorite-channels-$id'),
+                    sourceId: id,
+                    controller: _list,
+                  ),
+                  _Tab.movies => _titleGrid(CatalogueKind.movie, id, movies),
+                  _Tab.series => _titleGrid(CatalogueKind.series, id, series),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

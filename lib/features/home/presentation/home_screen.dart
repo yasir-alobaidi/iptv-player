@@ -49,12 +49,11 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 class HomeScreen extends ConsumerStatefulWidget {
   const new({super.key});
 
-  /// The canvas's rows at 1440 px: cards across and the gap between.
-  static const continueAcross = 4;
+  /// The gaps between a row's cards (canvas). How many cards a row holds
+  /// follows the window (`AppLayoutTokens.across`): 4 of Continue
+  /// watching, 5 channels and 8 posters in the canvas's 1440 px.
   static const continueGap = 24.0;
-  static const channelsAcross = 5;
   static const channelsGap = 16.0;
-  static const postersAcross = 8;
   static const postersGap = 20.0;
 
   @override
@@ -360,18 +359,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth - tokens.spacing.s32 * 2;
-        double across(int count, double gap) =>
-            (width - gap * (count - 1)) / count;
-        final continueWidth = across(
-          HomeScreen.continueAcross,
+        // A wider window shows more cards and a smaller one fewer, each
+        // near the size the canvas draws it (ADR-017).
+        final layout = tokens.layout;
+        final continueWidth = layout.cardWidth(
+          width,
+          layout.continueCardMin,
           HomeScreen.continueGap,
         );
-        final tileWidth = across(
-          HomeScreen.channelsAcross,
+        final tileWidth = layout.cardWidth(
+          width,
+          layout.channelTileMin,
           HomeScreen.channelsGap,
         );
-        final posterWidth = across(
-          HomeScreen.postersAcross,
+        final posterWidth = layout.cardWidth(
+          width,
+          layout.posterMin,
           HomeScreen.postersGap,
         );
         final now = ref.watch(appClockProvider)();
@@ -857,9 +860,17 @@ class _Loading extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth - tokens.spacing.s32 * 2;
-        final poster =
-            (width - HomeScreen.postersGap * (HomeScreen.postersAcross - 1)) /
-            HomeScreen.postersAcross;
+        final layout = tokens.layout;
+        final posters = layout.across(
+          width,
+          layout.posterMin,
+          HomeScreen.postersGap,
+        );
+        final poster = layout.cardWidth(
+          width,
+          layout.posterMin,
+          HomeScreen.postersGap,
+        );
         return SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -875,7 +886,7 @@ class _Loading extends StatelessWidget {
                 SizedBox(height: tokens.spacing.s16),
                 Row(
                   children: [
-                    for (var i = 0; i < HomeScreen.postersAcross; i++) ...[
+                    for (var i = 0; i < posters; i++) ...[
                       if (i > 0) const SizedBox(width: HomeScreen.postersGap),
                       SkeletonPoster(width: poster),
                     ],

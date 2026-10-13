@@ -134,51 +134,60 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
               ),
               if (fresh != null) ...[
                 SizedBox(height: tokens.spacing.s16 + 2),
+                // Under a picture wider than a line should be, the words
+                // and the buttons keep to a line's length.
                 Expanded(
-                  child: _Details(
-                    channel: fresh,
-                    guide: guide?.value,
-                    // Only the first lookup: a refresh (the guide
-                    // changed, a programme ended) keeps what it shows.
-                    loading: (guide?.isLoading ?? false) && !guide!.hasValue,
+                  child: PageMeasure(
+                    maxWidth: tokens.layout.previewTextMax,
+                    child: _Details(
+                      channel: fresh,
+                      guide: guide?.value,
+                      // Only the first lookup: a refresh (the guide
+                      // changed, a programme ended) keeps what it shows.
+                      loading: (guide?.isLoading ?? false) && !guide!.hasValue,
+                    ),
                   ),
                 ),
                 SizedBox(height: tokens.spacing.s12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppButton(
-                        label: castingTo == null
-                            ? 'Watch full screen'
-                            : 'Play on $castingTo',
-                        icon: castingTo == null
-                            ? AppIcons.fullscreen
-                            : AppIcons.cast,
-                        size: AppButtonSize.l,
-                        onPressed: widget.onFullscreen == null
-                            ? null
-                            : () => widget.onFullscreen!(fresh),
+                PageMeasure(
+                  maxWidth: tokens.layout.previewTextMax,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AppButton(
+                          label: castingTo == null
+                              ? 'Watch full screen'
+                              : 'Play on $castingTo',
+                          icon: castingTo == null
+                              ? AppIcons.fullscreen
+                              : AppIcons.cast,
+                          size: AppButtonSize.l,
+                          onPressed: widget.onFullscreen == null
+                              ? null
+                              : () => widget.onFullscreen!(fresh),
+                        ),
                       ),
-                    ),
-                    SizedBox(width: tokens.spacing.s8 + 2),
-                    AppIconButton(
-                      icon: fresh.isFavorite
-                          ? AppIcons.starFilled
-                          : AppIcons.star,
-                      tooltip: fresh.isFavorite
-                          ? 'Remove from favorites'
-                          : 'Add to favorites',
-                      shortcut: 'F',
-                      bordered: true,
-                      size: 44,
-                      selected: fresh.isFavorite,
-                      onPressed: () => unawaited(
-                        ref
-                            .read(channelRepositoryProvider)
-                            .setFavorite(fresh, on: !fresh.isFavorite),
+                      SizedBox(width: tokens.spacing.s8 + 2),
+                      AppIconButton(
+                        icon: fresh.isFavorite
+                            ? AppIcons.starFilled
+                            : AppIcons.star,
+                        tooltip: fresh.isFavorite
+                            ? 'Remove from favorites'
+                            : 'Add to favorites',
+                        shortcut: 'F',
+                        bordered: true,
+                        size: 44,
+                        selected: fresh.isFavorite,
+                        onPressed: () => unawaited(
+                          ref
+                              .read(channelRepositoryProvider)
+                              .setFavorite(fresh, on: !fresh.isFavorite),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ] else
                 const Spacer(),
