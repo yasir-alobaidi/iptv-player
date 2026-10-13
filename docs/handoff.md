@@ -1,184 +1,182 @@
-# Handoff — 2026-10-13 (Phase 9: steps 1–5 of 9 are built and committed; step 6, reminders on screen, is next)
+# Handoff — 2026-10-13, second session (Phase 9: steps 1–6 built; step 7, the audit, part done)
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md,
-**docs/plans/phase-9-settings-diagnostics-polish.md** (steps 6–9, decisions
-13–16, sketches F–I), **ADR-016 in docs/decisions.md** (what steps 1–5
-built, and every departure from the plan), docs/05-design-system.md (§12
-Settings "As built", the shortcut tables) and docs/06-quality.md (the
-budgets, the soak).
+**docs/plans/phase-9-settings-diagnostics-polish.md** (steps 7–9, decisions
+14–16), **ADR-016 in docs/decisions.md** (a section per step; "The audit"
+says what step 7 has and what is left of it), docs/05-design-system.md (the
+text-size rule's "What grows, as built") and docs/06-quality.md (the Audit
+row, the budgets, the soak).
 
 ## Before you start the next session (user)
-1. **Push** the 6 local commits when you like: b00faa0, 0de1986,
-   7ac8a28, 58fbe54, f1d4f1f (Phase 9 steps 1–5) and the one with this
-   handoff. You pushed the CI fix (7c9cc13) and the approvals (3ba9f6e)
-   during the session.
-2. **CI is green on both systems at 3ba9f6e** (run 38350198031): the
-   fix for the three library cast tests held. **The next push is the
-   first with Phase 9's code, and with the notification package's
-   Windows part** (flutter_local_notifications): if the Windows **Build**
-   step fails, that package is the likely cause, and a build's log needs
-   your rights to read.
-3. **Step 6 needs you once, for about five minutes:** one real reminder
-   set a minute ahead, with the app's window covered. Click the
-   notification's text one time and its Watch button another, and say
-   what the window did. Nothing has been shown on your desktop yet.
+1. **Push** the local commits when you like: 2c4910a (CI fixes), 29fbbff
+   (step 6), 3594b38 and b19bcc7 (step 7, parts 1 and 2) and the docs
+   commit after them.
+2. **CI was red at 97155cc** (run 38365432183), on both systems, **in
+   tests, not in the app**; both are fixed in 2c4910a:
+   - Windows: the notifier's D-Bus tests ran there and timed out (13).
+     They are Linux only now.
+   - Linux: one relay test expected nobody on a port it had just freed.
+   Nothing after the test step ran, so **this push is still the first to
+   build Windows with the notification package** (flutter_local_
+   notifications): if the Windows **Build** step fails, that package is
+   the likely cause, and a build's log needs your rights to read.
+3. **One real reminder, about five minutes at the laptop** (step 6's last
+   item; nothing has been shown on your desktop yet): set one a minute
+   ahead from the app, cover its window, click the notification's text one
+   time and its Watch button another, and say what the window did.
 4. **Steps 8 and 9 take your display** for a few minutes at a time
    (profile runs) and for an hour (the soak's new mix); the session asks
    first.
-5. **What this session decided for you** (say if you want any otherwise):
-   - "the 7 and 8 are approved" was read as: Phases 7 and 8 are accepted
-     as built, without the TV sitting. The matrix on the real TV stays an
-     open check for a day the TV is reachable.
-   - No 8-hour soak: its exit criterion will be written as unmet by your
-     choice. The soak's new mix still gets a 1-hour run.
-   - About & diagnostics shows the report and the log as two views
-     (Diagnostics · Log), not stacked as sketch D drew them.
-   - In an export file, a source whose name says its server or its
-     username is written "Xtream source 1". Yours was named after its
-     server (the app does that for a source you don't name).
-   - Live TV's category rows stay 40 px in Compact (the smallest size a
-     pointer needs); text size is 100–130 % at both ends.
-   - The notification package is pinned at 22.3.1, the release the plan
-     looked at.
-6. **The Google TV version** (your question, 2026-10-13): yes, it is an
-   APK built here and installed on the Chromecast with `adb`. It is not
-   today's app exported: it is the same data and logic under a new TV
-   shell (docs/07). To start TV-0 (the player spike, the first APK):
-   install the Android SDK, JDK 17 and `adb` (none is installed), add the
-   `android/` project, turn on Developer options and USB debugging on the
-   TV, and have the laptop and the TV on one network (the laptop is on
-   192.168.26.x, the TV was on 192.168.1.x). It doesn't depend on Phase 10.
+5. **The Google TV version: start TV-0 when Phase 9 is done, before Phase
+   10** (this session's recommendation, as you asked). Phase 10 waits on
+   your Windows PC and the app's name and icon; TV-0 waits on nothing of
+   ours. What it needs from you, any time before: the Android SDK, JDK 17
+   and `adb` on the laptop (none is installed), Developer options and USB
+   debugging on the TV, and the laptop and the TV on one network (the
+   laptop is on 192.168.26.x, the TV was on 192.168.1.x).
+6. **What this session decided for you** (say if you want any otherwise):
+   - The bell icon is drawn here (the canvas has none); "Remind me" in
+     search is the canvas's words.
+   - The search footer says what Ctrl+R does while the cursor is on an
+     upcoming programme.
+   - The programme sheet is 640 px wide (was 520) so its three buttons
+     share a line.
+   - Settings → Guide's Reminders row is one line.
+   - **The nav rail's items stay 48 px at every text size** (ten must fit
+     the smallest window); everything else that holds text grows.
+   - At 130 % in the smallest window Settings' list of sections scrolls.
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-9-settings-diagnostics-polish.md (steps 6–9), ADR-016 in docs/decisions.md,
-docs/05-design-system.md and docs/06-quality.md first. Check CI on the last push and fix
-what it names. Then build Phase 9 step 6 (reminders on screen), and go on to steps 7, 8
-and 9 without the 8-hour soak. <I am at the laptop for the real reminder | I am not: leave
-the real reminder for later and carry on>
+docs/plans/phase-9-settings-diagnostics-polish.md (steps 7–9), ADR-016 in docs/decisions.md
+(its section "The audit"), docs/05-design-system.md and docs/06-quality.md first. Check CI on
+the last push and fix what it names. Then finish Phase 9 step 7 (the audit: the scenes for the
+states no golden draws, the loose ends, Offline from the network status, the 130 % goldens and
+walks, the table), and go on to steps 8 and 9 without the 8-hour soak.
+<I am at the laptop for the real reminder | I am not: leave the real reminder for later>
 ```
 
 ## Where things stand
 - **Phases 7 and 8: accepted 2026-10-13 without the TV sitting** (ADR-014,
   ADR-015). Open, for when the TV is reachable: `test/tools/cast_tv_test.dart`
   and `test/tools/cast_matrix_tv_test.dart` (rows 1–23), after asking.
-- **Phase 9: steps 1–5 built, each its own commit; steps 6–9 left.**
+- **Phase 9: steps 1–6 built; step 7 part done; steps 8 and 9 left.**
   ADR-016 is Proposed and has a section per step.
-- **Checks at the last code commit (f1d4f1f):** analyze, format,
-  `build_runner` leaves no diff, **3,790 app tests** (19 skipped) under
-  `TZ=UTC`. Integration under Xvfb, green: `app_launch` (now also the
-  runner's window channel), `player_engine` (with a picture and with
-  `IPTV_PLAYER_VIDEO=0`), `library_cast_walk` and `library_scan` with
-  CI's 2-minute samples and FFmpeg 4.4. **Not run this session:** the
-  other integration files, the fake panel's and the fake TV's own suites
-  (nothing of theirs changed; run them at the next session's end).
-- **Schema is v10** (`reminders`); `drift_schemas/app/drift_schema_v10.json`
-  and the migration tests are in.
-- **New dependencies:** `crypto` (was a dev dependency) and
-  `flutter_local_notifications: 22.3.1` (Windows only in use; ADR-002's
-  table has both).
+- **Checks at this session's end:** see "The session's end, as run" below.
+- **Schema is v10**; no new dependency this session.
+- **The test suite is 4,192 tests** (19 skipped), about 4 minutes: 364 of
+  them are the audit (every golden in seven looks), 30 s.
 
 ## What is left of Phase 9
-**Step 6 — Reminders on screen** (decision 13, sketches F–I). Already
-there to build on:
-- `reminderRepositoryProvider` (`set(ReminderDraft)`, `remove(id)`),
-  `remindersProvider` (a stream, soonest first), `reminderAlertsProvider`
-  (its `watches` stream is every Watch the user chose, from a notice or a
-  toast, with the desktop's token when there is one),
-  `reminderServiceProvider` (started by `bootstrap()`),
-  `reminder_text.dart` (`reminderWhen` is "Tomorrow, 9:30 PM").
-- A `ReminderDraft` needs the source, the channel's **remote key**, the
-  guide channel's **XMLTV id**, the channel's name, the title, start and
-  end. Check what `EpgProgramme.channelId` holds (it should be the XMLTV
-  id) and where Search's `ProgrammeHit` and the Guide's sheet have the
-  channel's remote key.
-To build:
-- **Search:** "Remind me" at the right of an upcoming row, "Reminder set"
-  with a bell once it is; Ctrl+R toggles it (the keyboard stays in the
-  field, as with Ctrl+D), and the menu key has it.
-- **The Guide:** "Remind me" / "Reminder set · Remove" in the programme
-  sheet; **R** on the focused programme in the grid and a bell in a cell
-  that has one; a bell with the count in the toolbar.
-- **Reminders**, a dialog (sketch H): soonest first, Remove, Enter opens
-  the Guide on it, Delete removes with Undo, an empty state; its second
-  door is a row in Settings → Guide.
-- **The toast** "Reminder set · Tomorrow, 9:30 PM" with Undo.
-- **Watch:** a listener near the app's root on `watches`:
-  `windowControls.bringToFront(activationToken:)`, then the channel full
-  screen (find it by source and remote key); while casting, on the TV.
-  A channel that is gone says so.
-- **The shortcut table** (`lib/app/shortcut_table.dart`) gets R and
-  Ctrl+R in the commit that binds them, then
-  `UPDATE_SHORTCUT_DOCS=1 flutter test test/app/shortcut_table_test.dart`.
-- **Tests:** widget tests of each place and state by keyboard;
-  `integration_test/reminder_walk_test.dart` (keys only, the app's clock
-  in the test's hand, a recording notifier); the real reminder with the
-  user.
+**Step 6 — one thing:** the real reminder on the user's desktop (above).
+Everything else of it is built and tested; `integration_test/
+reminder_walk_test.dart` is its walk.
 
-**Step 7 — The audit** (decision 14). Found so far, for its list:
-- The screens' own fixed heights don't grow with the text: the top bar
-  (64), Settings' list (40), Live TV's categories (40), the Guide's rows
-  and cells, Home's `captionHeight`, grids' captions, dialogs' fixed
-  inner heights. The helper is `context.scaled` / `scaledAround`.
-- The Guide's channel column gives a number 26 px
-  (`AppGuideTokens.channelNumberWidth`): four or five digits may not fit.
-- Playback's and the Guide's private `_Setting` rows should become
-  `SettingRow` (it puts the control under the words when they don't fit).
-- A busy button is disabled and drops the focus; Settings → Data gives
-  it back (`_refocus` in `data_section.dart`). Other busy buttons don't.
-- The loose ends in decision 14's list are all still open.
-- Tests reach the look through `pumpApp(withAppearance: true, …)` and
-  `appearanceOverrides(settings: …)`; the goldens at 130 % made so far
-  are the Appearance page and the component sheets.
+**Step 7 — The audit** (decision 14). In place: the harness, every golden
+as a scene, and two sweeps (ADR-016 "The audit" lists what was found).
+**Left, in the order I would take it:**
+1. **The single-line clip check.** `_clippedText` in
+   `test/audit/audit_harness.dart` compares the laid-out width, which a
+   clipped single line never exceeds: compare
+   `paragraph.getMaxIntrinsicWidth(double.infinity)` with the box for a
+   one-line `TextOverflow.clip`. Expect the Guide's channel numbers at
+   130 % (`AppGuideTokens.channelNumberWidth`, 26 px) and narrow cells'
+   times; some will be meant (a cell sliding under the edge) and get an
+   `allow`.
+2. **Scenes for what no golden draws**, as `auditScreen` scenes
+   (`test/audit/guide_audit_test.dart` is the model: a fixture, `pumpApp`,
+   a state): each screen's loading, empty, error and offline states, and
+   the screens with no golden — a movie's and a series' page, Connect,
+   Sync, Settings → Casting, the Match picker, the cast picker's states,
+   Favorites' and Home's empty states, Live TV with no channels. The
+   widget tests of each screen already build these states: lift their
+   setups. Then **the table of screens by state** into ADR-016.
+3. **Decision 14's loose ends**, all still open:
+   - Tab on a two-column details page passes Play;
+   - the provider's Series page swaps its season when a mark moves
+     Continue;
+   - Live TV's categories pane forgets the chosen category when Tab comes
+     round — and Shift+Tab into any one-stop list lands at its near end
+     (`FocusPane(tabStop: true)`; a `FocusPaneController` remembers the
+     last item, nobody calls `focusLast()` on the way in);
+   - the Guide's "Offline" reads its last failure, not
+     `networkStatusProvider`; then **every screen that needs the network
+     says Offline from it**;
+   - a subtitle the TV refuses says nothing;
+   - Favorites' drag draws Flutter's gap, not the canvas's accent line.
+4. **Goldens at 130 %** for the screens with the most text (Live TV, the
+   Guide, a details page, Search, the Library), each looked at; and **the
+   keyboard walks at 130 %** under Xvfb (the walks take the app's
+   container: override `appearanceStoreProvider` in `PanelApp.open`'s
+   `overrides`).
 
-**Step 8 — Performance in profile mode** (decision 16): unchanged from
-the plan. Say before each run on the display.
+**Step 8 — Performance in profile mode** (decision 16): unchanged from the
+plan. Say before each run on the display.
 
 **Step 9 — The exit, without the night's soak:** extend the soak's mix
 (cast to the fake TV, a download, a walk of the Guide, Movies and Search
 about every 20 minutes), run it for an hour after asking, then the docs
-and ADR-016 Accepted, **with "8-hour soak" written as unmet by the
-user's choice** in the ADR and in docs/progress.md.
+and ADR-016 Accepted, **with "8-hour soak" written as unmet by the user's
+choice** in the ADR and in docs/progress.md.
 
-## Done on 2026-10-13
-- **CI's three failures** (7c9cc13): `cast_e2e_library_test.dart` reads
-  its cue count from the sample and seeks inside 2 minutes. Pushed, and
-  green on both systems.
-- **The approvals** (3ba9f6e): the plan's status line, ADR-014 and
-  ADR-015 Accepted, ADR-016 started.
-- **Step 1, Appearance** (b00faa0); **step 2, shortcuts, hardware
-  decoding, About** (0de1986); **step 3, Data** (7ac8a28); **step 4,
-  diagnostics and the log** (58fbe54); **step 5, reminders underneath**
-  (f1d4f1f). What each built, measured and departed from is in ADR-016,
-  one section per step; the codebase notes below say where things are.
-- **Two faults found by checking against real things:** a channel number
-  of four or more digits wrapped in every channel row (found by drawing
-  rows at three text sizes with real-sized numbers), and an export file
-  carried the provider's host as the source's name (found by building
-  the file from a copy of the real database).
+## Done this session (2026-10-13, the second)
+- **CI's failures after the push of steps 1–5** (2c4910a): the notifier's
+  bus tests are `@TestOn('linux')`; the relay test accepts a 404 from
+  whoever took the freed port; `tools/ci/failed_tests.dart` names every
+  failed test in one annotation when ten or more fail (GitHub shows ten).
+- **Step 6, reminders on screen** (29fbbff): ADR-016 "Reminders on
+  screen".
+- **Step 7, part 1** (3594b38): the audit harness; loading placeholders
+  (`SkeletonColumn`), the Guide's rows, poster captions, search's rows,
+  the cast preview card, the channel row's progress bar, the casting
+  view's focus node.
+- **Step 7, part 2** (b19bcc7): every other fixed height that held text.
+
+## The session's end, as run
+At b19bcc7, all green:
+- `flutter analyze`; `dart format --set-exit-if-changed lib test
+  integration_test tools`; `build_runner` leaves no diff.
+- `TZ=UTC flutter test`: **4,192 passed**, 19 skipped, 4 min.
+- The fake panel's own suite (`tools/fake_provider`): 146. The fake TV's
+  (`tools/fake_receiver`): 41. (Neither was run the session before.)
+- Integration, each its own run under Xvfb (X11) with a picture:
+  `app_launch` (29 s), `live_tv_keyboard` (48 s), `sources_keyboard`
+  (78 s), `search_keyboard` (54 s), `guide_keyboard` (43 s),
+  `guide_settings_keyboard` (49 s), `favorites_walk` (57 s),
+  `library_walk` (60 s), `vod_walk` (75 s), `cast_walk` (70 s),
+  `reminder_walk` (47 s).
+- **Not run this session:** `guide_watch` after step 7 (it passed after
+  step 6), `hiding_walk`, `home_continue`, `large_sync`,
+  `library_cast_walk`, `library_playback`, `library_scan`,
+  `playback_faults`, `player_engine`, `player_engine_vod`, `vod_player`,
+  the scroll and typing measurements, the soak, and the real-provider
+  files (never without the user's yes). CI runs all but the last group.
+- **Not run as CI runs them:** with FFmpeg 4.4 and CI's short samples
+  (nothing that runs FFmpeg changed this session).
 
 ## What's next
 1. **Whatever CI names after the push.**
-2. **Phase 9 step 6**, then 7, 8, 9 (above).
-3. **If the user says the TV is back:** the sitting, after asking; it
-   fills docs/04's "Verify" notes. No phase waits on it any more.
+2. **Phase 9 step 7, the rest** (above), then 8 and 9.
+3. **The real reminder,** when the user is at the laptop.
+4. **TV-0,** once Phase 9 is done and the user has installed what it needs.
 
 ## The road to v1 (what is still needed to go live)
 Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07);
 its first step (TV-0) doesn't depend on Phase 10.
-- **CI green on both systems:** it is, at 3ba9f6e. Phase 9's five steps
-  haven't been through it yet. Keep to `p.join` for every path a test
-  expects, and don't tie a test to the samples' length (CI's are 30 s
-  live and 2 minutes VOD).
+- **CI green on both systems:** red at 97155cc in tests, fixed locally;
+  Phase 9's Windows build has still not been seen. Keep to `p.join` for
+  every path a test expects, and don't tie a test to the samples' length
+  (CI's are 30 s live and 2 minutes VOD). **A test that needs a session
+  bus is Linux only.**
 - **Phases 7 and 8:** accepted. Open only: the matrices on the real TV.
-- **Phase 9 — Settings, diagnostics, reminders, polish:** steps 1–5
-  built; left: reminders on screen, the keyboard and text-size audit,
-  every docs/06 budget in profile mode, the 1-hour soak of the new mix.
-  The 8-hour soak is dropped by the user's choice.
+- **Phase 9:** steps 1–6 built (one real reminder owed); the audit part
+  done; left: the rest of the audit, every docs/06 budget in profile mode,
+  the 1-hour soak of the new mix. The 8-hour soak is dropped by the user's
+  choice.
 - **Phase 10 — Packaging:** a Windows installer bundling libmpv and FFmpeg
   (MSIX vs Inno Setup: recommend, then build; it also registers the app
   id the Windows notifications use); a Linux AppImage tested on clean
@@ -191,7 +189,8 @@ its first step (TV-0) doesn't depend on Phase 10.
   the diagnostics' graphics cards have never run on real Windows; ADR-007's
   GO covers Linux only); the app's name and icon; access to their TV;
   permission for each real-provider stream; five minutes at the laptop
-  for the real reminder.
+  for the real reminder; the Android tools for TV-0.
+
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -283,7 +282,42 @@ its first step (TV-0) doesn't depend on Phase 10.
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
-- **Lessons of this session (Phase 9 steps 1–5):**
+- **Lessons of this session (Phase 9 steps 6–7):**
+  - **A failing widget test whose screens still watch the database waits
+    out its whole timeout** on the fixture's close. The audit pumps an
+    empty widget before it fails (`auditRun`); a failing golden comparison
+    still hangs its file. Run the audit with `AUDIT_REPORT=1` while
+    sweeping: it prints and fails nothing, 45 s for everything.
+  - **Never pipe a long `flutter test` into `tail`** while it may hang:
+    nothing shows until it ends. Write to a log in the scratchpad, with
+    `timeout`, and read the log.
+  - **A `Skeleton` with no width inside a `Column` is 0 px wide.** Use
+    `SkeletonColumn`.
+  - **A `Column` of fixed rows in a bounded pane overflows the day the
+    pane is short** (a small window, a larger text size, one more setting
+    above it). Lists scroll; placeholders are cut.
+  - **Scaled text is laid out a fraction taller than its font size says:**
+    a row sized to the sum of its lines' heights overflowed by 0.2 px at
+    130 %. Round a computed row height up (`guideRowHeight`).
+  - **A focus node that only holds the focus for its keys must be
+    `skipTraversal`,** or Tab lands on a stop that shows nothing; Tab from
+    it still goes on to the first control.
+  - **Tab passes some controls that the arrows reach** (the catalogue's
+    "More" chip, beside a one-stop row of chips): the audit follows the
+    arrows from every stop before it says a control is unreachable.
+  - **A golden's choreography is written for its own window:** a tap or a
+    focus on something by name may be below the fold in 1024 × 640 at
+    130 %. Use `tapShown` (it scrolls to it first), or do the step only
+    when its target is there.
+  - **Named arguments can go before the closure:**
+    `sceneTest('x', audit: size.width == 1280, (tester) async {…})`.
+  - **A provider that only listens must subscribe to the stream itself**
+    (`reminderWatchesProvider`), and `bootstrap()` reads it once; a test
+    of it reads it the same way.
+  - **In the search overlay Ctrl+Z belongs to the text field:** a toast's
+    Undo there is the mouse's; give the keyboard its own way back (Ctrl+R
+    toggles).
+- **Lessons of the session before (Phase 9 steps 1–5):**
   - **Check a "nothing of X leaves the app" rule against the real
     thing.** The made-up sources had names of their own; the real one
     was named after its server, and that name was in the export. A copy
@@ -315,8 +349,44 @@ its first step (TV-0) doesn't depend on Phase 10.
     against `git show HEAD:<file>` with PIL's `ImageChops.difference(…)
     .getbbox()`; then look at the new ones whole.
 
+
 ## Codebase notes by area
-New this session (Phase 9 steps 1–5):
+New this session (Phase 9 steps 6–7):
+- **Reminders on screen:** `lib/features/reminders/presentation/` —
+  `reminder_actions.dart` (`toggleReminder`, `removeReminder`,
+  `reminderFor`, `showReminderInGuide`, `reminderChannel`; all take the
+  app's `ProviderContainer`), `reminders_dialog.dart`
+  (`showRemindersDialog`; `reminderChannelItemProvider` for a row's logo),
+  `reminder_watch.dart` (`reminderWatchesProvider`, `watchReminder`),
+  `reminder_text.dart` (every sentence and label).
+- **Where a reminder is set:** `search_overlay.dart` (`_RemindMe`,
+  `_remind`, `_remindHint`, the footer's `remind`), `guide_grid.dart`
+  (`_remind` on R, `_noteReminders`, the `reminders` set a row's strip
+  gets, `_MadeCell.reminded`), `guide_programme_sheet.dart`,
+  `guide_screen.dart` (`_RemindersButton`), `guide_settings.dart` (the
+  row).
+- **Icons the canvas doesn't draw** go in `tools/extract_icons.dart`'s
+  `_handDrawn` and in `assets/icons/` (`bell`, `bell-filled`).
+- **The audit:** `test/audit/audit_look.dart` (`AuditLook`, `auditLooks`,
+  `currentAuditLook`), `test/audit/audit_harness.dart` (`auditRun`,
+  `auditReport`, `auditScreen`, `AuditScene`, `auditSettle`),
+  `test/golden/golden_harness.dart` (`sceneTest`, `golden`, `tapShown`).
+  `pumpApp` and `appearanceOverrides` read `currentAuditLook`. A scene's
+  `allow` is a map of a piece of a finding's text to why it is no fault.
+- **The text-size helpers the screens use:** `context.scaled`,
+  `scaledAround`; `guideRowHeight(context)`, `searchRowHeight(context)`,
+  `cardCaptionHeight(context)`; `SkeletonColumn`.
+- **Test fakes:** `FakeReminders` has `setFailure` and `watchFailure`;
+  `test/features/reminders/reminder_screens_test.dart` is the model for a
+  widget test that drives a toast's action, the desktop's notice
+  (`FakeNotifier.answer`) and a cast (`CastUi`) in one file.
+- **`integration_test/reminder_walk_test.dart`:** the app's clock is a
+  closure the test moves (`appClockProvider`), the desktop is a recording
+  `SystemNotifier`, the window a recording `WindowControls`; after
+  `PanelApp.restart()` it starts the reminders as `bootstrap()` does.
+
+
+From the session before (Phase 9 steps 1–5):
 - **The look:** `lib/design/appearance.dart` (`AppearanceSettings` →
   `resolve(SystemAppearance)` → `Appearance`), `lib/design/text_scale.dart`
   (`context.scaled`, `scaledAround`, `textScale`, `AppTextScale`),
@@ -1498,9 +1568,11 @@ From earlier sessions (still true):
   stop.
 
 ## Open questions for the user
-- The Google TV version: start TV-0 (the player spike) right after Phase 9,
-  or after Phase 10's installers? It needs the Android SDK, JDK 17 and
-  `adb` installed, and the TV in Developer mode on the laptop's network.
+- The Google TV version: the user asked when to start. Recommended:
+  TV-0 (the player spike) right after Phase 9, before Phase 10's
+  installers. It needs the Android SDK, JDK 17 and `adb` installed, and
+  the TV in Developer mode on the laptop's network: has the user done
+  those?
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.

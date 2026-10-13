@@ -235,6 +235,10 @@ As built (Phase 2 step 7; decisions in ADR-009):
 - **`ScrollPane`** (`lib/design/components/`): text longer than its box is one Tab stop with the focus ring, scrolled by the keyboard; at an end the arrow leaves it.
 - **Dialogs** keep 24 px clear of the window's edges.
 - **Text size (the rule, `lib/design/text_scale.dart`):** a height that holds text grows with it (`context.scaled`), pictures, icons, the Guide's hour width and the nav rail don't; at 100 % nothing moves. Compact takes 12 px off a long list's row (`AppDensity.row`), never under 40 px.
+  - **What grows, as built (Phase 9 step 7):** every button, chip and field; the top bar; channel rows and tiles; Settings' list of sections and every settings row; Live TV's category rows; the Categories manager, Hidden channels and Settings → Guide's lists; the Guide's rows (only the two lines of text in a cell: `guideRowHeight`) and its toolbar; poster cards' captions in grids and rails (`cardCaptionHeight`, the picture keeps its size); search's rows, bars and headings (`searchRowHeight`); the Library's folder and download rows; onboarding's rows and tiles; dialogs' lists.
+  - **What keeps its size:** pictures, logos and icons; the Guide's hour width and time ruler; **the nav rail, its items included** (48 px: ten of them must fit the smallest window).
+  - **In the smallest window at 130 %** Settings' list of sections scrolls, and a pane too low for its lines scrolls rather than cuts them (Live TV's cast preview card).
+  - **Loading placeholders** stacked in a list go in a `SkeletonColumn`: each as wide as the column, and cut at the room there is.
 - **In-field buttons:** a text field's Clear button is not a Tab stop (Tab goes field to field); the Show-password toggle is, with the standard focus ring.
 
 ## Keyboard shortcuts (desktop)
