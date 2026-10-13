@@ -263,12 +263,19 @@ List<String> _clippedText(WidgetTester tester) {
         'text cut off below: "$shown" needs ${needs.height.round()} px and '
         'has ${has.height.round()} (${_owner(element)})',
       );
-    } else if (paragraph.overflow == TextOverflow.clip &&
-        needs.width - has.width > 0.5) {
-      findings.add(
-        'text cut off at the right: "$shown" needs ${needs.width.round()} px '
-        'and has ${has.width.round()} (${_owner(element)})',
-      );
+    } else if (paragraph.overflow == TextOverflow.clip) {
+      // One line that may not wrap is laid out no wider than its box,
+      // whatever it holds: ask what it would take with all the room.
+      final oneLine = paragraph.maxLines == 1 || !paragraph.softWrap;
+      final wants = oneLine
+          ? paragraph.getMaxIntrinsicWidth(double.infinity)
+          : needs.width;
+      if (wants - has.width > 0.5) {
+        findings.add(
+          'text cut off at the right: "$shown" needs ${wants.round()} px '
+          'and has ${has.width.round()} (${_owner(element)})',
+        );
+      }
     }
   }
   return findings;

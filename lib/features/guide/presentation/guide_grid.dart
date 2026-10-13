@@ -1644,7 +1644,14 @@ class _ChannelCell extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: guide.channelNumberWidth,
+          // As wide as the number's digits at the text's size: cut, "201"
+          // read as channel 20.
+          width: context.scaled(
+            math.max(
+              guide.channelNumberWidth,
+              '${number ?? ''}'.length * guide.channelDigitWidth,
+            ),
+          ),
           child: Text(
             number == null ? '' : '$number',
             maxLines: 1,

@@ -513,6 +513,10 @@ class AppGuideTokens {
   double get channelPadding => 16;
   double get channelGap => 10;
   double get channelNumberWidth => 26;
+
+  /// What each digit of a channel's number takes: a number past three
+  /// digits (a provider's list can pass 10,000) gets the room it needs.
+  double get channelDigitWidth => 8;
   double get logoSize => 32;
 
   /// The dashed outline of a channel with no guide.
