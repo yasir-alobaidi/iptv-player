@@ -849,7 +849,7 @@ final class GuideSettingsControllerProvider
 }
 
 String _$guideSettingsControllerHash() =>
-    r'186f4932b7f754c6187674d58d11101907285d1f';
+    r'c737c1877282d4429370cc41bbad40ae21fe939c';
 
 /// Settings → Guide's choices: the days kept (global) and a source's time
 /// offset. The defaults at once, the stored choices as soon as they are

@@ -783,7 +783,7 @@ final class CastSettingsControllerProvider
 }
 
 String _$castSettingsControllerHash() =>
-    r'37313874078fc0c9e683d51b86dc8a816de21c0a';
+    r'e66ff5687c042b35355f5b3c9689d23efbd36a64';
 
 /// Settings → Casting (sketch C): Dolby passthrough, Low-latency mode,
 /// Smooth interlaced. The defaults at once, the stored choices as soon as

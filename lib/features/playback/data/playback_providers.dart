@@ -48,6 +48,13 @@ class PlaybackSettingsController extends _$PlaybackSettingsController {
     state = settings;
     return ref.read(playbackSettingsStoreProvider).save(settings);
   }
+
+  /// Reads the stored choices again: an import replaced them (Settings →
+  /// Data).
+  Future<void> reload() {
+    _changed = false;
+    return _load();
+  }
 }
 
 /// Stream URLs built from their source at play time (docs/02).

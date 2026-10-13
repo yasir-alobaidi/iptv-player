@@ -52,7 +52,7 @@ final class DownloadSettingsControllerProvider
 }
 
 String _$downloadSettingsControllerHash() =>
-    r'73e6e7ae37b831aed7406ca1b70a5a06d24c9ae6';
+    r'3e6ea4a042464ff7b0bd33905927434b60ef40dd';
 
 /// Settings → Downloads & library's download half. The defaults at once,
 /// the stored choices as soon as they are read; a change is saved, and

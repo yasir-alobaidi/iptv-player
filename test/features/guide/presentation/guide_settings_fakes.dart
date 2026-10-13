@@ -258,9 +258,19 @@ final class FakeEpgRepository implements EpgRepository {
     int limit = 50,
   }) => throw UnimplementedError();
 
+  /// The sources whose guide was cleared, in order.
+  final cleared = <String>[];
+
+  /// Makes [clearGuide] fail with this.
+  AppFailure? clearFailure;
+
   @override
-  Future<Result<void>> clearGuide(String sourceId) =>
-      throw UnimplementedError();
+  Future<Result<void>> clearGuide(String sourceId) async {
+    if (clearFailure case final failure?) return Err(failure);
+    cleared.add(sourceId);
+    setCoverage(sourceId, const GuideCoverage());
+    return const Ok(null);
+  }
 }
 
 /// An importer the test drives: each import waits for [gate] when one is

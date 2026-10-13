@@ -11,6 +11,9 @@ environment:
 dependencies:
   bonsoir: ^7.1.5
   # Sleep held off while casting, over the desktop portal or logind (ADR-014).
+  # A source's fingerprint in a settings export (ADR-016); the icon
+  # extractor's md5 too.
+  crypto: ^3.0.6
   dbus: ^0.7.15
   desktop_drop: ^0.8.4
   dio: ^5.11.1
@@ -46,8 +49,6 @@ dependencies:
 dev_dependencies:
   bonsoir_linux: ^7.1.0
   build_runner: ^2.16.1
-  # tools/extract_icons.dart identifies canvas icons by an md5 of their markup.
-  crypto: ^3.0.6
   drift_dev: ^2.35.0
   # Tests start the fake Xtream panel in-process on a free port (docs/06).
   # Timers in the playback watchdog's tests (backoff, stall, open timeout).

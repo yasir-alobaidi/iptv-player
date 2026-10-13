@@ -8,14 +8,14 @@ import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/about_section.dart';
 import 'package:iptv_player/features/settings/presentation/appearance_section.dart';
+import 'package:iptv_player/features/settings/presentation/data_section.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/settings/presentation/shortcuts_section.dart';
 import 'package:iptv_player/features/sources/presentation/categories_manager.dart';
 import 'package:iptv_player/features/sources/presentation/sources_settings.dart';
 
 /// Settings (canvas `Settings`): a 248 px sub-navigation card on the left
-/// and the chosen section's card beside it. Sources, Playback, Guide and
-/// Categories are built; the other sections say which phase brings them.
+/// and the chosen section's card beside it.
 class SettingsScreen extends ConsumerWidget {
   const new({super.key});
 
@@ -62,7 +62,7 @@ class SettingsScreen extends ConsumerWidget {
                     SettingsSection.appearance => const AppearanceSection(),
                     SettingsSection.shortcuts => const ShortcutsSection(),
                     SettingsSection.about => const AboutSection(),
-                    SettingsSection.data => _ComingLater(section: section),
+                    SettingsSection.data => const DataSection(),
                   },
                 ),
               ),
@@ -211,44 +211,12 @@ class _NavItem extends StatelessWidget {
                             ),
                       ),
                     ),
-                    if (section.phase != null)
-                      Text(
-                        'Phase ${section.phase}',
-                        style: tokens.text.labelSmall.copyWith(
-                          color: colors.textDisabled,
-                        ),
-                      ),
                   ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// A section a later phase builds. Still a card with a title, so the
-/// panel never looks broken.
-class _ComingLater extends StatelessWidget {
-  const new({required this.section});
-
-  final SettingsSection section;
-
-  @override
-  Widget build(BuildContext context) {
-    final summary = switch (section) {
-      SettingsSection.data =>
-        'Clear the image cache or the guide, and export or import settings.',
-      _ => '',
-    };
-    return SettingsPanel(
-      title: section.label,
-      body: EmptyState(
-        icon: AppIcons.settings,
-        title: '${section.label} comes in Phase ${section.phase}',
-        message: summary,
       ),
     );
   }

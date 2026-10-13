@@ -127,6 +127,26 @@ final class ArtworkCache {
     }
   }
 
+  /// The bytes its files take on disk, counted in an isolate.
+  Future<int> size() async {
+    final path = directory.path;
+    final bytes = await Isolate.run(() => artworkBytes(path));
+    _knownBytes = bytes;
+    return bytes;
+  }
+
+  /// Deletes every picture kept, in an isolate (Settings → Data). A
+  /// picture being fetched right now lands after it and stays: it is
+  /// wanted on screen. Completes with how many files went.
+  Future<int> clear() async {
+    final path = directory.path;
+    final removed = await Isolate.run(() => clearArtwork(path));
+    _failed.clear();
+    _writtenSinceSweep = 0;
+    _knownBytes = null;
+    return removed;
+  }
+
   void close() {
     _http.close(force: true);
     for (final job in _waiting) {
@@ -327,6 +347,35 @@ ArtworkSweep sweepArtwork(String path, int maxBytes, int nowMs) {
     removed += gone;
   }
   return (removed: removed, bytes: total);
+}
+
+/// [ArtworkCache.size]'s work, synchronous, for the isolate.
+int artworkBytes(String path) {
+  final directory = Directory(path);
+  if (!directory.existsSync()) return 0;
+  var total = 0;
+  for (final entity in directory.listSync(followLinks: false)) {
+    if (entity is! File) continue;
+    try {
+      total += entity.lengthSync();
+    } on FileSystemException {
+      // Deleted while we looked.
+    }
+  }
+  return total;
+}
+
+/// [ArtworkCache.clear]'s work, synchronous, for the isolate. Only the
+/// files directly in the folder: the cache makes no folders, so anything
+/// else there isn't its own.
+int clearArtwork(String path) {
+  final directory = Directory(path);
+  if (!directory.existsSync()) return 0;
+  var removed = 0;
+  for (final entity in directory.listSync(followLinks: false)) {
+    if (entity is File) removed += _delete(entity);
+  }
+  return removed;
 }
 
 int _delete(File file) {

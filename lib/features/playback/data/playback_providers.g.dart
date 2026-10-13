@@ -101,7 +101,7 @@ final class PlaybackSettingsControllerProvider
 }
 
 String _$playbackSettingsControllerHash() =>
-    r'be0a94a954429478b745edfee89efed5a9535437';
+    r'd8b5474b8c00139c8d0ce9775c4e6eb9f5b5b9c5';
 
 /// Settings → Playback: the defaults at once, the stored choices as soon
 /// as they are read; a change is saved and applies to the next stream

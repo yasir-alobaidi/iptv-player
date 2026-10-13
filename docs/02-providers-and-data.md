@@ -141,6 +141,31 @@ Triggers are derived state: drift's versioned schemas leave them out, and its sc
 
 Downloads and the local library (tables `library_folders`, `library_items`, `downloads`, `library_fts`) are specified in docs/09 and were added in v9, with the columns ADR-015 step 1 adds. `favorites` and `watch_history` also hold local files (`item_type = local`, `remote_key` = quick hash).
 
+## Settings export (format 1; Phase 9 step 3, ADR-016)
+Settings → Data → Export… writes one JSON file, and Import… reads it on another computer. It holds settings and the user's choices; **never a password, a username, a server or playlist address, a folder path, or watch history**, and an import adds no source.
+
+```json
+{
+  "app": "iptv-player", "format": 1,
+  "exported_at": "2026-10-13T09:00:00.000Z", "app_version": "0.1.0+1",
+  "settings": { "appearance": {}, "playback": {}, "guide": {}, "cast": {}, "downloads": {} },
+  "sources": [{
+    "name": "Northwind TV", "type": "xtream",
+    "fingerprint": "<sha256 of type, server, username>",
+    "favorite_groups": [{"name": "Sport", "order": 0, "collapsed": false}],
+    "favorites": [{"type": "live", "key": "201", "group": "Sport", "order": 0, "added_at": "…"}],
+    "categories": [{"kind": "live", "key": "1", "hidden": false, "name": "Sport & more", "order": 0}],
+    "channels": [{"key": "201", "hidden": false, "name": "Arena One"}],
+    "guide_matches": [{"channel": "201", "xmltv_id": "arena1.uk"}],
+    "reminders": []
+  }]
+}
+```
+- `settings` pages are each page's own stored JSON (`downloads` without its `folder`); a page's own reader is the tolerant one.
+- Everything is keyed by `remote_key`, like all user data, so it survives a re-sync on either side.
+- `categories` lists every category of the source; `channels` only those hidden or renamed.
+- The reader refuses a file only when it isn't JSON, isn't ours, or has a higher `format`; unknown keys and malformed entries are skipped.
+
 ## Sync engine
 - Runs in a background isolate connected straight to the database isolate (`serializableConnection()`, which is why `openAppDatabase` returns drift's `createBackgroundConnection` and not a `LazyDatabase`); emits progress events to the UI: the stage, a count per list, the current list's total once it has arrived, and the account (ADR-009)
 - Order: account → categories → live → movies → series for Xtream; an M3U playlist is one stage. EPG runs separately at lower priority (Phase 4)

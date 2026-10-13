@@ -304,4 +304,85 @@ void main() {
       expect(await first, 1);
     });
   });
+
+  group('Settings → Data: what is kept, and Clear', () {
+    test(
+      'the size is what its files take, counted off the UI isolate',
+      () async {
+        final server = await _Server.start();
+        final artwork = cache();
+        expect(await artwork.size(), 0);
+
+        await artwork.bytes(server.url('/ok/a.jpg'));
+        await artwork.bytes(server.url('/ok/b.jpg'));
+
+        expect(await artwork.size(), png.length * 2);
+      },
+    );
+
+    test('a folder that was never made is nothing kept', () async {
+      final none = ArtworkCache(
+        directory: Directory('${directory.path}/never-made'),
+      );
+      addTearDown(none.close);
+
+      expect(await none.size(), 0);
+      expect(await none.clear(), 0);
+    });
+
+    test('Clear deletes every picture, and each is fetched again when '
+        'asked for', () async {
+      final server = await _Server.start();
+      final artwork = cache();
+      final a = server.url('/ok/a.jpg');
+      final b = server.url('/ok/b.jpg');
+      await artwork.bytes(a);
+      await artwork.bytes(b);
+
+      expect(await artwork.clear(), 2);
+
+      expect(artwork.fileFor(a).existsSync(), isFalse);
+      expect(artwork.fileFor(b).existsSync(), isFalse);
+      expect(await artwork.size(), 0);
+      expect(await artwork.bytes(a), png);
+      expect(server.hits, ['/ok/a.jpg', '/ok/b.jpg', '/ok/a.jpg']);
+    });
+
+    test(
+      'Clear forgets what failed a moment ago, so it is tried again',
+      () async {
+        final server = await _Server.start();
+        final artwork = cache();
+        final missing = server.url('/missing');
+        await expectLater(
+          artwork.bytes(missing),
+          throwsA(isA<ArtworkUnavailable>()),
+        );
+        await expectLater(
+          artwork.bytes(missing),
+          throwsA(isA<ArtworkUnavailable>()),
+        );
+        expect(server.hits, ['/missing']);
+
+        await artwork.clear();
+        await expectLater(
+          artwork.bytes(missing),
+          throwsA(isA<ArtworkUnavailable>()),
+        );
+
+        expect(server.hits, ['/missing', '/missing']);
+      },
+    );
+
+    test("only its own files go: a folder inside isn't the cache's", () {
+      File('${directory.path}/picture').writeAsBytesSync(png);
+      final inner = Directory('${directory.path}/not-ours')..createSync();
+      File('${inner.path}/kept').writeAsBytesSync(png);
+
+      expect(clearArtwork(directory.path), 1);
+
+      expect(File('${inner.path}/kept').existsSync(), isTrue);
+      expect(artworkBytes(directory.path), 0);
+    });
+  });
 }

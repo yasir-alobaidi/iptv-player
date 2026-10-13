@@ -1,0 +1,50 @@
+{
+  "app": "iptv-player",
+  "format": 1,
+  "exported_at": "2026-10-12T18:30:00.000Z",
+  "app_version": "0.1.0+1",
+  "settings": {
+    "appearance": {"accent": "teal", "text_size": "s115", "density": "compact", "reduce_motion": "on", "clock": "h24"},
+    "playback": {"preset": "stable", "audio": ["ar", "en"], "subtitles": ["en"], "deinterlace": "off", "hwdec": "off"},
+    "guide": {"keep_days": 5},
+    "cast": {"dolby_passthrough": true, "low_latency": false, "smooth_interlaced": true},
+    "downloads": {"at_a_time": 2, "speed_limit_mbps": 0, "resume_on_launch": false, "keep_awake": true}
+  },
+  "sources": [
+    {
+      "name": "Northwind TV",
+      "type": "xtream",
+      "fingerprint": "5f7a",
+      "favorite_groups": [
+        {"name": "Sport", "order": 0, "collapsed": false},
+        {"name": "News", "order": 1, "collapsed": true}
+      ],
+      "favorites": [
+        {"type": "live", "key": "201", "group": "Sport", "order": 0, "added_at": "2026-09-20T10:00:00.000Z"},
+        {"type": "live", "key": "305", "group": "News", "order": 0},
+        {"type": "movie", "key": "9001", "order": 2}
+      ],
+      "categories": [
+        {"kind": "live", "key": "1", "hidden": false, "name": "Sport & more", "order": 0},
+        {"kind": "live", "key": "2", "hidden": true},
+        {"kind": "movie", "key": "1", "hidden": true}
+      ],
+      "channels": [
+        {"key": "201", "hidden": false, "name": "Arena One"},
+        {"key": "999", "hidden": true}
+      ],
+      "guide_matches": [
+        {"channel": "201", "xmltv_id": "arena1.uk"}
+      ],
+      "reminders": [
+        {"channel": "201", "title": "Late Scores", "start": "2026-10-16T23:00:00.000Z"}
+      ]
+    },
+    {
+      "name": "Harbor IPTV",
+      "type": "m3uUrl",
+      "fingerprint": "c0de",
+      "favorites": [{"type": "live", "key": "abc"}]
+    }
+  ]
+}

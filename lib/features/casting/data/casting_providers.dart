@@ -217,6 +217,13 @@ class CastSettingsController extends _$CastSettingsController {
         .read(settingsRepositoryProvider)
         .writeValue(SettingsKeys.cast, settings.toJson());
   }
+
+  /// Reads the stored choices again: an import replaced them (Settings →
+  /// Data).
+  Future<void> reload() {
+    _changed = false;
+    return _load();
+  }
 }
 
 /// Whether this computer has an address on a network a TV could be on

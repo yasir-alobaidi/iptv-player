@@ -11,6 +11,7 @@ import 'package:iptv_player/app/window_setup.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
+import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/launch_mark.dart';
@@ -30,6 +31,7 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/images/artwork_cache.dart';
 import 'package:iptv_player/data/images/cached_artwork.dart';
+import 'package:iptv_player/data/images/cached_artwork_store.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/platform/file_reveals.dart';
 import 'package:iptv_player/data/platform/system_networks.dart';
@@ -144,6 +146,7 @@ Future<void> bootstrap() async {
         firstRun ? welcomeRoutePath : '/',
       ),
       if (artwork != null) ...[
+        artworkStoreProvider.overrideWithValue(CachedArtworkStore(artwork)),
         artworkImagesProvider.overrideWithValue(CachedArtworkImages(artwork)),
         castPicturesProvider.overrideWithValue(ArtworkCastPictures(artwork)),
       ],

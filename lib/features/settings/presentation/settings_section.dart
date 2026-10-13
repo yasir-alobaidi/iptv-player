@@ -14,15 +14,12 @@ enum SettingsSection {
   categories('Categories'),
   appearance('Appearance'),
   shortcuts('Keyboard shortcuts'),
-  data('Data', phase: 9),
+  data('Data'),
   about('About & diagnostics');
 
-  new(this.label, {this.phase});
+  new(this.label);
 
   final String label;
-
-  /// The phase that builds the section; null once it is built.
-  final int? phase;
 }
 
 /// Where Settings is: the section it shows, and the source each per-source

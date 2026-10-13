@@ -10,12 +10,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/licenses.dart';
 import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
+import 'package:iptv_player/features/settings/data/data_providers.dart';
+import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/sources/domain/provider_account.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
@@ -27,6 +30,7 @@ import '../features/guide/presentation/guide_settings_fakes.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import '../features/onboarding/onboarding_fakes.dart';
 import '../features/settings/appearance_fakes.dart';
+import '../features/settings/data_fakes.dart';
 import 'golden_harness.dart';
 
 void main() {
@@ -248,6 +252,70 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/shortcuts_panel_1024x640.png'),
+      );
+    });
+
+    /// Settings → Data, with 412 MB of pictures and a guide; Import…
+    /// answers with sketch C's file.
+    Future<void> data(WidgetTester tester) async {
+      hideDebugBanner();
+      final base = sketch();
+      final fakes = GuideFakes(base);
+      final updated = base.now.subtract(const Duration(hours: 2));
+      fakes.guide.setCoverage(
+        'src-1',
+        GuideCoverage(
+          lastImport: GuideImport(
+            id: 4,
+            outcome: GuideImportOutcome.succeeded,
+            startedAt: updated,
+            finishedAt: updated,
+            isLive: true,
+          ),
+          updatedAt: updated,
+          guideChannels: 1290,
+          programmes: 142880,
+          lastEnd: DateTime(2026, 10, 19, 6),
+        ),
+      );
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.settings.path,
+        overrides: [
+          ...fakes.overrides,
+          ...sourceShellOverrides,
+          artworkStoreProvider.overrideWithValue(FakeArtworkStore()),
+          settingsTransferProvider.overrideWithValue(
+            FakeTransfer()..reading = SettingsFileReadable(sketchPlan()),
+          ),
+          settingsOpenPickerProvider.overrideWithValue(
+            () async => sketchPlan().path,
+          ),
+        ],
+      );
+      await tester.tap(find.text('Data').first);
+      await settleApp(tester);
+      await settleApp(tester);
+    }
+
+    testWidgets('Data', (tester) async {
+      await data(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_data.png'),
+      );
+    });
+
+    testWidgets("Data: an import's preview", (tester) async {
+      await data(tester);
+      await tester.tap(find.text('Import…'));
+      await settleApp(tester);
+      await settleApp(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_data_import.png'),
       );
     });
 

@@ -193,6 +193,14 @@ class GuideSettingsController extends _$GuideSettingsController {
     }
   }
 
+  /// Reads the stored choices again: an import replaced them (Settings →
+  /// Data). Nothing is re-imported for it: the days kept apply from the
+  /// guide's next refresh.
+  Future<void> reload() {
+    _changed = false;
+    return _load();
+  }
+
   /// Keeps [days] of programmes ahead, then re-imports every source that
   /// has a guide or is importing one. Returns once the choice is saved;
   /// the imports carry on after it.

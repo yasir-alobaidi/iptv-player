@@ -1,0 +1,33 @@
+{
+  "app": "iptv-player",
+  "format": 1,
+  "exported_at": "not a date",
+  "from_a_later_build": {"anything": [1, 2, 3]},
+  "settings": {
+    "appearance": {"accent": "ultraviolet", "new_switch": true},
+    "playback": "not a map",
+    "sound": {"volume": 11}
+  },
+  "sources": [
+    "not a source",
+    {"name": "No fingerprint", "type": "xtream"},
+    {
+      "name": "  ",
+      "type": "xtream",
+      "fingerprint": "abcd",
+      "new_list": [1, 2],
+      "favorites": [
+        {"type": "live", "key": "1", "colour": "red"},
+        {"type": "live"},
+        {"key": "2"},
+        "junk",
+        {"type": "live", "key": "3", "order": "first", "added_at": 17}
+      ],
+      "favorite_groups": [{"order": 1}, {"name": "Kept", "order": "x", "collapsed": "yes"}],
+      "categories": [{"kind": "live"}, {"kind": "live", "key": "7", "hidden": "true", "name": 5}],
+      "channels": [{"hidden": true}, {"key": "8", "name": "   "}],
+      "guide_matches": [{"channel": "8"}, {"channel": "8", "xmltv_id": "x.y"}],
+      "reminders": [{"title": "T"}, "junk", 12]
+    }
+  ]
+}

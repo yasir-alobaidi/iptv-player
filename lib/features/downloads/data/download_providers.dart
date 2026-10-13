@@ -56,6 +56,13 @@ class DownloadSettingsController extends _$DownloadSettingsController {
         .read(settingsRepositoryProvider)
         .writeValue(SettingsKeys.downloads, settings.toJson());
   }
+
+  /// Reads the stored choices again: an import replaced them (Settings →
+  /// Data).
+  Future<void> reload() {
+    _changed = false;
+    return _load();
+  }
 }
 
 /// The system's Videos folder. Tests point it elsewhere.
