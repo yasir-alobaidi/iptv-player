@@ -9,6 +9,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
 import 'package:iptv_player/features/playback/presentation/vod_player_controller.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
@@ -17,9 +18,10 @@ import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 /// title, "S2 · E4 · Undertow" for an episode, the picture's and sound's
 /// badges, and the clock.
 class VodOsdTop extends ConsumerWidget {
-  const new({required this.item, super.key});
+  const new({required this.item, required this.onBack, super.key});
 
   final Playable item;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,14 +44,8 @@ class VodOsdTop extends ConsumerWidget {
       PlayableLibraryItem(item: final file) => libraryTitleLines(file),
       PlayableChannel(:final channel) => (channel.name, null),
     };
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [colors.scrim, colors.scrim.withValues(alpha: 0)],
-        ),
-      ),
+    return OsdShade(
+      top: true,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s32,
@@ -58,8 +54,9 @@ class VodOsdTop extends ConsumerWidget {
           tokens.spacing.s48,
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            OsdBack(onPressed: onBack),
+            SizedBox(width: tokens.spacing.s16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +88,7 @@ class VodOsdTop extends ConsumerWidget {
             SizedBox(width: tokens.spacing.s16),
             Text(
               formatClock(now, tokens.timeStyle),
-              style: tokens.text.h3.copyWith(color: colors.textPrimary),
+              style: tokens.text.h2.copyWith(color: colors.textPrimary),
             ),
           ],
         ),
@@ -133,9 +130,11 @@ int? channelCount(String? layout) {
   };
 }
 
-/// The bottom of a movie's or an episode's OSD: the "Resumed from" line,
-/// the seek bar with the time on each side, and the controls — Play or
-/// Pause, −10 and +10, then [controls] (the live player's).
+/// The bottom of a movie's or an episode's OSD (ADR-017): the "Resumed
+/// from" line, the seek bar with the time on each side, and the controls
+/// — Play or Pause, back and forward 10 s, the next episode when there is
+/// one, then [leading] (the volume) from the left; [trailing] at the
+/// right.
 class VodOsdBottom extends StatelessWidget {
   const new({
     required this.timeline,
@@ -144,7 +143,9 @@ class VodOsdBottom extends StatelessWidget {
     required this.onTogglePause,
     required this.onNudge,
     required this.onDrag,
-    required this.controls,
+    required this.leading,
+    required this.trailing,
+    this.onNext,
     this.preparing = false,
     super.key,
   });
@@ -160,7 +161,11 @@ class VodOsdBottom extends StatelessWidget {
   final VoidCallback onTogglePause;
   final void Function(Duration delta) onNudge;
   final void Function(Duration position, {bool commit}) onDrag;
-  final List<Widget> controls;
+
+  /// An episode with one after it: Next episode, after the seek buttons.
+  final VoidCallback? onNext;
+  final List<Widget> leading;
+  final List<Widget> trailing;
 
   static const step = Duration(seconds: 10);
 
@@ -173,15 +178,15 @@ class VodOsdBottom extends StatelessWidget {
     double fraction(Duration at) =>
         ms <= 0 ? 0 : (at.inMilliseconds / ms).clamp(0.0, 1.0);
     Duration at(double value) => Duration(milliseconds: (value * ms).round());
-    final time = tokens.text.mono.copyWith(color: colors.textSecondary);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [colors.scrim, colors.scrim.withValues(alpha: 0)],
-        ),
-      ),
+    final time = tokens.text.timecode.copyWith(color: colors.textPrimary);
+    // The bar keeps room above it for its bubble: the times sit beside
+    // the bar itself.
+    Widget beside(Widget text) => Padding(
+      padding: EdgeInsets.only(top: AppSlider.bubbleRoom(context)),
+      child: text,
+    );
+    return OsdShade(
+      top: false,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s32,
@@ -203,12 +208,12 @@ class VodOsdBottom extends StatelessWidget {
                       'Resumed from ${formatPosition(from)} · Home starts over',
                     null => '',
                   },
-                  style: tokens.text.label.copyWith(color: colors.textEmphasis),
+                  style: tokens.text.body.copyWith(color: colors.textEmphasis),
                 ),
               ),
             Row(
               children: [
-                Text(formatPosition(timeline.position), style: time),
+                beside(Text(formatPosition(timeline.position), style: time)),
                 SizedBox(width: tokens.spacing.s12),
                 Expanded(
                   // ←/→ seek from anywhere in the player: the bar is for
@@ -220,6 +225,7 @@ class VodOsdBottom extends StatelessWidget {
                           ? fraction(timeline.position + timeline.buffered)
                           : null,
                       enabled: ms > 0,
+                      overVideo: true,
                       showBubble: seeking,
                       bubbleLabel: (v) => formatPosition(at(v)),
                       semanticLabel: 'Position',
@@ -229,37 +235,45 @@ class VodOsdBottom extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: tokens.spacing.s12),
-                Text(switch (timeline.remaining) {
-                  final left? => '−${formatPosition(left)}',
-                  null => '',
-                }, style: time),
+                beside(
+                  Text(switch (timeline.remaining) {
+                    final left? => '−${formatPosition(left)}',
+                    null => '',
+                  }, style: time),
+                ),
               ],
             ),
             SizedBox(height: tokens.spacing.s8),
-            Row(
-              children: [
-                AppIconButton(
+            OsdControlRow(
+              leading: [
+                OsdButton(
                   icon: timeline.paused ? AppIcons.play : AppIcons.pause,
                   tooltip: timeline.paused ? 'Play' : 'Pause',
                   shortcut: 'Space',
+                  primary: true,
                   onPressed: onTogglePause,
                 ),
-                SizedBox(width: tokens.spacing.s4),
-                AppButton(
-                  label: '−10',
-                  variant: AppButtonVariant.ghost,
-                  size: AppButtonSize.s,
+                OsdButton(
+                  icon: AppIcons.replay10,
+                  tooltip: 'Back 10 seconds',
+                  shortcut: '←',
                   onPressed: () => onNudge(-step),
                 ),
-                AppButton(
-                  label: '+10',
-                  variant: AppButtonVariant.ghost,
-                  size: AppButtonSize.s,
+                OsdButton(
+                  icon: AppIcons.forward10,
+                  tooltip: 'Forward 10 seconds',
+                  shortcut: '→',
                   onPressed: () => onNudge(step),
                 ),
-                const Spacer(),
-                ...controls,
+                if (onNext != null)
+                  OsdButton(
+                    icon: AppIcons.skipNext,
+                    tooltip: 'Next episode',
+                    onPressed: onNext,
+                  ),
+                ...leading,
               ],
+              trailing: trailing,
             ),
           ],
         ),

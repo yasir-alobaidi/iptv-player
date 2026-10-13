@@ -162,6 +162,10 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry('The last channel', [
       ['Backspace'],
     ]),
+    ShortcutEntry('The volume up or down (while playing)', [
+      ['+'],
+      ['−'],
+    ]),
     ShortcutEntry('Mute', [
       ['M'],
     ]),
@@ -207,6 +211,12 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry('From the beginning (while playing)', [
       ['Home'],
     ]),
+    ShortcutEntry('The volume up or down (while playing)', [
+      ['↑'],
+      ['↓'],
+      ['+'],
+      ['−'],
+    ], between: ''),
   ]),
   ShortcutGroup('The Guide', [
     ShortcutEntry('From programme to programme, channel to channel', [

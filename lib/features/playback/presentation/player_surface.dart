@@ -26,10 +26,21 @@ class PlayerSurface extends ConsumerWidget {
     this.badges = true,
     this.beforeShowInFolder,
     this.onFileRemoved,
+    this.onPictureTap,
+    this.onPictureDoubleTap,
     super.key,
   });
 
+  /// The preview pane's size; false is the full-screen player's, where
+  /// the spinner and the failure card are larger and grow with the
+  /// window as the OSD does (ADR-017).
   final bool compact;
+
+  /// A click and a double click on the picture itself. They are heard
+  /// under what is laid over it, so a button on the failure card answers
+  /// at once instead of waiting to see whether a second click follows.
+  final VoidCallback? onPictureTap;
+  final VoidCallback? onPictureDoubleTap;
 
   /// A file that can't be read (Phase 8 decision 8): what happens before
   /// its folder opens (the full-screen player leaves full screen, so the
@@ -63,56 +74,71 @@ class PlayerSurface extends ConsumerWidget {
         ? ref.watch(failedFileProvider(state.item)).value
         : null;
 
+    final overlays = [
+      if (state is PlaybackOpening ||
+          (state is PlaybackPlaying && state.buffering))
+        Center(child: _Spinner(large: !compact)),
+      if (badges && state is PlaybackPlaying)
+        Positioned(
+          top: tokens.spacing.s12,
+          left: tokens.spacing.s12,
+          child: Row(
+            children: [
+              const AppBadge('LIVE', tone: AppBadgeTone.live),
+              if (resolutionLabel(size?.$2) case final label?) ...[
+                SizedBox(width: tokens.spacing.s4 + 2),
+                _VideoChip(label),
+              ],
+            ],
+          ),
+        ),
+      if (state is PlaybackReconnecting)
+        Positioned(
+          top: tokens.spacing.s12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: ReconnectingPill(message: reconnectingText(state)),
+          ),
+        ),
+      if (state is PlaybackFailed)
+        Center(
+          child: Padding(
+            padding: EdgeInsets.all(tokens.spacing.s16),
+            child: PlaybackFailureCard(
+              state: state,
+              compact: compact,
+              onRetry: ref.read(playbackCoordinatorProvider).retry,
+              onNext: onNext,
+              nextLabel: nextLabel,
+              onShowInFolder: file?.path == null
+                  ? null
+                  : () => unawaited(_showInFolder(ref, file!.path!)),
+              onRemoveFromLibrary: file == null
+                  ? null
+                  : () => unawaited(_remove(ref, file)),
+            ),
+          ),
+        ),
+    ];
+
     return ColoredBox(
       color: colors.video,
       child: Stack(
         fit: StackFit.expand,
         children: [
           if (showPicture) engine.videoView(background: colors.video),
-          if (state is PlaybackOpening ||
-              (state is PlaybackPlaying && state.buffering))
-            const Center(child: _Spinner()),
-          if (badges && state is PlaybackPlaying)
-            Positioned(
-              top: tokens.spacing.s12,
-              left: tokens.spacing.s12,
-              child: Row(
-                children: [
-                  const AppBadge('LIVE', tone: AppBadgeTone.live),
-                  if (resolutionLabel(size?.$2) case final label?) ...[
-                    SizedBox(width: tokens.spacing.s4 + 2),
-                    _VideoChip(label),
-                  ],
-                ],
-              ),
+          if (onPictureTap != null || onPictureDoubleTap != null)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onPictureTap,
+              onDoubleTap: onPictureDoubleTap,
             ),
-          if (state is PlaybackReconnecting)
-            Positioned(
-              top: tokens.spacing.s12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: ReconnectingPill(message: reconnectingText(state)),
-              ),
-            ),
-          if (state is PlaybackFailed)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.all(tokens.spacing.s16),
-                child: PlaybackFailureCard(
-                  state: state,
-                  compact: compact,
-                  onRetry: ref.read(playbackCoordinatorProvider).retry,
-                  onNext: onNext,
-                  nextLabel: nextLabel,
-                  onShowInFolder: file?.path == null
-                      ? null
-                      : () => unawaited(_showInFolder(ref, file!.path!)),
-                  onRemoveFromLibrary: file == null
-                      ? null
-                      : () => unawaited(_remove(ref, file)),
-                ),
-              ),
+          if (compact)
+            ...overlays
+          else
+            OsdScale(
+              child: Stack(fit: StackFit.expand, children: overlays),
             ),
         ],
       ),
@@ -156,16 +182,22 @@ class PlayerSurface extends ConsumerWidget {
 }
 
 class _Spinner extends StatelessWidget {
-  const new();
+  const new({this.large = false});
+
+  /// The full-screen player's.
+  final bool large;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: 28,
-    child: CircularProgressIndicator(
-      strokeWidth: 3,
-      color: context.tokens.colors.textPrimary,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final player = context.tokens.player;
+    return SizedBox.square(
+      dimension: large ? player.spinnerSize : player.previewSpinnerSize,
+      child: CircularProgressIndicator(
+        strokeWidth: large ? player.spinnerStroke : player.previewSpinnerStroke,
+        color: context.tokens.colors.textPrimary,
+      ),
+    );
+  }
 }
 
 class _VideoChip extends StatelessWidget {
@@ -243,10 +275,18 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
       ?problem.detail,
     ].join('\n');
 
+    // In full screen the card is read from where the picture is watched:
+    // larger words, and buttons a size up (ADR-017).
+    final compact = widget.compact;
+    final size = compact ? AppButtonSize.s : AppButtonSize.m;
     return Container(
-      constraints: BoxConstraints(maxWidth: widget.compact ? 420 : 480),
+      constraints: BoxConstraints(
+        maxWidth: compact
+            ? tokens.player.previewCardWidth
+            : tokens.player.cardWidth,
+      ),
       padding: EdgeInsets.all(
-        widget.compact ? tokens.spacing.s16 : tokens.spacing.s20,
+        compact ? tokens.spacing.s16 : tokens.spacing.s24,
       ),
       decoration: BoxDecoration(
         color: colors.surface2,
@@ -261,7 +301,13 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppIcon(AppIcons.alertTriangle, color: colors.warning),
+                AppIcon(
+                  AppIcons.alertTriangle,
+                  size: compact
+                      ? tokens.player.previewCardIconSize
+                      : tokens.player.iconSize,
+                  color: colors.warning,
+                ),
                 SizedBox(width: tokens.spacing.s12),
                 Expanded(
                   child: Column(
@@ -269,18 +315,22 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
                     children: [
                       Text(
                         text.title,
-                        style: tokens.text.bodyStrong.copyWith(
-                          color: colors.textPrimary,
-                        ),
+                        style:
+                            (compact ? tokens.text.bodyStrong : tokens.text.h3)
+                                .copyWith(color: colors.textPrimary),
                       ),
                       SizedBox(height: tokens.spacing.s4),
                       Text(
                         text.message,
-                        maxLines: widget.compact ? 3 : 5,
+                        maxLines: compact ? 3 : 5,
                         overflow: TextOverflow.ellipsis,
-                        style: tokens.text.caption.copyWith(
-                          color: colors.textSecondary,
-                        ),
+                        style:
+                            (compact ? tokens.text.caption : tokens.text.body)
+                                .copyWith(
+                                  color: compact
+                                      ? colors.textSecondary
+                                      : colors.textEmphasis,
+                                ),
                       ),
                     ],
                   ),
@@ -296,15 +346,15 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
                 AppButton(
                   label: 'Retry',
                   icon: AppIcons.retry,
-                  size: AppButtonSize.s,
-                  autofocus: !widget.compact,
+                  size: size,
+                  autofocus: !compact,
                   onPressed: widget.onRetry,
                 ),
                 if (widget.onNext != null)
                   AppButton(
                     label: widget.nextLabel,
                     variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.s,
+                    size: size,
                     onPressed: widget.onNext,
                   ),
                 if (widget.onShowInFolder != null)
@@ -312,21 +362,21 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
                     label: 'Show in folder',
                     icon: AppIcons.folder,
                     variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.s,
+                    size: size,
                     onPressed: widget.onShowInFolder,
                   ),
                 if (widget.onRemoveFromLibrary != null)
                   AppButton(
                     label: 'Remove from library',
                     variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.s,
+                    size: size,
                     onPressed: widget.onRemoveFromLibrary,
                   ),
                 if (detail.isNotEmpty)
                   AppButton(
                     label: _details ? 'Hide details' : 'Details',
                     variant: AppButtonVariant.ghost,
-                    size: AppButtonSize.s,
+                    size: size,
                     onPressed: () => setState(() => _details = !_details),
                   ),
               ],

@@ -1554,3 +1554,50 @@ The sixteen, in short: **1** Phase 9 starts while the TV sitting waits. **2** Ap
 - **Linux, 1 failed:** `relay_runtime_test.dart` expected a refused connection on a port it had just freed, and another test file's relay had taken it in between. A 404 from whoever has the port is as right as nobody answering.
 - **Nothing after the test step ran on either system** (a job stops at its first failed step): the Windows build with the notification package, the Linux build, the fake provider's and fake TV's suites and the integration tests under Xvfb are all still to be seen on CI for Phase 9.
 
+
+## ADR-017 · 2026-10-13 · Accepted (the user's request) — The player's controls, and the app in every window size
+**Decision:** the full-screen player's OSD is rebuilt around large, named controls, and the app is checked in seven window sizes instead of two. The user asked for both on 2026-10-13: "adding more controlls to the play screen make it clear easy and best UI/UX possible to not make the ppl think to use, and the size of the buttons also clear to the eye even for old ppl, netflix is a good standard to follow, and also make sure the app design is responsive to the screen sizes to look perfect in each size". **This departs from the canvas's `Full-screen player` artboard** (44 px controls, no transport, no Back): the app is the reference for the player until the artboard is redrawn to match.
+
+### What was wrong
+- **The controls were seven 40 px grey icons in a corner,** with no words: Audio, Subtitles, Aspect, Mute, Stream info, Cast, and an "Exit full screen" that in fact left the player.
+- **Most of the player had no control on screen at all:** the channel before and after, the channel list, the last channel, the volume (only Mute existed, and no key or slider changed the level), the favorite, a file's speed, an episode's next. Each had a key, or nothing.
+- **A file's Play, −10 and +10 were small text buttons,** and a click on the picture did nothing.
+- **Mute was the player screen's own flag:** leave the player muted, come back, and the button said "Mute" over a silent engine.
+- **Every click on a control waited 300 ms:** the double-click detector for full screen sat above the whole OSD, so each click first waited to see whether a second one followed.
+- **The OSD was the same size in every window:** on a 1440p monitor the controls were a tenth of an inch.
+
+### What the player has now
+- **Back, top left, on every face** (Esc). Netflix's place for it; "Exit full screen" no longer means "leave".
+- **A channel, from the left:** Channels (the list, ←), Previous and Next channel (↑ ↓), Last channel (Backspace), then the volume. **At the right:** the favorite's star, Audio, Subtitles, Picture size, Stream info, Cast, Full screen.
+- **A movie or an episode, from the left:** Play / Pause (a size up, white, round), Back 10 seconds, Forward 10 seconds, Next episode when there is one, then the volume. **At the right:** Audio, Subtitles, Speed (0.5× to 2×), Picture size, Stream info, Cast, Full screen. The seek bar is thicker (6 px, an 18 px thumb), with the elapsed and remaining time in 15 px figures beside it.
+- **Play in the middle of a paused picture,** 104 px: what a click on the picture does, drawn where the eye is. A click on the picture plays and pauses a file; a double click is still full screen.
+- **The volume:** Mute and a slider in one tile; **+ and −** in every face, **↑ and ↓** while a file plays (a channel's ↑ ↓ zap), and the mouse's wheel over the picture. It is one level for the full-screen player and the preview (there is one engine), kept across restarts (`player.sound` in the settings table), and told to the engine before the first thing plays. Up while muted is Unmute; Unmute from a level dragged to nothing is 50 %.
+- **Controls are 56 px tiles with 28 px icons in white** (Play / Pause 64 px), on a translucent tile so they read over any picture; the shade behind the OSD's edges is docs/05's 85 % (it was 60 %), kept strong under the programme's title as the canvas draws it.
+- **A control that has a state says it in words** where the row has room (a 1280 px window and up): "Audio: English", "Subtitles: Off". Narrower, or at 130 % text in a small window, every control is its icon and its tooltip names it with its key. Speed's face is its state ("1.5×"); Picture size's tooltip says the size, and its menu ticks it.
+- **The OSD is drawn larger in a larger window:** laid out for 1280 × 800 and scaled with the picture, up to twice (`AppPlayerTokens.scaleFor`): 1.35× at 1920 × 1080, 1.8× at 2560 × 1440. A window smaller than 1280 × 800 keeps the drawn sizes. The channel panel, the zap banner, the number overlay, the stream info, the spinner and the failure card scale with it; menus don't.
+- **The OSD stays 6 s while the keyboard is on one of its controls** (3 s otherwise, as before), and when it hides the keyboard goes back to the player: Enter can no longer press a control nobody can see.
+- **In full screen the failure card and the spinner are larger too:** an 18 px title, 15 px words, buttons a size up, a 48 px spinner. The preview pane keeps the small ones.
+- **Speed and Picture size last as long as the player is open** (the next episode keeps them) and go back to 1× and Fit when it closes, so the preview is never stretched or fast.
+
+### Why these choices
+- **Netflix's arrangement, not its bare icons.** Its bar is: transport and volume at the left, what you hear and read and the window at the right, Back at the top left. That is kept. Its icons carry no words; for a viewer who doesn't know them, the two controls whose state is a word (a language, Off) say it.
+- **Rejected: a word under every icon.** Twelve controls with captions don't fit the smallest window (1024 px), and a caption can't hold "Subtitles: English".
+- **Rejected: fewer controls, the rest in a "More" menu.** A menu is exactly the thinking the request is against, and every control here fits the smallest window as an icon.
+- **Rejected: scaling the controls with the text size only.** Text size is the reader's choice for the whole app; the player's problem is distance and window size, which is why it scales with the window.
+- **The volume slider and the seek bar are the mouse's, not Tab stops:** the keyboard has keys for both from anywhere in the player, and a slider that takes the arrows would take them from zapping and seeking.
+- **A new engine call, `PlayerEngine.setSpeed`** (mpv's `speed`; it keeps the pitch by itself). Nothing else in the engine changed.
+
+### The app in every window size
+- **The audit draws every scene in five more windows** at the canvas's text size: 1280 × 720, 1366 × 768, 1600 × 900, 2560 × 1440 and 3440 × 1440 (an ultrawide one, where a pane that only stretches gives itself away), beside 1024 × 640 and 1920 × 1080 at three text sizes. Overflow and cut-off text fail there as they do at 130 %.
+- **`AUDIT_SHOTS=<folder> flutter test …` draws each scene in each look into that folder,** so a screen can be looked at in every window, which a pass of the checks alone doesn't tell.
+
+### Built
+- `lib/design/components/osd_controls.dart`: `OsdButton`, `OsdVolume`, `OsdControlRow` (decides when the words show; draws the right-hand group a little smaller rather than cut should two long track names not fit), `OsdCenterPlay`, `OsdScale`. `AppSlider(overVideo:, activeColor:)`. `AppPlayerTokens` (`tokens.player`), `AppTypography.timecode`, `AppColors.osdShade`. Six icons the canvas doesn't draw (`arrow-left`, `channel-list`, `replay-10`, `forward-10`, `skip-next`, `last-channel`).
+- `lib/features/playback/presentation/`: `player_sound.dart` (`playerSoundControllerProvider`), `player_overlays.dart` (`OsdShade`, `OsdBack`, `OsdTop(onBack:)`, `OsdBottom(leading:, trailing:)`), `vod_osd.dart`, `player_screen.dart`. `PlayerSound` and its place in `UiPreferences` (`lib/core/settings/`).
+- **The picture's click detector is under the OSD and under the failure card now, not around them** (`PlayerSurface(onPictureTap:, onPictureDoubleTap:)`; the preview pane uses it too), so a control answers at once; the shades take no clicks, so one on them is a click on the picture.
+- Tests: `player_sound_test.dart`; the OSD's controls in `player_screen_test.dart` and `vod_player_screen_test.dart` (its rig moved to `support/vod_player_rig.dart`); goldens `player_osd`, `player_movie_paused`, `player_episode_1920x1080`; the Component Gallery's "Player controls".
+
+### Known limits
+- **The canvas's player artboard is out of date** (above).
+- **Menus opened from the OSD are the app's usual size,** not scaled with the window.
+- **The words on Audio and Subtitles are cut with "…" past 140 px** (a track titled at length); the menu shows the whole name.

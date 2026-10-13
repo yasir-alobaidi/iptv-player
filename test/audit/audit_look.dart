@@ -38,8 +38,11 @@ final class AuditLook {
 }
 
 /// Every look a scene is drawn in: the three text sizes in both windows,
-/// the keyboard walked twice, and reduce motion once (what it changes is
-/// what moves, not where things are).
+/// the keyboard walked twice, reduce motion once (what it changes is
+/// what moves, not where things are), and, at the canvas's text size,
+/// the windows between and beyond those two that people have: a 720p
+/// screen, the commonest laptop, a larger laptop, a QHD monitor, and an
+/// ultrawide one (where a pane that only stretches gives itself away).
 const auditLooks = [
   AuditLook(auditSmall, TextSizeChoice.s100, keyboard: true),
   AuditLook(auditSmall, TextSizeChoice.s115),
@@ -48,6 +51,11 @@ const auditLooks = [
   AuditLook(auditLarge, TextSizeChoice.s115),
   AuditLook(auditLarge, TextSizeChoice.s130),
   AuditLook(auditSmall, TextSizeChoice.s100, reduceMotion: true),
+  AuditLook(Size(1280, 720), TextSizeChoice.s100),
+  AuditLook(Size(1366, 768), TextSizeChoice.s100),
+  AuditLook(Size(1600, 900), TextSizeChoice.s100),
+  AuditLook(Size(2560, 1440), TextSizeChoice.s100),
+  AuditLook(Size(3440, 1440), TextSizeChoice.s100),
 ];
 
 /// The look the audit is drawing in right now; null in every other test.

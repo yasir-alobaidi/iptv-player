@@ -10,6 +10,9 @@ abstract final class SettingsKeys {
   static const windowBounds = 'window.bounds';
   static const railExpanded = 'shell.rail_expanded';
   static const currentSource = 'shell.current_source';
+
+  /// The player's volume and mute, as the user left them (ADR-017).
+  static const playerSound = 'player.sound';
   static const playback = 'playback.settings';
   static const guide = 'guide.settings';
   static const cast = 'cast.settings';

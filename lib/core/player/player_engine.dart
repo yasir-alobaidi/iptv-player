@@ -29,6 +29,9 @@ abstract interface class PlayerEngine {
 
   Future<void> setMuted({required bool muted});
 
+  /// How fast a file plays: 1 is as recorded. The pitch is kept.
+  Future<void> setSpeed(double speed);
+
   /// A track id from [PlayerTracks], or null for none (subtitles) / auto.
   Future<void> selectAudio(String? id);
 

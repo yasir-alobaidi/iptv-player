@@ -99,6 +99,9 @@ final class FakePlayerEngine implements PlayerEngine {
   Future<void> setMuted({required bool muted}) async => _call('muted:$muted');
 
   @override
+  Future<void> setSpeed(double speed) async => _call('speed:$speed');
+
+  @override
   Future<void> selectAudio(String? id) async => _call('audio:$id');
 
   @override

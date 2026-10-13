@@ -417,6 +417,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   Future<void> setMuted({required bool muted}) =>
       _set('mute', muted ? 'yes' : 'no');
 
+  // mpv keeps the pitch by itself (`audio-pitch-correction` is on).
+  @override
+  Future<void> setSpeed(double speed) =>
+      _set('speed', speed.clamp(0.25, 4).toStringAsFixed(2));
+
   @override
   Future<void> selectAudio(String? id) => _set('aid', id ?? 'auto');
 

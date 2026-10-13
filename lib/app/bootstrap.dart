@@ -58,6 +58,7 @@ import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
+import 'package:iptv_player/features/playback/presentation/player_sound.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_watch.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
@@ -205,7 +206,9 @@ Future<void> bootstrap() async {
     // The cast's quiet fallbacks and unexpected ends, as toasts.
     ..read(castNoticeToastsProvider)
     // What each play says about the network, for "You're offline".
-    ..read(playbackReachabilityProvider);
+    ..read(playbackReachabilityProvider)
+    // The volume as the user left it, before the first thing plays.
+    ..read(playerSoundControllerProvider);
   runApp(
     UncontrolledProviderScope(
       container: container,

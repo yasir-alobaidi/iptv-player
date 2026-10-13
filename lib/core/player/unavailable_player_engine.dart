@@ -39,6 +39,9 @@ final class UnavailablePlayerEngine implements PlayerEngine {
   Future<void> setMuted({required bool muted}) async {}
 
   @override
+  Future<void> setSpeed(double speed) async {}
+
+  @override
   Future<void> selectAudio(String? id) async {}
 
   @override

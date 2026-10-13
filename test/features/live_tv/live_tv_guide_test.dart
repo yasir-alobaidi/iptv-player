@@ -190,7 +190,7 @@ void main() {
         child: MaterialApp(
           theme: buildAppTheme(),
           home: const Scaffold(
-            body: OsdBottom(channel: zebra, controls: []),
+            body: OsdBottom(channel: zebra, leading: [], trailing: []),
           ),
         ),
       ),

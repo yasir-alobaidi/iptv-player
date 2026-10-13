@@ -343,6 +343,116 @@ List<Widget> mediaSections(BuildContext context) {
       ],
     ),
     GallerySection(
+      title: 'Player controls',
+      children: [
+        SpecimenRow(
+          children: [
+            Specimen(
+              label: 'Play (the primary control)',
+              child: OsdButton(
+                icon: AppIcons.play,
+                tooltip: 'Play',
+                shortcut: 'Space',
+                primary: true,
+                onPressed: () {},
+              ),
+            ),
+            Specimen(
+              label: 'A control',
+              child: OsdButton(
+                icon: AppIcons.replay10,
+                tooltip: 'Back 10 seconds',
+                shortcut: '←',
+                onPressed: () {},
+              ),
+            ),
+            Specimen(
+              label: 'On',
+              child: OsdButton(
+                icon: AppIcons.starFilled,
+                tooltip: 'Remove from favorites',
+                selected: true,
+                onPressed: () {},
+              ),
+            ),
+            Specimen(
+              label: 'Its state is its face',
+              child: OsdButton(
+                text: '1.5×',
+                tooltip: 'Speed',
+                onPressed: () {},
+              ),
+            ),
+            const Specimen(
+              label: 'Disabled',
+              child: OsdButton(
+                icon: AppIcons.skipNext,
+                tooltip: 'Next episode',
+              ),
+            ),
+            Specimen(
+              label: 'Volume',
+              child: OsdVolume(
+                volume: 70,
+                muted: false,
+                shortcut: 'M',
+                onToggleMute: () {},
+                onChanged: (_) {},
+              ),
+            ),
+            Specimen(
+              label: 'Play, on a paused picture',
+              child: OsdCenterPlay(onPressed: () {}),
+            ),
+          ],
+        ),
+        SizedBox(
+          width: 1240,
+          child: Specimen(
+            label: 'A row with room for words',
+            child: OsdControlRow(
+              leading: [
+                OsdButton(
+                  icon: AppIcons.channelList,
+                  tooltip: 'Channels',
+                  onPressed: () {},
+                ),
+                OsdButton(
+                  icon: AppIcons.chevronUp,
+                  tooltip: 'Previous channel',
+                  onPressed: () {},
+                ),
+                OsdButton(
+                  icon: AppIcons.chevronDown,
+                  tooltip: 'Next channel',
+                  onPressed: () {},
+                ),
+              ],
+              trailing: [
+                OsdButton(
+                  icon: AppIcons.audio,
+                  tooltip: 'Audio',
+                  label: 'Audio: English',
+                  onPressed: () {},
+                ),
+                OsdButton(
+                  icon: AppIcons.subtitles,
+                  tooltip: 'Subtitles',
+                  label: 'Subtitles: Off',
+                  onPressed: () {},
+                ),
+                OsdButton(
+                  icon: AppIcons.fullscreen,
+                  tooltip: 'Full screen',
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+    GallerySection(
       title: 'Downloads',
       children: [
         SpecimenRow(

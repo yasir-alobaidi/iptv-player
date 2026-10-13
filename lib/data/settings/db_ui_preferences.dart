@@ -15,14 +15,20 @@ final class DbUiPreferences implements UiPreferences {
       SettingsKeys.currentSource,
       null,
     );
+    final sound = await settings.readValue<Object?>(
+      SettingsKeys.playerSound,
+      null,
+    );
     return DbUiPreferences(settings)
       .._railExpanded = expanded.valueOrNull ?? false
-      .._currentSourceId = source.valueOrNull;
+      .._currentSourceId = source.valueOrNull
+      .._playerSound = PlayerSound.fromJson(sound.valueOrNull);
   }
 
   final SettingsRepository _settings;
   bool _railExpanded = false;
   String? _currentSourceId;
+  PlayerSound _playerSound = const PlayerSound();
 
   @override
   bool get railExpanded => _railExpanded;
@@ -42,5 +48,14 @@ final class DbUiPreferences implements UiPreferences {
     return id == null
         ? _settings.remove(SettingsKeys.currentSource)
         : _settings.writeValue(SettingsKeys.currentSource, id);
+  }
+
+  @override
+  PlayerSound get playerSound => _playerSound;
+
+  @override
+  Future<Result<void>> setPlayerSound(PlayerSound sound) {
+    _playerSound = sound;
+    return _settings.writeValue(SettingsKeys.playerSound, sound.toJson());
   }
 }

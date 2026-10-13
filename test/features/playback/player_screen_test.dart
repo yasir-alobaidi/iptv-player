@@ -1,8 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
+import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
@@ -178,6 +180,183 @@ void main() {
     expect(find.text('vaapi (hardware)'), findsOneWidget);
     expect(find.textContaining('/live/***/***/'), findsOneWidget);
     await finish(tester);
+  });
+
+  group('the controls on the OSD (ADR-017)', () {
+    testWidgets('Back leaves the player, as Esc does', (tester) async {
+      await open(tester);
+
+      await tester.tap(findByLabel('Back'));
+      await _settle(tester);
+
+      expect(app.location, AppDestination.liveTv.path);
+      expect(live.window.changes, [true, false]);
+      expect(live.rig.engine.playing, isTrue);
+      await finish(tester);
+    });
+
+    testWidgets('+ and − turn the volume; the wheel does too', (tester) async {
+      await open(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+      await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+      await _settle(tester);
+      expect(
+        live.rig.engine.calls,
+        containsAllInOrder(['volume:95.0', 'volume:90.0']),
+      );
+      expect(findByLabel('Mute, volume 90%'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await _settle(tester);
+      expect(live.rig.engine.calls.last, 'volume:95.0');
+
+      // A notch of the wheel over the picture: down is quieter.
+      final picture = tester.getCenter(find.byType(PlayerScreen));
+      await tester.sendEventToBinding(
+        PointerScrollEvent(position: picture, scrollDelta: const Offset(0, 40)),
+      );
+      await _settle(tester);
+      expect(live.rig.engine.calls.last, 'volume:90.0');
+      await finish(tester);
+    });
+
+    testWidgets('Mute is still on after leaving the player and coming back', (
+      tester,
+    ) async {
+      await open(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await _settle(tester);
+      expect(findByLabel('Unmute'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await _settle(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await _settle(tester);
+
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      expect(findByLabel('Unmute'), findsOneWidget);
+      await tester.tap(findByLabel('Unmute'));
+      await _settle(tester);
+      expect(live.rig.engine.calls.last, 'muted:false');
+      expect(findByLabel('Mute, volume 100%'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('Channels opens the panel; Previous and Next zap', (
+      tester,
+    ) async {
+      await open(tester);
+
+      await tester.tap(findByLabel('Next channel'));
+      await _settle(tester);
+      expect(find.text('202  Arena Sports 2'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 400));
+      await _settle(tester);
+      expect(live.rig.engine.opened.last.url, contains('202'));
+
+      live.rig.engine.firstFrame();
+      await tester.tap(findByLabel('Previous channel'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await _settle(tester);
+      expect(live.rig.engine.opened.last.url, contains('201'));
+
+      live.rig.engine.firstFrame();
+      await tester.tap(findByLabel('Last channel'));
+      await _settle(tester);
+      expect(live.rig.engine.opened.last.url, contains('202'));
+
+      await tester.tap(findByLabel('Channels'));
+      await _settle(tester);
+      expect(find.byType(ChannelPanel), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('the star makes the channel a favorite, and says so', (
+      tester,
+    ) async {
+      await open(tester);
+      expect(findByLabel('Remove from favorites'), findsNothing);
+
+      await tester.tap(findByLabel('Add to favorites'));
+      await _settle(tester);
+
+      expect(findByLabel('Remove from favorites'), findsOneWidget);
+      final stored = await tester.runAsync(
+        () => DbChannelRepository(live.db).byRemoteKey('src-1', '201'),
+      );
+      expect(stored?.valueOrNull?.isFavorite, isTrue);
+      await finish(tester);
+    });
+
+    testWidgets('Full screen leaves and enters it without leaving the player', (
+      tester,
+    ) async {
+      await open(tester);
+
+      await tester.tap(findByLabel('Exit full screen'));
+      await _settle(tester);
+      expect(live.window.changes, [true, false]);
+      expect(find.byType(PlayerScreen), findsOneWidget);
+
+      await tester.tap(findByLabel('Full screen'));
+      await _settle(tester);
+      expect(live.window.changes, [true, false, true]);
+      expect(findByLabel('Exit full screen'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('a control keeps the keyboard while the OSD shows, and gives '
+        'it back when the OSD hides', (tester) async {
+      await open(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await _settle(tester);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, isNot('player'));
+
+      double opacity() => tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.byType(OsdTop),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity;
+
+      // Still up after the mouse's three seconds: time to read it.
+      await tester.pump(const Duration(seconds: 4));
+      expect(opacity(), 1);
+      await tester.pump(const Duration(seconds: 3));
+      await _settle(tester);
+
+      expect(opacity(), 0);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'player');
+      await finish(tester);
+    });
+
+    testWidgets('a wide window names what Audio and Subtitles are set to; a '
+        'narrow one draws their icons', (tester) async {
+      await open(tester);
+      live.rig.engine.emit(
+        const PlayerTracks(
+          audio: [MediaTrack(id: '1', language: 'eng')],
+          subtitles: [MediaTrack(id: '2', language: 'fra')],
+          audioId: '1',
+          subtitleId: '2',
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.text('Audio: English'), findsOneWidget);
+      expect(find.text('Subtitles: French'), findsOneWidget);
+
+      tester.view.physicalSize = const Size(1024, 640);
+      await _settle(tester);
+      expect(find.text('Audio: English'), findsNothing);
+      expect(findByLabel('Subtitles: French'), findsOneWidget);
+      await finish(tester);
+    });
   });
 }
 

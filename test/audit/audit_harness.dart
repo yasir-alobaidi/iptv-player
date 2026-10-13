@@ -67,7 +67,7 @@ void auditScreen(String screen, List<AuditScene> scenes) {
           auditReport(
             '$screen, ${scene.state}',
             look,
-            await audit(tester, scene, look),
+            await audit(tester, scene, look, name: '$screen, ${scene.state}'),
             allow: scene.allow,
           );
         });
@@ -114,8 +114,9 @@ final _reporting = Platform.environment['AUDIT_REPORT'] == '1';
 Future<List<String>> audit(
   WidgetTester tester,
   AuditScene scene,
-  AuditLook look,
-) => auditRun(tester, look, (check) async {
+  AuditLook look, {
+  String? name,
+}) => auditRun(tester, look, name: name, (check) async {
   await scene.open(tester, look);
   await auditSettle(tester);
   await check(keyboard: scene.keyboard);
@@ -128,12 +129,14 @@ typedef AuditCheck = Future<void> Function({bool keyboard});
 
 /// Runs [body] with [look] in force (`currentAuditLook`) and everything
 /// the framework reports caught, and returns what [body]'s checks and the
-/// framework found.
+/// framework found. With `AUDIT_SHOTS` set, the scene called [name] is
+/// also drawn into that folder as it was checked.
 Future<List<String>> auditRun(
   WidgetTester tester,
   AuditLook look,
-  Future<void> Function(AuditCheck check) body,
-) async {
+  Future<void> Function(AuditCheck check) body, {
+  String? name,
+}) async {
   final findings = <String>{};
   // Every framework error, not only the first: a row that overflows is
   // reported once per row, and each belongs in the list. Described as it
@@ -152,6 +155,7 @@ Future<List<String>> auditRun(
     await body(({keyboard = true}) async {
       checked = true;
       findings.addAll(_clippedText(tester));
+      if (name != null) await _shoot(tester, name, look);
       if (look.reduceMotion) findings.addAll(await _stillMoving(tester));
       if (look.keyboard && keyboard) {
         // With what moving the focus breaks (a row that grows when
@@ -183,6 +187,34 @@ Future<List<String>> auditRun(
   final thrown = tester.takeException();
   if (thrown != null) findings.add('threw: $thrown');
   return findings.toList();
+}
+
+/// `AUDIT_SHOTS=<folder> flutter test …` draws every scene in every look
+/// into that folder (`<scene>__<window>_<text>.png`), for looking at a
+/// screen in each window size. Nothing is compared.
+final String? _shots = Platform.environment['AUDIT_SHOTS'];
+
+Future<void> _shoot(WidgetTester tester, String name, AuditLook look) async {
+  final folder = _shots;
+  if (folder == null || folder.isEmpty) return;
+  final app = find.byType(MaterialApp);
+  if (app.evaluate().length != 1) return;
+  final scene = name
+      .toLowerCase()
+      .replaceAll(RegExp('[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'^_+|_+$'), '');
+  final file = File(
+    '$folder/${scene}__${look.size.width.toInt()}x'
+    '${look.size.height.toInt()}_${look.text.name}'
+    '${look.reduceMotion ? '_still' : ''}.png',
+  );
+  final updating = autoUpdateGoldenFiles;
+  autoUpdateGoldenFiles = true;
+  try {
+    await expectLater(app, matchesGoldenFile(file.absolute.uri));
+  } finally {
+    autoUpdateGoldenFiles = updating;
+  }
 }
 
 /// Real time for the fixtures' databases, then frames for what they

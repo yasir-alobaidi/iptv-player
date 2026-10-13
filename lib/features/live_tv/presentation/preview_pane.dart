@@ -124,12 +124,11 @@ class _PreviewPaneState extends ConsumerState<PreviewPane> {
                             message: 'It plays here.',
                           ),
                         )
-                      : GestureDetector(
-                          onDoubleTap: () => widget.onFullscreen?.call(fresh),
-                          child: PlayerSurface(
-                            compact: true,
-                            onNext: widget.onNextChannel,
-                          ),
+                      : PlayerSurface(
+                          compact: true,
+                          onNext: widget.onNextChannel,
+                          onPictureDoubleTap: () =>
+                              widget.onFullscreen?.call(fresh),
                         ),
                 ),
               ),

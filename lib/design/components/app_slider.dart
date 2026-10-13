@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Volume and seek control. With [bubbleLabel] set it shows a time bubble
@@ -16,6 +17,8 @@ class AppSlider extends StatefulWidget {
     this.semanticLabel,
     this.enabled = true,
     this.compact = false,
+    this.overVideo = false,
+    this.activeColor,
     this.focusNode,
     super.key,
   });
@@ -38,7 +41,17 @@ class AppSlider extends StatefulWidget {
 
   /// No room kept above for the bubble: a volume slider in a row.
   final bool compact;
+
+  /// On the player's OSD (ADR-017): a thicker track and a larger thumb
+  /// and bubble, and a track that shows over any picture.
+  final bool overVideo;
+
+  /// The filled part; the accent when null.
+  final Color? activeColor;
   final FocusNode? focusNode;
+
+  /// The room an [overVideo] slider keeps above its bar for the bubble.
+  static double bubbleRoom(BuildContext context) => context.scaled(28);
 
   @override
   State<AppSlider> createState() => _AppSliderState();
@@ -52,6 +65,8 @@ class _AppSliderState extends State<AppSlider> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final player = tokens.player;
+    final over = widget.overVideo;
     final showBubble =
         widget.bubbleLabel != null &&
         (_dragging || _hovered || widget.showBubble);
@@ -64,26 +79,37 @@ class _AppSliderState extends State<AppSlider> {
         children: [
           if (!widget.compact)
             SizedBox(
-              height: 20,
+              height: over ? AppSlider.bubbleRoom(context) : 20,
               child: showBubble
                   ? Align(
                       alignment: Alignment(widget.value * 2 - 1, 0),
-                      child: _Bubble(label: widget.bubbleLabel!(widget.value)),
+                      child: _Bubble(
+                        label: widget.bubbleLabel!(widget.value),
+                        large: over,
+                      ),
                     )
                   : null,
             ),
           SliderTheme(
             data: SliderThemeData(
-              trackHeight: 4,
-              activeTrackColor: colors.accentBase,
-              inactiveTrackColor: colors.border,
-              secondaryActiveTrackColor: colors.borderStrong,
+              trackHeight: over ? player.seekTrackHeight : 4,
+              activeTrackColor: widget.activeColor ?? colors.accentBase,
+              inactiveTrackColor: over
+                  ? colors.textPrimary.withValues(alpha: player.tileOpacity * 2)
+                  : colors.border,
+              secondaryActiveTrackColor: over
+                  ? colors.textPrimary.withValues(alpha: player.tileOpacity * 4)
+                  : colors.borderStrong,
               thumbColor: colors.textPrimary,
               overlayColor: colors.accentBase.withValues(
                 alpha: tokens.focus.glowOpacity,
               ),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              thumbShape: RoundSliderThumbShape(
+                enabledThumbRadius: over ? player.seekThumbRadius : 7,
+              ),
+              overlayShape: RoundSliderOverlayShape(
+                overlayRadius: over ? player.seekHaloRadius : 14,
+              ),
               trackShape: const RoundedRectSliderTrackShape(),
             ),
             child: Slider(
@@ -106,15 +132,20 @@ class _AppSliderState extends State<AppSlider> {
 }
 
 class _Bubble extends StatelessWidget {
-  const new({required this.label});
+  const new({required this.label, this.large = false});
 
   final String label;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final style = large ? tokens.text.mono : tokens.text.monoMicro;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: large ? tokens.spacing.s12 : tokens.spacing.s8,
+        vertical: large ? tokens.spacing.s4 : 2,
+      ),
       decoration: BoxDecoration(
         color: tokens.colors.surface3,
         borderRadius: tokens.radii.xsAll,
@@ -122,7 +153,7 @@ class _Bubble extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: tokens.text.monoMicro.copyWith(color: tokens.colors.textPrimary),
+        style: style.copyWith(color: tokens.colors.textPrimary),
       ),
     );
   }

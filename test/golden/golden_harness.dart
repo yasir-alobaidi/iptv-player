@@ -54,9 +54,14 @@ void sceneTest(
 }) {
   testWidgets(description, body);
   if (!audit) return;
+  // The file the scene is in names its pictures (`AUDIT_SHOTS`): two
+  // files may each have a scene called "content".
+  final file = RegExp(r'(\w+?)(_golden)?_test\.dart')
+      .firstMatch('${StackTrace.current}'.split('\n').skip(1).join('\n'))?[1];
   for (final look in auditLooks) {
     testWidgets('$description — audit, ${look.name}', (tester) async {
-      final findings = await auditRun(tester, look, (check) async {
+      final scene = '${file ?? 'scene'} $description';
+      final findings = await auditRun(tester, look, name: scene, (check) async {
         _auditCheck = () => check(keyboard: keyboard);
         try {
           await body(tester);

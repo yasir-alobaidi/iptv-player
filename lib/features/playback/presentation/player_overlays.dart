@@ -14,27 +14,77 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
 
-/// The top of the OSD (canvas `Full-screen player`): logo, number, name,
-/// LIVE, the resolution, and the clock.
+/// The scrim behind one edge of the OSD, fading into the picture. It
+/// takes no clicks: one on it is a click on the picture.
+class OsdShade extends StatelessWidget {
+  const new({required this.top, required this.child, super.key});
+
+  /// At the top of the picture; false at its bottom.
+  final bool top;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.tokens.colors;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: top ? Alignment.topCenter : Alignment.bottomCenter,
+                  end: top ? Alignment.bottomCenter : Alignment.topCenter,
+                  colors: [
+                    colors.osdShade,
+                    colors.osdShadeMid,
+                    colors.osdShade.withValues(alpha: 0),
+                  ],
+                  stops: const [0, 0.55, 1],
+                ),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+/// Back, at the top left of every face of the player (ADR-017): out of
+/// the player, as Esc.
+class OsdBack extends StatelessWidget {
+  const new({required this.onPressed, super.key});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => OsdButton(
+    icon: AppIcons.arrowLeft,
+    tooltip: 'Back',
+    shortcut: 'Esc',
+    onPressed: onPressed,
+  );
+}
+
+/// The top of the OSD (canvas `Full-screen player`; ADR-017): Back, the
+/// logo, number, name, LIVE, the resolution, and the clock.
 class OsdTop extends ConsumerWidget {
-  const new({required this.channel, super.key});
+  const new({required this.channel, required this.onBack, super.key});
 
   final ChannelItem channel;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final player = tokens.player;
     final size = ref.watch(videoSizeProvider).value;
     final now = ref.watch(appClockProvider)();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [colors.scrim, colors.scrim.withValues(alpha: 0)],
-        ),
-      ),
+    return OsdShade(
+      top: true,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s32,
@@ -44,10 +94,16 @@ class OsdTop extends ConsumerWidget {
         ),
         child: Row(
           children: [
+            OsdBack(onPressed: onBack),
+            SizedBox(width: tokens.spacing.s16),
             ChannelLogo(
               name: channel.name,
-              size: 48,
-              image: artworkFor(context, channel.logoUrl, width: 48),
+              size: player.logoSize,
+              image: artworkFor(
+                context,
+                channel.logoUrl,
+                width: player.logoSize,
+              ),
             ),
             SizedBox(width: tokens.spacing.s16),
             Expanded(
@@ -79,7 +135,7 @@ class OsdTop extends ConsumerWidget {
             SizedBox(width: tokens.spacing.s16),
             Text(
               formatClock(now, tokens.timeStyle),
-              style: tokens.text.h3.copyWith(color: colors.textPrimary),
+              style: tokens.text.h2.copyWith(color: colors.textPrimary),
             ),
           ],
         ),
@@ -88,29 +144,33 @@ class OsdTop extends ConsumerWidget {
   }
 }
 
-/// The bottom of the OSD: what's on now and next, and the controls.
+/// The bottom of the OSD: what's on now and next, and the controls —
+/// [leading] from the left (the channels and the volume), [trailing] at
+/// the right.
 class OsdBottom extends ConsumerWidget {
-  const new({required this.channel, required this.controls, super.key});
+  const new({
+    required this.channel,
+    required this.leading,
+    required this.trailing,
+    super.key,
+  });
 
   final ChannelItem channel;
-  final List<Widget> controls;
+  final List<Widget> leading;
+  final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final player = tokens.player;
     final guide = ref.watch(nowNextProvider(channel)).value;
     final now = ref.watch(appClockProvider)();
     final current = guide?.now;
     final next = guide?.next;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [colors.scrim, colors.scrim.withValues(alpha: 0)],
-        ),
-      ),
+    final time = tokens.text.body.copyWith(color: colors.textEmphasis);
+    return OsdShade(
+      top: false,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s32,
@@ -127,8 +187,9 @@ class OsdBottom extends ConsumerWidget {
                   (next == null
                       ? 'No guide information'
                       : 'Nothing on right now'),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: tokens.text.h1.copyWith(
+              style: tokens.text.hero.copyWith(
                 color: current == null
                     ? colors.textSecondary
                     : colors.textPrimary,
@@ -140,55 +201,49 @@ class OsdBottom extends ConsumerWidget {
                 children: [
                   Text(
                     formatClock(current.start, tokens.timeStyle),
-                    style: tokens.text.caption.copyWith(
-                      color: colors.textSecondary,
+                    style: time,
+                  ),
+                  SizedBox(width: tokens.spacing.s16),
+                  Expanded(
+                    child: ProgressBar(
+                      value: current.progressAt(now),
+                      height: player.timelineHeight,
+                      trackColor: colors.textPrimary.withValues(
+                        alpha: player.tileOpacity * 2,
+                      ),
                     ),
                   ),
-                  SizedBox(width: tokens.spacing.s12),
-                  Expanded(child: ProgressBar(value: current.progressAt(now))),
-                  SizedBox(width: tokens.spacing.s12),
-                  Text(
-                    formatClock(current.end, tokens.timeStyle),
-                    style: tokens.text.caption.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
+                  SizedBox(width: tokens.spacing.s16),
+                  Text(formatClock(current.end, tokens.timeStyle), style: time),
                 ],
               ),
             ],
-            SizedBox(height: tokens.spacing.s12),
-            Row(
-              children: [
-                if (next != null)
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'NEXT  ',
-                            style: tokens.text.micro
-                                .withWeight(800)
-                                .copyWith(color: colors.textTertiary),
-                          ),
-                          TextSpan(
-                            text: [
-                              formatClock(next.start, tokens.timeStyle),
-                              next.title,
-                            ].join(' · '),
-                          ),
-                        ],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.text.label.copyWith(
-                        color: colors.textEmphasis,
+            if (next != null) ...[
+              SizedBox(height: tokens.spacing.s8),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'NEXT  ',
+                      style: tokens.text.overline.copyWith(
+                        color: colors.textSecondary,
                       ),
                     ),
-                  )
-                else
-                  const Spacer(),
-                ...controls,
-              ],
-            ),
+                    TextSpan(
+                      text: [
+                        formatClock(next.start, tokens.timeStyle),
+                        next.title,
+                      ].join(' · '),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.body.copyWith(color: colors.textEmphasis),
+              ),
+            ],
+            SizedBox(height: tokens.spacing.s16),
+            OsdControlRow(leading: leading, trailing: trailing),
           ],
         ),
       ),

@@ -14,6 +14,8 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
 import '../app/app_harness.dart';
 import '../features/live_tv/live_tv_fakes.dart';
+import '../features/playback/support/vod_player_rig.dart';
+import '../features/vod/vod_fakes.dart';
 import 'golden_harness.dart';
 
 /// The player has the focus as a whole and no Tab stops: its keys are its
@@ -85,6 +87,76 @@ void main() {
       await live.rig.coordinator.stop();
       await _settle(tester);
     });
+
+    /// A movie or an episode in the player: its own face (ADR-017).
+    Future<VodPlayerRig> play(
+      WidgetTester tester,
+      String location, {
+      required Duration length,
+      required Duration at,
+      Size size = const Size(1280, 800),
+    }) async {
+      hideDebugBanner();
+      final t = VodPlayerRig();
+      t.vod.fakes.now = goldenNow();
+      await t.open(tester, location, size: size);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await settle(tester);
+      await t.firstFrame(tester, length: length);
+      t.rig.engine
+        ..emit(const PlayerVideoChanged(width: 3840, height: 2160))
+        ..emit(
+          const PlayerTracks(
+            audio: [
+              MediaTrack(id: '1', language: 'eng', channels: '5.1'),
+              MediaTrack(id: '2', language: 'fra', channels: 'stereo'),
+            ],
+            subtitles: [MediaTrack(id: '3', language: 'eng')],
+            audioId: '1',
+            subtitleId: '3',
+          ),
+        )
+        ..progress(at, buffered: const Duration(minutes: 2));
+      await settle(tester);
+      return t;
+    }
+
+    sceneTest('a movie, paused', allow: _playerIsOneStop, (tester) async {
+      final t = await play(
+        tester,
+        '/movies/src-1/501',
+        length: vodPlayerHour,
+        at: const Duration(minutes: 24, seconds: 10),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await settle(tester);
+
+      await golden(tester, 'images/player_movie_paused.png');
+      await t.finish(tester);
+    });
+
+    sceneTest(
+      'an episode in a large window, the keyboard on Subtitles',
+      audit: false,
+      (tester) async {
+        final t = await play(
+          tester,
+          '/series/src-1/77',
+          length: const Duration(minutes: 45),
+          at: const Duration(minutes: 12, seconds: 40),
+          size: const Size(1920, 1080),
+        );
+        for (var i = 0; i < 8; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        await settle(tester);
+        await settle(tester);
+
+        await golden(tester, 'images/player_episode_1920x1080.png');
+        await t.finish(tester);
+      },
+    );
   }, skip: goldenSkipReason);
 }
 

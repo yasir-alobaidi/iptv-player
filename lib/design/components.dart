@@ -34,6 +34,7 @@ export 'package:iptv_player/design/components/empty_state.dart';
 export 'package:iptv_player/design/components/error_state.dart';
 export 'package:iptv_player/design/components/horizontal_rail.dart';
 export 'package:iptv_player/design/components/kbd.dart';
+export 'package:iptv_player/design/components/osd_controls.dart';
 export 'package:iptv_player/design/components/poster_card.dart';
 export 'package:iptv_player/design/components/progress_bar.dart';
 export 'package:iptv_player/design/components/quality_badge.dart';

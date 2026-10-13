@@ -1154,6 +1154,9 @@ final class _ReadingEngine implements PlayerEngine {
   Future<void> setMuted({required bool muted}) => _fake.setMuted(muted: muted);
 
   @override
+  Future<void> setSpeed(double speed) => _fake.setSpeed(speed);
+
+  @override
   Future<void> selectAudio(String? id) => _fake.selectAudio(id);
 
   @override

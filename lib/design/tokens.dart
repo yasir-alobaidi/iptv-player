@@ -132,6 +132,12 @@ class AppColors {
   /// Overlay over video (docs/05: black at 60 %).
   Color get scrim => const Color(0xFF000000).withValues(alpha: 0.6);
 
+  /// The OSD's shade at the picture's edge, fading to nothing (docs/05:
+  /// black, 0 → 85 %), and where it is part-way there (the canvas keeps
+  /// it strong under the programme's title).
+  Color get osdShade => const Color(0xFF000000).withValues(alpha: 0.85);
+  Color get osdShadeMid => const Color(0xFF000000).withValues(alpha: 0.55);
+
   /// Behind and around the picture (letterbox).
   Color get video => const Color(0xFF000000);
 
@@ -296,6 +302,9 @@ class AppTypography {
 
   /// 11/14 — keycaps.
   TextStyle get monoMicro => _font(AppFonts.mono, 11, 14, 500);
+
+  /// 15/22 — the player's elapsed and remaining time (ADR-017).
+  TextStyle get timecode => _font(AppFonts.mono, 15, 22, 500);
 
   /// 40/48 — what plays on the TV (canvas `Casting`).
   TextStyle get castTitle =>
@@ -553,6 +562,75 @@ class AppCastTokens {
   double get barLogo => 40;
 }
 
+/// The full-screen player's measures (ADR-017): its controls are larger
+/// than the canvas draws them and grow with the window, so they read from
+/// across a room.
+@immutable
+class AppPlayerTokens {
+  const new();
+
+  /// The window the measures below are drawn for. A larger window scales
+  /// the whole OSD up ([scaleFor]); a smaller one keeps these sizes.
+  Size get designSize => const Size(1280, 800);
+  double get maxScale => 2;
+
+  /// How much larger than drawn the OSD is in a [window] of this size.
+  double scaleFor(Size window) {
+    final design = designSize;
+    final fit = window.width / design.width < window.height / design.height
+        ? window.width / design.width
+        : window.height / design.height;
+    return fit.clamp(1, maxScale).toDouble();
+  }
+
+  /// A control's tile and its icon; Play / Pause is a size up.
+  double get controlSize => 56;
+  double get iconSize => 28;
+  double get primarySize => 64;
+  double get primaryIconSize => 32;
+
+  /// Between two controls, and between two groups of them.
+  double get controlGap => 8;
+  double get groupGap => 20;
+
+  /// A control's tile over the picture: [AppColors.textPrimary] at these
+  /// strengths, at rest and under the pointer or the focus.
+  double get tileOpacity => 0.1;
+  double get tileActiveOpacity => 0.22;
+
+  /// The volume slider beside its button.
+  double get volumeWidth => 132;
+
+  /// The row of controls' width from which those that have a state say
+  /// it in words ("Subtitles: Off"); narrower, they are icons with
+  /// tooltips. A 1280 px window's row is 1216 px.
+  double get labelsFrom => 1200;
+
+  /// The channel's logo in the top bar, and the programme's time line.
+  double get logoSize => 56;
+  double get timelineHeight => 6;
+
+  /// The seek bar: its track, its thumb, and the thumb's halo.
+  double get seekTrackHeight => 6;
+  double get seekThumbRadius => 9;
+  double get seekHaloRadius => 18;
+
+  /// The spinner while a stream opens, and the failure card's widest:
+  /// in full screen, and in the preview pane.
+  double get spinnerSize => 48;
+  double get spinnerStroke => 4;
+  double get previewSpinnerSize => 28;
+  double get previewSpinnerStroke => 3;
+  double get cardWidth => 600;
+  double get previewCardWidth => 420;
+  double get previewCardIconSize => 20;
+
+  /// Play, in the middle of a paused picture.
+  double get centerPlaySize => 104;
+  double get centerPlayIconSize => 52;
+  double get centerPlayOpacity => 0.55;
+}
+
 /// The Library's measures (canvas `Library`, `Library · Downloads`,
 /// `Settings · Downloads and library`).
 @immutable
@@ -630,6 +708,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.search = const AppSearchTokens(),
     this.cast = const AppCastTokens(),
     this.library = const AppLibraryTokens(),
+    this.player = const AppPlayerTokens(),
     this.timeStyle = TimeStyle.h12,
   });
 
@@ -661,6 +740,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppSearchTokens search;
   final AppCastTokens cast;
   final AppLibraryTokens library;
+  final AppPlayerTokens player;
 
   /// How a time of day is written (Settings → Appearance → Clock). Not a
   /// measure, but it changes with the user's choice as the accent does,
@@ -682,6 +762,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppSearchTokens? search,
     AppCastTokens? cast,
     AppLibraryTokens? library,
+    AppPlayerTokens? player,
     TimeStyle? timeStyle,
   }) => AppTokens(
     colors: colors ?? this.colors,
@@ -697,6 +778,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     search: search ?? this.search,
     cast: cast ?? this.cast,
     library: library ?? this.library,
+    player: player ?? this.player,
     timeStyle: timeStyle ?? this.timeStyle,
   );
 

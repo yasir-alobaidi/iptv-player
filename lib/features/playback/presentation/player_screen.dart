@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,8 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
+import 'package:iptv_player/core/settings/ui_preferences.dart';
+import 'package:iptv_player/core/text/languages.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
@@ -21,26 +24,31 @@ import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
+import 'package:iptv_player/features/playback/presentation/player_sound.dart';
 import 'package:iptv_player/features/playback/presentation/player_surface.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
 import 'package:iptv_player/features/playback/presentation/vod_player_controller.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 
-/// The full-screen player (canvas `Full-screen player`, docs/05 §4): the
-/// picture edge to edge, an OSD that hides after [osdTimeout] without
-/// input (the cursor with it), and the keyboard: ↑↓ and PageUp/PageDown
-/// zap (a banner at once, the stream after [zapDebounce]), digits enter a
-/// number (committed after [numberTimeout] or Enter), Backspace goes to
-/// the last channel, ← opens the channel panel, M mutes, A and S cycle
+/// The full-screen player (canvas `Full-screen player`, docs/05 §4; its
+/// controls as ADR-017 has them): the picture edge to edge, an OSD that
+/// hides after [osdTimeout] without input (the cursor with it), and the
+/// keyboard: ↑↓ and PageUp/PageDown zap (a banner at once, the stream
+/// after [zapDebounce]), digits enter a number (committed after
+/// [numberTimeout] or Enter), Backspace goes to the last channel, ← opens
+/// the channel panel, + and − turn the volume, M mutes, A and S cycle
 /// audio and subtitles, I shows the stream info, F or a double-click
-/// toggles the window's full screen, Esc goes back.
+/// toggles the window's full screen, Esc goes back. Every key has a
+/// control on the OSD, large enough to read from across a room, and the
+/// OSD is drawn larger in a larger window.
 ///
 /// A movie or an episode (Phase 5 step 6) has its own face and keys:
-/// Space plays and pauses, ←/→ seek 10 s and Shift+←/→ 60 s (the bar at
-/// once, the seek when the keys rest), Home starts over, and Esc saves,
-/// stops and goes back; ↑/↓ and the digits do nothing. Leaving the player
-/// any way at all stops the file.
+/// Space or a click on the picture plays and pauses, ←/→ seek 10 s and
+/// Shift+←/→ 60 s (the bar at once, the seek when the keys rest), ↑/↓
+/// turn the volume, Home starts over, and Esc saves, stops and goes back;
+/// the digits do nothing. Leaving the player any way at all stops the
+/// file.
 class PlayerScreen extends ConsumerStatefulWidget {
   const new({this.zapQuery, super.key});
 
@@ -49,6 +57,13 @@ class PlayerScreen extends ConsumerStatefulWidget {
   final ChannelQuery? zapQuery;
 
   static const osdTimeout = Duration(seconds: 3);
+
+  /// While the keyboard is on one of the OSD's controls: time to read
+  /// what the next one is.
+  static const osdFocusTimeout = Duration(seconds: 6);
+
+  /// What Speed offers a file.
+  static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   static const zapDebounce = Duration(milliseconds: 350);
   static const numberTimeout = Duration(milliseconds: 1500);
   static const bannerTime = Duration(seconds: 3);
@@ -73,9 +88,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   bool _panel = false;
   bool _info = false;
-  bool _muted = false;
+
+  /// The window is in full screen (the player opens it so; F leaves it).
+  bool _fullScreen = false;
+  AspectMode _aspect = AspectMode.fit;
+
+  /// How fast a file plays, for as long as the player is open: the next
+  /// episode keeps it.
+  double _speed = 1;
 
   WindowControls? _window;
+  late final PlayerEngine _engine;
   late final PlaybackCoordinator _coordinator;
   late final VodPlayerController _vod;
 
@@ -91,6 +114,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void initState() {
     super.initState();
     _window = ref.read(windowControlsProvider);
+    _engine = ref.read(playerEngineProvider);
     _coordinator = ref.read(playbackCoordinatorProvider);
     _vod = VodPlayerController(
       coordinator: _coordinator,
@@ -112,9 +136,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (_coordinator.casting) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handOffToCast());
     } else {
+      _fullScreen = true;
       unawaited(_window!.setFullScreen(on: true));
     }
+    // The keyboard moving onto a control restarts the OSD's clock with
+    // the longer wait (the Tab that moved it was heard before it moved).
+    _focus.addListener(_onFocusMoved);
     _showOsd();
+  }
+
+  void _onFocusMoved() {
+    if (mounted && _osd) _showOsd();
   }
 
   bool _handedOff = false;
@@ -138,8 +170,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _vod
       ..removeListener(_onVod)
       ..dispose();
-    _focus.dispose();
+    _focus
+      ..removeListener(_onFocusMoved)
+      ..dispose();
     unawaited(_window?.setFullScreen(on: false));
+    // The preview and the next thing played are at the recorded speed
+    // and shape again.
+    if (_speed != 1) unawaited(_engine.setSpeed(1));
+    if (_aspect != AspectMode.fit) unawaited(_engine.setAspect(AspectMode.fit));
     // A file plays only here: whichever way the player was left, it stops
     // (and saves where it was). Live carries on in the preview.
     if (_coordinator.item case final item? when !item.live) {
@@ -205,9 +243,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void _showOsd() {
     _osdTimer?.cancel();
     if (!_osd) setState(() => _osd = true);
-    _osdTimer = Timer(PlayerScreen.osdTimeout, () {
-      if (mounted && !_panel && !_pinned) setState(() => _osd = false);
-    });
+    // The keyboard on a control: the OSD stays long enough to read it.
+    final onControl = _focus.hasFocus && !_focus.hasPrimaryFocus;
+    _osdTimer = Timer(
+      onControl ? PlayerScreen.osdFocusTimeout : PlayerScreen.osdTimeout,
+      () {
+        if (!mounted || _panel || _pinned) return;
+        setState(() => _osd = false);
+        // A control nobody can see must not be the one Enter presses.
+        if (_focus.hasFocus && !_focus.hasPrimaryFocus) _focus.requestFocus();
+      },
+    );
   }
 
   void _play(ChannelItem channel) {
@@ -307,15 +353,36 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
   }
 
-  Future<void> _toggleMute() async {
-    setState(() => _muted = !_muted);
-    await ref.read(playerEngineProvider).setMuted(muted: _muted);
-  }
+  PlayerSoundController get _sound =>
+      ref.read(playerSoundControllerProvider.notifier);
 
   Future<void> _toggleWindowFullScreen() async {
     final window = ref.read(windowControlsProvider);
-    await window.setFullScreen(on: !await window.isFullScreen());
+    final on = !await window.isFullScreen();
+    await window.setFullScreen(on: on);
+    if (mounted) setState(() => _fullScreen = on);
   }
+
+  Future<void> _toggleFavorite(ChannelItem channel) => ref
+      .read(channelRepositoryProvider)
+      .setFavorite(channel, on: !channel.isFavorite);
+
+  void _setSpeed(double speed) {
+    setState(() => _speed = speed);
+    unawaited(_engine.setSpeed(speed));
+  }
+
+  void _openPanel() => setState(() => _panel = true);
+
+  /// + and − (and the number pad's) turn the volume in every face of the
+  /// player.
+  static int? _volumeStep(LogicalKeyboardKey key) => switch (key) {
+    LogicalKeyboardKey.equal ||
+    LogicalKeyboardKey.add ||
+    LogicalKeyboardKey.numpadAdd => 1,
+    LogicalKeyboardKey.minus || LogicalKeyboardKey.numpadSubtract => -1,
+    _ => null,
+  };
 
   void _exit() {
     final router = GoRouter.of(context);
@@ -352,6 +419,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         keyboard.isAltPressed ||
         keyboard.isMetaPressed) {
       return KeyEventResult.ignored;
+    }
+    if (_volumeStep(event.logicalKey) case final step?) {
+      _sound.nudge(step);
+      return KeyEventResult.handled;
     }
     if (_isVod) return _onVodKey(event);
     final key = event.logicalKey;
@@ -408,11 +479,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       case LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.pageDown:
         unawaited(_zap(1));
       case LogicalKeyboardKey.arrowLeft:
-        setState(() => _panel = true);
+        _openPanel();
       case LogicalKeyboardKey.backspace:
         unawaited(_lastChannel());
       case LogicalKeyboardKey.keyM:
-        unawaited(_toggleMute());
+        _sound.toggleMute();
       case LogicalKeyboardKey.keyA:
         unawaited(_cycleAudio());
       case LogicalKeyboardKey.keyS:
@@ -439,6 +510,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _vod.nudge(-(shift ? bigStep : step));
       case LogicalKeyboardKey.arrowRight:
         _vod.nudge(shift ? bigStep : step);
+      case LogicalKeyboardKey.arrowUp:
+        _sound.nudge(1);
+      case LogicalKeyboardKey.arrowDown:
+        _sound.nudge(-1);
       case _ when repeat:
         break;
       case LogicalKeyboardKey.escape:
@@ -454,7 +529,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       case LogicalKeyboardKey.home:
         _vod.startOver();
       case LogicalKeyboardKey.keyM:
-        unawaited(_toggleMute());
+        _sound.toggleMute();
       case LogicalKeyboardKey.keyA:
         unawaited(_cycleAudio());
       case LogicalKeyboardKey.keyS:
@@ -463,9 +538,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         setState(() => _info = !_info);
       case LogicalKeyboardKey.keyF:
         unawaited(_toggleWindowFullScreen());
-      case LogicalKeyboardKey.arrowUp ||
-          LogicalKeyboardKey.arrowDown ||
-          LogicalKeyboardKey.pageUp ||
+      case LogicalKeyboardKey.pageUp ||
           LogicalKeyboardKey.pageDown ||
           LogicalKeyboardKey.backspace:
         // Live's zapping keys; nothing to zap through here.
@@ -509,15 +582,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return j >= 0 ? j : null;
   }
 
+  /// A track as its menu names it: "English · Commentary · ac3 · 5.1".
+  static String _trackLine(MediaTrack t) => [
+    _trackName(t),
+    if (t.title != null && t.language != null) t.title!,
+    ?t.codec,
+    ?t.channels,
+  ].join(' · ');
+
+  /// A track in a word or two: its language, else its title.
+  static String _trackName(MediaTrack t) => switch (t.language) {
+    final code? when code.isNotEmpty && code != 'und' => languageName(code),
+    _ => t.title ?? 'Track ${t.id}',
+  };
+
   Future<void> _trackMenu(BuildContext anchor, {required bool audio}) {
     final tracks = ref.read(playerTracksProvider).value;
-    final engine = ref.read(playerEngineProvider);
-    String label(MediaTrack t) => [
-      t.title ?? t.language ?? 'Track ${t.id}',
-      if (t.title != null && t.language != null) t.language!,
-      ?t.codec,
-      ?t.channels,
-    ].join(' · ');
     return showAppMenu(
       anchor,
       width: 280,
@@ -525,9 +605,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           ? [
               for (final t in tracks?.audio ?? const <MediaTrack>[])
                 AppMenuItem(
-                  label: label(t),
+                  label: _trackLine(t),
                   checked: t.id == tracks?.audioId,
-                  onPressed: () => unawaited(engine.selectAudio(t.id)),
+                  onPressed: () => unawaited(_engine.selectAudio(t.id)),
                 ),
               if ((tracks?.audio ?? const []).isEmpty)
                 const AppMenuItem(label: 'No audio tracks'),
@@ -536,89 +616,173 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               AppMenuItem(
                 label: 'Off',
                 checked: tracks?.subtitleId == null,
-                onPressed: () => unawaited(engine.selectSubtitle(null)),
+                onPressed: () => unawaited(_engine.selectSubtitle(null)),
               ),
               for (final t in tracks?.subtitles ?? const <MediaTrack>[])
                 AppMenuItem(
-                  label: label(t),
+                  label: _trackLine(t),
                   checked: t.id == tracks?.subtitleId,
-                  onPressed: () => unawaited(engine.selectSubtitle(t.id)),
+                  onPressed: () => unawaited(_engine.selectSubtitle(t.id)),
                 ),
             ],
     );
   }
 
-  Future<void> _aspectMenu(BuildContext anchor) {
-    final engine = ref.read(playerEngineProvider);
-    return showAppMenu(
-      anchor,
-      items: [
-        for (final (mode, name) in const [
-          (AspectMode.fit, 'Fit'),
-          (AspectMode.fill, 'Fill (crop)'),
-          (AspectMode.stretch, 'Stretch'),
-          (AspectMode.ratio16x9, '16:9'),
-          (AspectMode.ratio4x3, '4:3'),
-        ])
-          AppMenuItem(
-            label: name,
-            onPressed: () => unawaited(engine.setAspect(mode)),
+  static const List<(AspectMode, String)> _aspects = [
+    (AspectMode.fit, 'Fit'),
+    (AspectMode.fill, 'Fill (crop)'),
+    (AspectMode.stretch, 'Stretch'),
+    (AspectMode.ratio16x9, '16:9'),
+    (AspectMode.ratio4x3, '4:3'),
+  ];
+
+  Future<void> _aspectMenu(BuildContext anchor) => showAppMenu(
+    anchor,
+    items: [
+      for (final (mode, name) in _aspects)
+        AppMenuItem(
+          label: name,
+          checked: mode == _aspect,
+          onPressed: () {
+            setState(() => _aspect = mode);
+            unawaited(_engine.setAspect(mode));
+          },
+        ),
+    ],
+  );
+
+  /// "1×", "1.25×".
+  static String _speedLabel(double speed) =>
+      '${speed == speed.roundToDouble() ? speed.round() : speed}×';
+
+  Future<void> _speedMenu(BuildContext anchor) => showAppMenu(
+    anchor,
+    items: [
+      for (final speed in PlayerScreen.speeds)
+        AppMenuItem(
+          label: speed == 1 ? '1× · Normal' : _speedLabel(speed),
+          checked: speed == _speed,
+          onPressed: () => _setSpeed(speed),
+        ),
+    ],
+  );
+
+  /// The volume: Mute and the level, after what is used most.
+  Widget _volume(PlayerSound sound) => Padding(
+    padding: EdgeInsets.only(left: context.tokens.spacing.s12),
+    child: OsdVolume(
+      volume: sound.volume,
+      muted: sound.muted,
+      shortcut: 'M',
+      onToggleMute: _sound.toggleMute,
+      onChanged: (volume) {
+        _showOsd();
+        _sound.setVolume(volume);
+      },
+    ),
+  );
+
+  /// The OSD's right-hand controls, live or not: what is heard and read,
+  /// then the picture, then where it plays.
+  List<Widget> _controls(PlayerTracks? tracks, {required bool vod}) {
+    final audio = tracks?.audio
+        .where((t) => t.id == tracks.audioId)
+        .firstOrNull;
+    final subtitle = tracks?.subtitles
+        .where((t) => t.id == tracks.subtitleId)
+        .firstOrNull;
+    return [
+      Builder(
+        builder: (anchor) => OsdButton(
+          icon: AppIcons.audio,
+          tooltip: 'Audio',
+          label: audio == null ? 'Audio' : 'Audio: ${_trackName(audio)}',
+          shortcut: 'A',
+          onPressed: () => unawaited(_trackMenu(anchor, audio: true)),
+        ),
+      ),
+      Builder(
+        builder: (anchor) => OsdButton(
+          icon: AppIcons.subtitles,
+          tooltip: 'Subtitles',
+          label: subtitle == null
+              ? 'Subtitles: Off'
+              : 'Subtitles: ${_trackName(subtitle)}',
+          shortcut: 'S',
+          selected: subtitle != null,
+          onPressed: () => unawaited(_trackMenu(anchor, audio: false)),
+        ),
+      ),
+      if (vod)
+        Builder(
+          builder: (anchor) => OsdButton(
+            text: _speedLabel(_speed),
+            tooltip: 'Speed',
+            selected: _speed != 1,
+            onPressed: () => unawaited(_speedMenu(anchor)),
           ),
-      ],
-    );
+        ),
+      Builder(
+        builder: (anchor) => OsdButton(
+          icon: AppIcons.aspectRatio,
+          tooltip:
+              'Picture size: '
+              '${_aspects.firstWhere((a) => a.$1 == _aspect).$2}',
+          selected: _aspect != AspectMode.fit,
+          onPressed: () => unawaited(_aspectMenu(anchor)),
+        ),
+      ),
+      OsdButton(
+        icon: AppIcons.info,
+        tooltip: 'Stream info',
+        shortcut: 'I',
+        selected: _info,
+        onPressed: () => setState(() => _info = !_info),
+      ),
+      OsdButton(
+        icon: AppIcons.cast,
+        tooltip: 'Cast',
+        shortcut: 'C',
+        onPressed: () => unawaited(castFrom(context)),
+      ),
+      OsdButton(
+        icon: _fullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
+        tooltip: _fullScreen ? 'Exit full screen' : 'Full screen',
+        shortcut: 'F',
+        onPressed: () => unawaited(_toggleWindowFullScreen()),
+      ),
+    ];
   }
 
-  /// The OSD's right-hand controls, live or not.
-  List<Widget> _controls(PlayerTracks? tracks) => [
-    Builder(
-      builder: (anchor) => AppIconButton(
-        icon: AppIcons.audio,
-        tooltip: 'Audio',
-        shortcut: 'A',
-        onPressed: () => unawaited(_trackMenu(anchor, audio: true)),
-      ),
+  /// A channel's own controls, from the left: the list, the channel
+  /// before and after, the one watched last, then the volume.
+  List<Widget> _channelControls(PlayerSound sound) => [
+    OsdButton(
+      icon: AppIcons.channelList,
+      tooltip: 'Channels',
+      shortcut: '←',
+      selected: _panel,
+      onPressed: _openPanel,
     ),
-    Builder(
-      builder: (anchor) => AppIconButton(
-        icon: AppIcons.subtitles,
-        tooltip: 'Subtitles',
-        shortcut: 'S',
-        selected: tracks?.subtitleId != null,
-        onPressed: () => unawaited(_trackMenu(anchor, audio: false)),
-      ),
+    OsdButton(
+      icon: AppIcons.chevronUp,
+      tooltip: 'Previous channel',
+      shortcut: '↑',
+      onPressed: () => unawaited(_zap(-1)),
     ),
-    Builder(
-      builder: (anchor) => AppIconButton(
-        icon: AppIcons.aspectRatio,
-        tooltip: 'Aspect',
-        onPressed: () => unawaited(_aspectMenu(anchor)),
-      ),
+    OsdButton(
+      icon: AppIcons.chevronDown,
+      tooltip: 'Next channel',
+      shortcut: '↓',
+      onPressed: () => unawaited(_zap(1)),
     ),
-    AppIconButton(
-      icon: _muted ? AppIcons.volumeOff : AppIcons.volumeHigh,
-      tooltip: _muted ? 'Unmute' : 'Mute',
-      shortcut: 'M',
-      onPressed: () => unawaited(_toggleMute()),
+    OsdButton(
+      icon: AppIcons.lastChannel,
+      tooltip: 'Last channel',
+      shortcut: 'Backspace',
+      onPressed: () => unawaited(_lastChannel()),
     ),
-    AppIconButton(
-      icon: AppIcons.info,
-      tooltip: 'Stream info',
-      shortcut: 'I',
-      selected: _info,
-      onPressed: () => setState(() => _info = !_info),
-    ),
-    AppIconButton(
-      icon: AppIcons.cast,
-      tooltip: 'Cast',
-      shortcut: 'C',
-      onPressed: () => unawaited(castFrom(context)),
-    ),
-    AppIconButton(
-      icon: AppIcons.exitFullscreen,
-      tooltip: 'Exit full screen',
-      shortcut: 'Esc',
-      onPressed: _exit,
-    ),
+    _volume(sound),
   ];
 
   @override
@@ -626,9 +790,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final tokens = context.tokens;
     final state = ref.watch(playbackStateProvider).value;
     final item = state?.item;
-    final channel = state?.channel;
+    final playing = state?.channel;
+    // The row may be stale (a favorite toggled since): read it fresh.
+    final channel = playing == null
+        ? null
+        : ref.watch(freshChannelProvider(playing)).value ?? playing;
     final vod = item != null && !item.live;
     final tracks = ref.watch(playerTracksProvider).value;
+    final sound = ref.watch(playerSoundControllerProvider);
     final showOsd = _osd || _panel || _pinned || state is PlaybackFailed;
 
     Widget osd(Widget child) => AnimatedOpacity(
@@ -648,16 +817,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         child: MouseRegion(
           cursor: showOsd ? MouseCursor.defer : SystemMouseCursors.none,
           onHover: (_) => _showOsd(),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onDoubleTap: () => unawaited(_toggleWindowFullScreen()),
+          child: Listener(
+            // The wheel over the picture turns the volume.
+            onPointerSignal: (signal) {
+              if (signal is! PointerScrollEvent || _panel) return;
+              _showOsd();
+              _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
+            },
             child: ColoredBox(
               color: tokens.colors.video,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // The picture's clicks are heard under the OSD and
+                  // under the failure card: a control answers at once,
+                  // with no wait for a second click.
                   PlayerSurface(
                     badges: false,
+                    onPictureTap: vod ? _vod.togglePause : _showOsd,
+                    onPictureDoubleTap: () =>
+                        unawaited(_toggleWindowFullScreen()),
                     onNext: !vod
                         ? () => unawaited(_zap(1))
                         : _hasNext
@@ -670,71 +849,102 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       if (mounted) _exit();
                     },
                   ),
-                  if (vod)
-                    osd(
-                      ListenableBuilder(
-                        listenable: _vod,
-                        builder: (context, _) => _vodOsd(item, tracks),
-                      ),
-                    )
-                  else if (channel != null)
-                    osd(
-                      Column(
-                        children: [
-                          OsdTop(channel: channel),
-                          const Spacer(),
-                          OsdBottom(
-                            channel: channel,
-                            controls: _controls(tracks),
+                  OsdScale(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (vod)
+                          osd(
+                            ListenableBuilder(
+                              listenable: _vod,
+                              builder: (context, _) =>
+                                  _vodOsd(item, tracks, sound),
+                            ),
+                          )
+                        else if (channel != null)
+                          osd(
+                            Column(
+                              children: [
+                                OsdTop(channel: channel, onBack: _exit),
+                                const Spacer(),
+                                OsdBottom(
+                                  channel: channel,
+                                  leading: _channelControls(sound),
+                                  trailing: [
+                                    OsdButton(
+                                      icon: channel.isFavorite
+                                          ? AppIcons.starFilled
+                                          : AppIcons.star,
+                                      tooltip: channel.isFavorite
+                                          ? 'Remove from favorites'
+                                          : 'Add to favorites',
+                                      selected: channel.isFavorite,
+                                      onPressed: () =>
+                                          unawaited(_toggleFavorite(channel)),
+                                    ),
+                                    ..._controls(tracks, vod: false),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
+                        if (_banner case final banner? when !_panel)
+                          Positioned(
+                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: ChannelBanner(channel: banner),
+                            ),
+                          ),
+                        if (_digits.isNotEmpty)
+                          Positioned(
+                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                            right: tokens.spacing.s32,
+                            child: NumberEntry(
+                              digits: _digits,
+                              match: _numberMatch,
+                            ),
+                          ),
+                        if (_info)
+                          Positioned(
+                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                            left: tokens.spacing.s32,
+                            child: const StreamInfoOverlay(),
+                          ),
+                        if (_panel)
+                          Positioned(
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
+                            child: CallbackShortcuts(
+                              bindings: {
+                                const SingleActivator(
+                                  LogicalKeyboardKey.arrowRight,
+                                ): _closePanel,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.escape,
+                                ): _closePanel,
+                              },
+                              child: ChannelPanel(
+                                query:
+                                    _query ??
+                                    ChannelQuery(
+                                      sourceId: channel?.sourceId ?? '',
+                                    ),
+                                current: channel,
+                                onPlay: (c) {
+                                  _closePanel();
+                                  _showBanner(c);
+                                  _play(c);
+                                },
+                                onClose: _closePanel,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  if (_banner case final banner? when !_panel)
-                    Positioned(
-                      top: tokens.spacing.s48 * 2,
-                      left: 0,
-                      right: 0,
-                      child: Center(child: ChannelBanner(channel: banner)),
-                    ),
-                  if (_digits.isNotEmpty)
-                    Positioned(
-                      top: tokens.spacing.s48 * 2,
-                      right: tokens.spacing.s32,
-                      child: NumberEntry(digits: _digits, match: _numberMatch),
-                    ),
-                  if (_info)
-                    Positioned(
-                      top: tokens.spacing.s48 * 2,
-                      left: tokens.spacing.s32,
-                      child: const StreamInfoOverlay(),
-                    ),
-                  if (_panel)
-                    Positioned(
-                      top: 0,
-                      bottom: 0,
-                      left: 0,
-                      child: CallbackShortcuts(
-                        bindings: {
-                          const SingleActivator(LogicalKeyboardKey.arrowRight):
-                              _closePanel,
-                          const SingleActivator(LogicalKeyboardKey.escape):
-                              _closePanel,
-                        },
-                        child: ChannelPanel(
-                          query:
-                              _query ??
-                              ChannelQuery(sourceId: channel?.sourceId ?? ''),
-                          current: channel,
-                          onPlay: (c) {
-                            _closePanel();
-                            _showBanner(c);
-                            _play(c);
-                          },
-                          onClose: _closePanel,
-                        ),
-                      ),
-                    ),
+                  ),
                 ],
               ),
             ),
@@ -744,39 +954,51 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     );
   }
 
-  Widget _vodOsd(Playable item, PlayerTracks? tracks) {
+  Widget _vodOsd(Playable item, PlayerTracks? tracks, PlayerSound sound) {
     final tokens = context.tokens;
     final next = _vod.next;
     final countdown = _vod.countdown;
-    return Column(
+    final card = next != null && (countdown != null || _vod.ended);
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        VodOsdTop(item: item),
-        const Spacer(),
-        if (next != null && (countdown != null || _vod.ended))
-          Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: EdgeInsets.only(right: tokens.spacing.s32),
-              child: NextEpisodeCard(
-                key: ValueKey(next.item.remoteKey),
-                next: next,
-                countdown: countdown,
-                onPlay: _vod.playNext,
-                onSecondary: countdown != null
-                    ? _vod.cancelNext
-                    : _backToSeries,
+        // Paused: Play where the eye is. Not while the file still opens,
+        // or under the next-episode card.
+        if (_vod.timeline.paused && !_vod.preparing && !card && !_vod.ended)
+          Center(child: OsdCenterPlay(onPressed: _vod.togglePause)),
+        Column(
+          children: [
+            VodOsdTop(item: item, onBack: _exit),
+            const Spacer(),
+            if (card)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: EdgeInsets.only(right: tokens.spacing.s32),
+                  child: NextEpisodeCard(
+                    key: ValueKey(next.item.remoteKey),
+                    next: next,
+                    countdown: countdown,
+                    onPlay: _vod.playNext,
+                    onSecondary: countdown != null
+                        ? _vod.cancelNext
+                        : _backToSeries,
+                  ),
+                ),
               ),
+            VodOsdBottom(
+              timeline: _vod.timeline,
+              seeking: _vod.pendingSeek != null,
+              resumedFrom: _vod.resumedFrom,
+              preparing: _vod.preparing,
+              onTogglePause: _vod.togglePause,
+              onNudge: _vod.nudge,
+              onDrag: _vod.dragTo,
+              onNext: next == null ? null : _vod.playNext,
+              leading: [_volume(sound)],
+              trailing: _controls(tracks, vod: true),
             ),
-          ),
-        VodOsdBottom(
-          timeline: _vod.timeline,
-          seeking: _vod.pendingSeek != null,
-          resumedFrom: _vod.resumedFrom,
-          preparing: _vod.preparing,
-          onTogglePause: _vod.togglePause,
-          onNudge: _vod.nudge,
-          onDrag: _vod.dragTo,
-          controls: _controls(tracks),
+          ],
         ),
       ],
     );

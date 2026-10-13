@@ -1,165 +1,27 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
-import 'package:iptv_player/core/platform/file_reveal.dart';
-import 'package:iptv_player/core/platform/window_controls.dart';
-import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
-import 'package:iptv_player/data/db/app_database.dart';
-import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/design/components.dart';
-import 'package:iptv_player/features/library/data/db_library_repository.dart'
-    show libraryItemFromRow;
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
-import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
+import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
-import 'package:iptv_player/features/vod/data/db_watch_progress.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 import '../../app/app_harness.dart';
-import '../live_tv/live_tv_fakes.dart';
 import '../vod/vod_fakes.dart';
-import 'support/playback_fakes.dart';
+import 'support/vod_player_rig.dart';
 
-const _movie = XtreamMovieInfo(
-  plot: 'A storm strands a ferry in a small fishing town.',
-  runtimeMinutes: 60,
-);
+typedef _Vod = VodPlayerRig;
 
-const _series = XtreamSeriesInfo(
-  plot: 'A harbor inspector follows the tide logs.',
-  episodes: [
-    XtreamEpisode(
-      id: '7101',
-      season: 1,
-      episode: 1,
-      title: 'Low Water',
-      durationSeconds: 2700,
-    ),
-    XtreamEpisode(
-      id: '7102',
-      season: 1,
-      episode: 2,
-      title: 'Ledger',
-      durationSeconds: 2880,
-    ),
-  ],
-);
-
-const _hour = Duration(hours: 1);
-
-/// Show in folder, recorded.
-final class _Reveal implements FileReveal {
-  final shown = <String>[];
-
-  @override
-  Future<bool> showInFolder(String path) async {
-    shown.add(path);
-    return true;
-  }
-}
-
-/// The details pages, the real launcher and the full-screen player, on the
-/// fake engine; where a file was left goes to the real database.
-final class _Vod {
-  new() : vod = VodFakes() {
-    rig = Rig(watchProgress: progress);
-  }
-
-  final VodFakes vod;
-  late final Rig rig;
-  final window = FakeWindow();
-  final reveal = _Reveal();
-  late final progress = DbWatchProgress(vod.db, clock: () => vod.now);
-  late AppUnderTest app;
-
-  List<Override> get overrides => [
-    ...vod.overrides,
-    playerEngineProvider.overrideWithValue(rig.engine),
-    playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
-    windowControlsProvider.overrideWithValue(window),
-    fileRevealProvider.overrideWithValue(reveal),
-  ];
-
-  /// A library item in a folder at /videos: the user's own file, or
-  /// [download] of the provider's movie 501. Written in [open]'s `before`:
-  /// once a page watches the database, a write from `runAsync` waits on
-  /// it for good.
-  Future<LibraryItem> addLibraryItem({bool download = false}) async {
-    final db = vod.db;
-    final folder = await db.libraryDao.addFolder(
-      path: '/videos',
-      label: 'Videos',
-      at: vod.now,
-    );
-    final id = await db.libraryDao.insertItem(
-      LibraryItemsCompanion.insert(
-        folderId: folder,
-        relPath: 'Paper Kites (2019).mkv',
-        sizeBytes: 1,
-        mtime: 0,
-        quickHash: 'hash-kites',
-        kind: LibraryKind.movie,
-        title: 'Paper Kites',
-        addedAt: vod.now,
-        providerSourceId: Value(download ? 'src-1' : null),
-        providerItemType: Value(download ? VodType.movie : null),
-        providerRemoteKey: Value(download ? '501' : null),
-      ),
-    );
-    return libraryItemFromRow(
-      (await db.libraryDao.itemById(id))!,
-      await db.libraryDao.folderById(folder),
-    );
-  }
-
-  Future<void> open(
-    WidgetTester tester,
-    String location, {
-    Future<void> Function()? before,
-  }) async {
-    addTearDown(() => tester.runAsync(vod.db.close));
-    await tester.runAsync(vod.seed);
-    vod.details
-      ..movieAnswer = const Ok(_movie)
-      ..seriesAnswer = const Ok(_series);
-    if (before != null) await tester.runAsync(before);
-    app = await pumpApp(
-      tester,
-      initialLocation: location,
-      overrides: overrides,
-    );
-    await settle(tester);
-  }
-
-  /// The player reports the file's length and its first frame.
-  Future<void> firstFrame(
-    WidgetTester tester, {
-    Duration length = _hour,
-  }) async {
-    rig.engine
-      ..duration(length)
-      ..firstFrame();
-    await settle(tester);
-  }
-
-  /// Stops what plays. The save goes to drift, which only answers while
-  /// the test pumps: started here, finished by [settle].
-  Future<void> finish(WidgetTester tester) async {
-    unawaited(rig.coordinator.stop());
-    await settle(tester);
-    await tester.pump(const Duration(seconds: 6));
-  }
-}
+const Duration _hour = vodPlayerHour;
 
 /// A test with a [_Vod] that is always stopped at the end, pass or fail:
 /// a failed expectation otherwise leaves the watchdog's timers running,
@@ -207,7 +69,13 @@ void main() {
       expect(find.byType(OsdTop), findsNothing);
       expect(find.text('The Quiet Harbor'), findsOneWidget);
       expect(find.text('LIVE'), findsNothing);
-      expect(find.byType(AppSlider), findsOneWidget);
+      // The seek bar, and the volume's beside its button.
+      expect(
+        tester
+            .widgetList<AppSlider>(find.byType(AppSlider))
+            .map((slider) => slider.semanticLabel),
+        ['Position', 'Volume'],
+      );
       expect(find.text('−1:00:00'), findsOneWidget);
       expect(findByLabel('Pause'), findsOneWidget);
     });
@@ -406,6 +274,147 @@ void main() {
       );
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('Next episode'), findsNothing);
+    });
+  });
+
+  group("a file's controls on the OSD (ADR-017)", () {
+    Future<void> play(WidgetTester tester, _Vod t) async {
+      await t.open(tester, '/movies/src-1/501');
+      await _key(tester, LogicalKeyboardKey.enter);
+      await t.firstFrame(tester);
+      t.rig.engine.progress(const Duration(minutes: 5));
+      await settle(tester);
+    }
+
+    _vodTest('a click on the picture pauses, and Play shows in the middle '
+        'of it', (tester, t) async {
+      await play(tester, t);
+      expect(find.byType(OsdCenterPlay), findsNothing);
+
+      await tester.tapAt(tester.getCenter(find.byType(PlayerScreen)));
+      // A click waits to see whether it is the first of two.
+      await tester.pump(const Duration(milliseconds: 350));
+      await settle(tester);
+      expect(t.rig.engine.calls, contains('paused:true'));
+      expect(find.byType(OsdCenterPlay), findsOneWidget);
+
+      await tester.tap(find.byType(OsdCenterPlay));
+      await settle(tester);
+      expect(t.rig.engine.calls.last, 'paused:false');
+      expect(find.byType(OsdCenterPlay), findsNothing);
+    });
+
+    _vodTest('a double click is full screen, not a pause', (tester, t) async {
+      await play(tester, t);
+      final picture = tester.getCenter(find.byType(PlayerScreen));
+
+      await tester.tapAt(picture);
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tapAt(picture);
+      await tester.pump(const Duration(milliseconds: 350));
+      await settle(tester);
+
+      expect(t.window.changes, [true, false]);
+      expect(t.rig.engine.calls, isNot(contains('paused:true')));
+      expect(find.byType(PlayerScreen), findsOneWidget);
+    });
+
+    _vodTest('↑ and ↓ turn the volume', (tester, t) async {
+      await play(tester, t);
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(t.rig.engine.calls.last, 'volume:90.0');
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(t.rig.engine.calls.last, 'volume:95.0');
+      expect(findByLabel('Mute, volume 95%'), findsOneWidget);
+      // No channel to zap to.
+      expect(t.rig.engine.opened, hasLength(1));
+    });
+
+    _vodTest('Back 10 seconds and Forward 10 seconds seek', (tester, t) async {
+      await play(tester, t);
+      List<String> seeks() => [
+        for (final c in t.rig.engine.calls)
+          if (c.startsWith('seek:')) c,
+      ];
+
+      await tester.tap(findByLabel('Forward 10 seconds'));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks(), ['seek:310000']);
+
+      t.rig.engine.progress(const Duration(minutes: 5, seconds: 10));
+      await settle(tester);
+      await tester.tap(findByLabel('Back 10 seconds'));
+      await tester.tap(findByLabel('Back 10 seconds'));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks().last, 'seek:290000');
+    });
+
+    _vodTest('Speed plays the file faster and says so; leaving the player '
+        'puts it back', (tester, t) async {
+      await play(tester, t);
+      expect(find.text('1×'), findsOneWidget);
+
+      await tester.tap(findByLabel('Speed'));
+      await settle(tester);
+      expect(find.text('1× · Normal'), findsOneWidget);
+      await tester.tap(find.text('1.5×'));
+      await settle(tester);
+
+      expect(t.rig.engine.calls, contains('speed:1.5'));
+      expect(find.text('1.5×'), findsOneWidget);
+
+      await _key(tester, LogicalKeyboardKey.escape);
+      expect(t.rig.engine.calls, contains('speed:1.0'));
+    });
+
+    _vodTest('Picture size sets the shape and ticks it; leaving the player '
+        'puts Fit back', (tester, t) async {
+      await play(tester, t);
+
+      await tester.tap(findByLabel('Picture size: Fit'));
+      await settle(tester);
+      await tester.tap(find.text('Fill (crop)'));
+      await settle(tester);
+
+      expect(t.rig.engine.calls, contains('aspect:fill'));
+      expect(findByLabel('Picture size: Fill (crop)'), findsOneWidget);
+
+      await _key(tester, LogicalKeyboardKey.escape);
+      expect(t.rig.engine.calls, contains('aspect:fit'));
+    });
+
+    _vodTest('a movie has no Next episode; Back leaves, saving its place', (
+      tester,
+      t,
+    ) async {
+      await play(tester, t);
+      expect(findByLabel('Next episode'), findsNothing);
+
+      await tester.tap(findByLabel('Back'));
+      await settle(tester);
+
+      expect(t.app.location, '/movies/src-1/501');
+      expect(find.text('Resume from 5:00'), findsOneWidget);
+    });
+
+    _vodTest('an episode with one after it has Next episode', (
+      tester,
+      t,
+    ) async {
+      await t.open(tester, '/series/src-1/77');
+      await _key(tester, LogicalKeyboardKey.enter);
+      await t.firstFrame(tester, length: const Duration(minutes: 45));
+
+      await tester.tap(findByLabel('Next episode'));
+      await settle(tester);
+
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
+      await t.firstFrame(tester, length: const Duration(minutes: 48));
+      expect(find.text('S1 · E2 · Ledger'), findsOneWidget);
+      // The last one of the season: nothing after it.
+      expect(findByLabel('Next episode'), findsNothing);
     });
   });
 
