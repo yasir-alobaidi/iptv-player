@@ -165,18 +165,23 @@ void main() {
   group('library', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      sceneTest('movies $name', audit: size.width == 1280, (tester) async {
-        await open(tester, size: size);
-        // The picture's focus is on the canvas's card; the audit's
-        // smaller window may not have it on screen.
-        final card = find.widgetWithText(PosterCard, 'The Quiet Harbor');
-        if (card.evaluate().isNotEmpty) {
-          tester.widget<PosterCard>(card).focusNode!.requestFocus();
-        }
-        await settle(tester);
+      sceneTest(
+        'movies $name',
+        audit: size.width == 1280,
+        large: size.width == 1280 ? 'images/library_130_1280x800.png' : null,
+        (tester) async {
+          await open(tester, size: size);
+          // The picture's focus is on the canvas's card; the audit's
+          // smaller window may not have it on screen.
+          final card = find.widgetWithText(PosterCard, 'The Quiet Harbor');
+          if (card.evaluate().isNotEmpty) {
+            tester.widget<PosterCard>(card).focusNode!.requestFocus();
+          }
+          await settle(tester);
 
-        await golden(tester, 'images/library_$name.png');
-      });
+          await golden(tester, 'images/library_$name.png');
+        },
+      );
     }
 
     sceneTest('series', (tester) async {
@@ -289,7 +294,9 @@ void main() {
       await golden(tester, 'images/library_first_run.png');
     });
 
-    sceneTest('a movie of the library', (tester) async {
+    sceneTest('a movie of the library', large: 'images/library_movie_130.png', (
+      tester,
+    ) async {
       // Paper Kites is the sixth row written.
       await open(tester, location: '/library/movie/6');
 

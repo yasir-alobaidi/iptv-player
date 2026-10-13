@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/design/appearance.dart';
 
 import '../audit/audit_harness.dart';
 
@@ -45,14 +46,32 @@ DateTime goldenNow() => DateTime(2026, 9, 14, 8);
 /// [audit] false for a second size of the same scene (the audit has its
 /// own windows) and for a golden that is about a look of its own.
 /// [allow] and [keyboard] as on an `AuditScene`.
+///
+/// [large] is a second picture of the scene, at 130 % text in a
+/// 1280 × 800 window (decision 14: the screens with the most text): what
+/// the audit's checks pass may still read badly, and a picture is looked
+/// at.
 void sceneTest(
   String description,
   Future<void> Function(WidgetTester tester) body, {
   bool audit = true,
   Map<String, String> allow = const {},
   bool keyboard = true,
+  String? large,
 }) {
   testWidgets(description, body);
+  if (large != null) {
+    testWidgets('$description — at 130 %', (tester) async {
+      currentAuditLook = _largeLook;
+      _goldenInstead = large;
+      try {
+        await body(tester);
+      } finally {
+        _goldenInstead = null;
+        currentAuditLook = null;
+      }
+    });
+  }
   if (!audit) return;
   // The file the scene is in names its pictures (`AUDIT_SHOTS`): two
   // files may each have a scene called "content".
@@ -76,6 +95,12 @@ void sceneTest(
 
 Future<void> Function()? _auditCheck;
 
+/// The look of a scene's [sceneTest] `large` picture.
+const _largeLook = AuditLook(Size(1280, 800), TextSizeChoice.s130);
+
+/// The picture a scene is compared with while its `large` test runs.
+String? _goldenInstead;
+
 /// The app as drawn now against the picture at [name]; while the audit
 /// runs a scene, the audit's checks of what is drawn.
 Future<void> golden(WidgetTester tester, String name) async {
@@ -84,7 +109,10 @@ Future<void> golden(WidgetTester tester, String name) async {
     await check();
     return;
   }
-  await expectLater(find.byType(MaterialApp), matchesGoldenFile(name));
+  await expectLater(
+    find.byType(MaterialApp),
+    matchesGoldenFile(_goldenInstead ?? name),
+  );
 }
 
 /// Taps [finder] once it is on screen: in the audit's smallest window, at

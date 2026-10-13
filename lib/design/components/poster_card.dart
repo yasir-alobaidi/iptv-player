@@ -312,11 +312,16 @@ class _ArtworkFallback extends StatelessWidget {
                 alignment: landscape
                     ? Alignment.bottomLeft
                     : Alignment.bottomCenter,
+                // Part of the picture, like a poster's own lettering: it
+                // keeps its size at a larger text size (the title under
+                // the card is the one that grows), or a long word would
+                // break in two.
                 child: Text(
                   title.toUpperCase(),
                   maxLines: 2,
                   textAlign: landscape ? TextAlign.left : TextAlign.center,
                   overflow: TextOverflow.ellipsis,
+                  textScaler: TextScaler.noScaling,
                   style: tokens.text.titleSmall.copyWith(
                     color: Colors.white.withValues(alpha: 0.92),
                     letterSpacing: 1,

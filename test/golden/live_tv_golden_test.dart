@@ -18,51 +18,56 @@ void main() {
   group('live tv', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      sceneTest(name, audit: size.width == 1280, (tester) async {
-        hideDebugBanner();
-        final live = LiveTvFakes();
-        live.fakes.now = goldenNow();
-        addTearDown(() => tester.runAsync(live.db.close));
-        await tester.runAsync(live.seed);
-        final now = live.fakes.now;
-        live.guide.byKey['201'] = NowNext(
-          now: Programme(
-            title: 'Continental Cup · Semi-final',
-            start: now.subtract(const Duration(minutes: 82)),
-            end: now.add(const Duration(minutes: 38)),
-            description:
-                'Holders Northport face Valencia Azul for a place in the '
-                'final. Live from Estadio Costa, with build-up, full match '
-                'coverage, and post-match analysis.',
-          ),
-          next: Programme(
-            title: 'Match of the Week: Extended Highlights',
-            start: now.add(const Duration(minutes: 38)),
-            end: now.add(const Duration(minutes: 98)),
-          ),
-        );
-        await pumpApp(
-          tester,
-          size: size,
-          initialLocation: AppDestination.liveTv.path,
-          overrides: [...live.overrides, ...sourceShellOverrides],
-        );
-        for (var i = 0; i < 5; i++) {
-          await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-          await tester.pump(const Duration(milliseconds: 50));
-        }
-        await tester.tap(find.text('Arena Sports 1').first);
-        for (var i = 0; i < 5; i++) {
-          await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-          await tester.pump(const Duration(milliseconds: 50));
-        }
-        live.rig.engine.firstFrame();
-        await tester.pump(const Duration(milliseconds: 300));
+      sceneTest(
+        name,
+        audit: size.width == 1280,
+        large: size.width == 1280 ? 'images/live_tv_130_1280x800.png' : null,
+        (tester) async {
+          hideDebugBanner();
+          final live = LiveTvFakes();
+          live.fakes.now = goldenNow();
+          addTearDown(() => tester.runAsync(live.db.close));
+          await tester.runAsync(live.seed);
+          final now = live.fakes.now;
+          live.guide.byKey['201'] = NowNext(
+            now: Programme(
+              title: 'Continental Cup · Semi-final',
+              start: now.subtract(const Duration(minutes: 82)),
+              end: now.add(const Duration(minutes: 38)),
+              description:
+                  'Holders Northport face Valencia Azul for a place in the '
+                  'final. Live from Estadio Costa, with build-up, full match '
+                  'coverage, and post-match analysis.',
+            ),
+            next: Programme(
+              title: 'Match of the Week: Extended Highlights',
+              start: now.add(const Duration(minutes: 38)),
+              end: now.add(const Duration(minutes: 98)),
+            ),
+          );
+          await pumpApp(
+            tester,
+            size: size,
+            initialLocation: AppDestination.liveTv.path,
+            overrides: [...live.overrides, ...sourceShellOverrides],
+          );
+          for (var i = 0; i < 5; i++) {
+            await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+            await tester.pump(const Duration(milliseconds: 50));
+          }
+          await tester.tap(find.text('Arena Sports 1').first);
+          for (var i = 0; i < 5; i++) {
+            await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+            await tester.pump(const Duration(milliseconds: 50));
+          }
+          live.rig.engine.firstFrame();
+          await tester.pump(const Duration(milliseconds: 300));
 
-        await golden(tester, 'images/live_tv_$name.png');
-        await live.rig.coordinator.stop();
-        await tester.pump(const Duration(milliseconds: 400));
-      });
+          await golden(tester, 'images/live_tv_$name.png');
+          await live.rig.coordinator.stop();
+          await tester.pump(const Duration(milliseconds: 400));
+        },
+      );
     }
   }, skip: goldenSkipReason);
 }

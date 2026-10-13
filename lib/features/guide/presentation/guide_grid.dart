@@ -43,6 +43,24 @@ double guideRowHeight(BuildContext context) {
       .ceilToDouble();
 }
 
+/// The channel column, as wide as a channel's name needs: the canvas's
+/// 220 px at 100 %, and only the name's part of it more at a larger text
+/// size (the number's slot grows by itself; the logo keeps its size).
+/// At 130 % the fixed column cut "Arena Sports 1" to "Arena Sp…".
+double guideChannelColumnWidth(BuildContext context) {
+  final guide = context.tokens.guide;
+  return context
+      .scaledAround(
+        guide.channelColumnWidth,
+        fixed:
+            guide.channelPadding * 2 +
+            guide.channelNumberWidth +
+            guide.channelGap * 2 +
+            guide.logoSize,
+      )
+      .ceilToDouble();
+}
+
 /// What the Guide's toolbar asks of the grid, and the day the grid shows
 /// (the selected day pill).
 class GuideGridController extends ChangeNotifier {
@@ -790,7 +808,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
           builder: (context, constraints) {
             _viewWidth = math.max(
               0,
-              constraints.maxWidth - guide.channelColumnWidth,
+              constraints.maxWidth - guideChannelColumnWidth(context),
             );
             _viewHeight = math.max(
               0,
@@ -821,7 +839,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
                     _pageError == null &&
                     _cache.failure == null)
                   Positioned(
-                    left: guide.channelColumnWidth,
+                    left: guideChannelColumnWidth(context),
                     top: guide.rulerHeight,
                     right: 0,
                     bottom: 0,
@@ -1083,7 +1101,7 @@ class _RowFrame extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            width: guide.channelColumnWidth,
+            width: guideChannelColumnWidth(context),
             padding: EdgeInsets.symmetric(horizontal: guide.channelPadding),
             decoration: BoxDecoration(
               border: Border(right: BorderSide(color: colors.surface3)),
@@ -2124,7 +2142,7 @@ class _Ruler extends StatelessWidget {
           return Row(
             children: [
               Container(
-                width: guide.channelColumnWidth,
+                width: guideChannelColumnWidth(context),
                 padding: EdgeInsets.symmetric(horizontal: guide.channelPadding),
                 alignment: Alignment.centerLeft,
                 child: Text(

@@ -188,32 +188,39 @@ void main() {
   group('search', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      sceneTest('results $name', audit: size.width == 1280, (tester) async {
-        final search = ScriptedSearch()
-          ..recent = ['tennis open', 'cup final']
-          ..answers['harbor'] = _harbor(goldenNow());
-        final live = await open(tester, size, search);
-        final now = live.fakes.now;
-        live.guide.byKey['118'] = NowNext(
-          now: Programme(
-            title: 'Evening Bulletin',
-            start: now.subtract(const Duration(minutes: 20)),
-            end: now.add(const Duration(minutes: 30)),
-          ),
-        );
-        live.guide.byKey['147'] = NowNext(
-          now: Programme(
-            title: 'Coastal Forecast',
-            start: now.subtract(const Duration(minutes: 5)),
-            end: now.add(const Duration(minutes: 60)),
-          ),
-        );
-        await tester.enterText(find.byType(EditableText), 'harbor');
-        await tester.pump(searchDelay);
-        await _settle(tester);
+      sceneTest(
+        'results $name',
+        audit: size.width == 1280,
+        large: size.width == 1280
+            ? 'images/search_results_130_1280x800.png'
+            : null,
+        (tester) async {
+          final search = ScriptedSearch()
+            ..recent = ['tennis open', 'cup final']
+            ..answers['harbor'] = _harbor(goldenNow());
+          final live = await open(tester, size, search);
+          final now = live.fakes.now;
+          live.guide.byKey['118'] = NowNext(
+            now: Programme(
+              title: 'Evening Bulletin',
+              start: now.subtract(const Duration(minutes: 20)),
+              end: now.add(const Duration(minutes: 30)),
+            ),
+          );
+          live.guide.byKey['147'] = NowNext(
+            now: Programme(
+              title: 'Coastal Forecast',
+              start: now.subtract(const Duration(minutes: 5)),
+              end: now.add(const Duration(minutes: 60)),
+            ),
+          );
+          await tester.enterText(find.byType(EditableText), 'harbor');
+          await tester.pump(searchDelay);
+          await _settle(tester);
 
-        await golden(tester, 'images/search_results_$name.png');
-      });
+          await golden(tester, 'images/search_results_$name.png');
+        },
+      );
     }
 
     // Phase 9 decision 13, sketch F: the row once it has a reminder, and

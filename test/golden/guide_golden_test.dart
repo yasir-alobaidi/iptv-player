@@ -23,30 +23,35 @@ void main() {
   group('guide', () {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
-      sceneTest(name, audit: size.width == 1280, (tester) async {
-        hideDebugBanner();
-        final fixture = GuideFixture();
-        addTearDown(() => tester.runAsync(fixture.db.close));
-        await tester.runAsync(fixture.seed);
-        await pumpApp(
-          tester,
-          size: size,
-          initialLocation: AppDestination.guide.path,
-          overrides: [...fixture.overrides, ...sourceShellOverrides],
-        );
-        await _settle(tester);
-        tester
-            .widget<Focus>(
-              find.byWidgetPredicate(
-                (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
-              ),
-            )
-            .focusNode!
-            .requestFocus();
-        await _settle(tester);
+      sceneTest(
+        name,
+        audit: size.width == 1280,
+        large: size.width == 1280 ? 'images/guide_130_1280x800.png' : null,
+        (tester) async {
+          hideDebugBanner();
+          final fixture = GuideFixture();
+          addTearDown(() => tester.runAsync(fixture.db.close));
+          await tester.runAsync(fixture.seed);
+          await pumpApp(
+            tester,
+            size: size,
+            initialLocation: AppDestination.guide.path,
+            overrides: [...fixture.overrides, ...sourceShellOverrides],
+          );
+          await _settle(tester);
+          tester
+              .widget<Focus>(
+                find.byWidgetPredicate(
+                  (w) => w is Focus && w.focusNode?.debugLabel == 'guide grid',
+                ),
+              )
+              .focusNode!
+              .requestFocus();
+          await _settle(tester);
 
-        await golden(tester, 'images/guide_$name.png');
-      });
+          await golden(tester, 'images/guide_$name.png');
+        },
+      );
     }
 
     // Settings → Appearance → Density (Phase 9 decision 2): 60 px rows,
