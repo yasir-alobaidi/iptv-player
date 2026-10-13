@@ -312,7 +312,8 @@ class _CategoryChips extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.arrowDown): onDown},
       child: SizedBox(
-        height: 40,
+        // The chips' own height and the room their focus ring needs.
+        height: context.scaled(40),
         child: Row(
           children: [
             Expanded(

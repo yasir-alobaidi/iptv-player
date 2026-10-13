@@ -167,7 +167,7 @@ class _BackChip extends StatelessWidget {
       borderRadius: tokens.radii.pillAll,
       semanticLabel: 'Back to $label',
       builder: (context, states) => Container(
-        height: tokens.details.backChipHeight,
+        height: context.scaled(tokens.details.backChipHeight),
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s8 + 2,
           0,

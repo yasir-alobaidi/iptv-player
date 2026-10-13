@@ -418,7 +418,7 @@ class _StageRow extends StatelessWidget {
       child: AnimatedContainer(
         duration: tokens.motion.base,
         curve: tokens.motion.baseCurve,
-        height: 60,
+        height: context.scaled(60),
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s16 + 2),
         decoration: BoxDecoration(
           color: active ? colors.surface2 : colors.surface1,

@@ -751,7 +751,7 @@ class _CategoryRow extends StatelessWidget {
                         horizontal: tokens.spacing.s8,
                       ),
                       child: SizedBox(
-                        height: 40,
+                        height: context.scaled(40),
                         child: Row(
                           children: [
                             AppCheckbox(

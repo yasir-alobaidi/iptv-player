@@ -123,7 +123,7 @@ class _FolderRow extends ConsumerWidget {
       borderRadius: tokens.radii.controlAll,
       semanticLabel: '${folder.label}, $line',
       builder: (context, states) => Container(
-        height: layout.folderRowHeight,
+        height: context.scaled(layout.folderRowHeight),
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
         decoration: BoxDecoration(
           color: states.highlighted ? colors.surface3 : colors.surface2,

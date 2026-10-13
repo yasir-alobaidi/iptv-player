@@ -145,11 +145,14 @@ class _GuideMatchPickerState extends ConsumerState<GuideMatchPicker> {
     _reveal(_highlighted);
   }
 
+  /// A row as tall as its two lines of text make it.
+  double get _rowHeight => context.scaled(GuideMatchPicker.rowHeight);
+
   /// Scrolls just enough to show row [index].
   void _reveal(int index) {
     if (!_scroll.hasClients) return;
-    final top = index * GuideMatchPicker.rowHeight;
-    final bottom = top + GuideMatchPicker.rowHeight;
+    final top = index * _rowHeight;
+    final bottom = top + _rowHeight;
     final view = _scroll.position.viewportDimension;
     final offset = _scroll.offset;
     if (top < offset) {
@@ -170,8 +173,7 @@ class _GuideMatchPickerState extends ConsumerState<GuideMatchPicker> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final channel = widget.channel;
-    final pageRows =
-        (GuideMatchPicker.listHeight / GuideMatchPicker.rowHeight).floor() - 1;
+    final pageRows = (GuideMatchPicker.listHeight / _rowHeight).floor() - 1;
 
     return AppDialog(
       title: 'Match ${channel.name}',
@@ -244,7 +246,7 @@ class _GuideMatchPickerState extends ConsumerState<GuideMatchPicker> {
         child: SkeletonColumn(
           children: [
             for (var i = 0; i < 5; i++) ...[
-              const SkeletonRow(height: GuideMatchPicker.rowHeight - 8),
+              SkeletonRow(height: _rowHeight - 8),
               SizedBox(height: tokens.spacing.s8),
             ],
           ],
@@ -272,7 +274,7 @@ class _GuideMatchPickerState extends ConsumerState<GuideMatchPicker> {
       child: ListView.builder(
         controller: _scroll,
         itemCount: candidates.length,
-        itemExtent: GuideMatchPicker.rowHeight,
+        itemExtent: _rowHeight,
         itemBuilder: (context, index) => _CandidateRow(
           candidate: candidates[index],
           highlighted: index == _highlighted,

@@ -81,3 +81,12 @@ Future<void> golden(WidgetTester tester, String name) async {
   }
   await expectLater(find.byType(MaterialApp), matchesGoldenFile(name));
 }
+
+/// Taps [finder] once it is on screen: in the audit's smallest window, at
+/// its largest text, a scene's control can be below the fold of a list
+/// that scrolls.
+Future<void> tapShown(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  await tester.tap(finder);
+}

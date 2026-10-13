@@ -864,7 +864,7 @@ class _OffsetStepper extends StatelessWidget {
           hoverBackground: colors.surface3,
           builder: (context, states) => SizedBox(
             width: _width,
-            height: _height,
+            height: context.scaled(_height),
             child: Row(
               children: [
                 arrow(
@@ -1151,7 +1151,7 @@ class _ChannelListState extends ConsumerState<_ChannelList> {
         child: SkeletonColumn(
           children: [
             for (var i = 0; i < 4; i++) ...[
-              const SkeletonRow(height: _ChannelList.rowHeight - 8),
+              SkeletonRow(height: context.scaled(_ChannelList.rowHeight) - 8),
               SizedBox(height: tokens.spacing.s8),
             ],
           ],
@@ -1165,7 +1165,7 @@ class _ChannelListState extends ConsumerState<_ChannelList> {
       child: ListView.builder(
         controller: _scroll,
         itemCount: total,
-        itemExtent: _ChannelList.rowHeight,
+        itemExtent: context.scaled(_ChannelList.rowHeight),
         itemBuilder: (context, index) {
           final channel = _at(index);
           if (channel == null) {

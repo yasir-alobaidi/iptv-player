@@ -193,7 +193,9 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
             for (var i = 0; i < 3; i++)
               Padding(
                 padding: EdgeInsets.only(bottom: tokens.spacing.s8 + 2),
-                child: SkeletonRow(height: tokens.library.downloadRowHeight),
+                child: SkeletonRow(
+                  height: context.scaled(tokens.library.downloadRowHeight),
+                ),
               ),
           ],
         );
@@ -657,7 +659,7 @@ class _InProgressRow extends StatelessWidget {
       },
       child: _RowFrame(
         task: task,
-        height: layout.downloadRowHeight,
+        height: context.scaled(layout.downloadRowHeight),
         focus: focus,
         label: '${downloadName(task)}, $word',
         onPressed: onToggle,
@@ -802,7 +804,7 @@ class _AttentionRow extends StatelessWidget {
       bindings: {const SingleActivator(LogicalKeyboardKey.delete): onRemove},
       child: _RowFrame(
         task: task,
-        height: tokens.library.attentionRowHeight,
+        height: context.scaled(tokens.library.attentionRowHeight),
         focus: focus,
         label: '${downloadName(task)}, $reason',
         onPressed: account ? onEditSource : onRetry,
@@ -919,7 +921,7 @@ class _FinishedRow extends StatelessWidget {
       bindings: {const SingleActivator(LogicalKeyboardKey.delete): onRemove},
       child: _RowFrame(
         task: task,
-        height: tokens.library.finishedRowHeight,
+        height: context.scaled(tokens.library.finishedRowHeight),
         focus: focus,
         label: '${downloadName(task)}, $line',
         onPressed: onPlay,

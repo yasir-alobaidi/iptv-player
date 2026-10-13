@@ -95,7 +95,7 @@ void main() {
         initialLocation: AppDestination.settings.path,
         overrides: [...fakes.overrides, ...sourceShellOverrides],
       );
-      await tester.tap(find.text('Categories').first);
+      await tapShown(tester, find.text('Categories').first);
       await settleApp(tester);
 
       await golden(tester, 'images/settings_categories.png');
@@ -111,7 +111,7 @@ void main() {
         initialLocation: AppDestination.settings.path,
         overrides: [...live.overrides, ...sourceShellOverrides],
       );
-      await tester.tap(find.text('Playback').first);
+      await tapShown(tester, find.text('Playback').first);
       for (var i = 0; i < 5; i++) {
         await tester.runAsync(() => Future<void>.delayed(Duration.zero));
         await tester.pump(const Duration(milliseconds: 50));
@@ -193,7 +193,7 @@ void main() {
           ...appearanceOverrides(settings: settings),
         ],
       );
-      await tester.tap(find.text('Appearance').first);
+      await tapShown(tester, find.text('Appearance').first);
       await settleApp(tester);
     }
 
@@ -210,7 +210,7 @@ void main() {
         initialLocation: AppDestination.settings.path,
         overrides: [...sketch().overrides, ...sourceShellOverrides],
       );
-      await tester.tap(find.text('Keyboard shortcuts').first);
+      await tapShown(tester, find.text('Keyboard shortcuts').first);
       await settleApp(tester);
 
       await golden(tester, 'images/settings_shortcuts.png');
@@ -273,7 +273,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('Data').first);
+      await tapShown(tester, find.text('Data').first);
       await settleApp(tester);
       await settleApp(tester);
     }
@@ -286,7 +286,7 @@ void main() {
 
     sceneTest("Data: an import's preview", (tester) async {
       await data(tester);
-      await tester.tap(find.text('Import…'));
+      await tapShown(tester, find.text('Import…'));
       await settleApp(tester);
       await settleApp(tester);
 
@@ -361,7 +361,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('About & diagnostics').first);
+      await tapShown(tester, find.text('About & diagnostics').first);
       await settleApp(tester);
     }
 
@@ -374,7 +374,7 @@ void main() {
 
     sceneTest('About: the log', (tester) async {
       await about(tester);
-      await tester.tap(find.text('Log'));
+      await tapShown(tester, find.text('Log'));
       await settleApp(tester);
       await settleApp(tester);
 
@@ -384,7 +384,7 @@ void main() {
 
     sceneTest('Licences', (tester) async {
       await about(tester);
-      await tester.tap(find.text('Licences'));
+      await tapShown(tester, find.text('Licences'));
       await settleApp(tester);
       await settleApp(tester);
 

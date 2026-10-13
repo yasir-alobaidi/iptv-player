@@ -83,6 +83,10 @@ void main() {
         ),
       ],
     );
+    // The last of the sections: at 130 % in the smallest window the list
+    // scrolls to it.
+    await tester.ensureVisible(find.text('About & diagnostics').first);
+    await tester.pump();
     await tester.tap(find.text('About & diagnostics').first);
     await settleApp(tester);
     await settleApp(tester);

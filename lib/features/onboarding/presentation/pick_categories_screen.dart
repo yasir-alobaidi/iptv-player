@@ -532,7 +532,7 @@ class _GroupHeader extends StatelessWidget {
               '${formatCount(group.itemCount)} $unit';
 
     return SizedBox(
-      height: 56,
+      height: context.scaled(56),
       child: Row(
         children: [
           Padding(

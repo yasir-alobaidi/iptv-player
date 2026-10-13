@@ -54,7 +54,7 @@ class ShellTopBar extends StatelessWidget {
     final colors = tokens.colors;
 
     return Container(
-      height: height,
+      height: context.scaled(height),
       padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s24),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: colors.borderSubtle)),
@@ -176,7 +176,7 @@ class _SourceChip extends StatelessWidget {
         hoverBackground: colors.surface3,
         semanticLabel: 'Source: $label',
         builder: (context, states) => Container(
-          height: 32,
+          height: context.scaled(32),
           padding: EdgeInsets.only(
             left: tokens.spacing.s8,
             right: tokens.spacing.s12,
@@ -272,7 +272,7 @@ class _DownloadIndicator extends StatelessWidget {
         hoverBackground: colors.surface3,
         semanticLabel: '${downloads.active} downloads, $percent per cent',
         builder: (context, states) => Container(
-          height: 32,
+          height: context.scaled(32),
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
           alignment: Alignment.center,
           child: Row(

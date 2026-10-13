@@ -124,7 +124,7 @@ class _HiddenChannelsState extends ConsumerState<HiddenChannelsView> {
           for (var i = 0; i < 4; i++)
             Padding(
               padding: EdgeInsets.only(bottom: tokens.spacing.s4),
-              child: const SkeletonRow(height: 52),
+              child: SkeletonRow(height: context.scaled(52)),
             ),
         ],
       );
@@ -224,7 +224,7 @@ class _HiddenRow extends StatelessWidget {
       borderRadius: tokens.radii.controlAll,
       semanticLabel: '${channel.name}, hidden. Show',
       builder: (context, states) => SizedBox(
-        height: 52,
+        height: context.scaled(52),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
           child: Row(

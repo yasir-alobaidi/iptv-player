@@ -500,7 +500,7 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
           for (var i = 0; i < 6; i++)
             Padding(
               padding: EdgeInsets.only(bottom: tokens.spacing.s4),
-              child: const SkeletonRow(height: 60),
+              child: SkeletonRow(height: context.scaled(60)),
             ),
         ],
       );
@@ -757,7 +757,7 @@ class _Header extends StatelessWidget {
       ],
     );
     final padded = SizedBox(
-      height: 40,
+      height: context.scaled(40),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8 + 2),
         child: content,

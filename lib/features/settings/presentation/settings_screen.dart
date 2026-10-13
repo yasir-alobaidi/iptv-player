@@ -173,7 +173,7 @@ class _NavItem extends StatelessWidget {
         hoverBackground: colors.surface2,
         semanticLabel: section.label,
         builder: (context, states) => SizedBox(
-          height: tokens.spacing.s40,
+          height: context.scaled(tokens.spacing.s40),
           child: Stack(
             alignment: Alignment.centerLeft,
             children: [

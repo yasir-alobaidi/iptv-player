@@ -391,7 +391,7 @@ class _CategoryItem extends StatelessWidget {
           borderRadius: tokens.radii.controlAll,
           semanticLabel: count == null ? label : '$label, $count',
           builder: (context, states) => SizedBox(
-            height: 40,
+            height: context.scaled(40),
             child: Stack(
               alignment: Alignment.centerLeft,
               children: [
