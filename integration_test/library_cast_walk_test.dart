@@ -10,7 +10,8 @@
 // plays on the TV through the relay, its subtitle file read by the TV as
 // WebVTT and showing → S: off → S: on again → → three times: the relay
 // starts again 30 s on → the MP4 made beside the relay is whole → → three
-// times: the TV loads the MP4 and the relay stops → →: the TV's own seek,
+// times: the TV loads the MP4 and the relay stops (a short film's MP4 is
+// whole before the first →: the TV loads it there) → →: the TV's own seek,
 // no new LOAD → Stop casting: the film's place kept, the TV gone home, no
 // FFmpeg and none of the cast's files left, the film's page offering
 // Resume.
@@ -258,14 +259,17 @@ void main() {
       await k.waitFor(find.text('Subtitles: English'));
       expect(tv.requests('LOAD'), hasLength(1), reason: 'no LOAD for S');
 
-      // ── → three times: the relay starts again 30 s on (at the key
-      // frame before it).
+      // ── → three times: 30 s on. Through the relay again (at the key
+      // frame before it) while the MP4 is still being made; on the MP4
+      // itself when a short film's is whole by now (CI's sample is two
+      // minutes long, and its MP4 takes a second or two).
       Future<void> forward(int presses) async {
         for (var i = 0; i < presses; i++) {
           await k.press(LogicalKeyboardKey.arrowRight);
         }
       }
 
+      bool onMp4() => loaded()?.endsWith('/media.mp4') ?? false;
       final relayed = loaded();
       await forward(3);
       await k.waitUntil(
@@ -274,35 +278,38 @@ void main() {
             loaded() != null &&
             cast.timeline.position >= const Duration(seconds: 25) &&
             await tvPlaying(),
-        'the film on from 0:30 through the relay (${cast.timeline.position})',
+        'the film on from 0:30 (${loaded()}, ${cast.timeline.position})',
         seconds: 40,
       );
-      expect(Uri.parse(loaded()!).path, startsWith('/p/'));
-      expect(tv.activeTrackIds, [1], reason: 'the choice is kept');
 
-      // ── The MP4 made beside the relay: whole after a while. Nothing
-      // is interrupted for it.
-      final again = loaded();
-      await k.waitUntil(
-        () => castFiles().any((file) => file.path.endsWith('media.mp4')),
-        'the MP4 made beside the relay',
-        seconds: 240,
-      );
-      expect(loaded(), again);
+      if (!onMp4()) {
+        expect(Uri.parse(loaded()!).path, startsWith('/p/'));
+        expect(tv.activeTrackIds, [1], reason: 'the choice is kept');
 
-      // ── → three times: the TV loads the MP4 there, and the relay stops.
-      final before = cast.timeline.position;
-      await forward(3);
-      await k.waitUntil(
-        () async =>
-            (loaded()?.endsWith('/media.mp4') ?? false) && await tvPlaying(),
-        'the MP4 on the TV (${loaded()}, ${cast.state.phase.name})',
-        seconds: 40,
-      );
-      expect(
-        cast.timeline.position,
-        greaterThanOrEqualTo(before + const Duration(seconds: 25)),
-      );
+        // ── The MP4 made beside the relay: whole after a while. Nothing
+        // is interrupted for it.
+        final again = loaded();
+        await k.waitUntil(
+          () => castFiles().any((file) => file.path.endsWith('media.mp4')),
+          'the MP4 made beside the relay',
+          seconds: 240,
+        );
+        expect(loaded(), again);
+
+        // ── → three times: the TV loads the MP4 there, and the relay
+        // stops.
+        final before = cast.timeline.position;
+        await forward(3);
+        await k.waitUntil(
+          () async => onMp4() && await tvPlaying(),
+          'the MP4 on the TV (${loaded()}, ${cast.state.phase.name})',
+          seconds: 40,
+        );
+        expect(
+          cast.timeline.position,
+          greaterThanOrEqualTo(before + const Duration(seconds: 25)),
+        );
+      }
       await k.waitUntil(
         () => runningProcesses(folder).isEmpty,
         'no FFmpeg left (${runningProcesses(folder)})',
