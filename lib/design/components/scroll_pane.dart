@@ -20,6 +20,7 @@ class ScrollPane extends StatefulWidget {
     this.focusNode,
     this.autofocus = false,
     this.borderRadius,
+    this.reverse = false,
     super.key,
   });
 
@@ -57,6 +58,10 @@ class ScrollPane extends StatefulWidget {
   final bool autofocus;
   final BorderRadius? borderRadius;
 
+  /// The scrolling child starts at the bottom (`reverse: true`, as a log
+  /// does): ↑ still shows what is above, Home the top, End the bottom.
+  final bool reverse;
+
   /// One press of ↑ or ↓, at the canvas's text size.
   static const lineStep = 48.0;
 
@@ -90,20 +95,28 @@ class _ScrollPaneState extends State<ScrollPane> {
       double.infinity,
     );
     final line = context.scaled(ScrollPane.lineStep);
+    // In a reversed list the offset counts up from the bottom.
+    final up = widget.reverse ? 1 : -1;
+    final top = widget.reverse
+        ? position.maxScrollExtent
+        : position.minScrollExtent;
+    final bottom = widget.reverse
+        ? position.minScrollExtent
+        : position.maxScrollExtent;
     final double target;
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:
-        target = position.pixels - line;
+        target = position.pixels + up * line;
       case LogicalKeyboardKey.arrowDown:
-        target = position.pixels + line;
+        target = position.pixels - up * line;
       case LogicalKeyboardKey.pageUp:
-        target = position.pixels - page;
+        target = position.pixels + up * page;
       case LogicalKeyboardKey.pageDown:
-        target = position.pixels + page;
+        target = position.pixels - up * page;
       case LogicalKeyboardKey.home:
-        target = position.minScrollExtent;
+        target = top;
       case LogicalKeyboardKey.end:
-        target = position.maxScrollExtent;
+        target = bottom;
       default:
         return KeyEventResult.ignored;
     }

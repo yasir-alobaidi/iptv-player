@@ -7,17 +7,33 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/diagnostics/presentation/log_view.dart';
+import 'package:iptv_player/features/diagnostics/presentation/report_view.dart';
 import 'package:iptv_player/features/settings/presentation/licenses_dialog.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
-/// Settings → About & diagnostics (Phase 9, sketch D). Step 2 builds
-/// About: the name, the version this build was made as, the system, and
-/// the licences. The diagnostics and the log viewer join it in step 4.
-class AboutSection extends ConsumerWidget {
+/// Which of the two the lower part of the page shows.
+enum _View { report, log }
+
+/// Settings → About & diagnostics (Phase 9 steps 2 and 4, sketch D): the
+/// name, the version this build was made as and the system, the
+/// licences, and under them the diagnostics report or the log.
+///
+/// The sketch stacks the report over the log. Here they are two views of
+/// the same space, chosen with one control: stacked, each got about a
+/// hundred pixels of height in the smallest window (ADR-016, step 4).
+class AboutSection extends ConsumerStatefulWidget {
   const new({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends ConsumerState<AboutSection> {
+  _View _view = _View.report;
+
+  @override
+  Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     // The version file is a few bytes in the bundle: until it is read,
@@ -26,7 +42,8 @@ class AboutSection extends ConsumerWidget {
 
     return SettingsPanel(
       title: 'About & diagnostics',
-      body: ListView(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
@@ -61,6 +78,25 @@ class AboutSection extends ConsumerWidget {
                 onPressed: () => unawaited(showLicensesDialog(context)),
               ),
             ],
+          ),
+          SizedBox(height: tokens.spacing.s20),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SegmentedControl<_View>(
+              options: const [
+                SegmentOption(value: _View.report, label: 'Diagnostics'),
+                SegmentOption(value: _View.log, label: 'Log'),
+              ],
+              value: _view,
+              onChanged: (view) => setState(() => _view = view),
+            ),
+          ),
+          SizedBox(height: tokens.spacing.s12),
+          Expanded(
+            child: switch (_view) {
+              _View.report => const ReportView(),
+              _View.log => const LogView(),
+            },
           ),
         ],
       ),

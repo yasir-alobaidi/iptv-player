@@ -280,6 +280,71 @@ void main() {
       );
     });
 
+    // Found on the user's own source: the app names an unnamed source
+    // after its server's host, and a name is in the file.
+    test('a source named after its server, or after its user, is not named '
+        'so in the file', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final host = Uri.parse(_server).host;
+      await _source(db, 'a', name: host);
+      await _source(db, 'b', name: 'zq7northwind', order: 1);
+      await _source(db, 'c', name: 'TV of $_username', order: 2);
+      await _source(
+        db,
+        'd',
+        name: 'lists.zq7harbor.test',
+        type: SourceType.m3uUrl,
+        url: 'http://lists.zq7harbor.test',
+        username: null,
+        order: 3,
+      );
+      await _source(db, 'e', name: 'Living room box', order: 4);
+
+      await transfer(db).exportTo(path);
+      final text = File(path).readAsStringSync();
+
+      expect(text, isNot(contains('zq7northwind')));
+      expect(text, isNot(contains('zq7harbor')));
+      expect(text, isNot(contains(_username)));
+      expect(
+        [for (final s in parseSettingsExport(text).sources) s.name],
+        [
+          'Xtream source 1',
+          'Xtream source 2',
+          'Xtream source 3',
+          'Playlist 4',
+          'Living room box',
+        ],
+      );
+    });
+
+    test(
+      'a playlist file keeps its name: it is a file’s, not an address',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        await _source(
+          db,
+          'f',
+          name: 'channels',
+          type: SourceType.m3uFile,
+          url: '/home/first/lists/channels.m3u',
+          username: null,
+        );
+
+        await transfer(db).exportTo(path);
+
+        expect(
+          parseSettingsExport(File(path).readAsStringSync())
+              .sources
+              .single
+              .name,
+          'channels',
+        );
+      },
+    );
+
     test(
       'replaces a file already there, and leaves no half-written one',
       () async {

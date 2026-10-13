@@ -126,6 +126,55 @@ abstract class _$PlaybackSettingsController
   }
 }
 
+/// What decoded each kind of video last, kept for the diagnostics report
+/// (Phase 9 decision 9).
+
+@ProviderFor(decoderNotes)
+final decoderNotesProvider = DecoderNotesProvider._();
+
+/// What decoded each kind of video last, kept for the diagnostics report
+/// (Phase 9 decision 9).
+
+final class DecoderNotesProvider
+    extends $FunctionalProvider<DecoderNotes, DecoderNotes, DecoderNotes>
+    with $Provider<DecoderNotes> {
+  /// What decoded each kind of video last, kept for the diagnostics report
+  /// (Phase 9 decision 9).
+  DecoderNotesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'decoderNotesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$decoderNotesHash();
+
+  @$internal
+  @override
+  $ProviderElement<DecoderNotes> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DecoderNotes create(Ref ref) {
+    return decoderNotes(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DecoderNotes value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DecoderNotes>(value),
+    );
+  }
+}
+
+String _$decoderNotesHash() => r'e2240711d8cf8d905dcbb8135136f42902e7de8a';
+
 /// Stream URLs built from their source at play time (docs/02).
 
 @ProviderFor(streamResolver)
@@ -265,7 +314,7 @@ final class PlaybackCoordinatorProvider
 }
 
 String _$playbackCoordinatorHash() =>
-    r'f20b451772c28dae7720fdcbf8a555990d16a1ab';
+    r'2fbef403fc3ae294623ff05c4e6fcc548684852a';
 
 /// What plays, as it changes.
 

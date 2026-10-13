@@ -23,6 +23,10 @@ abstract final class SettingsKeys {
 
   /// Settings → Appearance (Phase 9), read before the first frame.
   static const appearance = 'appearance.settings';
+
+  /// What decoded each kind of video last, for the diagnostics report
+  /// (Phase 9 decision 9).
+  static const decoders = 'diagnostics.decoders';
 }
 
 /// Reads and writes the `settings` table.

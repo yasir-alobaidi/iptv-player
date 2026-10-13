@@ -3,6 +3,7 @@
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -150,4 +151,57 @@ void main() {
       });
     });
   });
+
+  group('what decoded it (the diagnostics report)', () {
+    test('is noted at the first frame, once the player knows', () {
+      fakeAsync((async) {
+        final notes = _Notes();
+        final rig = Rig(decoders: notes);
+        rig.engine.info = const StreamInfo(
+          height: 1080,
+          videoCodec: 'H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10',
+          hardwareDecoder: 'vaapi',
+        );
+
+        rig.coordinator.playLive(channel(1));
+        async.flushMicrotasks();
+        expect(notes.noted, isEmpty, reason: 'nothing decodes yet');
+
+        rig.engine.firstFrame();
+        async.flushMicrotasks();
+
+        expect(notes.noted.single.hardwareDecoder, 'vaapi');
+        expect(notes.noted.single.height, 1080);
+      });
+    });
+
+    test('a store that fails is no playback problem', () {
+      fakeAsync((async) {
+        final rig = Rig(decoders: _Notes(fail: true));
+
+        rig.coordinator.playLive(channel(1));
+        async.flushMicrotasks();
+        rig.engine.firstFrame();
+        async.flushMicrotasks();
+
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
+    });
+  });
+}
+
+final class _Notes implements DecoderNotes {
+  new({this.fail = false});
+
+  final bool fail;
+  final noted = <StreamInfo>[];
+
+  @override
+  Future<void> note(StreamInfo info) async {
+    if (fail) throw StateError('disk full');
+    noted.add(info);
+  }
+
+  @override
+  Future<List<DecoderNote>> recent() async => const [];
 }

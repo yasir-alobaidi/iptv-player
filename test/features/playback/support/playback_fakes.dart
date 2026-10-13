@@ -1,6 +1,7 @@
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
+import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -268,8 +269,11 @@ final class FakeWatchProgress implements WatchProgress {
 final class Rig {
   /// [watchProgress] saves where files were left in place of [progress]
   /// (a real database's, for screens that read it back).
-  new({Duration stopDelay = Duration.zero, WatchProgress? watchProgress})
-    : engine = FakePlayerEngine(stopDelay: stopDelay) {
+  new({
+    Duration stopDelay = Duration.zero,
+    WatchProgress? watchProgress,
+    DecoderNotes? decoders,
+  }) : engine = FakePlayerEngine(stopDelay: stopDelay) {
     coordinator = PlaybackCoordinator(
       engine: engine,
       resolver: resolver,
@@ -277,6 +281,7 @@ final class Rig {
       history: history,
       channels: channels,
       progress: watchProgress ?? progress,
+      decoders: decoders,
       log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
     );
     coordinator.states.listen(states.add);

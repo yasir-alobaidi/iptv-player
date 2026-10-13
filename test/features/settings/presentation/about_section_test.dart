@@ -15,6 +15,7 @@ import 'package:iptv_player/features/sources/presentation/source_shell_slots.dar
 
 import '../../../app/app_harness.dart';
 import '../../casting/support/cast_ui_harness.dart' show focusedLabelOf;
+import '../../diagnostics/diagnostics_fakes.dart';
 import '../../onboarding/onboarding_fakes.dart';
 
 void main() {
@@ -45,6 +46,10 @@ void main() {
       overrides: [
         ...fakes.overrides,
         ...sourceShellOverrides,
+        ...diagnosticsOverrides(
+          diagnostics: FakeDiagnostics(),
+          log: FakeLogReader(),
+        ),
         appVersionProvider.overrideWith((ref) async => version),
         licensesProvider.overrideWith(
           (ref) async => licenses == null ? packages : await licenses(),

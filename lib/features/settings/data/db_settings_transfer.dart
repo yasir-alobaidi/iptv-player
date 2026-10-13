@@ -109,11 +109,40 @@ final class DbSettingsTransfer implements SettingsTransfer {
       exportedAt: _clock(),
       appVersion: appVersion,
       settings: settings,
-      sources: [for (final source in sources) await _gatherSource(source)],
+      sources: [
+        for (final (index, source) in sources.indexed)
+          await _gatherSource(source, index),
+      ],
     );
   }
 
-  Future<ExportedSource> _gatherSource(SourceRow source) async {
+  /// The name a file gives a source: the user's own, unless it says where
+  /// the source is or whose it is. A source the user didn't name is named
+  /// after its server's host (`suggestedSourceName`), and that is an
+  /// address: the file then says "Xtream source 1" instead. Found on the
+  /// user's own source, whose name was its host (ADR-016, step 4).
+  static String exportedName(SourceRow source, int index) {
+    final name = source.name.trim();
+    final lower = name.toLowerCase();
+    bool says(String? other) {
+      final text = other?.trim().toLowerCase() ?? '';
+      if (text.length < 3 || lower.length < 3) return false;
+      return lower.contains(text) || text.contains(lower);
+    }
+
+    final uri = Uri.tryParse(source.url);
+    final revealing =
+        source.type != SourceType.m3uFile &&
+        (says(uri?.host) || says(source.url) || says(source.username));
+    if (name.isNotEmpty && !revealing) return name;
+    return switch (source.type) {
+      SourceType.xtream => 'Xtream source ${index + 1}',
+      SourceType.m3uUrl => 'Playlist ${index + 1}',
+      SourceType.m3uFile => name.isEmpty ? 'Playlist ${index + 1}' : name,
+    };
+  }
+
+  Future<ExportedSource> _gatherSource(SourceRow source, int index) async {
     final id = source.id;
     final groups =
         await (_db.select(_db.favoriteGroups)
@@ -147,7 +176,7 @@ final class DbSettingsTransfer implements SettingsTransfer {
             .get();
     final mappings = await _db.epgDao.mappingsFor(id);
     return ExportedSource(
-      name: source.name,
+      name: exportedName(source, index),
       type: source.type.name,
       fingerprint: _fingerprint(source),
       favoriteGroups: [

@@ -6,6 +6,7 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
+import 'package:iptv_player/core/player/player_version.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -89,7 +90,7 @@ final _listSeparator = Platform.isWindows ? ';' : ':';
 /// [PlayerEngine] on media_kit (libmpv) with our patched media_kit_video
 /// (ADR-003). One instance for the app's lifetime; every channel is an
 /// `open` on it.
-final class MediaKitPlayerEngine implements PlayerEngine {
+final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   new _(this._player, this._controller, this._log, this._secrets);
 
   /// [video] false runs mpv with no video output (`vo=null`): decoding,
@@ -145,6 +146,17 @@ final class MediaKitPlayerEngine implements PlayerEngine {
 
   Future<String> _get(String name) =>
       _native.getProperty(name, waitForInitialization: false);
+
+  @override
+  Future<String?> playerVersion() async {
+    try {
+      // "mpv 0.34.1", or "mpv v0.38.0-…" from a development build.
+      final version = (await _get('mpv-version')).trim();
+      return version.isEmpty ? null : version;
+    } on Object {
+      return null;
+    }
+  }
 
   /// What mpv has for [name] now (`hwdec`, `hwdec-current`): for tests of
   /// the options this engine sets.

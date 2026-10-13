@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/features/diagnostics/data/db_decoder_notes.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/playback/data/db_playback_history.dart';
 import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
@@ -57,6 +59,14 @@ class PlaybackSettingsController extends _$PlaybackSettingsController {
   }
 }
 
+/// What decoded each kind of video last, kept for the diagnostics report
+/// (Phase 9 decision 9).
+@Riverpod(keepAlive: true)
+DecoderNotes decoderNotes(Ref ref) => DbDecoderNotes(
+  ref.watch(settingsRepositoryProvider),
+  clock: ref.watch(appClockProvider),
+);
+
 /// Stream URLs built from their source at play time (docs/02).
 @Riverpod(keepAlive: true)
 StreamResolver streamResolver(Ref ref) => DbStreamResolver(
@@ -79,6 +89,7 @@ PlaybackCoordinator playbackCoordinator(Ref ref) {
     history: ref.watch(playbackHistoryProvider),
     channels: ref.watch(channelRepositoryProvider),
     progress: ref.watch(watchProgressProvider),
+    decoders: ref.watch(decoderNotesProvider),
     log: ref.watch(appLogProvider),
     settings: () => ref.read(playbackSettingsControllerProvider),
   );

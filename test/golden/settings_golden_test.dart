@@ -15,6 +15,7 @@ import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/licenses.dart';
 import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/diagnostics/domain/log_lines.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
 import 'package:iptv_player/features/settings/data/data_providers.dart';
@@ -26,6 +27,7 @@ import 'package:iptv_player/features/sources/domain/source_overview.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import '../app/app_harness.dart';
+import '../features/diagnostics/diagnostics_fakes.dart';
 import '../features/guide/presentation/guide_settings_fakes.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import '../features/onboarding/onboarding_fakes.dart';
@@ -329,6 +331,33 @@ void main() {
         overrides: [
           ...sketch().overrides,
           ...sourceShellOverrides,
+          ...diagnosticsOverrides(
+            diagnostics: FakeDiagnostics(),
+            log: FakeLogReader([
+              logRow(0, tag: 'bootstrap', text: 'Starting IPTV Player'),
+              logRow(3, text: 'Opening channel 147'),
+              logRow(4, text: 'First frame after 961 ms'),
+              logRow(
+                7,
+                level: LogLevel.warning,
+                tag: 'watchdog',
+                text: 'Stalled for 4 s, reconnecting (1 of 6)',
+              ),
+              logRow(8, text: 'First frame after 1,204 ms'),
+              logRow(
+                12,
+                level: LogLevel.error,
+                tag: 'sync',
+                text: 'The sync failed',
+              ),
+              const LogRow(
+                level: LogLevel.error,
+                text: 'error: TimeoutException after 0:00:30.000000',
+                continuation: true,
+              ),
+              logRow(15, tag: 'epg', text: 'Guide updated · 1,284 matched'),
+            ]),
+          ),
           appVersionProvider.overrideWith(
             (ref) async => const AppVersion(version: '0.1.0', build: '1'),
           ),
@@ -370,6 +399,19 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/settings_about.png'),
+      );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('About: the log', (tester) async {
+      await about(tester);
+      await tester.tap(find.text('Log'));
+      await settleApp(tester);
+      await settleApp(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_about_log.png'),
       );
       debugDefaultTargetPlatformOverride = null;
     });

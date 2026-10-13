@@ -348,6 +348,37 @@ final class FfmpegEncoderDetector implements CastEncoderDetection {
     return made;
   }
 
+  /// What the last detection in [folder] found, whichever FFmpeg it was
+  /// for and however old: FFmpeg's own first line and the encoders' FFmpeg
+  /// names, best first. Null when none was ever remembered. Runs nothing:
+  /// the diagnostics report reads this rather than testing encoders.
+  static ({String? ffmpeg, List<String> encoders})? remembered(
+    Directory folder,
+  ) {
+    try {
+      final file = File(p.join(folder.path, 'encoders.json'));
+      if (!file.existsSync()) return null;
+      final json = jsonDecode(file.readAsStringSync());
+      if (json is! Map) return null;
+      final version = json['ffmpeg'];
+      final list = json['encoders'];
+      return (
+        ffmpeg: version is String && version.isNotEmpty ? version : null,
+        encoders: [
+          if (list is List)
+            for (final entry in list)
+              if (entry is Map)
+                ?CastEncoderKind.values
+                    .where((kind) => kind.name == entry['kind'])
+                    .firstOrNull
+                    ?.ffmpegName,
+        ],
+      );
+    } on Object {
+      return null;
+    }
+  }
+
   CastEncoders? _readCache(String version) {
     try {
       final file = _cacheFile;

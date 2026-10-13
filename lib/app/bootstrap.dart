@@ -20,6 +20,7 @@ import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/platform/tool_licenses.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -34,6 +35,7 @@ import 'package:iptv_player/data/images/cached_artwork.dart';
 import 'package:iptv_player/data/images/cached_artwork_store.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/platform/file_reveals.dart';
+import 'package:iptv_player/data/platform/system_facts_readers.dart';
 import 'package:iptv_player/data/platform/system_networks.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
@@ -45,6 +47,8 @@ import 'package:iptv_player/design/fonts.dart';
 import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/presentation/cast_shell_slots.dart';
+import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
+import 'package:iptv_player/features/diagnostics/data/file_log_reader.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
@@ -133,6 +137,11 @@ Future<void> bootstrap() async {
       windowControlsProvider.overrideWithValue(const WindowManagerControls()),
       fileRevealProvider.overrideWithValue(platformFileReveal(log)),
       systemNetworkProvider.overrideWithValue(platformSystemNetwork(log)),
+      systemFactsReaderProvider.overrideWithValue(platformSystemFacts()),
+      if (paths != null)
+        logReaderProvider.overrideWithValue(
+          FileLogReader(directory: paths.logs),
+        ),
       appLogProvider.overrideWithValue(log),
       secretRegistryProvider.overrideWithValue(secrets),
       errorReporterProvider.overrideWithValue(errors),

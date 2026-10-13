@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
+import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
@@ -91,6 +92,7 @@ final class PlaybackCoordinator {
     required this._channels,
     required this._log,
     this._progress,
+    this._decoders,
     PlaybackSettings Function()? settings,
     SourceConnections? connections,
     this.timings = const WatchdogTimings(),
@@ -111,6 +113,7 @@ final class PlaybackCoordinator {
 
   /// Null: a file's position isn't saved (tests that only play live).
   final WatchProgress? _progress;
+  final DecoderNotes? _decoders;
   final PlaybackSettings Function() _settings;
   final WatchdogTimings timings;
 
@@ -501,6 +504,21 @@ final class PlaybackCoordinator {
     }
   }
 
+  /// What decodes this stream, for the diagnostics report (Phase 9
+  /// decision 9). Asked at the first frame, when the decoder is known;
+  /// whatever goes wrong here is no playback problem.
+  Future<void> _noteDecoder(int generation) async {
+    final notes = _decoders;
+    if (notes == null) return;
+    try {
+      final info = await engine.streamInfo();
+      if (generation != _generation) return;
+      await notes.note(info);
+    } on Object catch (error) {
+      _log.debug(_tag, "Couldn't note the decoder: $error");
+    }
+  }
+
   void _onEvent(PlayerEvent event) {
     final item = this.item;
     final token = _token;
@@ -518,6 +536,7 @@ final class PlaybackCoordinator {
         _started = true;
         _set(PlaybackPlaying(item));
         _startTick(item, token);
+        unawaited(_noteDecoder(generation));
         if (item case PlayableChannel(:final channel) when !_recorded) {
           _recorded = true;
           unawaited(_history.recordLive(channel));
