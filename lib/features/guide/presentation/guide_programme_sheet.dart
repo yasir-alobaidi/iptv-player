@@ -9,9 +9,13 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 
 /// Opens the programme detail sheet (the approved sketch, ADR-011): the
-/// programme, its channel and description, **Watch channel** and the
+/// programme, its channel and description, **Watch channel**, **Remind
+/// me** on one that hasn't started (Phase 9 decision 13) and the
 /// channel's favorite. Esc closes it.
 Future<void> showGuideProgrammeSheet(
   BuildContext context, {
@@ -57,12 +61,24 @@ class GuideProgrammeSheet extends ConsumerWidget {
     final whole =
         ref.watch(guideProgrammeProvider(programme.id)).value ?? programme;
     final ended = !programme.end.isAfter(now);
+    final upcoming = programme.start.isAfter(now);
+    final reminded =
+        upcoming &&
+        reminderFor(
+              ref.watch(remindersProvider).value ?? const [],
+              channel,
+              programme,
+            ) !=
+            null;
     final subtitle = whole.subtitle?.trim() ?? '';
     final description = whole.description?.trim() ?? '';
 
     return AppDialog(
       title: programme.title,
       subtitle: programmeSheetMeta(programme, now, tokens.timeStyle),
+      // Wide enough for Watch channel, Remind me and the favorite on one
+      // line.
+      width: 640,
       onClose: () => Navigator.of(context).pop(),
       child: Padding(
         padding: EdgeInsets.only(bottom: tokens.spacing.s20),
@@ -100,34 +116,65 @@ class GuideProgrammeSheet extends ConsumerWidget {
             ],
             SizedBox(height: tokens.spacing.s20),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                AppButton(
-                  label: ended ? 'Already finished' : 'Watch channel',
-                  icon: AppIcons.play,
-                  autofocus: !ended,
-                  onPressed: ended
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          onWatch();
-                        },
-                ),
-                SizedBox(width: tokens.spacing.s8),
-                AppButton(
-                  label: fresh.isFavorite
-                      ? 'Remove from favorites'
-                      : 'Add to favorites',
-                  icon: fresh.isFavorite ? AppIcons.starFilled : AppIcons.star,
-                  variant: AppButtonVariant.secondary,
-                  autofocus: ended,
-                  onPressed: () => unawaited(
-                    ref
-                        .read(channelRepositoryProvider)
-                        .setFavorite(fresh, on: !fresh.isFavorite),
+                // The longest three labels are wider than the sheet: they
+                // wrap, and never clip.
+                Expanded(
+                  child: Wrap(
+                    spacing: tokens.spacing.s8,
+                    runSpacing: tokens.spacing.s8,
+                    children: [
+                      AppButton(
+                        label: ended ? 'Already finished' : 'Watch channel',
+                        icon: AppIcons.play,
+                        autofocus: !ended,
+                        onPressed: ended
+                            ? null
+                            : () {
+                                Navigator.of(context).pop();
+                                onWatch();
+                              },
+                      ),
+                      if (upcoming)
+                        AppButton(
+                          label: reminded
+                              ? '$reminderSetLabel · Remove'
+                              : remindMeLabel,
+                          icon: reminded ? AppIcons.bellFilled : AppIcons.bell,
+                          variant: AppButtonVariant.secondary,
+                          onPressed: () => unawaited(
+                            toggleReminder(
+                              ProviderScope.containerOf(context, listen: false),
+                              channel,
+                              programme,
+                            ),
+                          ),
+                        ),
+                      AppButton(
+                        label: fresh.isFavorite
+                            ? 'Remove from favorites'
+                            : 'Add to favorites',
+                        icon: fresh.isFavorite
+                            ? AppIcons.starFilled
+                            : AppIcons.star,
+                        variant: AppButtonVariant.secondary,
+                        autofocus: ended,
+                        onPressed: () => unawaited(
+                          ref
+                              .read(channelRepositoryProvider)
+                              .setFavorite(fresh, on: !fresh.isFavorite),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                const Kbd('Esc'),
+                SizedBox(width: tokens.spacing.s8),
+                // Beside the last line of buttons, at its middle.
+                SizedBox(
+                  height: context.scaled(AppButtonSize.m.height),
+                  child: const Center(child: Kbd('Esc')),
+                ),
               ],
             ),
           ],

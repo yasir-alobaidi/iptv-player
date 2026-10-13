@@ -19,6 +19,10 @@ import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/domain/reminder.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/domain/search_words.dart';
 import 'package:iptv_player/features/search/presentation/search_actions.dart';
@@ -36,8 +40,9 @@ import 'package:iptv_player/features/vod/domain/titles.dart';
 /// **The keyboard's focus stays in the field** (as in the Match… picker):
 /// ↑/↓ move a cursor through every result, PageUp/PageDown by a screen,
 /// Tab and Shift+Tab to the next or previous group, Enter opens, the Menu
-/// key opens the result's menu, Esc closes. D is a letter here, so a
-/// movie downloads with Ctrl+D or from its menu. The mouse highlights on
+/// key opens the result's menu, Esc closes. D and R are letters here, so
+/// a movie downloads with Ctrl+D and an upcoming programme gets its
+/// reminder with Ctrl+R, or from their menus. The mouse highlights on
 /// hover and opens on a click.
 class SearchOverlay extends ConsumerStatefulWidget {
   const new({this.onClose, super.key});
@@ -107,6 +112,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       case LogicalKeyboardKey.keyD
           when HardwareKeyboard.instance.isControlPressed:
         return _download(selectable);
+      case LogicalKeyboardKey.keyR
+          when HardwareKeyboard.instance.isControlPressed:
+        return _remind(selectable);
       case LogicalKeyboardKey.contextMenu:
         return _menu(selectable);
       case LogicalKeyboardKey.f10 when shift:
@@ -245,6 +253,36 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     return KeyEventResult.ignored;
   }
 
+  /// Ctrl+R on a programme: sets its reminder, or removes the one it has
+  /// (the toast shows over search). One that is on already says so.
+  KeyEventResult _remind(List<_Entry> selectable) {
+    final entry = _at(selectable);
+    if (entry case _HitEntry(:final ProgrammeHit hit)) {
+      unawaited(
+        toggleReminder(
+          ProviderScope.containerOf(context, listen: false),
+          hit.channel,
+          hit.programme,
+        ),
+      );
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// What Ctrl+R would do on the cursor's row, for the footer: nothing
+  /// to say unless it is an upcoming programme.
+  String? _remindHint(List<Reminder> reminders) {
+    final entry = _at(_selectable);
+    if (entry case _HitEntry(:final ProgrammeHit hit)
+        when hit.programme.start.isAfter(ref.read(appClockProvider)())) {
+      return reminderFor(reminders, hit.channel, hit.programme) == null
+          ? remindMeLabel
+          : removeReminderLabel;
+    }
+    return null;
+  }
+
   KeyEventResult _menu(List<_Entry> selectable) {
     final entry = _at(selectable);
     final anchor = _cursorRow.currentContext;
@@ -261,6 +299,22 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
     switch (hit) {
       case ChannelHit(:final channel) || ProgrammeHit(:final channel):
+        final container = ProviderScope.containerOf(context, listen: false);
+        // An upcoming programme's reminder, as the row's Remind me.
+        final upcoming = switch (hit) {
+          ProgrammeHit(:final programme)
+              when programme.start.isAfter(ref.read(appClockProvider)()) =>
+            programme,
+          _ => null,
+        };
+        final reminded =
+            upcoming != null &&
+            reminderFor(
+                  ref.read(remindersProvider).value ?? const [],
+                  channel,
+                  upcoming,
+                ) !=
+                null;
         // The one channel menu (step 7), and search's own way to Live TV.
         return showChannelMenu(
           anchor,
@@ -273,6 +327,14 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
           onChanged: searchAgain,
           after: [
             const AppMenuItem.separator(),
+            if (upcoming != null)
+              AppMenuItem(
+                label: reminded ? removeReminderLabel : remindMeLabel,
+                icon: reminded ? AppIcons.bellFilled : AppIcons.bell,
+                shortcut: 'Ctrl+R',
+                onPressed: () =>
+                    unawaited(toggleReminder(container, channel, upcoming)),
+              ),
             AppMenuItem(
               label: 'Show in Live TV',
               icon: AppIcons.liveTv,
@@ -347,6 +409,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     final search = tokens.search;
     final view = ref.watch(searchSessionProvider);
     final source = ref.watch(currentSourceProvider);
+    final reminders = ref.watch(remindersProvider).value ?? const <Reminder>[];
     final results = view.idle ? null : view.results;
     if (!identical(results, _placedIn)) {
       _placedIn = results;
@@ -447,10 +510,12 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                                   _body(context, view, results, source),
                                 ),
                               ),
+                              // After the body, which lists the entries.
                               _Footer(
                                 idle: view.idle || source == null,
                                 recent: view.recent,
                                 hasRecent: view.idle && view.recent.isNotEmpty,
+                                remind: _remindHint(reminders),
                               ),
                             ],
                           ),
@@ -965,6 +1030,8 @@ class _EntryRowState extends State<_EntryRow> {
                 padding: EdgeInsets.only(left: tokens.spacing.s12),
                 child: const AppBadge('LIVE', tone: AppBadgeTone.live),
               )
+            : programme.programme.start.isAfter(widget.now)
+            ? _RemindMe(programme)
             : null,
       ),
       MovieHit(:final movie) => (
@@ -1149,6 +1216,70 @@ class _EntryRowState extends State<_EntryRow> {
   }
 }
 
+/// "Remind me" at the end of an upcoming programme's row (canvas), and
+/// "Reminder set" with a bell once it has one. A click sets or removes
+/// it; the keyboard, which stays in the field, has Ctrl+R.
+class _RemindMe extends ConsumerWidget {
+  const new(this.hit);
+
+  final ProgrammeHit hit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final set =
+        reminderFor(
+          ref.watch(remindersProvider).value ?? const [],
+          hit.channel,
+          hit.programme,
+        ) !=
+        null;
+    return Padding(
+      padding: EdgeInsets.only(left: tokens.spacing.s12),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => unawaited(
+            toggleReminder(
+              ProviderScope.containerOf(context, listen: false),
+              hit.channel,
+              hit.programme,
+            ),
+          ),
+          child: Semantics(
+            button: true,
+            label: set ? '$reminderSetLabel. Remove' : remindMeLabel,
+            excludeSemantics: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (set) ...[
+                  AppIcon(
+                    AppIcons.bellFilled,
+                    size: tokens.search.lineIconSize + 2,
+                    color: colors.accentBase,
+                  ),
+                  SizedBox(width: tokens.search.lineIconGap),
+                ],
+                Text(
+                  set ? reminderSetLabel : remindMeLabel,
+                  style: tokens.text.labelSmall
+                      .withWeight(700)
+                      .copyWith(
+                        color: set ? colors.textPrimary : colors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The DOWNLOADED badge at the end of a movie's row while the movie is
 /// on this computer (canvas).
 class _DownloadedIf extends ConsumerWidget {
@@ -1253,6 +1384,7 @@ class _Footer extends StatelessWidget {
     required this.idle,
     required this.recent,
     required this.hasRecent,
+    this.remind,
   });
 
   final bool idle;
@@ -1261,6 +1393,10 @@ class _Footer extends StatelessWidget {
   /// The body lists the recent searches: Enter searches again, Delete
   /// removes one.
   final bool hasRecent;
+
+  /// What Ctrl+R does on the cursor's row ("Remind me", "Remove
+  /// reminder"); null where it does nothing.
+  final String? remind;
 
   @override
   Widget build(BuildContext context) {
@@ -1313,6 +1449,20 @@ class _Footer extends StatelessWidget {
             if (hasRecent) ...[
               SizedBox(width: tokens.spacing.s16 + 2),
               key(const Kbd('Del'), 'Remove'),
+            ],
+            if (remind case final remind?) ...[
+              SizedBox(width: tokens.spacing.s16 + 2),
+              key(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Kbd('Ctrl'),
+                    SizedBox(width: tokens.spacing.s4),
+                    const Kbd('R'),
+                  ],
+                ),
+                remind,
+              ),
             ],
             SizedBox(width: tokens.spacing.s16 + 2),
             key(const Kbd('Esc'), 'Close'),

@@ -16,6 +16,12 @@ final class FakeReminders implements ReminderRepository {
   /// Makes [remove] fail with this.
   AppFailure? removeFailure;
 
+  /// Makes [set] fail with this.
+  AppFailure? setFailure;
+
+  /// Makes [watchAll] fail with this instead of listing anything.
+  AppFailure? watchFailure;
+
   /// Ids removed, in order.
   final removed = <int>[];
 
@@ -54,6 +60,7 @@ final class FakeReminders implements ReminderRepository {
 
   @override
   Stream<List<Reminder>> watchAll() async* {
+    if (watchFailure case final failure?) throw failure;
     yield sorted;
     yield* _changes.stream;
   }
@@ -73,6 +80,7 @@ final class FakeReminders implements ReminderRepository {
 
   @override
   Future<Result<Reminder>> set(ReminderDraft draft) async {
+    if (setFailure case final failure?) return Err(failure);
     for (final held in _held.values) {
       if (held.isFor(
         sourceId: draft.sourceId,

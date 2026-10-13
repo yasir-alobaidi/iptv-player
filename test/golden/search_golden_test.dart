@@ -7,6 +7,7 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -14,6 +15,7 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/search/data/search_providers.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/presentation/search_state.dart';
@@ -23,6 +25,7 @@ import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 import '../app/app_harness.dart';
 import '../features/live_tv/live_tv_fakes.dart';
+import '../features/reminders/reminder_fakes.dart';
 import '../features/search/search_fakes.dart';
 import 'golden_harness.dart';
 
@@ -131,8 +134,9 @@ void main() {
   Future<LiveTvFakes> open(
     WidgetTester tester,
     Size size,
-    ScriptedSearch search,
-  ) async {
+    ScriptedSearch search, {
+    List<Override> more = const [],
+  }) async {
     hideDebugBanner();
     final live = LiveTvFakes();
     live.fakes.now = goldenNow();
@@ -170,6 +174,7 @@ void main() {
         searchRepositoryProvider.overrideWithValue(search),
         // No frame is made in a golden: the row draws its stand-in.
         libraryThumbnailProvider.overrideWith((ref, id) async => null),
+        ...more,
       ],
     );
     await _settle(tester);
@@ -213,6 +218,37 @@ void main() {
         );
       });
     }
+
+    // Phase 9 decision 13, sketch F: the row once it has a reminder, and
+    // what the footer says of Ctrl+R with the cursor on it.
+    testWidgets('a reminder set, the cursor on its row', (tester) async {
+      final harbor = _harbor(goldenNow());
+      final pilot = harbor.programmes.hits.last;
+      final reminders = FakeReminders()
+        ..add(
+          start: pilot.programme.start,
+          channelKey: pilot.channel.remoteKey,
+        );
+      final search = ScriptedSearch()..answers['harbor'] = harbor;
+      await open(
+        tester,
+        const Size(1280, 800),
+        search,
+        more: [reminderRepositoryProvider.overrideWithValue(reminders)],
+      );
+      await tester.enterText(find.byType(EditableText), 'harbor');
+      await tester.pump(searchDelay);
+      await _settle(tester);
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      }
+      await _settle(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/search_reminder_set_1280x800.png'),
+      );
+    });
 
     testWidgets('recent searches 1280x800', (tester) async {
       final search = ScriptedSearch()..recent = ['tennis open', 'cup final'];

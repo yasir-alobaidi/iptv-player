@@ -53,3 +53,56 @@ String reminderGoneText(Reminder before) =>
 /// toast that says one was set.
 String reminderWhen(DateTime start, DateTime now, TimeStyle style) =>
     '${formatRelativeDay(start, now)}, ${formatClock(start, style)}';
+
+// Setting, removing and listing them (sketches F–H).
+
+/// What a control that sets one says, and what it says once it is set.
+const remindMeLabel = 'Remind me';
+const reminderSetLabel = 'Reminder set';
+
+/// A menu's and a key hint's way to take one back.
+const removeReminderLabel = 'Remove reminder';
+
+/// The toast after setting one: "Reminder set · Tomorrow, 9:30 PM".
+String reminderSetText(DateTime start, DateTime now, TimeStyle style) =>
+    '$reminderSetLabel · ${reminderWhen(start, now, style)}';
+
+/// The toast after removing one: "Reminder removed · The Harbor Pilot".
+String reminderRemovedText(String title) => 'Reminder removed · $title';
+
+/// Remind me on a programme that is on already, or over.
+String reminderTooLateText(String title) => '$title has already started.';
+
+/// A reminder whose channel the source no longer lists: Watch, and Enter
+/// in the list, say so.
+String reminderChannelGoneText(String channelName) =>
+    '$channelName is no longer in your channels.';
+
+/// The list's title and Settings → Guide's row: "Reminders · 3".
+String remindersTitle(int count) =>
+    count == 0 ? 'Reminders' : 'Reminders · ${formatCount(count)}';
+
+/// Under the list (sketch H): the one limit, said plainly.
+const remindersLimit =
+    'A reminder shows when its programme starts, while the app is open.';
+
+/// The empty list: where one is set.
+const noRemindersTitle = 'No reminders';
+const noRemindersMessage =
+    'Press R on an upcoming programme in the Guide, or choose Remind me '
+    'in Search.';
+
+/// A row of the list, for assistive technology: "The Harbor Pilot, Blue
+/// Water, Tomorrow, 9:30 PM".
+String reminderRowLabel(Reminder reminder, DateTime now, TimeStyle style) => [
+  reminder.title,
+  reminder.channelName,
+  reminderWhen(reminder.start, now, style),
+].join(', ');
+
+/// The bell in the Guide's toolbar, for assistive technology.
+String remindersButtonLabel(int count) => switch (count) {
+  0 => 'Reminders, none set',
+  1 => 'Reminders, 1 set',
+  _ => 'Reminders, ${formatCount(count)} set',
+};

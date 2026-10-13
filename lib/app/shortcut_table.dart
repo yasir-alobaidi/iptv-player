@@ -225,6 +225,9 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry("A programme's details", [
       ['Enter'],
     ]),
+    ShortcutEntry("Set the programme's reminder, or remove it", [
+      ['R'],
+    ]),
   ]),
   ShortcutGroup('Search', [
     ShortcutEntry('Through the results', [
@@ -240,6 +243,9 @@ const shortcutTable = <ShortcutGroup>[
     ]),
     ShortcutEntry('Download the result', [
       ['Ctrl', 'D'],
+    ]),
+    ShortcutEntry("Set an upcoming programme's reminder, or remove it", [
+      ['Ctrl', 'R'],
     ]),
     ShortcutEntry('Forget a recent search', [
       ['Delete'],
@@ -270,6 +276,9 @@ const shortcutTable = <ShortcutGroup>[
       ['→'],
     ]),
     ShortcutEntry('Cancel a download, or clear a finished one', [
+      ['Delete'],
+    ]),
+    ShortcutEntry('Remove a reminder from the list', [
       ['Delete'],
     ]),
     ShortcutEntry("Step the Guide's time offset", [

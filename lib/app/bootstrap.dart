@@ -59,6 +59,7 @@ import 'package:iptv_player/features/playback/data/db_playback_settings_store.da
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_watch.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 import 'package:iptv_player/features/settings/data/db_appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -255,6 +256,9 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
         // their programmes are still on; then the scheduler keeps watch
         // (Phase 9 decision 10). Before the syncs: it reads only its own
         // table.
+        // Watch on a reminder plays its channel, from before the first
+        // one can show.
+        container.read(reminderWatchesProvider);
         unawaited(container.read(reminderServiceProvider).start());
         // The download folder is a library folder (docs/09), and what
         // was downloading when the app went picks up again.

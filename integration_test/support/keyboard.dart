@@ -51,6 +51,7 @@ final class Keys {
     LogicalKeyboardKey.keyF: PhysicalKeyboardKey.keyF,
     LogicalKeyboardKey.keyG: PhysicalKeyboardKey.keyG,
     LogicalKeyboardKey.keyK: PhysicalKeyboardKey.keyK,
+    LogicalKeyboardKey.keyR: PhysicalKeyboardKey.keyR,
     LogicalKeyboardKey.keyZ: PhysicalKeyboardKey.keyZ,
     LogicalKeyboardKey.slash: PhysicalKeyboardKey.slash,
     LogicalKeyboardKey.contextMenu: PhysicalKeyboardKey.contextMenu,

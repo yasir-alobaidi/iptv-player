@@ -19,6 +19,9 @@ import 'package:iptv_player/features/guide/presentation/guide_view_state.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
+import 'package:iptv_player/features/reminders/presentation/reminders_dialog.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
@@ -321,8 +324,8 @@ class _GuideViewState extends ConsumerState<_GuideView> {
   }
 }
 
-/// Day pills, Jump to now, the running import or a failed refresh, and
-/// the category filter.
+/// Day pills, Jump to now, the running import or a failed refresh, the
+/// reminders' bell and the category filter.
 class _Toolbar extends ConsumerWidget {
   const new({
     required this.grid,
@@ -340,7 +343,7 @@ class _Toolbar extends ConsumerWidget {
 
   /// Room a day pill takes, and what the toolbar keeps for the rest.
   static const _pillWidth = 84.0;
-  static const _reserved = 440.0;
+  static const _reserved = 504.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -389,11 +392,64 @@ class _Toolbar extends ConsumerWidget {
                 Flexible(child: status!),
                 SizedBox(width: spacing.s12),
               ],
+              const _RemindersButton(),
+              SizedBox(width: spacing.s8),
               _CategoryFilter(query: query),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// The bell, with how many reminders are set: it opens their list
+/// (Phase 9 decision 13). Drawn as the toolbar's other buttons are.
+class _RemindersButton extends ConsumerWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final count = ref.watch(remindersProvider).value?.length ?? 0;
+    const size = AppButtonSize.s;
+    return AppTooltip(
+      message: 'Reminders',
+      child: FocusableSurface(
+        onPressed: () => unawaited(showRemindersDialog(context)),
+        background: colors.surface2,
+        hoverBackground: colors.surface3,
+        borderRadius: tokens.radii.controlAll,
+        semanticLabel: remindersButtonLabel(count),
+        builder: (context, states) => Container(
+          height: context.scaled(size.height),
+          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
+          decoration: BoxDecoration(
+            borderRadius: tokens.radii.controlAll,
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppIcon(
+                count == 0 ? AppIcons.bell : AppIcons.bellFilled,
+                size: 18,
+                color: count == 0 ? colors.textPrimary : colors.accentBase,
+              ),
+              if (count > 0) ...[
+                SizedBox(width: size.gap),
+                Text(
+                  formatCount(count),
+                  style: tokens.text.buttonSmall.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

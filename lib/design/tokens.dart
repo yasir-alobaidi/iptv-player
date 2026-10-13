@@ -505,6 +505,10 @@ class AppGuideTokens {
   /// The dashed outline of a channel with no guide.
   double get dashLength => 4;
   double get dashGap => 3;
+
+  /// The bell after the title of a programme that has a reminder.
+  double get reminderBellSize => 12;
+  double get reminderBellGap => 4;
 }
 
 /// The casting screens' measures (canvas `Cast device picker` and

@@ -23,6 +23,9 @@ import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/domain/reminder.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
 
 /// What the Guide's toolbar asks of the grid, and the day the grid shows
 /// (the selected day pill).
@@ -73,7 +76,9 @@ class GuideGridController extends ChangeNotifier {
 /// moving the time window when it leaves the screen; ↑/↓ between
 /// channels at the same time; PageUp/PageDown by a screen; Home to now;
 /// Enter or Space opens the programme's detail sheet, or the Match…
-/// picker on a channel with no guide. A click does the same as Enter.
+/// picker on a channel with no guide; R sets the programme's reminder or
+/// removes it, and a cell that has one shows a bell (Phase 9 decision
+/// 13). A click does the same as Enter.
 class GuideGrid extends ConsumerStatefulWidget {
   const new({
     required this.query,
@@ -163,6 +168,11 @@ class _GuideGridState extends ConsumerState<GuideGrid>
 
   /// Whether the rows have shown once: see [_claimFocus].
   bool _shown = false;
+
+  /// The starts of the programmes with a reminder, by their channel's
+  /// remote key: which cells draw a bell.
+  var _reminded = const <String, Set<int>>{};
+  List<Reminder>? _remindedFrom;
 
   GuideTimeline get _timeline => widget.timeline;
   DateTime get _viewStart => _timeline.timeAt(_x.value);
@@ -507,6 +517,8 @@ class _GuideGridState extends ConsumerState<GuideGrid>
         _activate();
       case LogicalKeyboardKey.contextMenu when !repeat:
         _menu();
+      case LogicalKeyboardKey.keyR when _plainKey:
+        if (!repeat) _remind();
       case LogicalKeyboardKey.home ||
           LogicalKeyboardKey.enter ||
           LogicalKeyboardKey.numpadEnter ||
@@ -517,6 +529,53 @@ class _GuideGridState extends ConsumerState<GuideGrid>
         return KeyEventResult.ignored;
     }
     return KeyEventResult.handled;
+  }
+
+  /// A letter by itself: Ctrl+R and the like are somebody else's.
+  bool get _plainKey {
+    final keyboard = HardwareKeyboard.instance;
+    return !keyboard.isControlPressed &&
+        !keyboard.isAltPressed &&
+        !keyboard.isMetaPressed;
+  }
+
+  /// The programme under the keyboard's cursor; null on a gap, on a
+  /// channel with no guide, and while its row is still being read.
+  EpgProgramme? _programmeAtCursor(ChannelItem channel) {
+    final anchor = _anchor;
+    if (anchor == null) return null;
+    final cells = _cells(channel.id, _viewStart, _viewEnd);
+    return cells == null ? null : cellAt(cells, anchor)?.programme;
+  }
+
+  /// R: the focused programme's reminder, set or removed; the toast says
+  /// which, with Undo.
+  void _remind() {
+    final channel = _channelAt(_row);
+    final programme = channel == null ? null : _programmeAtCursor(channel);
+    if (channel == null || programme == null) return;
+    unawaited(
+      toggleReminder(
+        ProviderScope.containerOf(context, listen: false),
+        channel,
+        programme,
+      ),
+    );
+  }
+
+  /// Which cells have a reminder, worked out again only when the list of
+  /// reminders is another one.
+  void _noteReminders(List<Reminder>? reminders, String sourceId) {
+    if (identical(reminders, _remindedFrom)) return;
+    _remindedFrom = reminders;
+    final byChannel = <String, Set<int>>{};
+    for (final reminder in reminders ?? const <Reminder>[]) {
+      if (reminder.sourceId != sourceId) continue;
+      (byChannel[reminder.channelKey] ??= {}).add(
+        reminder.start.millisecondsSinceEpoch,
+      );
+    }
+    _reminded = byChannel;
   }
 
   /// The menu key: the one channel menu (Phase 6 step 7) for the
@@ -701,6 +760,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
       ..listen(guideChangesProvider, (_, _) => _onGuideChanged());
     final count = ref.watch(channelCountProvider(query));
     _total = count.value;
+    _noteReminders(ref.watch(remindersProvider).value, query.sourceId);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -844,6 +904,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
                 cells: (from, to) =>
                     channel == null ? null : _cells(channel.id, from, to),
                 cursor: hasFocus && index == _row ? _anchor : null,
+                reminders: _reminded[channel?.remoteKey] ?? const {},
                 channelKey: index == _row ? _cursorChannel : null,
                 onTap: channel == null
                     ? null
@@ -1032,6 +1093,7 @@ class _GuideRowView extends StatelessWidget {
     required this.now,
     required this.cells,
     required this.cursor,
+    required this.reminders,
     required this.onTap,
     this.channelKey,
   });
@@ -1049,6 +1111,10 @@ class _GuideRowView extends StatelessWidget {
   /// The keyboard's moment, when its cursor is on this row and the grid
   /// has the focus.
   final DateTime? cursor;
+
+  /// When this channel's programmes with a reminder start, in
+  /// milliseconds since the epoch.
+  final Set<int> reminders;
   final ValueChanged<GuideCell>? onTap;
 
   @override
@@ -1067,6 +1133,7 @@ class _GuideRowView extends StatelessWidget {
         now: now,
         cells: cells,
         cursor: cursor,
+        reminders: reminders,
         onTap: onTap,
       ),
     );
@@ -1092,6 +1159,7 @@ class _Strip extends StatefulWidget {
     required this.now,
     required this.cells,
     required this.cursor,
+    required this.reminders,
     required this.onTap,
   });
 
@@ -1104,6 +1172,7 @@ class _Strip extends StatefulWidget {
   final DateTime now;
   final List<GuideCell>? Function(DateTime from, DateTime to) cells;
   final DateTime? cursor;
+  final Set<int> reminders;
   final ValueChanged<GuideCell>? onTap;
 
   /// The stretch built either side of the view, and how near its end the
@@ -1415,6 +1484,11 @@ class _StripState extends State<_Strip> {
   static Object _keyOf(GuideCell cell) =>
       cell.programme?.id ?? 'gap ${cell.start.millisecondsSinceEpoch}';
 
+  /// Whether [cell]'s programme has a reminder.
+  bool _reminded(GuideCell cell) =>
+      cell.programme != null &&
+      widget.reminders.contains(cell.start.millisecondsSinceEpoch);
+
   /// [cell]'s widget: the one built last time when what it shows is the
   /// same, else a new one. Recorded in [made].
   Widget _cellWidget(
@@ -1430,6 +1504,7 @@ class _StripState extends State<_Strip> {
       phase: _phase(cell.programme, widget.now),
       focused: focused,
       hovered: cell.start == _hovered,
+      reminded: _reminded(cell),
     );
     final last = _made[key];
     final onTap = widget.onTap;
@@ -1443,6 +1518,7 @@ class _StripState extends State<_Strip> {
             focused: focused,
             ring: false,
             hovered: shows.hovered,
+            reminded: shows.reminded,
             onTap: onTap == null ? null : () => onTap(cell),
           );
     made[key] = shows..widget = built;
@@ -1496,6 +1572,7 @@ class _StripState extends State<_Strip> {
                 focused: isFocused,
                 ring: isFocused,
                 hovered: cut.start == _hovered,
+                reminded: _reminded(cut),
                 onTap: null,
               ),
             ),
@@ -1592,6 +1669,7 @@ class _CellView extends StatelessWidget {
     required this.ring,
     required this.hovered,
     required this.onTap,
+    this.reminded = false,
     this.layoutWidth,
   });
 
@@ -1613,6 +1691,9 @@ class _CellView extends StatelessWidget {
   /// Draws the focus ring too (the strip draws it apart otherwise).
   final bool ring;
   final bool hovered;
+
+  /// Its programme has a reminder: a bell after its title.
+  final bool reminded;
 
   /// For assistive technology; the strip handles the pointer.
   final VoidCallback? onTap;
@@ -1661,19 +1742,34 @@ class _CellView extends StatelessWidget {
       final titleStyle =
           (focused ? tokens.text.label.withWeight(700) : tokens.text.label)
               .copyWith(color: title);
+      final titleText = Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        style: programme == null
+            ? tokens.text.caption.copyWith(color: title)
+            : titleStyle,
+      );
       Widget lines = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: programme == null
-                ? tokens.text.caption.copyWith(color: title)
-                : titleStyle,
-          ),
+          if (reminded)
+            // The bell keeps its place when the title is cut short.
+            Row(
+              children: [
+                Flexible(child: titleText),
+                SizedBox(width: guide.reminderBellGap),
+                AppIcon(
+                  AppIcons.bellFilled,
+                  size: guide.reminderBellSize,
+                  color: colors.accentBase,
+                ),
+              ],
+            )
+          else
+            titleText,
           if (labels != null) ...[
             SizedBox(height: guide.cellLineGap),
             // The form by the width that shows: it changes at two widths
@@ -1741,7 +1837,11 @@ class _CellView extends StatelessWidget {
     return Semantics(
       button: programme != null,
       selected: focused,
-      label: programme == null ? 'No information' : labels!.spoken(now),
+      label: programme == null
+          ? 'No information'
+          : reminded
+          ? '${labels!.spoken(now)}, reminder set'
+          : labels!.spoken(now),
       onTap: onTap,
       excludeSemantics: true,
       child: box,
@@ -1851,6 +1951,7 @@ final class _MadeCell {
     required this.phase,
     required this.focused,
     required this.hovered,
+    required this.reminded,
   });
 
   final DateTime end;
@@ -1858,6 +1959,7 @@ final class _MadeCell {
   final int phase;
   final bool focused;
   final bool hovered;
+  final bool reminded;
   Widget? widget;
 
   bool same(_MadeCell other) =>
@@ -1865,7 +1967,8 @@ final class _MadeCell {
       other.width == width &&
       other.phase == phase &&
       other.focused == focused &&
-      other.hovered == hovered;
+      other.hovered == hovered &&
+      other.reminded == reminded;
 }
 
 /// Clips a row's sliding cells to the right of the programme the view's

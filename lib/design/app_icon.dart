@@ -13,6 +13,8 @@ enum AppIcons {
   arrowUp('arrow-up'),
   aspectRatio('aspect-ratio'),
   audio('audio'),
+  bell('bell'),
+  bellFilled('bell-filled'),
   cast('cast'),
   castConnected('cast-connected'),
   catchUp('catch-up'),

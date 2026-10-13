@@ -21,6 +21,9 @@ import 'package:iptv_player/features/guide/presentation/guide_match_picker.dart'
 import 'package:iptv_player/features/guide/presentation/guide_match_request.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
+import 'package:iptv_player/features/reminders/presentation/reminders_dialog.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -351,6 +354,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
         (coverage.value?.isImporting ?? false) ||
         ref.watch(guideImportServiceProvider).isImporting(_sourceId);
     final keepDays = ref.watch(guideSettingsControllerProvider).keepDays;
+    final reminderCount = ref.watch(remindersProvider).value?.length ?? 0;
 
     final rows = [
       if (_error case final error?) ...[
@@ -412,6 +416,22 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
           onChanged: _stepOffset,
         ),
       ),
+      // The second door to the one list of reminders (Phase 9 decision
+      // 13); the first is the bell in the Guide's toolbar.
+      _Setting(
+        title: remindersTitle(reminderCount),
+        // One line: every row here is height the channels below lose.
+        description: Text(
+          'Each shows when its programme starts, while the app is open.',
+          style: _descriptionStyle(context),
+        ),
+        control: AppButton(
+          label: 'Manage',
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.s,
+          onPressed: () => unawaited(showRemindersDialog(context)),
+        ),
+      ),
     ];
 
     final Widget list;
@@ -465,7 +485,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
         // Tall enough: the settings on top, the list takes the rest. A
         // short window scrolls the whole page with the list at a fixed
         // height instead.
-        if (constraints.maxHeight >= 460) {
+        if (constraints.maxHeight >= _fixedLayoutFrom) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -492,6 +512,10 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
     );
   }
 }
+
+/// The page's height from which the settings stay put and the channels
+/// take what is left: under it they would get two rows or fewer.
+const double _fixedLayoutFrom = 532;
 
 TextStyle _descriptionStyle(BuildContext context) => context.tokens.text.caption
     .copyWith(color: context.tokens.colors.textTertiary);
@@ -1120,15 +1144,24 @@ class _ChannelListState extends ConsumerState<_ChannelList> {
       );
     }
     if (total == null) {
+      // Cut at the list's own height: four rows are taller than the room
+      // a short window leaves it.
       return Semantics(
         label: 'Loading the channels',
-        child: Column(
-          children: [
-            for (var i = 0; i < 4; i++) ...[
-              const SkeletonRow(height: _ChannelList.rowHeight - 8),
-              SizedBox(height: tokens.spacing.s8),
-            ],
-          ],
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topCenter,
+            maxHeight: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  const SkeletonRow(height: _ChannelList.rowHeight - 8),
+                  SizedBox(height: tokens.spacing.s8),
+                ],
+              ],
+            ),
+          ),
         ),
       );
     }
