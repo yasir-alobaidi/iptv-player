@@ -120,10 +120,13 @@ String guideCellTime(
   EpgProgramme programme, {
   required bool full,
   required bool range,
+  required TimeStyle style,
 }) {
-  if (full) return formatTimeRange(programme.start, programme.end);
-  if (range) return formatTimeRangeShort(programme.start, programme.end);
-  return formatClockShort(programme.start);
+  if (full) return formatTimeRange(programme.start, programme.end, style);
+  if (range) {
+    return formatTimeRangeShort(programme.start, programme.end, style);
+  }
+  return formatClockShort(programme.start, style);
 }
 
 /// When a programme is on, relative to [now]: "on now", "ended", or
@@ -136,9 +139,13 @@ String? guideProgrammeState(EpgProgramme programme, DateTime now) {
 
 /// The detail sheet's line under the title: "Today · 8:00 – 10:00 PM ·
 /// Sport".
-String programmeSheetMeta(EpgProgramme programme, DateTime now) => [
+String programmeSheetMeta(
+  EpgProgramme programme,
+  DateTime now,
+  TimeStyle style,
+) => [
   formatRelativeDay(programme.start, now),
-  formatTimeRange(programme.start, programme.end),
+  formatTimeRange(programme.start, programme.end, style),
   if (programme.category?.trim().isNotEmpty ?? false) programme.category!,
 ].join(' · ');
 

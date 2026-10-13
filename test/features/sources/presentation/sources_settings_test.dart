@@ -371,14 +371,14 @@ void main() {
       Focus.of(tester.element(find.text('Sources').first)).requestFocus();
       await tester.pump();
       // Past Playback, Casting, Downloads & library, Guide and Categories
-      // to Appearance, which Phase 9 builds.
+      // to Appearance.
       for (var i = 0; i < 6; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       }
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await settleApp(tester);
 
-      expect(find.text('Appearance comes in Phase 9'), findsOneWidget);
+      expect(find.text('Changes show at once.'), findsOneWidget);
       // Focus stays in the list, as in the nav rail.
       expect(focusIsOn(tester, find.text('Appearance').first), isTrue);
     });

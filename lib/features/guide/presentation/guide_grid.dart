@@ -1647,7 +1647,9 @@ class _CellView extends StatelessWidget {
       time = colors.textTertiary;
     }
 
-    final labels = programme == null ? null : _Labels.of(programme);
+    final labels = programme == null
+        ? null
+        : _Labels.of(programme, tokens.timeStyle);
     final laidOut = math.max(width, layoutWidth ?? 0);
     Widget content = const SizedBox.expand();
     if (width >= guide.cellTextWidth) {
@@ -1750,17 +1752,22 @@ class _CellView extends StatelessWidget {
 /// A programme's words, worked out once rather than on every frame the
 /// grid moves: the cache hands out the same programme objects.
 final class _Labels {
-  new _(EpgProgramme programme)
+  new _(EpgProgramme programme, TimeStyle style)
     : clippedTitle = '‹ ${programme.title}',
-      full = guideCellTime(programme, full: true, range: true),
-      range = guideCellTime(programme, full: false, range: true),
-      start = guideCellTime(programme, full: false, range: false),
+      full = guideCellTime(programme, full: true, range: true, style: style),
+      range = guideCellTime(programme, full: false, range: true, style: style),
+      start = guideCellTime(programme, full: false, range: false, style: style),
       _programme = programme;
 
-  factory of(EpgProgramme programme) =>
-      _cache[programme] ??= _Labels._(programme);
+  /// One set of words per clock: a change of Settings → Appearance →
+  /// Clock must not show the times written before it.
+  factory of(EpgProgramme programme, TimeStyle style) {
+    final cache = style == TimeStyle.h24 ? _cache24 : _cache12;
+    return cache[programme] ??= _Labels._(programme, style);
+  }
 
-  static final _cache = Expando<_Labels>('guide cell labels');
+  static final _cache12 = Expando<_Labels>('guide cell labels, 12-hour');
+  static final _cache24 = Expando<_Labels>('guide cell labels, 24-hour');
 
   final EpgProgramme _programme;
   final String clippedTitle;
@@ -2043,8 +2050,8 @@ class _Ruler extends StatelessWidget {
             child: Center(
               child: Text(
                 i == first || (i > 0 && !sameMeridiem(ticks[i - 1], ticks[i]))
-                    ? formatClock(ticks[i])
-                    : formatClockShort(ticks[i]),
+                    ? formatClock(ticks[i], tokens.timeStyle)
+                    : formatClockShort(ticks[i], tokens.timeStyle),
                 style: labelStyle,
               ),
             ),
@@ -2064,7 +2071,7 @@ class _Ruler extends StatelessWidget {
                     borderRadius: tokens.radii.xsAll,
                   ),
                   child: Text(
-                    formatClockShort(now),
+                    formatClockShort(now, tokens.timeStyle),
                     style: tokens.text.labelSmall
                         .withWeight(800)
                         .copyWith(color: colors.onAccent),

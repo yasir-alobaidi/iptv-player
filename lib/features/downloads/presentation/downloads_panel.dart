@@ -887,7 +887,7 @@ class _FinishedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final line = downloadFinishedLine(task);
+    final line = downloadFinishedLine(task, tokens.timeStyle);
 
     void menu(BuildContext anchor) => unawaited(
       showAppMenu(

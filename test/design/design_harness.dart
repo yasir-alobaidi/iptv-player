@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Pumps [child] inside the app theme, sized like a desktop window.
+/// [textScale] is Settings → Appearance's text size (1.15, 1.3).
 Future<void> pumpDesign(
   WidgetTester tester,
   Widget child, {
   AppAccent accent = AppAccent.blue,
   AppDensity density = AppDensity.comfortable,
   bool reduceMotion = false,
+  double textScale = 1,
 }) async {
   // Focus highlights only render in "traditional" mode, which a real
   // desktop is always in.
@@ -25,6 +28,9 @@ Future<void> pumpDesign(
         density: density,
         reduceMotion: reduceMotion,
       ),
+      builder: textScale == 1
+          ? null
+          : (context, app) => AppTextScale(scale: textScale, child: app!),
       home: Scaffold(body: Center(child: child)),
     ),
   );

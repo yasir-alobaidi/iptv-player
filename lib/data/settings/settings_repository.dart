@@ -20,6 +20,9 @@ abstract final class SettingsKeys {
 
   /// Settings → Downloads & library's download half (Phase 8).
   static const downloads = 'downloads.settings';
+
+  /// Settings → Appearance (Phase 9), read before the first frame.
+  static const appearance = 'appearance.settings';
 }
 
 /// Reads and writes the `settings` table.

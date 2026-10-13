@@ -668,7 +668,7 @@ class _ChannelRowState extends ConsumerState<_ChannelRow> {
       controller: widget.controller,
       count: widget.channels.length,
       cardWidth: widget.width,
-      cardHeight: ChannelTile.height,
+      cardHeight: ChannelTile.heightOf(context),
       gap: HomeScreen.channelsGap,
       onSeeAll: widget.onSeeAll,
       card: (context, i, focus) {

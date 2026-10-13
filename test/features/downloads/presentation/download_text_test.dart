@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/features/downloads/presentation/download_text.dart';
 
 import '../../library/presentation/library_ui_support.dart';
@@ -187,8 +188,22 @@ void main() {
           total: (3.4 * 1024 * 1024 * 1024).round(),
           completedAt: DateTime(2026, 10, 11, 14, 14),
         ),
+        TimeStyle.h12,
       ),
       '3.4 GB · finished at 2:14 PM',
+    );
+    expect(
+      downloadFinishedLine(
+        download(
+          1,
+          'Northwind Hotel',
+          state: DownloadTaskState.completed,
+          total: 1024 * 1024,
+          completedAt: DateTime(2026, 10, 11, 14, 14),
+        ),
+        TimeStyle.h24,
+      ),
+      '1.0 MB · finished at 14:14',
     );
     expect(downloadsUsedLabel(45419225907), 'Downloads 42.3 GB');
     expect(

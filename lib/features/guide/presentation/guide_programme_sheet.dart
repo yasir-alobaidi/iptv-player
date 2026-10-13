@@ -62,7 +62,7 @@ class GuideProgrammeSheet extends ConsumerWidget {
 
     return AppDialog(
       title: programme.title,
-      subtitle: programmeSheetMeta(programme, now),
+      subtitle: programmeSheetMeta(programme, now, tokens.timeStyle),
       onClose: () => Navigator.of(context).pop(),
       child: Padding(
         padding: EdgeInsets.only(bottom: tokens.spacing.s20),

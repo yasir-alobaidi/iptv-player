@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// "Channels 8": a tab with its count, underlined when chosen (canvas
@@ -60,8 +61,10 @@ class CountTab extends StatelessWidget {
               SizedBox(width: tokens.spacing.s4 + 2),
               if (highlightCount)
                 Container(
-                  constraints: BoxConstraints(minWidth: tokens.spacing.s16 + 2),
-                  height: tokens.spacing.s16 + 2,
+                  constraints: BoxConstraints(
+                    minWidth: context.scaled(tokens.spacing.s16 + 2),
+                  ),
+                  height: context.scaled(tokens.spacing.s16 + 2),
                   padding: EdgeInsets.symmetric(
                     horizontal: tokens.spacing.s4 + 1,
                   ),

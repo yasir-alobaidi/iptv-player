@@ -72,7 +72,8 @@ class CastPreviewCard extends ConsumerWidget {
             if (now != null) ...[
               SizedBox(height: tokens.spacing.s4),
               Text(
-                '${now.title} · ${formatTimeRangeShort(now.start, now.end)}',
+                '${now.title} · '
+                '${formatTimeRangeShort(now.start, now.end, tokens.timeStyle)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: secondary,

@@ -87,18 +87,28 @@ const _months = [
   'Dec',
 ];
 
-/// `8:05 PM`, in local time (the 12/24 h setting arrives in Phase 9).
-String formatClock(DateTime at) {
+/// How a time of day is written: `8:05 PM` or `20:05` (Settings →
+/// Appearance → Clock). Screens read it from the design tokens; text made
+/// away from a screen (a toast, a notification) from `timeStyleProvider`.
+enum TimeStyle { h12, h24 }
+
+/// `8:05 PM` or `20:05`, in local time.
+String formatClock(DateTime at, TimeStyle style) {
   final local = at.toLocal();
-  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
   final minute = local.minute.toString().padLeft(2, '0');
+  if (style == TimeStyle.h24) {
+    return '${local.hour.toString().padLeft(2, '0')}:$minute';
+  }
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
   return '$hour:$minute ${local.hour < 12 ? 'AM' : 'PM'}';
 }
 
-/// `8:00 – 10:00 PM`, or `11:30 AM – 1:00 PM` when the halves differ.
-String formatTimeRange(DateTime start, DateTime end) {
-  final a = formatClock(start);
-  final b = formatClock(end);
+/// `8:00 – 10:00 PM`, or `11:30 AM – 1:00 PM` when the halves differ;
+/// `20:00 – 22:00` on a 24-hour clock.
+String formatTimeRange(DateTime start, DateTime end, TimeStyle style) {
+  final a = formatClock(start, style);
+  final b = formatClock(end, style);
+  if (style == TimeStyle.h24) return '$a – $b';
   final sameHalf = a.substring(a.length - 2) == b.substring(b.length - 2);
   return sameHalf ? '${a.substring(0, a.length - 3)} – $b' : '$a – $b';
 }
@@ -134,15 +144,15 @@ String formatTimeLeft(Duration left) {
 
 /// `8:05`: [formatClock] without AM/PM, for the Guide's ruler and its
 /// narrow cells, where the half of the day is clear from the labels
-/// around it.
-String formatClockShort(DateTime at) {
-  final clock = formatClock(at);
-  return clock.substring(0, clock.length - 3);
+/// around it. A 24-hour time has nothing to drop.
+String formatClockShort(DateTime at, TimeStyle style) {
+  final clock = formatClock(at, style);
+  return style == TimeStyle.h24 ? clock : clock.substring(0, clock.length - 3);
 }
 
 /// `8:00 – 10:00`: [formatTimeRange] without AM/PM.
-String formatTimeRangeShort(DateTime start, DateTime end) =>
-    '${formatClockShort(start)} – ${formatClockShort(end)}';
+String formatTimeRangeShort(DateTime start, DateTime end, TimeStyle style) =>
+    '${formatClockShort(start, style)} – ${formatClockShort(end, style)}';
 
 /// True when [a] and [b] fall in the same half of the day (AM or PM), in
 /// local time.

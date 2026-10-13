@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/app/app.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
@@ -36,11 +37,20 @@ class AppUnderTest {
 ///
 /// [ErrorReporter] is built but deliberately not installed: a test must
 /// not take over `FlutterError.onError`.
+///
+/// [withAppearance] pumps the root widget itself ([IptvPlayerApp]), so
+/// Settings → Appearance applies: the accent, the density, reduce motion
+/// and the clock through the theme, the text size above the router. Give
+/// the look through `appearanceStoreProvider` and
+/// `desktopAppearanceProvider`. Without it the default theme is used,
+/// as before Phase 9. [settle] false stops after the first frame.
 Future<AppUnderTest> pumpApp(
   WidgetTester tester, {
   String initialLocation = '/',
   Size size = const Size(1440, 900),
   List<Override> overrides = const [],
+  bool withAppearance = false,
+  bool settle = true,
 }) async {
   FocusManager.instance.highlightStrategy =
       FocusHighlightStrategy.alwaysTraditional;
@@ -63,16 +73,18 @@ Future<AppUnderTest> pumpApp(
         routerProvider.overrideWithValue(router),
         ...overrides,
       ],
-      child: MaterialApp.router(
-        theme: buildAppTheme(),
-        routerConfig: router,
-        builder: (context, child) => AppGlobalShortcuts(
-          child: AppToasts(child: child ?? const SizedBox.shrink()),
-        ),
-      ),
+      child: withAppearance
+          ? const IptvPlayerApp()
+          : MaterialApp.router(
+              theme: buildAppTheme(),
+              routerConfig: router,
+              builder: (context, child) => AppGlobalShortcuts(
+                child: AppToasts(child: child ?? const SizedBox.shrink()),
+              ),
+            ),
     ),
   );
-  await settleApp(tester);
+  if (settle) await settleApp(tester);
 
   return AppUnderTest(router: router, errors: errors);
 }

@@ -5,11 +5,21 @@ import 'package:iptv_player/design/tokens.dart';
 /// One option in a [SegmentedControl].
 @immutable
 class SegmentOption<T> {
-  const new({required this.value, required this.label, this.icon, this.count});
+  const new({
+    required this.value,
+    required this.label,
+    this.icon,
+    this.count,
+    this.swatch,
+  });
 
   final T value;
   final String label;
   final IconData? icon;
+
+  /// A dot of this color before the label (Settings → Appearance's
+  /// accents).
+  final Color? swatch;
 
   /// A quieter figure after the label (canvas: "Live TV 412").
   final String? count;
@@ -45,17 +55,19 @@ class SegmentedControl<T> extends StatelessWidget {
           borderRadius: tokens.radii.smAll,
           border: Border.all(color: colors.border),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        // One line wherever it fits; where it doesn't (larger text, a
+        // narrow window) the segments wrap rather than clip.
+        child: Wrap(
+          spacing: 2,
+          runSpacing: 2,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            for (final option in options) ...[
-              if (option != options.first) const SizedBox(width: 2),
+            for (final option in options)
               _Segment<T>(
                 option: option,
                 selected: option.value == value,
                 onPressed: enabled ? () => onChanged(option.value) : null,
               ),
-            ],
           ],
         ),
       ),
@@ -96,6 +108,17 @@ class _Segment<T> extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (option.swatch != null) ...[
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: option.swatch,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: tokens.spacing.s4 + 2),
+            ],
             if (option.icon != null) ...[
               Icon(
                 option.icon,

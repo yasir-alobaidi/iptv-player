@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Where a multi-step flow is: done steps get a green check, the current
@@ -71,8 +72,8 @@ class _Dot extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     return Container(
-      width: 20,
-      height: 20,
+      width: context.scaled(20),
+      height: context.scaled(20),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// The app's dark theme, built only from [AppTokens]. Material's own
@@ -8,11 +9,13 @@ ThemeData buildAppTheme({
   AppAccent accent = AppAccent.blue,
   AppDensity density = AppDensity.comfortable,
   bool reduceMotion = false,
+  TimeStyle timeStyle = TimeStyle.h12,
 }) {
   final tokens = AppTokens.defaults(
     accent: accent,
     density: density,
     reduceMotion: reduceMotion,
+    timeStyle: timeStyle,
   );
   final colors = tokens.colors;
   final text = tokens.text;

@@ -212,9 +212,9 @@ String downloadProblemText(DownloadTask task) {
 }
 
 /// "3.4 GB · finished at 2:14 PM".
-String downloadFinishedLine(DownloadTask task) => [
+String downloadFinishedLine(DownloadTask task, TimeStyle style) => [
   librarySize(task.totalBytes ?? task.downloadedBytes),
-  if (task.completedAt case final at?) 'finished at ${formatClock(at)}',
+  if (task.completedAt case final at?) 'finished at ${formatClock(at, style)}',
 ].join(' · ');
 
 /// The meter's "Downloads 42.3 GB" and "118 GB free of 512 GB".

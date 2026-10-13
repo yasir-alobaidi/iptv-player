@@ -4,6 +4,7 @@ import 'package:iptv_player/design/components/app_icon_button.dart';
 import 'package:iptv_player/design/components/channel_logo.dart';
 import 'package:iptv_player/design/components/quality_badge.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// The bar under the content while something is casting (canvas
@@ -67,7 +68,7 @@ class CastingBar extends StatelessWidget {
           ].join(' · ');
 
     return Container(
-      height: cast.barHeight,
+      height: context.scaled(cast.barHeight),
       padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
       decoration: BoxDecoration(
         color: colors.surface2,

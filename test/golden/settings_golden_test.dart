@@ -7,6 +7,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/design/appearance.dart';
+import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
@@ -19,6 +21,7 @@ import '../app/app_harness.dart';
 import '../features/guide/presentation/guide_settings_fakes.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import '../features/onboarding/onboarding_fakes.dart';
+import '../features/settings/appearance_fakes.dart';
 import 'golden_harness.dart';
 
 void main() {
@@ -169,6 +172,59 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/settings_guide.png'),
+      );
+    });
+
+    /// Settings → Appearance with [settings] in use, at 8:05 in the
+    /// evening wherever the test runs.
+    Future<void> appearance(
+      WidgetTester tester, {
+      AppearanceSettings settings = const AppearanceSettings(),
+      Size size = const Size(1440, 900),
+    }) async {
+      hideDebugBanner();
+      final fakes = sketch()..now = DateTime(2026, 9, 14, 20, 5);
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.settings.path,
+        size: size,
+        withAppearance: true,
+        overrides: [
+          ...fakes.overrides,
+          ...sourceShellOverrides,
+          ...appearanceOverrides(settings: settings),
+        ],
+      );
+      await tester.tap(find.text('Appearance').first);
+      await settleApp(tester);
+    }
+
+    testWidgets('Appearance', (tester) async {
+      await appearance(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_appearance.png'),
+      );
+    });
+
+    testWidgets('Appearance at 130 %, Compact, Rose, 24-hour, in the '
+        'smallest window', (tester) async {
+      await appearance(
+        tester,
+        size: const Size(1024, 640),
+        settings: const AppearanceSettings(
+          accent: AppAccent.rose,
+          textSize: TextSizeChoice.s130,
+          density: AppDensity.compact,
+          reduceMotion: SystemSwitch.on,
+          clock: ClockChoice.h24,
+        ),
+      );
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_appearance_130_1024x640.png'),
       );
     });
   }, skip: goldenSkipReason);

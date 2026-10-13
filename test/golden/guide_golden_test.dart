@@ -7,10 +7,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/design/appearance.dart';
+import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import '../app/app_harness.dart';
 import '../features/guide/guide_grid_fakes.dart';
+import '../features/settings/appearance_fakes.dart';
 import 'golden_harness.dart';
 
 /// The Guide as the canvas draws it: Tuesday 15 at 9:22 PM (a local time,
@@ -48,6 +51,38 @@ void main() {
         );
       });
     }
+
+    // Settings → Appearance → Density (Phase 9 decision 2): 60 px rows,
+    // and a programme's two lines still inside its cell.
+    testWidgets('Compact, with a 24-hour clock', (tester) async {
+      hideDebugBanner();
+      final fixture = GuideFixture();
+      addTearDown(() => tester.runAsync(fixture.db.close));
+      await tester.runAsync(fixture.seed);
+      await pumpApp(
+        tester,
+        size: const Size(1280, 800),
+        initialLocation: AppDestination.guide.path,
+        withAppearance: true,
+        overrides: [
+          ...fixture.overrides,
+          ...sourceShellOverrides,
+          ...appearanceOverrides(
+            settings: const AppearanceSettings(
+              density: AppDensity.compact,
+              clock: ClockChoice.h24,
+            ),
+          ),
+        ],
+      );
+      await _settle(tester);
+
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/guide_compact_24h_1280x800.png'),
+      );
+    });
   }, skip: goldenSkipReason);
 }
 

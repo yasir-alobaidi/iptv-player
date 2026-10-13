@@ -30,6 +30,7 @@ String channelHitLine(
   required NowNext? guide,
   required bool sameName,
   required int sources,
+  required TimeStyle style,
 }) {
   final channel = hit.channel;
   final now = guide?.now;
@@ -37,7 +38,7 @@ String channelHitLine(
     if (channel.number != null) '${channel.number}',
     if (sameName && hit.categoryName != null) hit.categoryName!,
     if (sources > 1) hit.sourceName,
-    if (now != null) '${now.title}, until ${formatClock(now.end)}',
+    if (now != null) '${now.title}, until ${formatClock(now.end, style)}',
   ].join(' · ');
 }
 
@@ -47,12 +48,13 @@ String programmeHitLine(
   ProgrammeHit hit, {
   required DateTime now,
   required int sources,
+  required TimeStyle style,
 }) {
   final programme = hit.programme;
   final when = hit.isOnAt(now)
-      ? 'ends ${formatClock(programme.end)}'
+      ? 'ends ${formatClock(programme.end, style)}'
       : '${formatRelativeDay(programme.start, now)}, '
-            '${formatClock(programme.start)}';
+            '${formatClock(programme.start, style)}';
   return [hit.channel.name, if (sources > 1) hit.sourceName, when].join(' · ');
 }
 

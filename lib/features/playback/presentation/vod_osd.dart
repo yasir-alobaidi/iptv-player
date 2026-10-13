@@ -90,7 +90,7 @@ class VodOsdTop extends ConsumerWidget {
             ],
             SizedBox(width: tokens.spacing.s16),
             Text(
-              formatClock(now),
+              formatClock(now, tokens.timeStyle),
               style: tokens.text.h3.copyWith(color: colors.textPrimary),
             ),
           ],

@@ -62,4 +62,47 @@ void main() {
     expect(formatPosition(const Duration(seconds: 5)), '0:05');
     expect(formatPosition(const Duration(seconds: -3)), '0:00');
   });
+
+  group('the clock (Settings → Appearance → Clock)', () {
+    final morning = DateTime(2026, 9, 14, 8, 5);
+    final noon = DateTime(2026, 9, 14, 12);
+    final evening = DateTime(2026, 9, 14, 20);
+    final late = DateTime(2026, 9, 14, 22);
+    final midnight = DateTime(2026, 9, 15);
+
+    test('12-hour: no leading zero, 12 at noon and midnight', () {
+      expect(formatClock(morning, TimeStyle.h12), '8:05 AM');
+      expect(formatClock(noon, TimeStyle.h12), '12:00 PM');
+      expect(formatClock(midnight, TimeStyle.h12), '12:00 AM');
+      expect(formatClockShort(evening, TimeStyle.h12), '8:00');
+    });
+
+    test('24-hour: two digits, and nothing to drop from the short form', () {
+      expect(formatClock(morning, TimeStyle.h24), '08:05');
+      expect(formatClock(evening, TimeStyle.h24), '20:00');
+      expect(formatClock(midnight, TimeStyle.h24), '00:00');
+      expect(formatClockShort(evening, TimeStyle.h24), '20:00');
+    });
+
+    test('a range says AM or PM once when both ends share it', () {
+      expect(formatTimeRange(evening, late, TimeStyle.h12), '8:00 – 10:00 PM');
+      expect(
+        formatTimeRange(morning, evening, TimeStyle.h12),
+        '8:05 AM – 8:00 PM',
+      );
+      expect(
+        formatTimeRangeShort(evening, late, TimeStyle.h12),
+        '8:00 – 10:00',
+      );
+    });
+
+    test('a 24-hour range is the two times, whole', () {
+      expect(formatTimeRange(evening, late, TimeStyle.h24), '20:00 – 22:00');
+      expect(formatTimeRange(morning, evening, TimeStyle.h24), '08:05 – 20:00');
+      expect(
+        formatTimeRangeShort(evening, late, TimeStyle.h24),
+        '20:00 – 22:00',
+      );
+    });
+  });
 }

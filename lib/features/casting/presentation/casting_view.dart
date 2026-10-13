@@ -685,7 +685,7 @@ class _ProgrammeTimes extends ConsumerWidget {
         .copyWith(color: colors.textSecondary);
     return Row(
       children: [
-        Text(formatClock(now.start), style: style),
+        Text(formatClock(now.start, tokens.timeStyle), style: style),
         SizedBox(width: tokens.spacing.s12 + 2),
         Expanded(
           child: ProgressBar(
@@ -694,7 +694,7 @@ class _ProgrammeTimes extends ConsumerWidget {
           ),
         ),
         SizedBox(width: tokens.spacing.s12 + 2),
-        Text(formatClock(now.end), style: style),
+        Text(formatClock(now.end, tokens.timeStyle), style: style),
       ],
     );
   }

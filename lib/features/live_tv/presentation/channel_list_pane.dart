@@ -432,12 +432,13 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
       );
     }
     final total = count.value;
-    if (total == null) return _skeletons(tokens);
+    if (total == null) return _skeletons();
     if (total == 0) {
       _wantFocus = false;
       return _empty(context, query);
     }
-    final rowHeight = tokens.density.rowHeight + 4;
+    // The row, as tall as its text makes it, and the gap under it.
+    final rowHeight = context.scaled(tokens.density.rowHeight) + 4;
     _rowExtent = rowHeight;
     _focusFirstWhenReady();
     return Focus(
@@ -486,12 +487,12 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     );
   }
 
-  Widget _skeletons(AppTokens tokens) => Column(
+  Widget _skeletons() => Column(
     children: [
       for (var i = 0; i < 8; i++)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: SkeletonRow(height: tokens.density.rowHeight),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: SkeletonRow(),
         ),
     ],
   );
@@ -710,7 +711,8 @@ class _RowState extends ConsumerState<_Row> {
             image: artworkFor(context, channel.logoUrl, width: 40),
             nowTitle: programme?.title,
             upNext: programme == null && next != null
-                ? '${formatClock(next.start)} · ${next.title}'
+                ? '${formatClock(next.start, context.tokens.timeStyle)} · '
+                      '${next.title}'
                 : null,
             guideKnown: guide != null,
             progress: programme?.progressAt(now),

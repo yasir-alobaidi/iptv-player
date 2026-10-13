@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_tooltip.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Single-line text input (canvas: 48 px tall, radius 10, surface1 on a
@@ -128,7 +129,7 @@ class _AppTextFieldState extends State<AppTextField> {
           child: AnimatedContainer(
             duration: tokens.motion.fast,
             curve: tokens.motion.fastCurve,
-            height: 48,
+            height: context.scaled(48),
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
             decoration: BoxDecoration(
               color: colors.surface1,

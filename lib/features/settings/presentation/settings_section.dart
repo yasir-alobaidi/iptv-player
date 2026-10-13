@@ -12,7 +12,7 @@ enum SettingsSection {
   downloads('Downloads & library'),
   guide('Guide'),
   categories('Categories'),
-  appearance('Appearance', phase: 9),
+  appearance('Appearance'),
   shortcuts('Keyboard shortcuts', phase: 9),
   data('Data', phase: 9),
   about('About & diagnostics', phase: 9);

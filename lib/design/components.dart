@@ -46,3 +46,4 @@ export 'package:iptv_player/design/focus/app_intents.dart';
 export 'package:iptv_player/design/focus/focus_pane.dart';
 export 'package:iptv_player/design/focus/focus_ring.dart';
 export 'package:iptv_player/design/focus/focusable_surface.dart';
+export 'package:iptv_player/design/text_scale.dart';

@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:iptv_player/core/text/format.dart';
 
 /// User-selectable accent (docs/05). Blue is the default and the only one
 /// the design canvas shows; the other four are derived from it the same way
@@ -66,6 +69,15 @@ enum AppDensity {
 
   final double rowHeight;
   final String label;
+
+  /// A long list's row that is [comfortable] px tall in the canvas: 12 px
+  /// less in Compact, as the channel row is, and never under the 40 px a
+  /// pointer needs (docs/05 "Accessibility"). Posters, cards, dialogs and
+  /// settings rows don't ask: they keep their size (Phase 9 decision 2).
+  double row(double comfortable) => switch (this) {
+    AppDensity.comfortable => comfortable,
+    AppDensity.compact => math.max(40, comfortable - 12),
+  };
 }
 
 /// Dark palette. Values come from docs/05 and the design canvas; a light
@@ -433,7 +445,13 @@ class AppSearchTokens {
 /// are [AppColors] tokens; these are the sizes only the grid uses.
 @immutable
 class AppGuideTokens {
-  const new();
+  const new({this.density = AppDensity.comfortable});
+
+  /// Compact takes 12 px off a row and gives its cells less air, so the
+  /// two lines of a programme still fit (Phase 9 decision 2).
+  final AppDensity density;
+
+  bool get _compact => density == AppDensity.compact;
 
   /// One hour of programmes (docs/05: 1 hour = 240 px).
   double get hourWidth => 240;
@@ -444,8 +462,8 @@ class AppGuideTokens {
   /// The pinned column of channel numbers, logos and names.
   double get channelColumnWidth => 220;
 
-  /// A channel's row, its 1 px divider included.
-  double get rowHeight => 72;
+  /// A channel's row, its 1 px divider included: 72, and 60 in Compact.
+  double get rowHeight => density.row(72);
 
   /// The time ruler above the rows.
   double get rulerHeight => 44;
@@ -454,14 +472,14 @@ class AppGuideTokens {
   double get rulerLabelInset => 8;
 
   /// A programme cell sits this far inside its row, top and bottom…
-  double get cellInsetY => 6;
+  double get cellInsetY => _compact ? 4 : 6;
 
   /// …and this far from where its programme starts and ends, so two
   /// programmes back to back are 8 px apart.
   double get cellInsetX => 4;
 
   EdgeInsets get cellPadding =>
-      const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+      EdgeInsets.symmetric(horizontal: 12, vertical: _compact ? 6 : 10);
 
   /// Between a cell's title and its time.
   double get cellLineGap => 4;
@@ -604,17 +622,22 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.search = const AppSearchTokens(),
     this.cast = const AppCastTokens(),
     this.library = const AppLibraryTokens(),
+    this.timeStyle = TimeStyle.h12,
   });
 
-  /// Defaults: blue accent, comfortable rows, full motion.
+  /// Defaults: blue accent, comfortable rows, full motion, a 12-hour
+  /// clock.
   factory defaults({
     AppAccent accent = AppAccent.blue,
     AppDensity density = AppDensity.comfortable,
     bool reduceMotion = false,
+    TimeStyle timeStyle = TimeStyle.h12,
   }) => AppTokens(
     colors: AppColors(accent: accent),
     density: density,
     motion: AppMotion(reduceMotion: reduceMotion),
+    guide: AppGuideTokens(density: density),
+    timeStyle: timeStyle,
   );
 
   final AppColors colors;
@@ -631,6 +654,11 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppCastTokens cast;
   final AppLibraryTokens library;
 
+  /// How a time of day is written (Settings → Appearance → Clock). Not a
+  /// measure, but it changes with the user's choice as the accent does,
+  /// and every screen that writes a time already has the tokens.
+  final TimeStyle timeStyle;
+
   @override
   AppTokens copyWith({
     AppColors? colors,
@@ -646,6 +674,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppSearchTokens? search,
     AppCastTokens? cast,
     AppLibraryTokens? library,
+    TimeStyle? timeStyle,
   }) => AppTokens(
     colors: colors ?? this.colors,
     density: density ?? this.density,
@@ -660,6 +689,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     search: search ?? this.search,
     cast: cast ?? this.cast,
     library: library ?? this.library,
+    timeStyle: timeStyle ?? this.timeStyle,
   );
 
   /// Tokens are discrete (an accent is picked, not blended), so this snaps

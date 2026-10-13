@@ -56,8 +56,11 @@ void main() {
     expect(_rowText('Morning Rally'), findsOneWidget);
     expect(
       _rowText(
-        'Next ${formatClock(now.add(const Duration(minutes: 30)))} · '
-        'Zebra Late Show',
+        [
+          'Next',
+          formatClock(now.add(const Duration(minutes: 30)), TimeStyle.h12),
+          '· Zebra Late Show',
+        ].join(' '),
       ),
       findsOneWidget,
       reason: 'a gap now, a programme to come',

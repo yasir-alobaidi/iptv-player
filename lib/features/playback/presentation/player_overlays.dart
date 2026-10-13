@@ -78,7 +78,7 @@ class OsdTop extends ConsumerWidget {
             ),
             SizedBox(width: tokens.spacing.s16),
             Text(
-              formatClock(now),
+              formatClock(now, tokens.timeStyle),
               style: tokens.text.h3.copyWith(color: colors.textPrimary),
             ),
           ],
@@ -139,7 +139,7 @@ class OsdBottom extends ConsumerWidget {
               Row(
                 children: [
                   Text(
-                    formatClock(current.start),
+                    formatClock(current.start, tokens.timeStyle),
                     style: tokens.text.caption.copyWith(
                       color: colors.textSecondary,
                     ),
@@ -148,7 +148,7 @@ class OsdBottom extends ConsumerWidget {
                   Expanded(child: ProgressBar(value: current.progressAt(now))),
                   SizedBox(width: tokens.spacing.s12),
                   Text(
-                    formatClock(current.end),
+                    formatClock(current.end, tokens.timeStyle),
                     style: tokens.text.caption.copyWith(
                       color: colors.textSecondary,
                     ),
@@ -171,7 +171,10 @@ class OsdBottom extends ConsumerWidget {
                                 .copyWith(color: colors.textTertiary),
                           ),
                           TextSpan(
-                            text: '${formatClock(next.start)} · ${next.title}',
+                            text: [
+                              formatClock(next.start, tokens.timeStyle),
+                              next.title,
+                            ].join(' · '),
                           ),
                         ],
                       ),
@@ -360,6 +363,9 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    // A channel row in the chosen density, as tall as its text makes it,
+    // and 8 px of air: 64 at the canvas's sizes.
+    final extent = context.scaled(tokens.density.rowHeight) + 8;
     return Container(
       width: ChannelPanel.width,
       decoration: BoxDecoration(
@@ -375,9 +381,9 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
             : ListView.builder(
                 controller: ScrollController(
                   initialScrollOffset:
-                      ((_currentIndex ?? 0) - 3).clamp(0, 1 << 30) * 64.0,
+                      ((_currentIndex ?? 0) - 3).clamp(0, 1 << 30) * extent,
                 ),
-                itemExtent: 64,
+                itemExtent: extent,
                 itemCount: _channels.length,
                 itemBuilder: (context, i) {
                   final channel = _channels[i];

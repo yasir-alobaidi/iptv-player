@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/channel_badge.dart';
 import 'package:iptv_player/design/components/channel_logo.dart';
 import 'package:iptv_player/design/components/progress_bar.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// One channel in the Live TV list: number, logo, name with its quality
@@ -84,11 +87,18 @@ class ChannelRow extends StatelessWidget {
     null => '',
   };
 
+  /// The number's slot: the canvas's 32 px holds three digits; a longer
+  /// number (a provider's list can pass 10,000) gets the room its digits
+  /// need rather than wrapping onto a second line.
+  static double numberWidth(int number) =>
+      math.max(32, '$number'.length * 8.25);
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final height = tokens.density.rowHeight;
+    // Taller with the text (Phase 9 decision 3); the logo keeps its size.
+    final height = context.scaled(tokens.density.rowHeight);
 
     return FocusableSurface(
       onPressed: onPressed,
@@ -113,9 +123,11 @@ class ChannelRow extends StatelessWidget {
                 ],
                 if (number != null) ...[
                   SizedBox(
-                    width: 32,
+                    width: context.scaled(numberWidth(number!)),
                     child: Text(
                       '$number',
+                      maxLines: 1,
+                      softWrap: false,
                       style: tokens.text.caption
                           .withWeight(700)
                           .copyWith(
@@ -200,7 +212,7 @@ class ChannelRow extends StatelessWidget {
                 ),
                 if (timeLeft != null)
                   SizedBox(
-                    width: 96,
+                    width: context.scaled(96),
                     child: Text(
                       timeLeft!,
                       textAlign: TextAlign.right,

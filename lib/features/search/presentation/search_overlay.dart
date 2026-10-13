@@ -946,13 +946,19 @@ class _EntryRowState extends State<_EntryRow> {
           guide: widget.guide.cached(channel),
           sameName: widget.sameName,
           sources: widget.sources,
+          style: context.tokens.timeStyle,
         ),
         _logo(context, channel),
         null,
       ),
       final ProgrammeHit programme => (
         programmeHitTitle(programme),
-        programmeHitLine(programme, now: widget.now, sources: widget.sources),
+        programmeHitLine(
+          programme,
+          now: widget.now,
+          sources: widget.sources,
+          style: context.tokens.timeStyle,
+        ),
         _logo(context, programme.channel),
         programme.isOnAt(widget.now)
             ? Padding(

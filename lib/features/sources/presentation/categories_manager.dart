@@ -687,7 +687,7 @@ class _CategoryRow extends StatelessWidget {
             onMove(1),
       },
       child: Container(
-        height: 48,
+        height: context.scaled(tokens.density.row(48)),
         decoration: BoxDecoration(
           color: colors.surface2,
           borderRadius: tokens.radii.controlAll,

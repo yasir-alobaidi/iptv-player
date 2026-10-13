@@ -8,13 +8,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/design/gallery/gallery_section.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/theme.dart';
 
 import 'golden_harness.dart';
 
 /// Pumps the Component Gallery in a 1280x800 window, the size docs/06
-/// records component goldens at.
-Future<void> _pumpSheet(WidgetTester tester) async {
+/// records component goldens at. [textScale] is Settings → Appearance's
+/// text size.
+Future<void> _pumpSheet(WidgetTester tester, {double textScale = 1}) async {
   hideDebugBanner();
   FocusManager.instance.highlightStrategy =
       FocusHighlightStrategy.alwaysTraditional;
@@ -23,7 +25,13 @@ Future<void> _pumpSheet(WidgetTester tester) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-    MaterialApp(theme: buildAppTheme(), home: const GalleryScreen()),
+    MaterialApp(
+      theme: buildAppTheme(),
+      builder: textScale == 1
+          ? null
+          : (context, app) => AppTextScale(scale: textScale, child: app!),
+      home: const GalleryScreen(),
+    ),
   );
   // Not pumpAndSettle: the skeleton shimmer and the indeterminate
   // progress bar animate forever by design. The test clock is fake, so
@@ -63,6 +71,44 @@ void main() {
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('images/component_sheet_media_1280x800.png'),
+      );
+    });
+
+    // Phase 9 decision 3: at 130 % the controls and rows that hold text
+    // are taller, the pictures are not, and nothing is cut.
+    testWidgets('controls at 130 %', (tester) async {
+      await _pumpSheet(tester, textScale: 1.3);
+
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/component_sheet_controls_130_1280x800.png'),
+      );
+    });
+
+    testWidgets('media at 130 %', (tester) async {
+      await _pumpSheet(tester, textScale: 1.3);
+      await _scrollToSection(tester, 'Channel rows and logos');
+
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/component_sheet_media_130_1280x800.png'),
+      );
+    });
+
+    testWidgets('media in Compact, with the Teal accent', (tester) async {
+      await _pumpSheet(tester);
+      await tester.tap(find.text('Teal'));
+      await tester.tap(find.text('Compact'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await _scrollToSection(tester, 'Channel rows and logos');
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile(
+          'images/component_sheet_media_compact_teal_1280x800.png',
+        ),
       );
     });
   }, skip: goldenSkipReason);

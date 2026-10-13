@@ -299,7 +299,8 @@ class _GuideViewState extends ConsumerState<_GuideView> {
         message: lastEnd == null
             ? "It has no programmes. Refresh it to see what's on."
             : 'It ends ${dayInSentence(lastEnd, now)} at '
-                  "${formatClock(lastEnd)}. Refresh it to see what's on.",
+                  '${formatClock(lastEnd, context.tokens.timeStyle)}. '
+                  "Refresh it to see what's on.",
         actionLabel: coverage.isImporting ? null : 'Refresh guide',
         onAction: _refresh,
       );
@@ -310,8 +311,8 @@ class _GuideViewState extends ConsumerState<_GuideView> {
         title: 'Nothing in the guide for today',
         message:
             'It starts ${dayInSentence(firstStart, now)} '
-            'at ${formatClock(firstStart)}. If its times look shifted, set a '
-            'time offset in Settings → Guide.',
+            'at ${formatClock(firstStart, context.tokens.timeStyle)}. If its '
+            'times look shifted, set a time offset in Settings → Guide.',
         actionLabel: 'Open Settings → Guide',
         onAction: _openSettings,
       );

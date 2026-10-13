@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Button emphasis (docs/05). [dangerOutline] is the canvas's "Stop
@@ -134,7 +135,7 @@ class AppButton extends StatelessWidget {
         return Opacity(
           opacity: states.disabled ? _disabledOpacity : 1,
           child: Container(
-            height: size.height,
+            height: context.scaled(size.height),
             padding: EdgeInsets.symmetric(horizontal: size.padding),
             decoration: BoxDecoration(
               // The surface paints the background; this paints the border

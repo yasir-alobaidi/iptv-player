@@ -250,7 +250,7 @@ class _Details extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  formatTimeRange(current.start, current.end),
+                  formatTimeRange(current.start, current.end, tokens.timeStyle),
                   style: tokens.text.caption.copyWith(
                     color: colors.textSecondary,
                   ),
@@ -324,7 +324,7 @@ class _Details extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    'NEXT · ${formatClock(next.start)}',
+                    'NEXT · ${formatClock(next.start, tokens.timeStyle)}',
                     style: tokens.text.micro
                         .withWeight(800)
                         .copyWith(color: colors.textTertiary),

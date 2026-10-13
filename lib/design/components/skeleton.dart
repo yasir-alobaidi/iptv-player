@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// A loading placeholder. Skeletons match the shape of the content that
@@ -84,7 +85,7 @@ class SkeletonRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return SizedBox(
-      height: height ?? tokens.density.rowHeight,
+      height: height ?? context.scaled(tokens.density.rowHeight),
       child: Row(
         children: [
           Skeleton(

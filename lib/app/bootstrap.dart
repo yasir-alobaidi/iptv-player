@@ -47,6 +47,8 @@ import 'package:iptv_player/features/downloads/presentation/download_actions.dar
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/settings/data/appearance_providers.dart';
+import 'package:iptv_player/features/settings/data/db_appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 import 'package:logger/logger.dart';
@@ -84,6 +86,12 @@ Future<void> bootstrap() async {
   final settings = SettingsRepository(database);
   final windowBounds = DbWindowBoundsStore(settings);
   final uiPreferences = await _loadUiPreferences(settings, log);
+  // Before the first frame, so the app never opens in one look and
+  // changes to another (Phase 9 decision 2).
+  final appearance = await DbAppearanceStore.open(settings);
+  if (appearance.readFailure case final failure?) {
+    log.warning('bootstrap', 'Could not read the appearance: $failure');
+  }
   final firstRun = await _hasNoSources(database, log);
 
   final window = AppWindow(store: windowBounds, log: log);
@@ -118,6 +126,7 @@ Future<void> bootstrap() async {
       credentialStoreProvider.overrideWithValue(SecureCredentialStore()),
       windowBoundsStoreProvider.overrideWithValue(windowBounds),
       uiPreferencesProvider.overrideWithValue(uiPreferences),
+      appearanceStoreProvider.overrideWithValue(appearance),
       startLocationProvider.overrideWithValue(
         firstRun ? welcomeRoutePath : '/',
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// A pill-shaped filter chip (canvas: 34 px tall; selected chips use the
@@ -51,7 +52,7 @@ class AppChip extends StatelessWidget {
       builder: (context, states) => Opacity(
         opacity: states.disabled ? 0.4 : 1,
         child: Container(
-          height: 34,
+          height: context.scaled(34),
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s16 - 2),
           decoration: BoxDecoration(
             borderRadius: tokens.radii.pillAll,

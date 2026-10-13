@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
+import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
@@ -67,11 +68,23 @@ void main() {
         ),
       );
       expect(
-        channelHitLine(hit, guide: guide, sameName: false, sources: 1),
+        channelHitLine(
+          hit,
+          guide: guide,
+          sameName: false,
+          sources: 1,
+          style: TimeStyle.h12,
+        ),
         '118 · Evening Bulletin, until 8:30 PM',
       );
       expect(
-        channelHitLine(hit, guide: null, sameName: true, sources: 2),
+        channelHitLine(
+          hit,
+          guide: null,
+          sameName: true,
+          sources: 2,
+          style: TimeStyle.h24,
+        ),
         '118 · UK | News · Northwind TV',
       );
     });
@@ -96,6 +109,7 @@ void main() {
           ),
           now: now,
           sources: 1,
+          style: TimeStyle.h12,
         ),
         'Courtside · ends 10:55 PM',
       );
@@ -104,6 +118,7 @@ void main() {
           at(DateTime(2026, 9, 15, 21, 30), DateTime(2026, 9, 15, 22, 30)),
           now: now,
           sources: 1,
+          style: TimeStyle.h12,
         ),
         'Courtside · Tomorrow, 9:30 PM',
       );

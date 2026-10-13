@@ -6,6 +6,7 @@ import 'package:iptv_player/features/casting/presentation/cast_settings_section.
 import 'package:iptv_player/features/downloads/presentation/download_settings_section.dart';
 import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
+import 'package:iptv_player/features/settings/presentation/appearance_section.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/presentation/categories_manager.dart';
 import 'package:iptv_player/features/sources/presentation/sources_settings.dart';
@@ -56,6 +57,7 @@ class SettingsScreen extends ConsumerWidget {
                     SettingsSection.casting => const CastSettingsSection(),
                     SettingsSection.downloads =>
                       const DownloadSettingsSection(),
+                    SettingsSection.appearance => const AppearanceSection(),
                     _ => _ComingLater(section: section),
                   },
                 ),
@@ -233,16 +235,13 @@ class _ComingLater extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = switch (section) {
-      SettingsSection.playback =>
-        'Buffering, hardware decoding, deinterlacing, preferred audio and '
-            'subtitle languages.',
-      SettingsSection.appearance =>
-        'Accent colour, density, reduce motion and the clock format.',
       SettingsSection.shortcuts => 'Every keyboard shortcut in one place.',
       SettingsSection.data =>
         'Clear the image cache or the guide, and export or import settings.',
       SettingsSection.about => 'Version, the log viewer and Copy diagnostics.',
       SettingsSection.sources ||
+      SettingsSection.playback ||
+      SettingsSection.appearance ||
       SettingsSection.categories ||
       SettingsSection.casting ||
       SettingsSection.downloads ||

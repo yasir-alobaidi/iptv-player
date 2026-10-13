@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/kbd.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// The top bar's search box (canvas: 40 px tall, radius 10, magnifier on
@@ -74,6 +75,10 @@ class _SearchFieldState extends State<SearchField> {
     final body = asButton
         ? Text(
             widget.hint,
+            // One line, whatever the text size: a hint that wraps is cut
+            // by the box.
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: tokens.text.label
                 .withWeight(500)
                 .copyWith(color: colors.textTertiary),
@@ -103,7 +108,7 @@ class _SearchFieldState extends State<SearchField> {
       duration: tokens.motion.fast,
       curve: tokens.motion.fastCurve,
       width: widget.width,
-      height: 40,
+      height: context.scaled(40),
       padding: EdgeInsets.only(
         left: tokens.spacing.s12,
         right: tokens.spacing.s8,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/design/components/channel_logo.dart';
 import 'package:iptv_player/design/components/progress_bar.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// A channel as Home's rows show it (canvas `Home`): an 84 px tile with
@@ -32,8 +33,12 @@ class ChannelTile extends StatelessWidget {
   final double width;
   final FocusNode? focusNode;
 
-  static const height = 84.0;
+  static const _height = 84.0;
   static const logoSize = 44.0;
+
+  /// A tile's height: 84 px at the canvas's text size, taller with
+  /// larger text (Phase 9 decision 3). A rail of tiles asks here.
+  static double heightOf(BuildContext context) => context.scaled(_height);
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +53,7 @@ class ChannelTile extends StatelessWidget {
       semanticLabel: name,
       builder: (context, states) => Container(
         width: width,
-        height: height,
+        height: heightOf(context),
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
         decoration: BoxDecoration(
           color: states.highlighted ? colors.surface2 : colors.surface1,
