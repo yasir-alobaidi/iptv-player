@@ -4,9 +4,14 @@
 @Tags(['golden'])
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/app_version.dart';
+import 'package:iptv_player/core/platform/licenses.dart';
 import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
@@ -206,6 +211,112 @@ void main() {
         find.byType(MaterialApp),
         matchesGoldenFile('images/settings_appearance.png'),
       );
+    });
+
+    testWidgets('Keyboard shortcuts', (tester) async {
+      hideDebugBanner();
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.settings.path,
+        overrides: [...sketch().overrides, ...sourceShellOverrides],
+      );
+      await tester.tap(find.text('Keyboard shortcuts').first);
+      await settleApp(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_shortcuts.png'),
+      );
+    });
+
+    testWidgets('the F1 panel, over Settings in the smallest window', (
+      tester,
+    ) async {
+      hideDebugBanner();
+      await pumpApp(
+        tester,
+        size: const Size(1024, 640),
+        initialLocation: AppDestination.settings.path,
+        overrides: [...sketch().overrides, ...sourceShellOverrides],
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.f1);
+      await settleApp(tester);
+      // Once more: the list takes the focus when it opens, and its ring
+      // is drawn the frame after.
+      await settleApp(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/shortcuts_panel_1024x640.png'),
+      );
+    });
+
+    /// Settings → About & diagnostics, as a 0.1.0 build on Linux.
+    Future<void> about(WidgetTester tester) async {
+      hideDebugBanner();
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.settings.path,
+        overrides: [
+          ...sketch().overrides,
+          ...sourceShellOverrides,
+          appVersionProvider.overrideWith(
+            (ref) async => const AppVersion(version: '0.1.0', build: '1'),
+          ),
+          licensesProvider.overrideWith(
+            (ref) async => const [
+              PackageLicenses('FFmpeg', [
+                LicenseEntryWithLineBreaks(
+                  ['FFmpeg'],
+                  'IPTV Player runs the ffmpeg and ffprobe programs as '
+                  'separate processes, to read what a stream or a file '
+                  'holds, to convert it for a TV when casting, and to save '
+                  'downloads.\n\nGNU GENERAL PUBLIC LICENSE\n'
+                  'Version 3, 29 June 2007',
+                ),
+              ]),
+              PackageLicenses('flutter', [
+                LicenseEntryWithLineBreaks(['flutter'], 'Flutter terms'),
+              ]),
+              PackageLicenses('JetBrains Mono', [
+                LicenseEntryWithLineBreaks(['JetBrains Mono'], 'OFL'),
+              ]),
+              PackageLicenses('Manrope', [
+                LicenseEntryWithLineBreaks(['Manrope'], 'OFL'),
+              ]),
+              PackageLicenses('mpv (libmpv)', [
+                LicenseEntryWithLineBreaks(['mpv (libmpv)'], 'LGPL'),
+              ]),
+            ],
+          ),
+        ],
+      );
+      await tester.tap(find.text('About & diagnostics').first);
+      await settleApp(tester);
+    }
+
+    testWidgets('About', (tester) async {
+      await about(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_about.png'),
+      );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('Licences', (tester) async {
+      await about(tester);
+      await tester.tap(find.text('Licences'));
+      await settleApp(tester);
+      await settleApp(tester);
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('images/settings_licences.png'),
+      );
+      debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('Appearance at 130 %, Compact, Rose, 24-hour, in the '

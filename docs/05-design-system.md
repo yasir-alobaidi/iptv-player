@@ -216,32 +216,102 @@ As built (Phase 2 step 7; decisions in ADR-009):
 - **Errors say what the server answered.** Wherever a failure is shown (Connect's result card, the Sync banner, a source card's "Last attempt failed", Account details, the error toast), a failure with an HTTP status adds `serverAnswer()`: "The server answered HTTP 503 (Service Unavailable)." after our own words. A 5xx is **Server error** / "The server answered with an error", never "Can't reach the server", which is kept for no answer at all. The technical detail stays behind **Details** (hard rule 4).
 - **Casting** (Phase 7 step 7, sketch C; ADR-014): "Applies to the next thing you cast."; DEVICES — each kept device with its model and address, Forget, HEVC Automatic / Yes / No and what it learned with Reset; Dolby passthrough, Low-latency mode, Smooth interlaced; "Your TV reaches this computer on ports 38400–38499." with Firewall help; Add device by address at the top right. On Windows, before the first relay, a dialog says the firewall prompt is coming and why (once).
 - **Appearance** (Phase 9 step 1, sketch A; ADR-016): "Changes show at once." Five rows in Playback's layout, each a segmented control: **Accent** (Blue · Violet · Teal · Amber · Rose, each with a dot of its colour), **Text size** (System · 100 % · 115 % · 130 %), **Density** (Comfortable · Compact), **Reduce motion** (System · On · Off), **Clock** (System · 12-hour · 24-hour). Each "System" says what the desktop answers under it ("Your desktop is at 150 %, so this is 130 %."; "It is 8:05 PM, as your desktop writes it."). A change is applied at once and saved behind it; the choices are read before the first frame. A read that failed shows the usual look and a line with **Try again**; a save that failed says the change lasts until the app closes. Where a control no longer fits beside its words it goes under them.
+- **Playback's Hardware decoding** (Phase 9 step 2, sketch E): Automatic · Off, after Deinterlacing. "Automatic uses your graphics card when it can. Off decodes on the processor: slower, and a way round a faulty graphics driver. Applies to the next thing you play."
+- **Keyboard shortcuts** (Phase 9 step 2, sketch B): "F1 shows this list anywhere." The list below as groups under overline headings, each row an action and its keycaps (`Kbd`), with "or", "…" and "then" between ways; two columns of groups from 760 px. The whole list is one Tab stop (`ScrollPane`): ↑/↓, PageUp/PageDown, Home/End scroll it. **F1** shows the same list as a dialog over any screen, the player included; Esc closes it and nothing under it stops.
+- **About & diagnostics** (Phase 9 step 2, sketch D's first line; the diagnostics and the log come in step 4): the app mark, "IPTV Player 0.1.0 (build 1) · Linux", one line of what the app is, and **Licences**: a dialog with every package, the bundled fonts, FFmpeg and mpv on the left (one Tab stop, ↑/↓, Enter shows a licence) and the chosen one's text on the right (a `ScrollPane`).
+- **`ScrollPane`** (`lib/design/components/`): text longer than its box is one Tab stop with the focus ring, scrolled by the keyboard; at an end the arrow leaves it.
+- **Dialogs** keep 24 px clear of the window's edges.
 - **Text size (the rule, `lib/design/text_scale.dart`):** a height that holds text grows with it (`context.scaled`), pictures, icons, the Guide's hour width and the nav rail don't; at 100 % nothing moves. Compact takes 12 px off a long list's row (`AppDensity.row`), never under 40 px.
 - **In-field buttons:** a text field's Clear button is not a Tab stop (Tab goes field to field); the Show-password toggle is, with the standard focus ring.
 
 ## Keyboard shortcuts (desktop)
-| Key | Action |
+One list in the code (`lib/app/shortcut_table.dart`) is the truth: Settings → Keyboard shortcuts and the **F1** panel draw it, and the tables below are written from it (`test/app/shortcut_table_test.dart` fails when they differ; run it with `UPDATE_SHORTCUT_DOCS=1` to rewrite them). A new shortcut goes into the list in the commit that binds it. Shortcuts aren't rebindable (Phase 9 decision 5). F means favorite on a channel, a title or a card, and full screen while something plays; D downloads, and is **Ctrl+D** in Search, where D is a letter. A destination shortcut takes the focus into the screen it opens.
+
+<!-- shortcuts: written from lib/app/shortcut_table.dart -->
+**Anywhere**
+
+| Keys | What they do |
 |---|---|
-| Ctrl+K or / | Search |
-| Space | Play / pause |
-| F, or Enter on a channel | Fullscreen |
-| Esc | Back / exit fullscreen / close dialog |
-| ↑ ↓ · PageUp PageDown | Previous / next channel (player) |
-| ← → | Seek 10 s (VOD) · ← opens channel panel (live) |
-| Shift + ← → | Seek 60 s |
-| 0–9 | Channel number entry |
-| Backspace | Last channel |
+| ↑ ↓ ← → | Move around |
+| Tab or Shift Tab | The next or the previous part of the screen |
+| Enter or Space | Choose what has the focus |
+| Menu or Shift F10 | The focused item's menu |
+| Esc | Back, close, or leave full screen |
+| Ctrl K or / | Search |
+| Ctrl 1 … Ctrl 7 | Home, Live TV, Guide, Movies, Series, Favorites, Library |
+| Ctrl , | Settings |
+| G | The Guide |
+| C | Cast, or choose a TV |
+| F1 | This list |
+| Alt ↑ or Alt ↓ | Move the focused item up or down its list |
+| Ctrl Z | Undo, while a message offers it |
+
+**Live TV and the player**
+
+| Keys | What they do |
+|---|---|
+| Enter | Watch the focused channel full screen |
+| F | Add the channel to favorites, or take it out |
+| ↑ ↓ PageUp PageDown | The previous or the next channel |
+| ← | The channel list, over the picture |
+| 0–9 then Enter | Go to a channel by its number |
+| Backspace | The last channel |
 | M | Mute |
-| A / S | Cycle audio / subtitles |
+| A | The next audio track |
+| S | The next subtitle, then off |
 | I | Stream info |
-| G | Guide |
-| C | Cast |
-| D | Download (movie or episode): the focused poster in a grid or on Home, a Continue watching card, a title's page, an episode's row. In Search, where D is a letter, **Ctrl+D** |
-| Ctrl+1 … Ctrl+7 | Home / Live TV / Guide / Movies / Series / Favorites / Library (focus follows into the screen) |
-| Ctrl+, | Settings (focus follows into the screen) |
-| Menu key or Shift+F10 | The focused item's menu (a channel, a category, a group, a source) |
-| Alt+↑ / Alt+↓ | Move the focused item (categories, favorites, groups, sources) |
-| Ctrl+Z | Undo, while the toast that offers it shows (hide, remove from favorites) |
+| F | The window full screen, or back (while playing) |
+
+**Movies and episodes**
+
+| Keys | What they do |
+|---|---|
+| F | Add to favorites, or take out |
+| D | Download |
+| Home or End | The first or the last title of a grid |
+| PageUp or PageDown | A screen up or down a grid |
+| Space | Play or pause |
+| ← or → | Back or forward 10 seconds |
+| Shift ← or Shift → | Back or forward a minute |
+| Home | From the beginning (while playing) |
+
+**The Guide**
+
+| Keys | What they do |
+|---|---|
+| ← → ↑ ↓ | From programme to programme, channel to channel |
+| PageUp or PageDown | A screen of channels up or down |
+| Home | Back to now |
+| Enter | A programme's details |
+
+**Search**
+
+| Keys | What they do |
+|---|---|
+| ↑ ↓ | Through the results |
+| Tab or Shift Tab | The next or the previous group of results |
+| Enter | Open the result |
+| Ctrl D | Download the result |
+| Delete | Forget a recent search |
+
+**Casting**
+
+| Keys | What they do |
+|---|---|
+| ↑ ↓ | The previous or the next channel on the TV |
+| Space | Play or pause on the TV |
+| ← or → | Back or forward 10 seconds on the TV |
+| S | The next subtitle on the TV, then off |
+| M | Mute the TV |
+
+**Favorites, downloads and settings**
+
+| Keys | What they do |
+|---|---|
+| ← or → | Fold or open a group of favorites |
+| Delete | Cancel a download, or clear a finished one |
+| ← → − + | Step the Guide's time offset |
+<!-- shortcuts: end -->
 
 ## States & microcopy
 - Loading: skeletons that match the final layout

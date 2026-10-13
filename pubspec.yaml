@@ -86,6 +86,9 @@ flutter:
     # Bundled font licences, added to LicenseRegistry at startup.
     - assets/fonts/Manrope-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
+    # The licences of the programs the app runs or loads (FFmpeg, mpv),
+    # added to LicenseRegistry at startup.
+    - assets/licenses/
 
   # Variable fonts (wght axis). Weights are selected with FontVariation('wght')
   # alongside FontWeight; see lib/design/tokens.dart.

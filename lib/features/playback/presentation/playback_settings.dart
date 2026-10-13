@@ -154,6 +154,22 @@ class _PlaybackSettingsSectionState
             ),
           ),
           _Setting(
+            title: 'Hardware decoding',
+            description:
+                'Automatic uses your graphics card when it can. Off decodes '
+                'on the processor: slower, and a way round a faulty graphics '
+                'driver. Applies to the next thing you play.',
+            control: SegmentedControl<bool>(
+              options: const [
+                SegmentOption(value: true, label: 'Automatic'),
+                SegmentOption(value: false, label: 'Off'),
+              ],
+              value: settings.hardwareDecoding,
+              onChanged: (value) =>
+                  unawaited(_save(settings.copyWith(hardwareDecoding: value))),
+            ),
+          ),
+          _Setting(
             title: 'Preferred audio',
             description:
                 'Language codes, most wanted first, e.g. "ar, en". The '

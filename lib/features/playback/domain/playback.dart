@@ -87,6 +87,7 @@ final class PlaybackSettings {
     this.audioLanguages = const [],
     this.subtitleLanguages = const [],
     this.deinterlace,
+    this.hardwareDecoding = true,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -110,6 +111,7 @@ final class PlaybackSettings {
         'off' => false,
         _ => null,
       },
+      hardwareDecoding: json['hwdec'] != 'off',
     );
   }
 
@@ -120,16 +122,22 @@ final class PlaybackSettings {
   /// null = Auto.
   final bool? deinterlace;
 
+  /// Automatic uses the graphics card when it can; false is Off, which
+  /// decodes on the processor (Phase 9 decision 4).
+  final bool hardwareDecoding;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
     List<String>? subtitleLanguages,
     bool? Function()? deinterlace,
+    bool? hardwareDecoding,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
     subtitleLanguages: subtitleLanguages ?? this.subtitleLanguages,
     deinterlace: deinterlace == null ? this.deinterlace : deinterlace(),
+    hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
   );
 
   /// As stored in the `settings` table.
@@ -142,6 +150,7 @@ final class PlaybackSettings {
       true => 'on',
       false => 'off',
     },
+    'hwdec': hardwareDecoding ? 'auto' : 'off',
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -159,6 +168,7 @@ final class PlaybackSettings {
     deinterlace: deinterlace,
     start: start,
     subtitleFiles: stream.subtitleFiles,
+    hardwareDecoding: hardwareDecoding,
   );
 
   @override
@@ -167,7 +177,8 @@ final class PlaybackSettings {
       other.preset == preset &&
       listEquals(other.audioLanguages, audioLanguages) &&
       listEquals(other.subtitleLanguages, subtitleLanguages) &&
-      other.deinterlace == deinterlace;
+      other.deinterlace == deinterlace &&
+      other.hardwareDecoding == hardwareDecoding;
 
   @override
   int get hashCode => Object.hash(
@@ -175,5 +186,6 @@ final class PlaybackSettings {
     Object.hashAll(audioLanguages),
     Object.hashAll(subtitleLanguages),
     deinterlace,
+    hardwareDecoding,
   );
 }

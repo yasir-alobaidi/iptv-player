@@ -11,6 +11,7 @@ void main() {
     audioLanguages: ['ar', 'en'],
     subtitleLanguages: ['en'],
     deinterlace: false,
+    hardwareDecoding: false,
   );
 
   test('round-trips through JSON', () {
@@ -44,6 +45,29 @@ void main() {
     expect(request.subtitleLanguages, ['en']);
     expect(request.deinterlace, isFalse);
     expect(request.userAgent, 'Box/1');
+    expect(request.hardwareDecoding, isFalse);
+  });
+
+  test('hardware decoding is Automatic unless Off was stored', () {
+    expect(const PlaybackSettings().hardwareDecoding, isTrue);
+    expect(const PlaybackSettings().toJson()['hwdec'], 'auto');
+    expect(
+      PlaybackSettings.fromJson(const {'hwdec': 'off'}).hardwareDecoding,
+      isFalse,
+    );
+    // Settings stored before Phase 9, or damaged: Automatic.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'hwdec': 7},
+    ]) {
+      expect(PlaybackSettings.fromJson(stored).hardwareDecoding, isTrue);
+    }
+    expect(
+      const PlaybackSettings()
+          .request(const ResolvedStream(url: 'u', maxConnections: 1))
+          .hardwareDecoding,
+      isTrue,
+    );
   });
 
   test('the store keeps them in the settings table', () async {

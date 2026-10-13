@@ -13,9 +13,9 @@ enum SettingsSection {
   guide('Guide'),
   categories('Categories'),
   appearance('Appearance'),
-  shortcuts('Keyboard shortcuts', phase: 9),
+  shortcuts('Keyboard shortcuts'),
   data('Data', phase: 9),
-  about('About & diagnostics', phase: 9);
+  about('About & diagnostics');
 
   new(this.label, {this.phase});
 

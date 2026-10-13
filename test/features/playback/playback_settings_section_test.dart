@@ -47,7 +47,8 @@ void main() {
 
     await tester.enterText(find.byType(EditableText).first, 'AR, en');
     await _settle(tester);
-    await tester.tap(find.text('Off'));
+    // Deinterlacing's Off: Hardware decoding's is the second.
+    await tester.tap(find.text('Off').first);
     await _settle(tester);
 
     final stored = await tester.runAsync(
@@ -55,6 +56,31 @@ void main() {
     );
     expect(stored, contains('"audio":["ar","en"]'));
     expect(stored, contains('"deinterlace":"off"'));
+  });
+
+  testWidgets('Hardware decoding: Automatic until Off is chosen, saved at '
+      "once, and the next stream's request carries it", (tester) async {
+    final live = await open(tester);
+    expect(find.text('Hardware decoding'), findsOneWidget);
+    expect(
+      find.textContaining('a way round a faulty graphics driver'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Off').last);
+    await _settle(tester);
+
+    final stored = await tester.runAsync(
+      () => live.db.settingsDao.read('playback.settings'),
+    );
+    expect(stored, contains('"hwdec":"off"'));
+
+    await tester.tap(find.text('Automatic'));
+    await _settle(tester);
+    final again = await tester.runAsync(
+      () => live.db.settingsDao.read('playback.settings'),
+    );
+    expect(again, contains('"hwdec":"auto"'));
   });
 
   testWidgets("the source's live format is saved on the source", (

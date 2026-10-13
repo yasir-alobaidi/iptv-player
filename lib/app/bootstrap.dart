@@ -19,6 +19,7 @@ import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/platform/tool_licenses.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
@@ -46,7 +47,9 @@ import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
+import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 import 'package:iptv_player/features/settings/data/db_appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -58,6 +61,7 @@ Future<void> bootstrap() async {
   final sinceMain = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   registerBundledFontLicenses();
+  registerToolLicenses();
 
   final secrets = SecretRegistry();
   final outputs = <LogOutput>[if (kDebugMode) ConsoleOutput()];
@@ -108,7 +112,16 @@ Future<void> bootstrap() async {
     );
   }
 
-  final player = await _createPlayer(log, secrets);
+  // What the user chose for the decoder, before the player is made: its
+  // video controller sets `hwdec` once by itself (Phase 9 decision 4).
+  final playback =
+      (await DbPlaybackSettingsStore(settings).load()).valueOrNull ??
+      const PlaybackSettings();
+  final player = await _createPlayer(
+    log,
+    secrets,
+    hardwareDecoding: playback.hardwareDecoding,
+  );
   capDecodedImages(PaintingBinding.instance.imageCache);
   final artwork = paths == null ? null : ArtworkCache(directory: paths.artwork);
 
@@ -260,9 +273,17 @@ Future<void> _registerDownloadFolder(ProviderContainer container) async {
 
 /// The one player (docs/03). A libmpv that won't start leaves the app
 /// running without playback rather than not running (hard rule 1).
-Future<PlayerEngine> _createPlayer(AppLog log, SecretRegistry secrets) async {
+Future<PlayerEngine> _createPlayer(
+  AppLog log,
+  SecretRegistry secrets, {
+  required bool hardwareDecoding,
+}) async {
   try {
-    return await MediaKitPlayerEngine.create(log: log, secrets: secrets);
+    return await MediaKitPlayerEngine.create(
+      log: log,
+      secrets: secrets,
+      hardwareDecoding: hardwareDecoding,
+    );
   } on Object catch (error, stackTrace) {
     log.error(
       'bootstrap',

@@ -37,6 +37,7 @@ export 'package:iptv_player/design/components/kbd.dart';
 export 'package:iptv_player/design/components/poster_card.dart';
 export 'package:iptv_player/design/components/progress_bar.dart';
 export 'package:iptv_player/design/components/quality_badge.dart';
+export 'package:iptv_player/design/components/scroll_pane.dart';
 export 'package:iptv_player/design/components/search_field.dart';
 export 'package:iptv_player/design/components/section_header.dart';
 export 'package:iptv_player/design/components/segmented_control.dart';

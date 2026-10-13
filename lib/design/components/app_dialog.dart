@@ -48,108 +48,115 @@ class AppDialog extends StatelessWidget {
 
     return FocusPane(
       debugLabel: 'dialog',
-      child: Center(
-        child: Container(
-          width: width,
-          constraints: const BoxConstraints(maxHeight: 640),
-          decoration: BoxDecoration(
-            color: colors.surface2,
-            borderRadius: tokens.radii.lgAll,
-            border: Border.all(color: colors.border),
-            boxShadow: tokens.elevation.overlay,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  tokens.spacing.s20,
-                  tokens.spacing.s20,
-                  tokens.spacing.s12,
-                  tokens.spacing.s12,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            title,
-                            style: tokens.text.h3.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                          if (subtitle != null) ...[
-                            SizedBox(height: tokens.spacing.s4),
+      // Clear of the window's edges: in the smallest window (640 px
+      // high) a tall dialog would otherwise fill it top to bottom.
+      child: Padding(
+        padding: EdgeInsets.all(tokens.spacing.s24),
+        child: Center(
+          child: Container(
+            width: width,
+            constraints: const BoxConstraints(maxHeight: 640),
+            decoration: BoxDecoration(
+              color: colors.surface2,
+              borderRadius: tokens.radii.lgAll,
+              border: Border.all(color: colors.border),
+              boxShadow: tokens.elevation.overlay,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    tokens.spacing.s20,
+                    tokens.spacing.s20,
+                    tokens.spacing.s12,
+                    tokens.spacing.s12,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              subtitle!,
-                              style: tokens.text.caption.copyWith(
-                                color: colors.textSecondary,
+                              title,
+                              style: tokens.text.h3.copyWith(
+                                color: colors.textPrimary,
                               ),
                             ),
+                            if (subtitle != null) ...[
+                              SizedBox(height: tokens.spacing.s4),
+                              Text(
+                                subtitle!,
+                                style: tokens.text.caption.copyWith(
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    if (onClose != null)
-                      Semantics(
-                        button: true,
-                        label: 'Close',
-                        child: GestureDetector(
-                          onTap: onClose,
-                          child: Padding(
-                            padding: EdgeInsets.all(tokens.spacing.s8),
-                            child: AppIcon(
-                              AppIcons.close,
-                              size: 18,
-                              color: colors.textTertiary,
+                      if (onClose != null)
+                        Semantics(
+                          button: true,
+                          label: 'Close',
+                          child: GestureDetector(
+                            onTap: onClose,
+                            child: Padding(
+                              padding: EdgeInsets.all(tokens.spacing.s8),
+                              child: AppIcon(
+                                AppIcons.close,
+                                size: 18,
+                                color: colors.textTertiary,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s20),
-                  child: child,
-                ),
-              ),
-              if (primaryLabel != null || secondaryLabel != null)
-                Padding(
-                  padding: EdgeInsets.all(tokens.spacing.s20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (secondaryLabel != null) ...[
-                        AppButton(
-                          label: secondaryLabel!,
-                          variant: AppButtonVariant.secondary,
-                          // A destructive dialog starts on the safe
-                          // choice: Enter straight away must not delete.
-                          autofocus: focusButtons && destructive,
-                          onPressed: onSecondary,
-                        ),
-                        SizedBox(width: tokens.spacing.s8),
-                      ],
-                      if (primaryLabel != null)
-                        AppButton(
-                          label: primaryLabel!,
-                          variant: destructive
-                              ? AppButtonVariant.danger
-                              : AppButtonVariant.primary,
-                          autofocus: focusButtons && !destructive,
-                          onPressed: onPrimary,
                         ),
                     ],
                   ),
                 ),
-            ],
+                Flexible(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: tokens.spacing.s20,
+                    ),
+                    child: child,
+                  ),
+                ),
+                if (primaryLabel != null || secondaryLabel != null)
+                  Padding(
+                    padding: EdgeInsets.all(tokens.spacing.s20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (secondaryLabel != null) ...[
+                          AppButton(
+                            label: secondaryLabel!,
+                            variant: AppButtonVariant.secondary,
+                            // A destructive dialog starts on the safe
+                            // choice: Enter straight away must not delete.
+                            autofocus: focusButtons && destructive,
+                            onPressed: onSecondary,
+                          ),
+                          SizedBox(width: tokens.spacing.s8),
+                        ],
+                        if (primaryLabel != null)
+                          AppButton(
+                            label: primaryLabel!,
+                            variant: destructive
+                                ? AppButtonVariant.danger
+                                : AppButtonVariant.primary,
+                            autofocus: focusButtons && !destructive,
+                            onPressed: onPrimary,
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

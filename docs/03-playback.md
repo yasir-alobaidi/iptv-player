@@ -8,7 +8,7 @@ On Linux the app depends on our patched media_kit_video (ADR-003). Every unpatch
 ### Base options
 | Option | Value | Why |
 |---|---|---|
-| hwdec | `auto-safe` | GPU decoding (VA-API/NVDEC on Linux, D3D11VA on Windows) with safe fallback |
+| hwdec | `auto-safe`, or `no` when Settings → Playback → Hardware decoding is Off | GPU decoding (VA-API/NVDEC on Linux, D3D11VA on Windows) with safe fallback. Set before every open, so a change applies to the next thing played (ADR-016, step 2) |
 | cache | `yes` | required for network streams |
 | cache-on-disk | `no` | libmpv 0.34.1 otherwise logs `Failed to create file cache` on every open |
 | network-timeout | `10` | fail fast; the watchdog retries |

@@ -50,23 +50,39 @@ const Map<BufferPreset, Map<String, String>> _presetOptions = {
 const _liveBackBytes = '16MiB';
 const _vodBackBytes = '64MiB';
 
+/// mpv's `hwdec` for Settings → Playback → Hardware decoding: Automatic
+/// (ADR-003: only the decoders mpv lists as safe) and Off.
+const hwdecAutomatic = 'auto-safe';
+const hwdecOff = 'no';
+
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
 /// the preset, then what varies per stream. Exposed for tests.
-Map<String, String> mpvOptionsFor(PlayRequest request) => {
-  ..._presetOptions[request.preset]!,
-  'demuxer-max-back-bytes': request.live ? _liveBackBytes : _vodBackBytes,
-  'user-agent': request.userAgent ?? '',
-  'alang': request.audioLanguages.join(','),
-  'slang': request.subtitleLanguages.join(','),
-  if (request.deinterlace != null)
-    'deinterlace': request.deinterlace! ? 'yes' : 'no',
-  // A library file's subtitle files (docs/09), as tracks; empty clears the
-  // last file's. mpv's list option parts paths at ':' (';' on Windows),
-  // so a path holding one is left out.
-  'sub-files': request.subtitleFiles
-      .where((path) => !path.contains(_listSeparator))
-      .join(_listSeparator),
-};
+///
+/// [picture] false is a player with no video output: there Automatic
+/// leaves `hwdec` alone (nothing for a graphics card to draw to), and Off
+/// still says no.
+Map<String, String> mpvOptionsFor(PlayRequest request, {bool picture = true}) =>
+    {
+      ..._presetOptions[request.preset]!,
+      // Read when the file's decoder starts, so a change in Settings applies
+      // to the next thing played.
+      if (!request.hardwareDecoding)
+        'hwdec': hwdecOff
+      else if (picture)
+        'hwdec': hwdecAutomatic,
+      'demuxer-max-back-bytes': request.live ? _liveBackBytes : _vodBackBytes,
+      'user-agent': request.userAgent ?? '',
+      'alang': request.audioLanguages.join(','),
+      'slang': request.subtitleLanguages.join(','),
+      if (request.deinterlace != null)
+        'deinterlace': request.deinterlace! ? 'yes' : 'no',
+      // A library file's subtitle files (docs/09), as tracks; empty clears the
+      // last file's. mpv's list option parts paths at ':' (';' on Windows),
+      // so a path holding one is left out.
+      'sub-files': request.subtitleFiles
+          .where((path) => !path.contains(_listSeparator))
+          .join(_listSeparator),
+    };
 
 final _listSeparator = Platform.isWindows ? ';' : ':';
 
@@ -79,10 +95,15 @@ final class MediaKitPlayerEngine implements PlayerEngine {
   /// [video] false runs mpv with no video output (`vo=null`): decoding,
   /// network and audio as usual, nothing drawn. For headless runs with
   /// no GPU (ADR-010, step 1).
+  ///
+  /// [hardwareDecoding] is the stored choice at launch: the video
+  /// controller sets `hwdec` once by itself, some time after this
+  /// returns, and must not undo an Off chosen before the first play.
   static Future<MediaKitPlayerEngine> create({
     required AppLog log,
     required SecretRegistry secrets,
     bool video = true,
+    bool hardwareDecoding = true,
   }) async {
     MediaKit.ensureInitialized();
     final player = Player(
@@ -99,8 +120,8 @@ final class MediaKitPlayerEngine implements PlayerEngine {
     final controller = video
         ? VideoController(
             player,
-            configuration: const VideoControllerConfiguration(
-              hwdec: 'auto-safe',
+            configuration: VideoControllerConfiguration(
+              hwdec: hardwareDecoding ? hwdecAutomatic : hwdecOff,
             ),
           )
         : null;
@@ -124,6 +145,11 @@ final class MediaKitPlayerEngine implements PlayerEngine {
 
   Future<String> _get(String name) =>
       _native.getProperty(name, waitForInitialization: false);
+
+  /// What mpv has for [name] now (`hwdec`, `hwdec-current`): for tests of
+  /// the options this engine sets.
+  @visibleForTesting
+  Future<String> mpvProperty(String name) => _get(name);
 
   /// Counts opens; a poll or event from an older open is dropped.
   int _generation = 0;
@@ -209,7 +235,8 @@ final class MediaKitPlayerEngine implements PlayerEngine {
     _position = Duration.zero;
     _buffered = Duration.zero;
     _emit(PlayerOpening(generation));
-    for (final MapEntry(:key, :value) in mpvOptionsFor(request).entries) {
+    final options = mpvOptionsFor(request, picture: _controller != null);
+    for (final MapEntry(:key, :value) in options.entries) {
       await _set(key, value);
     }
     if (request.deinterlace == null) {

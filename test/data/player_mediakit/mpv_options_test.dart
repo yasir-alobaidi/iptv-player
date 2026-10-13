@@ -86,4 +86,37 @@ void main() {
     expect(options['sub-files'], '$english$separator$forced');
     expect(mpvOptionsFor(const PlayRequest(url: 'u'))['sub-files'], '');
   });
+
+  group('hardware decoding (Settings → Playback)', () {
+    test('Automatic asks mpv for its safe decoders', () {
+      expect(mpvOptionsFor(const PlayRequest(url: 'u'))['hwdec'], 'auto-safe');
+    });
+
+    test('Off says no, so the next file decodes on the processor', () {
+      expect(
+        mpvOptionsFor(
+          const PlayRequest(url: 'u', hardwareDecoding: false),
+        )['hwdec'],
+        'no',
+      );
+    });
+
+    test('with no picture Automatic leaves hwdec alone, and Off still '
+        'says no', () {
+      expect(
+        mpvOptionsFor(
+          const PlayRequest(url: 'u'),
+          picture: false,
+        ).containsKey('hwdec'),
+        isFalse,
+      );
+      expect(
+        mpvOptionsFor(
+          const PlayRequest(url: 'u', hardwareDecoding: false),
+          picture: false,
+        )['hwdec'],
+        'no',
+      );
+    });
+  });
 }

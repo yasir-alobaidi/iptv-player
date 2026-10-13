@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/launch_mark.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -53,3 +55,7 @@ AppNotices appNotices(Ref ref) {
   ref.onDispose(notices.dispose);
   return notices;
 }
+
+/// The version this build was made as, read once from the bundle.
+@Riverpod(keepAlive: true)
+Future<AppVersion> appVersion(Ref ref) => readAppVersion(rootBundle);

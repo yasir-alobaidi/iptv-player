@@ -95,6 +95,33 @@ void main() {
       final hls = await play(panel.live(1, extension: 'm3u8'));
       await tester.runAsync(engine.stop);
 
+      // ── Settings → Playback → Hardware decoding: Off decodes the next
+      // file on the processor, and Automatic hands it back (Phase 9
+      // decision 4). With no picture Automatic leaves mpv's own setting.
+      events.clear();
+      await tester.runAsync(
+        () => engine.open(
+          PlayRequest(url: panel.live(1), hardwareDecoding: false),
+        ),
+      );
+      await _until(
+        tester,
+        () => events.any((e) => e is PlayerFirstFrame || e is PlayerFailed),
+        'the first frame with hardware decoding off',
+      );
+      expect(events.whereType<PlayerFailed>(), isEmpty, reason: '$events');
+      expect(await tester.runAsync(() => engine.mpvProperty('hwdec')), 'no');
+      final software = (await tester.runAsync(engine.streamInfo))!;
+      expect(software.hardwareDecoder, isNull);
+      await play(panel.live(2));
+      if (video) {
+        expect(
+          await tester.runAsync(() => engine.mpvProperty('hwdec')),
+          hwdecAutomatic,
+        );
+      }
+      await tester.runAsync(engine.stop);
+
       // ── A channel that isn't there fails, with the reason behind it.
       events.clear();
       await tester.runAsync(

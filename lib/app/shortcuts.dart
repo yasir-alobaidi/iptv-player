@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/app/shell/shortcut_list.dart';
 
 /// Jump to a destination (Ctrl+1 … Ctrl+7, Ctrl+,, and G for the
 /// Guide).
@@ -40,13 +41,21 @@ class CastIntent extends Intent {
   const new();
 }
 
+/// F1: the keyboard shortcuts, over whatever is on screen (Phase 9
+/// decision 5).
+class ShowShortcutsIntent extends Intent {
+  const new();
+}
+
 /// The shortcuts that work anywhere in the app. They wrap the router's
 /// navigator, so they fire on every screen, including the search overlay.
 ///
 /// Player keys (Space, F, arrows, digits) belong to the player and come
 /// in Phase 3; putting them here would swallow them on every other
 /// screen.
-class AppGlobalShortcuts extends ConsumerWidget {
+///
+/// Every activator here has a row in `shortcutTable` (a test checks).
+class AppGlobalShortcuts extends ConsumerStatefulWidget {
   const new({required this.child, super.key});
 
   static Map<ShortcutActivator, Intent> get shortcuts => {
@@ -66,6 +75,7 @@ class AppGlobalShortcuts extends ConsumerWidget {
     ),
     const SingleActivator(LogicalKeyboardKey.escape): const CloseTopIntent(),
     const SingleActivator(LogicalKeyboardKey.keyC): const CastIntent(),
+    const SingleActivator(LogicalKeyboardKey.f1): const ShowShortcutsIntent(),
   };
 
   static const List<LogicalKeyboardKey> _numberKeys = [
@@ -81,21 +91,49 @@ class AppGlobalShortcuts extends ConsumerWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppGlobalShortcuts> createState() => _AppGlobalShortcutsState();
+}
+
+class _AppGlobalShortcutsState extends ConsumerState<AppGlobalShortcuts> {
+  final _shortcutsPanel = ShortcutsPanelGate();
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return Shortcuts(
-      shortcuts: shortcuts,
+      shortcuts: AppGlobalShortcuts.shortcuts,
       child: Actions(
         actions: {
           GoToDestinationIntent: _GoToDestinationAction(router),
           OpenSearchIntent: _OpenSearchAction(router),
           CloseTopIntent: _CloseTopAction(router),
           CastIntent: _CastAction(router, ref.watch(shellCastButtonProvider)),
+          ShowShortcutsIntent: _ShowShortcutsAction(router, _shortcutsPanel),
         },
-        child: child,
+        child: widget.child,
       ),
     );
+  }
+}
+
+/// F1 shows the list over whatever is on screen; a second F1 while it
+/// shows does nothing.
+class _ShowShortcutsAction extends Action<ShowShortcutsIntent> {
+  new(this._router, this._gate);
+
+  final GoRouter _router;
+  final ShortcutsPanelGate _gate;
+
+  @override
+  bool isEnabled(ShowShortcutsIntent intent, [BuildContext? context]) =>
+      !_gate.isOpen;
+
+  @override
+  Object? invoke(ShowShortcutsIntent intent) {
+    final context = _router.routerDelegate.navigatorKey.currentContext;
+    if (context != null) _gate.show(context);
+    return null;
   }
 }
 

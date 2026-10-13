@@ -80,6 +80,7 @@ final class PlayRequest {
     this.deinterlace,
     this.start,
     this.subtitleFiles = const [],
+    this.hardwareDecoding = true,
   });
 
   /// Carries credentials: never log it without `redact()`.
@@ -105,10 +106,15 @@ final class PlayRequest {
   /// Subtitle files to add as tracks (a library file's, docs/09).
   final List<String> subtitleFiles;
 
+  /// False decodes on the processor (Settings → Playback → Hardware
+  /// decoding: Off), a way round a faulty graphics driver.
+  final bool hardwareDecoding;
+
   @override
   String toString() =>
       'PlayRequest(live: $live, preset: ${preset.name}'
-      '${start == null ? '' : ', start: $start'})';
+      '${start == null ? '' : ', start: $start'}'
+      '${hardwareDecoding ? '' : ', software decoding'})';
 }
 
 /// Something the player reports.

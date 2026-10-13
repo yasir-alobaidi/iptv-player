@@ -1,0 +1,158 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:iptv_player/design/focus/focus_ring.dart';
+import 'package:iptv_player/design/text_scale.dart';
+import 'package:iptv_player/design/tokens.dart';
+
+/// Something to read that is longer than its box: one Tab stop with the
+/// focus ring, scrolled by the keyboard as well as the wheel.
+///
+/// ↑ and ↓ move a line, PageUp and PageDown a boxful, Home and End to
+/// the ends. At an end the arrow isn't taken, so the focus can leave the
+/// way it came (hard rule 5: no trap).
+class ScrollPane extends StatefulWidget {
+  /// [builder] makes the scrolling child and must give it the controller
+  /// it is handed (a `ListView.builder` for something long).
+  const new({
+    required this.builder,
+    required this.semanticLabel,
+    this.controller,
+    this.focusNode,
+    this.autofocus = false,
+    this.borderRadius,
+    super.key,
+  });
+
+  /// A fixed [child], scrolled as a whole.
+  factory child({
+    required Widget child,
+    required String semanticLabel,
+    ScrollController? controller,
+    FocusNode? focusNode,
+    bool autofocus = false,
+    BorderRadius? borderRadius,
+    EdgeInsetsGeometry? padding,
+    Key? key,
+  }) => ScrollPane(
+    key: key,
+    semanticLabel: semanticLabel,
+    controller: controller,
+    focusNode: focusNode,
+    autofocus: autofocus,
+    borderRadius: borderRadius,
+    builder: (context, controller) => SingleChildScrollView(
+      controller: controller,
+      padding: padding,
+      child: child,
+    ),
+  );
+
+  final Widget Function(BuildContext context, ScrollController controller)
+  builder;
+
+  /// What it is, for assistive technology: "Keyboard shortcuts".
+  final String semanticLabel;
+  final ScrollController? controller;
+  final FocusNode? focusNode;
+  final bool autofocus;
+  final BorderRadius? borderRadius;
+
+  /// One press of ↑ or ↓, at the canvas's text size.
+  static const lineStep = 48.0;
+
+  /// What a page keeps in view of the page before it.
+  static const pageOverlap = 48.0;
+
+  @override
+  State<ScrollPane> createState() => _ScrollPaneState();
+}
+
+class _ScrollPaneState extends State<ScrollPane> {
+  ScrollController? _own;
+  bool _focused = false;
+
+  ScrollController get _controller =>
+      widget.controller ?? (_own ??= ScrollController());
+
+  @override
+  void dispose() {
+    _own?.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent || !_controller.hasClients) {
+      return KeyEventResult.ignored;
+    }
+    final position = _controller.position;
+    final page = (position.viewportDimension - ScrollPane.pageOverlap).clamp(
+      ScrollPane.lineStep,
+      double.infinity,
+    );
+    final line = context.scaled(ScrollPane.lineStep);
+    final double target;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowUp:
+        target = position.pixels - line;
+      case LogicalKeyboardKey.arrowDown:
+        target = position.pixels + line;
+      case LogicalKeyboardKey.pageUp:
+        target = position.pixels - page;
+      case LogicalKeyboardKey.pageDown:
+        target = position.pixels + page;
+      case LogicalKeyboardKey.home:
+        target = position.minScrollExtent;
+      case LogicalKeyboardKey.end:
+        target = position.maxScrollExtent;
+      default:
+        return KeyEventResult.ignored;
+    }
+    final clamped = target.clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    // Nowhere further to go: the key is the focus's, to leave with.
+    if (clamped == position.pixels) return KeyEventResult.ignored;
+    _controller.jumpTo(clamped);
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final focus = tokens.focus;
+    final radius = widget.borderRadius ?? tokens.radii.controlAll;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _onKey,
+      child: FocusableActionDetector(
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        onShowFocusHighlight: (value) {
+          if (value != _focused) setState(() => _focused = value);
+        },
+        child: Semantics(
+          label: widget.semanticLabel,
+          container: true,
+          child: FocusRing(
+            visible: _focused,
+            borderRadius: radius,
+            ringColor: colors.accentBase,
+            glowColor: colors.accentBase.withValues(alpha: focus.glowOpacity),
+            ringWidth: focus.ringWidth,
+            glowWidth: focus.glowWidth,
+            duration: tokens.motion.fast,
+            curve: tokens.motion.fastCurve,
+            child: ClipRRect(
+              borderRadius: radius,
+              // Nothing inside is a stop of its own: the pane is.
+              child: ExcludeFocus(child: widget.builder(context, _controller)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
