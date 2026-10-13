@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
@@ -161,4 +164,36 @@ final class WindowManagerControls implements WindowControls {
   @override
   Future<void> setFullScreen({required bool on}) =>
       windowManager.setFullScreen(on);
+
+  @override
+  Future<bool> isFocused() async {
+    try {
+      return await windowManager.isFocused() &&
+          !await windowManager.isMinimized();
+    } on Object {
+      // Not known: said inside the app, which is never wrong.
+      return true;
+    }
+  }
+
+  /// The runner's own channel (linux/runner/my_application.cc): GTK's
+  /// "present", with the desktop's activation token when there is one.
+  static const _linuxWindow = MethodChannel('iptv_player/window');
+
+  @override
+  Future<void> bringToFront({String? activationToken}) async {
+    try {
+      if (await windowManager.isMinimized()) await windowManager.restore();
+      await windowManager.show();
+      if (Platform.isLinux) {
+        // window_manager's focus() presents with no token, which Wayland
+        // turns into "… is ready"; with one, the window comes forward.
+        await _linuxWindow.invokeMethod<void>('present', activationToken);
+      } else {
+        await windowManager.focus();
+      }
+    } on Object {
+      // The channel plays whether or not the window could be raised.
+    }
+  }
 }

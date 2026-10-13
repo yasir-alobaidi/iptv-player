@@ -169,4 +169,19 @@ final class FakeWindow implements WindowControls {
     fullScreen = on;
     changes.add(on);
   }
+
+  /// Whether the window is in front; a reminder is then a toast.
+  bool focused = true;
+
+  /// Each time it was brought forward, with the desktop's token or null.
+  final List<String?> raised = [];
+
+  @override
+  Future<bool> isFocused() async => focused;
+
+  @override
+  Future<void> bringToFront({String? activationToken}) async {
+    raised.add(activationToken);
+    focused = true;
+  }
 }

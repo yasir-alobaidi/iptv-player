@@ -1,5 +1,7 @@
 #include "my_application.h"
 
+#include <cstring>
+
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
@@ -10,9 +12,39 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  // "Bring the window forward", asked by the app when the user answers a
+  // reminder (Phase 9 decision 11).
+  FlMethodChannel* window_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+// iptv_player/window: "present" with the desktop's activation token, or
+// null. A click on a notification hands the app a token, and Wayland only
+// lets a window come forward by itself with one; GTK takes it as the
+// window's startup id (X11 startup notification, xdg-activation on
+// Wayland). Without a token this is a plain present, which Wayland turns
+// into "... is ready".
+static void window_method_call_cb(FlMethodChannel* channel,
+                                  FlMethodCall* method_call,
+                                  gpointer user_data) {
+  GtkWindow* window = GTK_WINDOW(user_data);
+  g_autoptr(FlMethodResponse) response = nullptr;
+  if (strcmp(fl_method_call_get_name(method_call), "present") == 0) {
+    FlValue* args = fl_method_call_get_args(method_call);
+    if (args != nullptr && fl_value_get_type(args) == FL_VALUE_TYPE_STRING) {
+      const gchar* token = fl_value_get_string(args);
+      if (token != nullptr && token[0] != '\0') {
+        gtk_window_set_startup_id(window, token);
+      }
+    }
+    gtk_window_present(window);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
+  fl_method_call_respond(method_call, response, nullptr);
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -75,6 +107,13 @@ static void my_application_activate(GApplication* application) {
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->window_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "iptv_player/window", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(
+      self->window_channel, window_method_call_cb, window, nullptr);
+
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
@@ -121,6 +160,7 @@ static void my_application_shutdown(GApplication* application) {
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
+  g_clear_object(&self->window_channel);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 

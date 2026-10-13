@@ -13,6 +13,7 @@ import 'package:iptv_player/data/db/daos/epg_dao.dart';
 import 'package:iptv_player/data/db/daos/favorites_dao.dart';
 import 'package:iptv_player/data/db/daos/library_dao.dart';
 import 'package:iptv_player/data/db/daos/movies_dao.dart';
+import 'package:iptv_player/data/db/daos/reminders_dao.dart';
 import 'package:iptv_player/data/db/daos/series_dao.dart';
 import 'package:iptv_player/data/db/daos/settings_dao.dart';
 import 'package:iptv_player/data/db/daos/sources_dao.dart';
@@ -20,6 +21,7 @@ import 'package:iptv_player/data/db/daos/sync_runs_dao.dart';
 import 'package:iptv_player/data/db/daos/watch_history_dao.dart';
 import 'package:iptv_player/data/db/epg_tables.dart';
 import 'package:iptv_player/data/db/library_tables.dart';
+import 'package:iptv_player/data/db/reminder_tables.dart';
 import 'package:iptv_player/data/db/tables.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:path/path.dart' as p;
@@ -55,6 +57,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     LibraryFolders,
     LibraryItems,
     Downloads,
+    Reminders,
   ],
   include: {'search.drift', 'library.drift'},
   daos: [
@@ -71,6 +74,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     CastDevicesDao,
     LibraryDao,
     DownloadsDao,
+    RemindersDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -80,7 +84,7 @@ class AppDatabase extends _$AppDatabase {
   factory memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -218,6 +222,11 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
     await m.createIndex(schema.favoritesLocal);
     await m.createIndex(schema.watchHistoryLocal);
     await m.create(schema.libraryFts);
+  },
+  from9To10: (m, schema) async {
+    // Phase 9: "Remind me" on upcoming programmes.
+    await m.createTable(schema.reminders);
+    await m.createIndex(schema.remindersStart);
   },
 );
 

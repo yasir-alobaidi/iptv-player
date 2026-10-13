@@ -4,6 +4,7 @@ import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
+import 'package:iptv_player/features/reminders/data/db_reminder_repository.dart';
 import 'package:iptv_player/features/settings/data/db_settings_transfer.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -16,6 +17,10 @@ part 'data_providers.g.dart';
 SettingsTransfer settingsTransfer(Ref ref) => DbSettingsTransfer(
   ref.watch(appDatabaseProvider),
   appVersion: ref.watch(appVersionProvider).value?.short ?? '',
+  reminders: DbReminderTransfer(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(appClockProvider),
+  ),
   clock: ref.watch(appClockProvider),
 );
 

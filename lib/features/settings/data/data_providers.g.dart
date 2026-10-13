@@ -57,7 +57,7 @@ final class SettingsTransferProvider
   }
 }
 
-String _$settingsTransferHash() => r'dc7e33a084bdf9d4641fd10bdf262664a9516bfd';
+String _$settingsTransferHash() => r'a9a4a95ef724240417dea83b2d9453393ae695f8';
 
 /// How much room the kept pictures take; measured again after Clear.
 

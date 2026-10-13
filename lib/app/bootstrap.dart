@@ -21,6 +21,7 @@ import 'package:iptv_player/core/platform/app_paths.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
+import 'package:iptv_player/core/platform/system_notifier.dart';
 import 'package:iptv_player/core/platform/tool_licenses.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -37,6 +38,7 @@ import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/platform/file_reveals.dart';
 import 'package:iptv_player/data/platform/system_facts_readers.dart';
 import 'package:iptv_player/data/platform/system_networks.dart';
+import 'package:iptv_player/data/platform/system_notifiers.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
 import 'package:iptv_player/data/secure/secure_credential_store.dart';
@@ -56,6 +58,7 @@ import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 import 'package:iptv_player/features/settings/data/db_appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -138,6 +141,9 @@ Future<void> bootstrap() async {
       fileRevealProvider.overrideWithValue(platformFileReveal(log)),
       systemNetworkProvider.overrideWithValue(platformSystemNetwork(log)),
       systemFactsReaderProvider.overrideWithValue(platformSystemFacts()),
+      systemNotificationsProvider.overrideWithValue(
+        platformSystemNotifier(log),
+      ),
       if (paths != null)
         logReaderProvider.overrideWithValue(
           FileLogReader(directory: paths.logs),
@@ -245,6 +251,11 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
       Future<void>.delayed(_launchSyncDelay, () async {
         // In its own isolate: the picture cache's size cap (docs/06).
         unawaited(artwork?.sweep());
+        // Reminders that fell due while the app was closed show now, if
+        // their programmes are still on; then the scheduler keeps watch
+        // (Phase 9 decision 10). Before the syncs: it reads only its own
+        // table.
+        unawaited(container.read(reminderServiceProvider).start());
         // The download folder is a library folder (docs/09), and what
         // was downloading when the app went picks up again.
         await _registerDownloadFolder(container);

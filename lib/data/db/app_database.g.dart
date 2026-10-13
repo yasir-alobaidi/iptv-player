@@ -16257,6 +16257,575 @@ class CastDevicesCompanion extends UpdateCompanion<CastDeviceRow> {
   }
 }
 
+class $RemindersTable extends Reminders
+    with TableInfo<$RemindersTable, ReminderRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RemindersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sources (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _channelRemoteKeyMeta = const VerificationMeta(
+    'channelRemoteKey',
+  );
+  @override
+  late final GeneratedColumn<String> channelRemoteKey = GeneratedColumn<String>(
+    'channel_remote_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _xmltvIdMeta = const VerificationMeta(
+    'xmltvId',
+  );
+  @override
+  late final GeneratedColumn<String> xmltvId = GeneratedColumn<String>(
+    'xmltv_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _channelNameMeta = const VerificationMeta(
+    'channelName',
+  );
+  @override
+  late final GeneratedColumn<String> channelName = GeneratedColumn<String>(
+    'channel_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startUtcMeta = const VerificationMeta(
+    'startUtc',
+  );
+  @override
+  late final GeneratedColumn<int> startUtc = GeneratedColumn<int>(
+    'start_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endUtcMeta = const VerificationMeta('endUtc');
+  @override
+  late final GeneratedColumn<int> endUtc = GeneratedColumn<int>(
+    'end_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceId,
+    channelRemoteKey,
+    xmltvId,
+    channelName,
+    title,
+    startUtc,
+    endUtc,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reminders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReminderRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('channel_remote_key')) {
+      context.handle(
+        _channelRemoteKeyMeta,
+        channelRemoteKey.isAcceptableOrUnknown(
+          data['channel_remote_key']!,
+          _channelRemoteKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_channelRemoteKeyMeta);
+    }
+    if (data.containsKey('xmltv_id')) {
+      context.handle(
+        _xmltvIdMeta,
+        xmltvId.isAcceptableOrUnknown(data['xmltv_id']!, _xmltvIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_xmltvIdMeta);
+    }
+    if (data.containsKey('channel_name')) {
+      context.handle(
+        _channelNameMeta,
+        channelName.isAcceptableOrUnknown(
+          data['channel_name']!,
+          _channelNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_channelNameMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('start_utc')) {
+      context.handle(
+        _startUtcMeta,
+        startUtc.isAcceptableOrUnknown(data['start_utc']!, _startUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startUtcMeta);
+    }
+    if (data.containsKey('end_utc')) {
+      context.handle(
+        _endUtcMeta,
+        endUtc.isAcceptableOrUnknown(data['end_utc']!, _endUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endUtcMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {sourceId, channelRemoteKey, startUtc},
+  ];
+  @override
+  ReminderRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReminderRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      channelRemoteKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}channel_remote_key'],
+      )!,
+      xmltvId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}xmltv_id'],
+      )!,
+      channelName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}channel_name'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      startUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_utc'],
+      )!,
+      endUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_utc'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RemindersTable createAlias(String alias) {
+    return $RemindersTable(attachedDatabase, alias);
+  }
+}
+
+class ReminderRow extends DataClass implements Insertable<ReminderRow> {
+  final int id;
+  final String sourceId;
+
+  /// The channel Watch plays.
+  final String channelRemoteKey;
+  final String xmltvId;
+
+  /// The channel's name when the reminder was set: what the notification
+  /// and the list say, even if the channel has since left the provider's
+  /// list.
+  final String channelName;
+  final String title;
+  final int startUtc;
+  final int endUtc;
+  final DateTime createdAt;
+  const ReminderRow({
+    required this.id,
+    required this.sourceId,
+    required this.channelRemoteKey,
+    required this.xmltvId,
+    required this.channelName,
+    required this.title,
+    required this.startUtc,
+    required this.endUtc,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    map['channel_remote_key'] = Variable<String>(channelRemoteKey);
+    map['xmltv_id'] = Variable<String>(xmltvId);
+    map['channel_name'] = Variable<String>(channelName);
+    map['title'] = Variable<String>(title);
+    map['start_utc'] = Variable<int>(startUtc);
+    map['end_utc'] = Variable<int>(endUtc);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  RemindersCompanion toCompanion(bool nullToAbsent) {
+    return RemindersCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      channelRemoteKey: Value(channelRemoteKey),
+      xmltvId: Value(xmltvId),
+      channelName: Value(channelName),
+      title: Value(title),
+      startUtc: Value(startUtc),
+      endUtc: Value(endUtc),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReminderRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReminderRow(
+      id: serializer.fromJson<int>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      channelRemoteKey: serializer.fromJson<String>(json['channelRemoteKey']),
+      xmltvId: serializer.fromJson<String>(json['xmltvId']),
+      channelName: serializer.fromJson<String>(json['channelName']),
+      title: serializer.fromJson<String>(json['title']),
+      startUtc: serializer.fromJson<int>(json['startUtc']),
+      endUtc: serializer.fromJson<int>(json['endUtc']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'channelRemoteKey': serializer.toJson<String>(channelRemoteKey),
+      'xmltvId': serializer.toJson<String>(xmltvId),
+      'channelName': serializer.toJson<String>(channelName),
+      'title': serializer.toJson<String>(title),
+      'startUtc': serializer.toJson<int>(startUtc),
+      'endUtc': serializer.toJson<int>(endUtc),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReminderRow copyWith({
+    int? id,
+    String? sourceId,
+    String? channelRemoteKey,
+    String? xmltvId,
+    String? channelName,
+    String? title,
+    int? startUtc,
+    int? endUtc,
+    DateTime? createdAt,
+  }) => ReminderRow(
+    id: id ?? this.id,
+    sourceId: sourceId ?? this.sourceId,
+    channelRemoteKey: channelRemoteKey ?? this.channelRemoteKey,
+    xmltvId: xmltvId ?? this.xmltvId,
+    channelName: channelName ?? this.channelName,
+    title: title ?? this.title,
+    startUtc: startUtc ?? this.startUtc,
+    endUtc: endUtc ?? this.endUtc,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReminderRow copyWithCompanion(RemindersCompanion data) {
+    return ReminderRow(
+      id: data.id.present ? data.id.value : this.id,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      channelRemoteKey: data.channelRemoteKey.present
+          ? data.channelRemoteKey.value
+          : this.channelRemoteKey,
+      xmltvId: data.xmltvId.present ? data.xmltvId.value : this.xmltvId,
+      channelName: data.channelName.present
+          ? data.channelName.value
+          : this.channelName,
+      title: data.title.present ? data.title.value : this.title,
+      startUtc: data.startUtc.present ? data.startUtc.value : this.startUtc,
+      endUtc: data.endUtc.present ? data.endUtc.value : this.endUtc,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReminderRow(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('channelRemoteKey: $channelRemoteKey, ')
+          ..write('xmltvId: $xmltvId, ')
+          ..write('channelName: $channelName, ')
+          ..write('title: $title, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sourceId,
+    channelRemoteKey,
+    xmltvId,
+    channelName,
+    title,
+    startUtc,
+    endUtc,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReminderRow &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.channelRemoteKey == this.channelRemoteKey &&
+          other.xmltvId == this.xmltvId &&
+          other.channelName == this.channelName &&
+          other.title == this.title &&
+          other.startUtc == this.startUtc &&
+          other.endUtc == this.endUtc &&
+          other.createdAt == this.createdAt);
+}
+
+class RemindersCompanion extends UpdateCompanion<ReminderRow> {
+  final Value<int> id;
+  final Value<String> sourceId;
+  final Value<String> channelRemoteKey;
+  final Value<String> xmltvId;
+  final Value<String> channelName;
+  final Value<String> title;
+  final Value<int> startUtc;
+  final Value<int> endUtc;
+  final Value<DateTime> createdAt;
+  const RemindersCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.channelRemoteKey = const Value.absent(),
+    this.xmltvId = const Value.absent(),
+    this.channelName = const Value.absent(),
+    this.title = const Value.absent(),
+    this.startUtc = const Value.absent(),
+    this.endUtc = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  RemindersCompanion.insert({
+    this.id = const Value.absent(),
+    required String sourceId,
+    required String channelRemoteKey,
+    required String xmltvId,
+    required String channelName,
+    required String title,
+    required int startUtc,
+    required int endUtc,
+    required DateTime createdAt,
+  }) : sourceId = Value(sourceId),
+       channelRemoteKey = Value(channelRemoteKey),
+       xmltvId = Value(xmltvId),
+       channelName = Value(channelName),
+       title = Value(title),
+       startUtc = Value(startUtc),
+       endUtc = Value(endUtc),
+       createdAt = Value(createdAt);
+  static Insertable<ReminderRow> custom({
+    Expression<int>? id,
+    Expression<String>? sourceId,
+    Expression<String>? channelRemoteKey,
+    Expression<String>? xmltvId,
+    Expression<String>? channelName,
+    Expression<String>? title,
+    Expression<int>? startUtc,
+    Expression<int>? endUtc,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (channelRemoteKey != null) 'channel_remote_key': channelRemoteKey,
+      if (xmltvId != null) 'xmltv_id': xmltvId,
+      if (channelName != null) 'channel_name': channelName,
+      if (title != null) 'title': title,
+      if (startUtc != null) 'start_utc': startUtc,
+      if (endUtc != null) 'end_utc': endUtc,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  RemindersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sourceId,
+    Value<String>? channelRemoteKey,
+    Value<String>? xmltvId,
+    Value<String>? channelName,
+    Value<String>? title,
+    Value<int>? startUtc,
+    Value<int>? endUtc,
+    Value<DateTime>? createdAt,
+  }) {
+    return RemindersCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      channelRemoteKey: channelRemoteKey ?? this.channelRemoteKey,
+      xmltvId: xmltvId ?? this.xmltvId,
+      channelName: channelName ?? this.channelName,
+      title: title ?? this.title,
+      startUtc: startUtc ?? this.startUtc,
+      endUtc: endUtc ?? this.endUtc,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (channelRemoteKey.present) {
+      map['channel_remote_key'] = Variable<String>(channelRemoteKey.value);
+    }
+    if (xmltvId.present) {
+      map['xmltv_id'] = Variable<String>(xmltvId.value);
+    }
+    if (channelName.present) {
+      map['channel_name'] = Variable<String>(channelName.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (startUtc.present) {
+      map['start_utc'] = Variable<int>(startUtc.value);
+    }
+    if (endUtc.present) {
+      map['end_utc'] = Variable<int>(endUtc.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemindersCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('channelRemoteKey: $channelRemoteKey, ')
+          ..write('xmltvId: $xmltvId, ')
+          ..write('channelName: $channelName, ')
+          ..write('title: $title, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16414,6 +16983,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'CREATE INDEX series_category ON series (category_id)',
   );
   late final $CastDevicesTable castDevices = $CastDevicesTable(this);
+  late final $RemindersTable reminders = $RemindersTable(this);
+  late final Index remindersStart = Index(
+    'reminders_start',
+    'CREATE INDEX reminders_start ON reminders (start_utc)',
+  );
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final SourcesDao sourcesDao = SourcesDao(this as AppDatabase);
   late final SyncRunsDao syncRunsDao = SyncRunsDao(this as AppDatabase);
@@ -16431,6 +17005,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final LibraryDao libraryDao = LibraryDao(this as AppDatabase);
   late final DownloadsDao downloadsDao = DownloadsDao(this as AppDatabase);
+  late final RemindersDao remindersDao = RemindersDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16495,6 +17070,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     moviesRating,
     seriesCategory,
     castDevices,
+    reminders,
+    remindersStart,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -16784,6 +17361,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('episodes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sources',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reminders', kind: UpdateKind.delete)],
     ),
   ]);
   @override
@@ -17455,6 +18039,24 @@ final class $$SourcesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$RemindersTable, List<ReminderRow>>
+  _remindersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.reminders,
+    aliasName: 'sources__id__reminders__source_id',
+  );
+
+  $$RemindersTableProcessedTableManager get remindersRefs {
+    final manager = $$RemindersTableTableManager(
+      $_db,
+      $_db.reminders,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$SourcesTableFilterComposer
@@ -17924,6 +18526,31 @@ class $$SourcesTableFilterComposer
           }) => $$SyncRunsTableFilterComposer(
             $db: $db,
             $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> remindersRefs(
+    Expression<bool> Function($$RemindersTableFilterComposer f) f,
+  ) {
+    final $$RemindersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableFilterComposer(
+            $db: $db,
+            $table: $db.reminders,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -18486,6 +19113,31 @@ class $$SourcesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> remindersRefs<T extends Object>(
+    Expression<T> Function($$RemindersTableAnnotationComposer a) f,
+  ) {
+    final $$RemindersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$SourcesTableTableManager
@@ -18517,6 +19169,7 @@ class $$SourcesTableTableManager
             bool epgMappingsRefs,
             bool epgMatchesRefs,
             bool syncRunsRefs,
+            bool remindersRefs,
           })
         > {
   $$SourcesTableTableManager(_$AppDatabase db, $SourcesTable table)
@@ -18639,6 +19292,7 @@ class $$SourcesTableTableManager
                 epgMappingsRefs = false,
                 epgMatchesRefs = false,
                 syncRunsRefs = false,
+                remindersRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -18658,6 +19312,7 @@ class $$SourcesTableTableManager
                     if (epgMappingsRefs) db.epgMappings,
                     if (epgMatchesRefs) db.epgMatches,
                     if (syncRunsRefs) db.syncRuns,
+                    if (remindersRefs) db.reminders,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -18977,6 +19632,27 @@ class $$SourcesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (remindersRefs)
+                        await $_getPrefetchedData<
+                          SourceRow,
+                          $SourcesTable,
+                          ReminderRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourcesTableReferences
+                              ._remindersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourcesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).remindersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -19013,6 +19689,7 @@ typedef $$SourcesTableProcessedTableManager =
         bool epgMappingsRefs,
         bool epgMatchesRefs,
         bool syncRunsRefs,
+        bool remindersRefs,
       })
     >;
 typedef $$LibraryItemsTableCreateCompanionBuilder =
@@ -29888,6 +30565,393 @@ typedef $$CastDevicesTableProcessedTableManager =
       CastDeviceRow,
       PrefetchHooks Function()
     >;
+typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
+  Value<int> id,
+  required String sourceId,
+  required String channelRemoteKey,
+  required String xmltvId,
+  required String channelName,
+  required String title,
+  required int startUtc,
+  required int endUtc,
+  required DateTime createdAt,
+});
+typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
+  Value<int> id,
+  Value<String> sourceId,
+  Value<String> channelRemoteKey,
+  Value<String> xmltvId,
+  Value<String> channelName,
+  Value<String> title,
+  Value<int> startUtc,
+  Value<int> endUtc,
+  Value<DateTime> createdAt,
+});
+
+final class $$RemindersTableReferences
+    extends BaseReferences<_$AppDatabase, $RemindersTable, ReminderRow> {
+  $$RemindersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) =>
+      db.sources.createAlias('reminders__source_id__sources__id');
+
+  $$SourcesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<String>('source_id')!;
+
+    final manager = $$SourcesTableTableManager(
+      $_db,
+      $_db.sources,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$RemindersTableFilterComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get channelRemoteKey => $composableBuilder(
+    column: $table.channelRemoteKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get xmltvId => $composableBuilder(
+    column: $table.xmltvId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get channelName => $composableBuilder(
+    column: $table.channelName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableFilterComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get channelRemoteKey => $composableBuilder(
+    column: $table.channelRemoteKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get xmltvId => $composableBuilder(
+    column: $table.xmltvId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get channelName => $composableBuilder(
+    column: $table.channelName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get channelRemoteKey => $composableBuilder(
+    column: $table.channelRemoteKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get xmltvId =>
+      $composableBuilder(column: $table.xmltvId, builder: (column) => column);
+
+  GeneratedColumn<String> get channelName => $composableBuilder(
+    column: $table.channelName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get startUtc =>
+      $composableBuilder(column: $table.startUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get endUtc =>
+      $composableBuilder(column: $table.endUtc, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourcesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sources,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RemindersTable,
+          ReminderRow,
+          $$RemindersTableFilterComposer,
+          $$RemindersTableOrderingComposer,
+          $$RemindersTableAnnotationComposer,
+          $$RemindersTableCreateCompanionBuilder,
+          $$RemindersTableUpdateCompanionBuilder,
+          (ReminderRow, $$RemindersTableReferences),
+          ReminderRow,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$RemindersTableTableManager(_$AppDatabase db, $RemindersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RemindersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RemindersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RemindersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<String> channelRemoteKey = const Value.absent(),
+                Value<String> xmltvId = const Value.absent(),
+                Value<String> channelName = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int> startUtc = const Value.absent(),
+                Value<int> endUtc = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => RemindersCompanion(
+                id: id,
+                sourceId: sourceId,
+                channelRemoteKey: channelRemoteKey,
+                xmltvId: xmltvId,
+                channelName: channelName,
+                title: title,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sourceId,
+                required String channelRemoteKey,
+                required String xmltvId,
+                required String channelName,
+                required String title,
+                required int startUtc,
+                required int endUtc,
+                required DateTime createdAt,
+              }) => RemindersCompanion.insert(
+                id: id,
+                sourceId: sourceId,
+                channelRemoteKey: channelRemoteKey,
+                xmltvId: xmltvId,
+                channelName: channelName,
+                title: title,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$RemindersTable, ReminderRow>(table),
+                  $$RemindersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.sourceId,
+                        referencedTable: $$RemindersTableReferences
+                            ._sourceIdTable(db),
+                        referencedColumn: $$RemindersTableReferences
+                            ._sourceIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RemindersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RemindersTable,
+      ReminderRow,
+      $$RemindersTableFilterComposer,
+      $$RemindersTableOrderingComposer,
+      $$RemindersTableAnnotationComposer,
+      $$RemindersTableCreateCompanionBuilder,
+      $$RemindersTableUpdateCompanionBuilder,
+      (ReminderRow, $$RemindersTableReferences),
+      ReminderRow,
+      PrefetchHooks Function({bool sourceId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29948,4 +31012,6 @@ class $AppDatabaseManager {
       $$EpisodesTableTableManager(_db, _db.episodes);
   $$CastDevicesTableTableManager get castDevices =>
       $$CastDevicesTableTableManager(_db, _db.castDevices);
+  $$RemindersTableTableManager get reminders =>
+      $$RemindersTableTableManager(_db, _db.reminders);
 }

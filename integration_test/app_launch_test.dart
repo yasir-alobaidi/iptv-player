@@ -10,7 +10,9 @@
 // Instead this pumps the app's own [IptvPlayerApp] with the same
 // ProviderScope overrides bootstrap passes, minus the disk-backed ones.
 
-import 'package:flutter/material.dart';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -78,6 +80,18 @@ void main() {
     await _settle(tester);
 
     expect(router.state.uri.path, AppDestination.liveTv.path);
+
+    // The runner's own "bring the window forward" (a reminder's Watch,
+    // Phase 9 decision 11) answers on this system, with a token and
+    // without one: the token here is no desktop's, so the window stays
+    // where it is, and nothing throws.
+    if (Platform.isLinux) {
+      const window = MethodChannel('iptv_player/window');
+      await tester.runAsync(() async {
+        await window.invokeMethod<void>('present');
+        await window.invokeMethod<void>('present', 'not-a-real-token');
+      });
+    }
     expect(find.byType(LiveTvScreen), findsOneWidget);
     expect(
       find.byType(HomeScreen),

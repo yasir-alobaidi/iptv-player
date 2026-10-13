@@ -198,7 +198,12 @@ final class EpgImporter implements GuideImportService {
   /// waiting for its cancel gives way to it.
   final _reimports = <String, Object>{};
   final _progress = StreamController<(String, EpgImportProgress)>.broadcast();
+  final _wentLive = StreamController<String>.broadcast();
   var _disposed = false;
+
+  /// Each source whose new guide has just been swapped in and matched:
+  /// what reminders follow their programmes by (Phase 9 decision 12).
+  Stream<String> get wentLive => _wentLive.stream;
 
   /// Every running import's progress, by source id.
   @override
@@ -297,6 +302,7 @@ final class EpgImporter implements GuideImportService {
     _disposed = true;
     await Future.wait([for (final id in _running.keys.toList()) cancel(id)]);
     await _progress.close();
+    await _wentLive.close();
   }
 
   Future<Result<EpgImportCounts>> _import(String sourceId, _Import run) async {
@@ -356,6 +362,7 @@ final class EpgImporter implements GuideImportService {
       return Err(clean);
     }
     await _rematch(sourceId);
+    if (!_wentLive.isClosed) _wentLive.add(sourceId);
     return finished;
   }
 

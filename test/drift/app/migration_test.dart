@@ -13,6 +13,7 @@ import 'package:sqlite3/sqlite3.dart' show SqliteException;
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
+import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
@@ -822,6 +823,90 @@ void main() {
         [for (final row in await dao.search('kit*')) row.title],
         ['Paper Kites'],
       );
+    });
+  });
+
+  group('v9 → v10', () {
+    const created = '2026-10-13T08:00:00.000Z';
+    const source = v9.SourcesData(
+      id: 'src-1',
+      type: 'xtream',
+      name: 'Northwind TV',
+      url: 'http://northwind.test:8080',
+      liveFormat: 'ts',
+      epgOffsetMinutes: 0,
+      refreshHours: 12,
+      sortOrder: 0,
+      createdAt: created,
+      updatedAt: created,
+    );
+    const favorite = v9.FavoritesData(
+      id: 1,
+      itemType: 'live',
+      sourceId: 'src-1',
+      remoteKey: '201',
+      addedAt: created,
+    );
+
+    test(
+      'keeps the sources and favorites and adds an empty reminders',
+      () async {
+        await verifier.testWithDataIntegrity(
+          oldVersion: 9,
+          newVersion: 10,
+          createOld: v9.DatabaseAtV9.new,
+          createNew: v10.DatabaseAtV10.new,
+          openTestedDatabase: AppDatabase.new,
+          createItems: (batch, oldDb) {
+            batch
+              ..insert(oldDb.sources, source)
+              ..insert(oldDb.favorites, favorite);
+          },
+          validateItems: (newDb) async {
+            expect(
+              (await newDb.select(newDb.sources).get()).single.id,
+              'src-1',
+            );
+            expect(
+              (await newDb.select(newDb.favorites).get()).single.remoteKey,
+              '201',
+            );
+            expect(await newDb.select(newDb.reminders).get(), isEmpty);
+          },
+        );
+      },
+    );
+
+    test('a migrated database takes a reminder, keeps one per programme, '
+        'and loses it with its source', () async {
+      final schema = await verifier.schemaAt(9);
+      final old = v9.DatabaseAtV9(schema.newConnection());
+      await old.into(old.sources).insert(source);
+      await old.close();
+
+      final database = AppDatabase(schema.newConnection());
+      addTearDown(database.close);
+      final dao = database.remindersDao;
+      RemindersCompanion reminder({String title = 'The Harbor Pilot'}) =>
+          RemindersCompanion.insert(
+            sourceId: 'src-1',
+            channelRemoteKey: '212',
+            xmltvId: 'bluewater.uk',
+            channelName: 'Blue Water',
+            title: title,
+            startUtc: 1760391000000,
+            endUtc: 1760394600000,
+            createdAt: DateTime.utc(2026, 10, 13),
+          );
+
+      final first = await dao.put(reminder());
+      final again = await dao.put(reminder(title: 'The Harbor Pilot: Part 2'));
+
+      expect(again.id, first.id, reason: 'the same channel and start');
+      expect((await dao.all()).single.title, 'The Harbor Pilot: Part 2');
+
+      await database.sourcesDao.remove('src-1');
+      expect(await dao.all(), isEmpty);
     });
   });
 }
