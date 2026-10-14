@@ -442,92 +442,104 @@ class _CastingViewState extends ConsumerState<CastingView> {
     final playing = state.phase == CastPhase.playing;
     final timeline = ref.watch(castTimelineProvider).value;
     final volume = state.volume;
-    return Row(
+    // Side by side where they fit, as the canvas draws them; where they
+    // don't (a film with subtitles has one control more, and at 130 %
+    // the row was 5 px too long) Stop casting goes under the others.
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: tokens.spacing.s12,
       children: [
-        if (state.item != null && live) ...[
-          AppIconButton(
-            icon: AppIcons.chevronUp,
-            tooltip: 'Previous channel',
-            shortcut: '↑',
-            filled: true,
-            bordered: true,
-            size: cast.controlSize,
-            autofocus: true,
-            onPressed: () => unawaited(_zap(-1)),
-          ),
-          SizedBox(width: tokens.spacing.s12),
-          AppIconButton(
-            icon: AppIcons.chevronDown,
-            tooltip: 'Next channel',
-            shortcut: '↓',
-            filled: true,
-            bordered: true,
-            size: cast.controlSize,
-            onPressed: () => unawaited(_zap(1)),
-          ),
-          SizedBox(width: tokens.spacing.s12),
-        ],
-        if (state.item != null && !live) ...[
-          AppIconButton(
-            icon: state.paused ? AppIcons.play : AppIcons.pause,
-            tooltip: state.paused ? 'Play' : 'Pause',
-            shortcut: 'Space',
-            filled: true,
-            bordered: true,
-            size: cast.controlSize,
-            autofocus: true,
-            onPressed: playing ? () => unawaited(_togglePause(state)) : null,
-          ),
-          SizedBox(width: tokens.spacing.s12),
-          AppIconButton(
-            icon: AppIcons.chevronLeft,
-            tooltip: 'Back 10 s',
-            shortcut: '←',
-            filled: true,
-            bordered: true,
-            size: cast.controlSize,
-            onPressed: playing && timeline != null
-                ? () => _seekBy(-CastingView.seekStep, timeline)
-                : null,
-          ),
-          SizedBox(width: tokens.spacing.s12),
-          AppIconButton(
-            icon: AppIcons.chevronRight,
-            tooltip: 'Forward 10 s',
-            shortcut: '→',
-            filled: true,
-            bordered: true,
-            size: cast.controlSize,
-            onPressed: playing && timeline != null
-                ? () => _seekBy(CastingView.seekStep, timeline)
-                : null,
-          ),
-          SizedBox(width: tokens.spacing.s12),
-          if (castSubtitlesLine(state) case final subtitles?) ...[
-            AppIconButton(
-              icon: AppIcons.subtitles,
-              tooltip: subtitles,
-              shortcut: 'S',
-              filled: true,
-              bordered: true,
-              selected: state.subtitle != null,
-              size: cast.controlSize,
-              onPressed: () => unawaited(_nextSubtitle(state)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state.item != null && live) ...[
+              AppIconButton(
+                icon: AppIcons.chevronUp,
+                tooltip: 'Previous channel',
+                shortcut: '↑',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                autofocus: true,
+                onPressed: () => unawaited(_zap(-1)),
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              AppIconButton(
+                icon: AppIcons.chevronDown,
+                tooltip: 'Next channel',
+                shortcut: '↓',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                onPressed: () => unawaited(_zap(1)),
+              ),
+              SizedBox(width: tokens.spacing.s12),
+            ],
+            if (state.item != null && !live) ...[
+              AppIconButton(
+                icon: state.paused ? AppIcons.play : AppIcons.pause,
+                tooltip: state.paused ? 'Play' : 'Pause',
+                shortcut: 'Space',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                autofocus: true,
+                onPressed: playing
+                    ? () => unawaited(_togglePause(state))
+                    : null,
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              AppIconButton(
+                icon: AppIcons.chevronLeft,
+                tooltip: 'Back 10 s',
+                shortcut: '←',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                onPressed: playing && timeline != null
+                    ? () => _seekBy(-CastingView.seekStep, timeline)
+                    : null,
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              AppIconButton(
+                icon: AppIcons.chevronRight,
+                tooltip: 'Forward 10 s',
+                shortcut: '→',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                onPressed: playing && timeline != null
+                    ? () => _seekBy(CastingView.seekStep, timeline)
+                    : null,
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              if (castSubtitlesLine(state) case final subtitles?) ...[
+                AppIconButton(
+                  icon: AppIcons.subtitles,
+                  tooltip: subtitles,
+                  shortcut: 'S',
+                  filled: true,
+                  bordered: true,
+                  selected: state.subtitle != null,
+                  size: cast.controlSize,
+                  onPressed: () => unawaited(_nextSubtitle(state)),
+                ),
+                SizedBox(width: tokens.spacing.s12),
+              ],
+            ],
+            _Volume(
+              volume: volume,
+              dragging: _volume,
+              onChanged: (level) => setState(() => _volume = level),
+              onChangeEnd: (level) {
+                setState(() => _volume = null);
+                unawaited(ref.read(castCoordinatorProvider).setVolume(level));
+              },
+              onMute: () => unawaited(_toggleMute(state)),
             ),
-            SizedBox(width: tokens.spacing.s12),
           ],
-        ],
-        _Volume(
-          volume: volume,
-          dragging: _volume,
-          onChanged: (level) => setState(() => _volume = level),
-          onChangeEnd: (level) {
-            setState(() => _volume = null);
-            unawaited(ref.read(castCoordinatorProvider).setVolume(level));
-          },
-          onMute: () => unawaited(_toggleMute(state)),
         ),
-        const Spacer(),
         AppButton(
           label: 'Stop casting',
           icon: AppIcons.stop,

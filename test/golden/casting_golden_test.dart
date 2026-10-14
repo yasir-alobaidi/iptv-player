@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
+import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/features/casting/domain/cast_coordinator.dart';
 import 'package:iptv_player/features/casting/presentation/casting_view_state.dart';
@@ -141,6 +142,25 @@ void main() {
       ui.cast.tv.playing(position: const Duration(minutes: 42, seconds: 10));
       await settleCast(tester);
       await golden(tester, 'images/casting_view_movie.png');
+      await end(tester);
+    });
+
+    // A film with subtitles has one control more in its row: at 130 %
+    // the row was 5 px too long (found by the library's cast walk at that
+    // size). No picture of its own: the audit's looks are the test.
+    sceneTest('a film with subtitles, its row of controls', (tester) async {
+      await pump(tester, const Size(1280, 800));
+      ui.live.rig.resolver.downloads['m7'] = '/downloads/Film (2025).mp4';
+      ui.cast.probe.next = const StreamProbed(mkvFacts);
+      ui.cast.subtitles.ready = const [
+        CastSubtitle(language: 'en', beside: true),
+        CastSubtitle(language: 'ger', title: 'SDH'),
+      ];
+      await castTo(tester, PlayableMovie(movie(7, runtime: mkvFacts.duration)));
+      ui.cast.tv.playing(position: const Duration(minutes: 42, seconds: 10));
+      await settleCast(tester);
+      expect(find.text('Subtitles: English'), findsOneWidget);
+      await golden(tester, 'images/casting_view_subtitles.png');
       await end(tester);
     });
 
