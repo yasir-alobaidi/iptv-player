@@ -44,10 +44,13 @@ final class PanelApp {
 
   /// Opens on Home. [video] false plays with no picture (CI has no GPU).
   /// [overrides] go after the app's own (the cast walk's TV and FFmpeg).
+  /// [maxConnections] is the user's own limit for the source (the soak's
+  /// one connection, as most providers give).
   static Future<PanelApp> open(
     FakePanel panel, {
     required bool video,
     List<Override> overrides = const [],
+    int? maxConnections,
   }) async {
     final directory = await Directory.systemTemp.createTemp('iptv_vod');
     final keyring = InMemoryCredentialStore();
@@ -66,6 +69,7 @@ final class PanelApp {
             url: panel.url,
             username: 'test',
             password: 'test',
+            maxConnectionsOverride: maxConnections,
           ),
         );
     final id = added.valueOrNull!.id;
