@@ -1733,8 +1733,17 @@ Every row of docs/06's table was run again on 2026-10-13 and is in docs/progress
 - **A safety net because no real TV has run it yet:** if a TV counted the stream from 0 after all, adding nothing would make the app's timeline and saved place wrong after every seek. The first report past a second, when the stream began 10 s or more in, tells the two apart (the film's time is never below the stream's start), and a "counts the stream from 0" line goes to the log. The matrix's file rows fail on that line, or on "says the file is … long", so its run on the Bedroom TV answers both.
 
 ### Not done
-- Not yet run on a real TV (the Bedroom TV's matrix rows 17–23, about 10 minutes, need the user's yes).
+- ~~Not yet run on a real TV~~ — run on the Bedroom TV on 2026-10-14 (below).
 - A seek with the TV's own remote in a relayed stream still goes back to the stream's start: the stream has no index to seek in. The app's seek (laptop, phone) is the way, as before.
+
+### On the Bedroom TV (2026-10-14, the seventh session)
+- **The user's report, with the fix in:** a 1:40:00 film moved to the TV from the laptop's player showed on the TV's bar a length equal to where it was, about 47 minutes, growing with it to the second. The app's log: "Facts from the player", then "Bedroom TV says the file is 2748 s long, not 6000 s".
+- **Why:** the relay writes a length only from `StreamFacts.duration`, and the facts a cast takes from the laptop's player (Cast while watching) had none: `streamFactsFromPlayer` read the codecs and tracks, never the length mpv had read. With no length the header stays as FFmpeg writes it, and the TV shows what it has read as the length; on the film's clock now, so from where it resumed. A cast started from a film's page is probed and always had the length; every test of ADR-019 went that way.
+- **The fix:** `PlaybackHandover.duration` (the player's reading of the stream, never the catalogue's runtime) → `streamFactsFromPlayer(duration:)`. The coordinator's test of Cast while watching a film fails without it (the length `null`).
+- **The TV honours the header:** a scratch probe cast the same 10-minute film, resumed at 5:00, four ways: the relay's form (fragmented MP4, chunked, no length), with a `Content-Length` and Range requests, with a `Content-Length` and no Range, and a VOD HLS playlist. All four reported 10:00 long and 5:00 in. No other form of stream is needed.
+- **Matrix rows 17–23, and a new row 24** (Cast while the laptop plays a film at 3:00, the user's way), on the Bedroom TV: **all eight passed** (17:27–17:33 local, `build/real_cast_run/matrix.md`). The MP4s the TV reads itself sought in 0.1 s; through the relay, seeks in 0.5–0.7 s and onto the MP4 made beside it in 0.1 s; no row logged "says the file is" or "counts the stream from 0", so the TV showed each film's length and counted on its clock; subtitles inside and beside the files switched in 0.2–0.4 s; the resume at 3:00 resumed at 3:00; row 24 took "Facts from the player", as the user's cast did, and moved the film at 3:02 on one provider connection, with the right length. Each played 3.4–4.4 s after Cast, the receiver's launch included.
+- **The matrix runner took the TV's address for this computer's** (`Socket.address`, the client's bug of 2026-10-13, left in the runner): it now uses `pickLocalAddress`, as the client does.
+- **The Bedroom TV is a classic Chromecast** (Cast firmware "mediashell", from its `eureka_info`): no Android, so not a TV for TV-0.
 
 ## ADR-020 · 2026-10-14 · Accepted (the user's request: "the steps to get the apk ready … then start doing that"; both TVs offline) — TV-0 begun without a TV: the Android toolchain, the Google TV project, and what the emulator showed
 **Decision:** TV-0 starts with what needs no TV. The laptop builds the Google TV app; the repository has its Android project (`android/`), whose app is **`io.github.yasiralobaidi.bijou`**, named Bijou, in Google TV's launcher with its banner; the app starts on a Google TV emulator and runs its shared code there; CI builds the APK on every push. The engine comparison of docs/07 (media_kit against Media3, on the device) waits for a TV.
@@ -1783,3 +1792,16 @@ Every row of docs/06's table was run again on 2026-10-13 and is in docs/progress
 ### How it is kept one drawing
 - `JewelPainter.corners`, `tableScale`, `facetShades`, `bandShades` and `JewelDetail.forTile` in `lib/design/components/app_mark.dart` and `CORNERS`, `TABLE_SCALE`, `FACET_SHADE`, `BAND_SHADE` and `detail()` in `tools/brand/make_icons.py` are the same numbers; `test/design/components/app_mark_test.dart` compares the painter's faces and shades with `design/brand/bijou_icon.svg`, which the script writes, so changing one side alone fails a test.
 - The script wrote every icon again: the SVG master and its Linux scalable copy, the Linux hicolor PNGs, the Windows `.ico`, Android's launcher icons and Google TV's banner. `brand_mark_sizes.png` (and its amber twin: the mark takes the accent) is the golden of every size.
+
+## ADR-023 · 2026-10-14 · Accepted (found by the casting matrix on the Bedroom TV, the user's "do all the tasks related to the bedroom tv") — A live continuous stream that ends is loaded again even when the TV doesn't say so
+**Decision:** when the relay's live continuous stream to the TV ends (`CastRelayEnded(tvLeft: false)`: FFmpeg died or the provider's stream ended for good), the coordinator waits `CastTimings.liveEnd` (10 s) for the TV's IDLE/FINISHED, which reloads it (ADR-004), and reloads it itself if none comes. The reload counts against the same budget (3 within 2 minutes), so a stream that keeps ending still fails.
+
+### Why
+- **Seen on a real TV:** the matrix's row 11 (the relay's FFmpeg killed during a continuous fMP4) failed on the Bedroom TV: the stream ended, the TV stayed BUFFERING, and nothing was loaded for 40 s. The fake TV always said FINISHED, which is what ADR-004 measured on the Living Room TV in Phase 0.
+- **The TV does both:** after the fix, row 11 alone and after row 10 passed, the TV saying FINISHED 5.4–5.5 s after the end both times. Its statuses weren't logged in the failing run, so whether it said nothing or said something the app didn't take as ours isn't known; the wait covers both, since it looks only at whether a LOAD followed.
+- **10 s:** the TV plays out about 4 s of buffer before FINISHED (ADR-004); 10 s leaves room for that and for a FINISHED that comes late, and is short against a frozen picture.
+- **Not on the TV leaving the stream** (`tvLeft`): that is the TV's own choice (a new LOAD, a stop) and has its own handling.
+
+### Checked by
+`cast_coordinator_test` "live streams that end": a continuous stream that ends with the TV saying nothing is loaded again; the TV saying FINISHED in time loads it once; the TV leaving is not an end. On the Bedroom TV: row 11 twice (above).
+

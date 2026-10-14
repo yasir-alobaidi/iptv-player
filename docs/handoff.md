@@ -1,4 +1,50 @@
-# Handoff — 2026-10-14, sixth session (the mark: a trillion), on top of the fifth (TV-0 begun without a TV: the Android build, the app on a Google TV emulator; Start over)
+# Handoff — 2026-10-14, seventh session (the Bedroom TV: the TV's bar for a film moved from the player, the matrix on a real TV), on top of the sixth (the mark: a trillion) and the fifth (TV-0 begun without a TV)
+
+**The seventh session, short:** you wrote "do all the tasks related to
+the bedroom tv, since its free for around 45 mins only from now", and that
+the TV's bar was still wrong: a 1:40:00 film showed 47 minutes long, the
+same as where it was, to the second.
+- **The bar, found and fixed** (ADR-019 "On the Bedroom TV", docs/04):
+  your cast moved the film from the laptop's player ("Facts from the
+  player" in the log), and those facts never carried the length, so the
+  relay wrote none into the stream and the TV showed what it had read
+  (from 45:48, where it resumed) as the length. `PlaybackHandover.duration`
+  (what mpv read from the stream) now goes into
+  `streamFactsFromPlayer(duration:)`. A cast started from a film's page
+  was probed and always had the length; ADR-019's tests all went that way.
+- **The TV honours the header:** a scratch probe cast the same film four
+  ways (the relay's form; with a Content-Length and Range; with a
+  Content-Length, no Range; a VOD HLS playlist): all four showed 10:00
+  long and 5:00 in. No other form of stream is needed.
+- **On the Bedroom TV (17:27–17:54), the casting matrix's first real
+  run:** rows 17–23 and a new row 24 (Cast while the laptop plays a film,
+  your way) all passed, every length and time right; rows 1–5 and 7–15:
+  13 of 14 passed. **Row 11 failed** (the relay's FFmpeg killed: the TV
+  stayed BUFFERING and never said FINISHED, so nothing reloaded) and is
+  fixed (ADR-023: 10 s after the live stream ends, it reloads anyway);
+  row 11 then passed twice. Rows 6 and 16 need you at the TV. The TV
+  played HEVC 2160p25 copied (row 4) and refused interlaced H.264 (row 3,
+  re-encoded by itself). Summaries: `build/real_cast_run/matrix.md` holds
+  the last run only; the numbers are in ADR-019 and ADR-023.
+- **The Bedroom TV is a classic Chromecast** (firmware "mediashell"): it
+  can't install apps, so TV-0 needs the Living Room TV or another Google TV.
+- **Also fixed:** the matrix runner took the TV's address for this
+  computer's (the client's bug of 2026-10-13, left in the runner); the CI
+  failure on 788e0f1 (`cast_e2e_library_test` now compares with the
+  sample's own length, 2 minutes on CI); the Windows race in
+  `relay_runtime_test` (a connection the closing server cut is "gone"
+  too).
+- **Checks at the end:** analyze and format clean; **4,892 app tests**
+  under `TZ=UTC` (20 skipped), all passing; `cast_e2e_library_test` also
+  with 2-minute samples and FFmpeg 4.4 (as on CI). Not run: the fake
+  provider's and the fake TV's suites (unchanged), `build_runner` (no
+  annotated code changed), and still the integration walks that Tab
+  through the player or the casting view (the fifth session's list).
+- **Commits:** c0254c2 (the bar), 24e944d (a live stream that ends,
+  ADR-023), 5069d56 (CI's two test fixes), and the docs. **Left running:
+  nothing**; the Bedroom TV is back on its idle screen. The scratch probe
+  (`bar_probe_tv_test.dart`) and its log are in the session's scratchpad,
+  not the repository.
 
 **The sixth session, short:** by your request it drew logo concepts on a
 canvas (https://claude.ai/artifact/7dUdNr7Ry8W5Lw4GYZp7as: Trillion,
@@ -38,31 +84,33 @@ TV's bar and Phase 9.
 
 ## Before you start the next session (user)
 **Your list** — what this session left for you:
-1. **Push** this session's commits (`git log origin/main..HEAD`), now or
-   after the next session fixes the one CI failure on your last push
-   (788e0f1, Linux only: a test that assumed the 10-minute sample where CI
-   makes 2-minute ones; the app itself is fine). Then CI runs the new
-   Android job for the first time.
-2. **Your question about AirPlay and TVs that aren't Google** — answered
+1. **Push** the seventh session's commits (`git log origin/main..HEAD`).
+   CI on 54051d4: the Android job's first build passed, Windows passed, Linux failed
+   only on the `cast_e2e_library_test` assumption this session fixed.
+2. **Check the bar with your film:** cast the 1:40:00 film again while
+   it plays on the laptop, pause with the TV's remote: the bar should say
+   1:40:00 and the place. (I didn't play from your provider.)
+3. **Your question about AirPlay and TVs that aren't Google** — answered
    below ("Casting to TVs that aren't Google"). Say whether you want DLNA
    casting and when.
-3. **For TV-0's rest, when a TV is free:** turn on Developer options and
-   USB debugging on it (Settings → System → About → press "Android TV OS
-   build" seven times; Settings → System → Developer options → USB
-   debugging). I ask before every TV session; the Living Room TV stays
-   off limits until you say so.
-4. Still from before: **Bijou** (keep, or say otherwise; the mark is the
+4. **For TV-0, a Google TV:** the Bedroom TV is a classic Chromecast and
+   can't install apps. When the Living Room TV (or another Google TV) is
+   free: Developer options and USB debugging on it (Settings → System →
+   About → press "Android TV OS build" seven times; Settings → System →
+   Developer options → USB debugging). I ask before every TV session; the
+   Living Room TV stays off limits until you say so.
+5. Still from before: **Bijou** (keep, or say otherwise; the mark is the
    trillion you chose, ADR-022);
-   **the progress-bar fix on the Bedroom TV** (after my pop-up, about 10
-   minutes); **the one real reminder** at the laptop
+   **the one real reminder** at the laptop
    (`flutter test integration_test/manual/real_reminder.dart -d linux`);
-   if you want them, **the night's soak** and **the full casting matrix**;
+   if you want it, **the night's soak**; the matrix's **rows 6 and 16**
+   need you at the TV (6: Input Signal Plus off; 16: the remote in hand);
    **Phase 9's close** is yours to say; **the dock icon**
    (`flutter build linux --release`, then `tools/install_desktop_entry.sh`).
-5. Optional: `fish_add_path ~/Android/Sdk/platform-tools` to have `adb`
+6. Optional: `fish_add_path ~/Android/Sdk/platform-tools` to have `adb`
    in your own terminal.
 
-**What this session did on your machine (outside the repository):**
+**What the fifth session did on your machine (outside the repository):**
 installed Temurin JDK 21 in `~/develop/jdk-21.0.12.1+1` (linked as
 `~/develop/jdk`) and the Android SDK in `~/Android/Sdk` (about 5 GB with
 the emulator image), accepted the SDK's licences, pointed Flutter at both
@@ -86,10 +134,9 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
-CLAUDE.md, docs/progress.md, ADR-020 and ADR-021 in docs/decisions.md first.
-Fix the CI failure the handoff names (cast_e2e_library_test.dart:495), then check
-CI on the last push (the new Android job too).
-<The Bedroom TV is free: you may use it for TV-0 after asking | Don't use any TV>
+CLAUDE.md, docs/progress.md, ADR-019 ("On the Bedroom TV"), ADR-020 and ADR-021
+in docs/decisions.md first. Check CI on the last push.
+<The Living Room TV is free: you may use it for TV-0 after asking | Don't use any TV>
 <I want DLNA casting: plan it | Not now>
 Then: <TV-0's engine comparison on the TV | TV-1 on the emulator (plan first) | Phase 10 | what is left of Phase 9>
 ```
@@ -190,9 +237,8 @@ not google?" Answer given, nothing built:
   are items 2 and 3 of "What's next".
 
 ## What's next
-1. **The CI failure above** (one test's assumption), then the user's push;
-   then CI's first Android job (it may need to fetch platform 35/36 or the
-   NDK itself on the runner).
+1. ~~The CI failure above~~ — fixed in the seventh session, with the
+   Windows race; CI's first Android job passed on 54051d4.
 2. **The integration walks** listed above, under Xvfb, one file per run
    (in a git worktree if agents run beside other `flutter test` work: they
    share `build/test_cache`).
@@ -317,6 +363,27 @@ not google?" Answer given, nothing built:
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
+- **Lessons of the seventh session (the TV's bar again):**
+  - **A fact with several sources needs a test per source.** The length
+    reaches the relay from the probe, the player or memory; ADR-019's
+    tests all cast from a film's page (the probe), and the user casts
+    while watching (the player), which had no length. When a feature
+    reads `StreamFacts`, check each `StreamFactsOrigin` that can feed it.
+  - **The app's own log said it:** "Facts from the player" beside "says
+    the file is 2748 s long, not 6000 s" (`~/.local/share/
+    io.github.yasiralobaidi.iptvplayer/logs/app.log`). Read the user's log
+    of the failing run before theorising.
+  - **A TV's behaviour can be asked directly, quickly:** a scratch test
+    that joins the TV, serves variants from this computer and logs each
+    `MEDIA_STATUS` (duration, position) answered "does the TV honour the
+    header?" in 75 s on the TV. Kept in the scratchpad, not the repo.
+  - **The matrix runner had the client's old address bug:** a tool that
+    copies the app's logic has to get its fixes too; it now calls
+    `pickLocalAddress`.
+  - **Is a TV a Google TV?** `curl http://<tv>:8008/setup/eureka_info`:
+    `cast_build_revision` "mediashell" is a classic Chromecast (no apps,
+    no adb); a Google TV advertises `rr=AndroidNativeApp` in its mDNS
+    TXT while an app runs.
 - **Lessons of this session (the name, the TV's bar):**
   - **A receiver's behaviour can be seen without the TV:** the Default
     Media Receiver is Chrome's media stack, so headless Chrome playing
