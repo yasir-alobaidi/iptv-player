@@ -1,162 +1,182 @@
-# Handoff — 2026-10-14, fourth session (a name and a mark: Bijou; the TV's own progress bar fixed)
+# Handoff — 2026-10-14, fifth session (TV-0 begun without a TV: the Android build, the app on a Google TV emulator; Start over)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-018 and
-ADR-019 in docs/decisions.md** (ADR-018: the name, the mark, how the app
-describes itself and what keeps the first name; ADR-019: the relay's
-stream on the film's own clock), **docs/05 "Brand"**, **docs/04 "The TV's
-own bar"**, and ADR-016 "The exit" for what Phase 9 left.
+it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-020 and
+ADR-021 in docs/decisions.md** (ADR-020: the Android toolchain, the Google
+TV project, what the emulator showed, what TV-0 still needs; ADR-021:
+Start over), **docs/setup.md §7** (the Android commands) and **docs/07**.
+ADR-018/019 and ADR-016 "The exit" are still the state of the name, the
+TV's bar and Phase 9.
 
 ## Before you start the next session (user)
-**Your list** — what this session needed you for and left for you, as you
-asked ("keep them in the list and let me know later"):
-1. **Push** this session's commits (`git log origin/main..HEAD`). The
-   last session's are pushed, and CI was green on them (62d1291).
-2. **Bijou and its jewel: keep them, or say otherwise.** The name is one
-   constant (`appName`, `lib/core/app_identity.dart`) plus the window
-   titles in `linux/runner/my_application.cc` and
-   `windows/runner/main.cpp` and `FileDescription` in
-   `windows/runner/Runner.rc`; the mark is `JewelPainter`
-   (`lib/design/components/app_mark.dart`) and
-   `tools/brand/make_icons.py` for the icon files. A look at every size:
-   `design/brand/bijou_sizes.png`.
-3. **The progress-bar fix on the Bedroom TV.** It is tested on this
-   laptop (headless Chrome, the real FFmpeg, the fake TV), not on a TV.
-   When you say yes to the pop-up, the casting matrix's file rows run
-   (`CAST_HOST=192.168.1.231 CAST_ROWS=17,18,19,20,21,22,23`, about 10
-   minutes of test films; the TV's own reports judge the bar, nobody
-   needs to watch). **And by hand**, the next time you cast a film
-   through the app: pause with the TV's remote — the length should be the
-   film's, and after a resume the place should be the film's too.
-4. **The one real reminder,** at the laptop:
-   `flutter test integration_test/manual/real_reminder.dart -d linux`;
-   cover the window; click the notification's text the first time and
-   its Watch button the second; say what the window did.
-5. **If you want them:** the night's soak (`tools/soak/run.sh 480`, the
-   laptop's screen for a night); the full casting matrix on the Bedroom
-   TV (about 30 minutes, after the pop-up).
-6. **Phase 9's close is yours to say** (ADR-016 "The exit": the night's
-   soak not run, the hour's memory 10 MB over, a frame or two over budget
-   on a few jumps, loading and error states not drawn by the audit, the
-   real reminder).
-7. **For TV-0** (the Google TV version, before Phase 10): the Android
-   SDK, JDK 17 and `adb` on the laptop; Developer options and USB
-   debugging on the TV.
-8. **To see the icon in the dock and the app grid now:**
-   `flutter build linux --release`, then `tools/install_desktop_entry.sh`
-   (`--remove` undoes it).
+**Your list** — what this session left for you:
+1. **Push** this session's commits (`git log origin/main..HEAD`), now or
+   after the next session fixes the one CI failure on your last push
+   (788e0f1, Linux only: a test that assumed the 10-minute sample where CI
+   makes 2-minute ones; the app itself is fine). Then CI runs the new
+   Android job for the first time.
+2. **Your question about AirPlay and TVs that aren't Google** — answered
+   below ("Casting to TVs that aren't Google"). Say whether you want DLNA
+   casting and when.
+3. **For TV-0's rest, when a TV is free:** turn on Developer options and
+   USB debugging on it (Settings → System → About → press "Android TV OS
+   build" seven times; Settings → System → Developer options → USB
+   debugging). I ask before every TV session; the Living Room TV stays
+   off limits until you say so.
+4. Still from before: **Bijou and its jewel** (keep, or say otherwise);
+   **the progress-bar fix on the Bedroom TV** (after my pop-up, about 10
+   minutes); **the one real reminder** at the laptop
+   (`flutter test integration_test/manual/real_reminder.dart -d linux`);
+   if you want them, **the night's soak** and **the full casting matrix**;
+   **Phase 9's close** is yours to say; **the dock icon**
+   (`flutter build linux --release`, then `tools/install_desktop_entry.sh`).
+5. Optional: `fish_add_path ~/Android/Sdk/platform-tools` to have `adb`
+   in your own terminal.
+
+**What this session did on your machine (outside the repository):**
+installed Temurin JDK 21 in `~/develop/jdk-21.0.12.1+1` (linked as
+`~/develop/jdk`) and the Android SDK in `~/Android/Sdk` (about 5 GB with
+the emulator image), accepted the SDK's licences, pointed Flutter at both
+(`flutter config`), and created the emulator `bijou_google_tv`
+(`~/.android/avd/`). **And it ran your laptop out of memory once** (04:02):
+a Gradle build beside the emulator; systemd-oomd killed your GNOME session
+and the kernel your editor. Gradle is now capped at 3 GB, and the rule
+(build, stop Gradle, then the emulator) is in docs/setup.md and in memory.
 
 **What this session decided for you** (say if you want any otherwise):
-- **The name Bijou** ("Your own little cinema"), **the jewel mark**, and
-  **the app describing itself as a player for your videos, playlists and
-  services that comes with nothing to watch of its own** — no "IPTV" in
-  the name, About, README, desktop entry or a store listing.
-- **The source types are now Server login, Playlist link and Playlist
-  file** (they were Xtream Codes, M3U link, M3U file): "Xtream Codes" is
-  the name of the panel software of the services police shut down in
-  2019, the first thing a store's review would flag. The M3U and server
-  words stay in their descriptions; the diagnostics report still says
-  "Xtream" (it is technical).
-- **What a system knows the app by keeps its first name**, so nothing
-  saved is lost: the application id (Linux data folder, desktop entry,
-  notifications), the Windows product name (the Windows data folder and
-  the file the passwords are kept in), the package, the database, the
-  executable `iptv_player`, the temp folders, the settings file's own
-  mark (old exports import). Phase 10 decides whether an installer moves
-  them.
-- **Downloads** go to Videos/Bijou on a new install, and on to
-  Videos/IPTV Player where that folder is already. Nothing is moved.
-- **The TV's bar shows the film's time and length,** not only the length:
-  after a resume at 30:00 of an hour, 30:05 of 1:00:00 (not 0:05 of 30:00).
+- **The TV app's id is `io.github.yasiralobaidi.bijou`** — no "iptv" in
+  it; an id is forever once installed, and nothing is saved under an old
+  one on Android (ADR-020).
+- **JDK 21** rather than 17 (what Android Studio bundles; AGP 9 needs 17+).
+- **Start over is a button, always there,** after Back/Forward 10 s in a
+  film's or an episode's player and in the casting view, not beside Play
+  (a stray press there would lose your place) (ADR-021).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
-CLAUDE.md, docs/progress.md, ADR-018 and ADR-019 in docs/decisions.md first.
-Check CI on the last push and fix what it names.
-<You may use the Bedroom TV for the matrix's file rows after asking | Don't use any TV>
-<I am at the laptop for the real reminder | I am not: leave it for later>
-Then: <TV-0 of the Google TV version | Phase 10 | what is left of Phase 9>
+CLAUDE.md, docs/progress.md, ADR-020 and ADR-021 in docs/decisions.md first.
+Fix the CI failure the handoff names (cast_e2e_library_test.dart:495), then check
+CI on the last push (the new Android job too).
+<The Bedroom TV is free: you may use it for TV-0 after asking | Don't use any TV>
+<I want DLNA casting: plan it | Not now>
+Then: <TV-0's engine comparison on the TV | TV-1 on the emulator (plan first) | Phase 10 | what is left of Phase 9>
 ```
 
 ## Where things stand
-- **Phases 7 and 8: accepted 2026-10-13 without the TV sitting** (ADR-014,
-  ADR-015). A real TV has played a file sent directly; the casting matrix
-  (rows 1–23) has never run on one.
+- **TV-0: begun (ADR-020).** Done: the toolchain, `android/`, start-up by
+  form factor, the CI job, the emulator run. Left: the app on a real TV,
+  and the engine comparison (media_kit vs a Media3 plugin) there.
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
-- **ADR-018 (the name and mark) and ADR-019 (the TV's own bar):
-  Accepted** this session; ADR-018 can be overridden at will.
-- **Schema is v10**; no new dependency, no new settings key this session.
-- **The test suite is 4,882 tests** (20 skipped), about 5 minutes alone
-  (14 under heavy load): 55 goldens and 26 scenes in twelve looks.
+- **Phases 7 and 8: accepted without the TV sitting** (ADR-014/015).
+- **Schema is v10**; no new dependency in pubspec, no new settings key.
+- **The test suite is about 4,880 tests** (20 skipped); see "The session's
+  end" for this session's count.
 
-## What is left of Phase 9
-Unchanged from the third session (ADR-016, "The exit"):
-1. **The night's soak**, if the user wants it: `tools/soak/run.sh 480` on
-   the real display, under `gnome-session-inhibit --inhibit idle`. If it
-   shows a slope, start from `IPTV_SOAK_HEAP=1` and the slow drifts
-   ADR-016 names (the guide's programmes, `DateTime`, `ProviderMeta`).
-2. **The frame-budget misses** (docs/progress.md, Known issues): the
-   Guide's Home and sideways moves, the poster grid's fastest flings and
-   its End and Home, one frame while ↓ is held in the channel list.
-3. **The audit's undrawn states:** loading states and most error states
-   (`test/audit/states_audit_test.dart` is the model), and the four walks
-   with no `WALK_TEXT` switch.
-4. **The real reminder** on the user's desktop.
-5. **The walks don't see the picture** (a fixed test-window size stops it
-   being drawn).
+## Casting to TVs that aren't Google (the user's question, answered)
+The user asked: "since most of the smart tvs they have air play or
+streaming from android, is there anyway we can support that in the app,
+and let the users of the app, stream on the tv directly even if they are
+not google?" Answer given, nothing built:
+- **DLNA / UPnP — yes, and the one to do first.** Most smart TVs (Samsung,
+  LG, Sony and Panasonic for certain; many Hisense, TCL, Philips and Android
+  TVs; consoles) are DLNA "media renderers": the app finds them on the
+  network (SSDP) and tells them to play an address on the laptop. It fits
+  what is built: the same local server and FFmpeg relay, a second kind of
+  device behind `CastService`, the same Cast button and picker. Plain Dart,
+  no licence. The catch: every TV plays a different set of formats and
+  says little about it, seeking and subtitles vary, positions are polled,
+  and there is no receiver screen of ours. Roughly 1.5–2 weeks with a fake
+  renderer for the tests and a format ladder like the Chromecast's.
+- **AirPlay — not now.** Samsung, LG, Sony, Vizio and Roku TVs since about
+  2019 receive AirPlay 2, but AirPlay is Apple's closed protocol: a sender
+  that isn't an Apple device uses a reverse-engineered one (pyatv), which
+  needs pairing and encryption, plays URLs reliably only on Apple TVs
+  (reports of third-party AirPlay TVs refusing them), and Apple can change
+  it. The same TVs also speak DLNA. Revisit only for a TV that does AirPlay
+  and nothing else.
+- **Fire TV, Shield, Sony/TCL/Hisense Android TVs: the TV app covers them.**
+  Fire OS runs Android apps, so the Google TV APK installs there too (no
+  DLNA on Fire TV without an app). **Roku TVs:** Roku's own control
+  protocol can open its media player with an address — possible later.
+- **Screen mirroring (Miracast):** a feature of the system (Windows' Win+K),
+  not of an app.
+- **Proposal:** DLNA casting as its own phase after Phase 10 (or beside
+  TV-2), planned first, with an ADR. Waiting for the user's word.
 
-## Done this session (2026-10-14, the fourth)
-- **The TV's own progress bar** (ADR-019, docs/04 "The TV's own bar"):
-  the user saw a film's length on the Bedroom TV as about 40 s, growing
-  as it played. Reproduced in headless Chrome with a relay-like server
-  (the receiver's media stack); FFmpeg can't write the length or keep the
-  start (every option tried writes 0); `Fmp4Timeline` rewrites
-  `mvhd`/`tkhd`/`mdhd`, adds `mehd`, moves every `tfdt`, drops `mfra`;
-  the coordinator measures where the stream begins before the relay
-  starts, LOADs there, reads the TV's time as the film's (floored at the
-  start), falls back if a TV counts from 0, and logs a wrong length the
-  TV reports. The fake TV reads a stream's length and start as a TV's
-  demuxer does; the matrix's file rows check both on a real TV.
-- **The name and the mark** (ADR-018, docs/05 "Brand"): Bijou;
-  `lib/core/app_identity.dart`; `AppMark` with `JewelPainter`; the icon
-  files from `tools/brand/make_icons.py`; the Linux desktop entry and
-  `tools/install_desktop_entry.sh`; every user-visible "IPTV Player"
-  replaced; the source types and the onboarding's words made
-  store-safe; downloads' folder kept where it is; README and pubspec.
+## Done this session (2026-10-14, the fifth)
+- **The Android toolchain** (ADR-020, docs/setup.md §7): JDK 21, the SDK,
+  NDK 28.2, the emulator and the Google TV image, `flutter doctor` clean.
+- **`android/`** from Flutter 3.47.4's template, in a scratch copy:
+  `io.github.yasiralobaidi.bijou`, Bijou, leanback launcher, banner and
+  launcher icons (`tools/brand/make_icons.py`; the desktop icons are byte
+  for byte as they were), internet, plain http, a dark launch window,
+  desugaring, Gradle at 3 GB.
+- **Start-up by form factor** (`lib/app/bootstrap.dart`): on the TV, no
+  `AppWindow`, no FFmpeg or relay sweeps, no cast notices, no downloads or
+  library; `FocusHighlightStrategy.alwaysTraditional`.
+- **The `sub-files` fix** (`media_kit_player_engine.dart`): never `""`;
+  `change-list sub-files clr` when there are none. Android's (and
+  Windows') libmpv failed every play on it.
+- **Start over** (ADR-021): `AppIcons.startOver` (hand-drawn in
+  `tools/extract_icons.dart`), an `OsdButton` in `VodOsdBottom`
+  (`onStartOver`), an `AppIconButton` and Home in `casting_view.dart`, the
+  shortcut tables (code and docs/05).
+- **CI's Android job** (`.github/workflows/ci.yml`): Temurin 21, `flutter
+  build apk --release`, the APK as the artifact `bijou-android-apk`.
+- **The emulator run**, by remote keys: ADR-020 "What the emulator showed".
 
 ## The session's end, as run
-- **CI** at the start: the user had pushed the third session's commits;
-  green at 62d1291.
-- **Checks:** analyze clean; format clean; `build_runner` regenerated one
-  file (a provider's doc comment), no other diff; **4,882 app tests under
-  `TZ=UTC`** (20 skipped); the casting, relay and download tests again
-  with CI's FFmpeg 4.4 (`RELAY_FFMPEG_DIR=/usr/bin`, 734); the fake TV's
-  suite (41); under Xvfb, one file per run: `sources_keyboard`,
-  `cast_walk`, `library_cast_walk` (also with FFmpeg 4.4) and
-  `app_launch`; the matrix's rows 17–23 against the fake TV
-  (`CAST_HOST=fake`, all ok); the new end-to-end test 6 of 6 under heavy
-  CPU load after its tolerance fix (below).
-- **All 60 re-recorded goldens looked at:** 53 changed only in the rail's
-  mark; the onboarding header, Welcome's words, About, the licences'
-  title, the sources' type labels and the shortcuts panel's background
-  changed as meant, nothing else.
-- **Not run this session:** any TV (none asked for: the user was away),
-  the other 17 walks (they touch nothing that changed but the rail's
-  mark), the fake provider's suite (unchanged), the real reminder, the
-  soak.
+- **CI on the user's last push (788e0f1): failed, one test** (Linux; Windows
+  green): `test/features/casting/cast_e2e_library_test.dart`, "a subtitle
+  file beside a Matroska film, through the relay …" — Expected 600000–600200,
+  Actual 120005. **A test assumption, not the app:** `_tenMinutes`
+  (line 495) expects the 10-minute VOD sample, but CI generates its samples
+  at `VOD_SECONDS=120` (2 minutes), and the relay reports that file's real
+  length. Fix first next session: compare with the sample's own length
+  (ffprobe it, as the test already does for other facts, or read
+  `VOD_SECONDS`), then run the file with `RELAY_FFMPEG_DIR=/usr/bin` and
+  with samples made at 120 s. Not fixed this session: the user asked to
+  stop at a clean point.
+- **Checks:** analyze and format clean; **4,902 app tests under `TZ=UTC`**
+  (20 skipped), all passing after the last golden (the shortcuts panel) was
+  re-recorded; six goldens re-recorded in all, each looked at. Not re-run:
+  `build_runner` (no annotated code changed), the fake provider's and the
+  fake TV's suites (unchanged), the FFmpeg 4.4 run (nothing in the relay
+  changed).
+- **Android:** debug APKs built and run on the emulator (above). **The
+  release APK was not built locally**; CI's new job is its first build.
+- **Not run this session:** any TV (both offline); **the integration walks
+  that Tab through the player or the casting view** (`live_tv_keyboard`,
+  `library_walk`, `cast_walk`, `library_cast_walk`, `player_engine`): one
+  more control is in each row, so a walk that counts Tabs may need one
+  more; the soak; the real reminder.
+- **Left running: nothing** (the emulator, Gradle's daemons and the fake
+  panel were stopped).
+- **Agents:** the user asked for agents to work while I waited, then to
+  stop at a clean point, so none was started. The two tasks meant for them
+  are items 2 and 3 of "What's next".
 
 ## What's next
-1. **Whatever CI names after the push.** New for CI: `fmp4_timeline_test`,
-   `relay_file_clock_test` (runs FFmpeg: CI's 4.4 passed here).
-2. **The matrix's file rows on the Bedroom TV,** after the pop-up: they
-   settle ADR-019 on a real receiver.
-3. **The user's list above;** then TV-0 (the Google TV app needs an
-   `applicationId` without "iptv": choose it with the name, ADR-018) or
-   Phase 10.
+1. **The CI failure above** (one test's assumption), then the user's push;
+   then CI's first Android job (it may need to fetch platform 35/36 or the
+   NDK itself on the runner).
+2. **The integration walks** listed above, under Xvfb, one file per run
+   (in a git worktree if agents run beside other `flutter test` work: they
+   share `build/test_cache`).
+3. **TV-0's Media3 candidate:** a small plugin of our own in
+   `spike/tv_engine_spike/` (ExoPlayer 1.x, a `SurfaceView` platform view
+   for frame-rate matching, the decoder and passthrough reported), beside
+   media_kit in one comparison app, measured on the emulator first (does
+   Media3 draw where mpv can't?), then on a TV. `video_player`'s Android
+   side uses Media3 but exposes none of what the comparison measures.
+   Gradle and the emulator under one lock: `flock <scratchpad>/android.lock`.
+4. **The user's answers:** DLNA casting, and a TV for TV-0 (then
+   `adb connect <address>:5555`, install, and the comparison of docs/07).
+5. **Or TV-1 on the emulator** (plan first): ADR-020's list is its start.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -176,6 +196,24 @@ Unchanged from the third session (ADR-016, "The exit"):
   - Use `~/develop/flutter/bin` on PATH in the Bash tool (the shell is
     fish). **The SIGKILL tests need `dart` on PATH** too, or they skip
     (3 more skipped than usual means PATH).
+  - **Installing an APK on a TV counts as using the TV:** ask first, as
+    for a cast.
+- **Android (ADR-020, docs/setup.md §7):** the JDK is `~/develop/jdk`, the
+  SDK `~/Android/Sdk` (`adb` at `~/Android/Sdk/platform-tools/adb`; not on
+  the Bash tool's PATH). **Never run a Gradle build and the emulator at
+  once** — together they killed the user's desktop session once: build,
+  `cd android && ./gradlew --stop`, `pkill -f '[K]otlinCompileDaemon'`,
+  then start the emulator (headless, `-no-window`); `adb emu kill` before
+  the next build. Don't run the full test suite beside the emulator either.
+  `pgrep -f`/`pkill -f` match their own shell's command line: write the
+  pattern as `'[q]emu-system'`. The laptop is `10.0.2.2` from the
+  emulator; drive it with `adb shell input keyevent KEYCODE_…` and look
+  with `adb exec-out screencap -p`. mpv draws no picture there.
+- **A failing golden in `player_golden_test.dart` hangs the run** instead
+  of failing it: the test throws before `t.finish`, and the player's
+  timers keep the runner waiting. A full run that stalls on that file
+  (one `flutter_tester` at 0 % CPU) means a player golden changed; run it
+  alone with output to a file to read the diff.
 - **CI runs in UTC; this laptop is New York time.** Run the full suite as
   `TZ=UTC flutter test` before every commit (about 2 min 40 s now). Check
   the last CI run at the start of a session:
