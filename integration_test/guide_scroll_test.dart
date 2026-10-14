@@ -225,7 +225,7 @@ void main() {
             await wait(120);
           }
         }),
-        // Down by a screen at a time, then back to now.
+        // Down by a screen at a time.
         'page_down': await measure(() async {
           for (var i = 0; i < 20; i++) {
             await tester.sendKeyEvent(
@@ -234,11 +234,17 @@ void main() {
             );
             await wait(80);
           }
+          await wait(300);
+        }),
+        // Back to now from the hours → went through: apart from the
+        // pages, which it was counted with until Phase 9 (its frames are
+        // whole screens of other programmes, a page's are not).
+        'home': await measure(() async {
           await tester.sendKeyEvent(
             LogicalKeyboardKey.home,
             physicalKey: PhysicalKeyboardKey.home,
           );
-          await wait(300);
+          await wait(400);
         }),
       };
 

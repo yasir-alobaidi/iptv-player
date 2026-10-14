@@ -194,6 +194,9 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   /// The keyboard's place: a row, and the moment it stands on. ↑/↓ keep
   /// the moment, so they land on what is on at that time.
   var _row = 0;
+
+  /// Where a page's glide is going, while it glides.
+  double? _pageTarget;
   DateTime? _anchor;
 
   late DateTime _now;
@@ -679,6 +682,10 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     _revealRow(_row);
   }
 
+  /// A screen of channels up or down. The rows glide there, as the grid
+  /// does through time: a jump builds a whole screen of new rows in one
+  /// frame (40 ms measured, against the 16 a frame has), a glide a row or
+  /// two a frame. With reduce motion it is the jump.
   void _page(int direction) {
     final total = _total ?? 0;
     if (total == 0 || !_vertical.hasClients) return;
@@ -686,14 +693,35 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     final rows = math.max(1, (_viewHeight / rowHeight).floor());
     final row = (_row + direction * rows).clamp(0, total - 1);
     final position = _vertical.position;
-    _vertical.jumpTo(
-      (_vertical.offset + direction * rows * rowHeight).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      ),
+    double within(double offset) =>
+        offset.clamp(position.minScrollExtent, position.maxScrollExtent);
+    // From where the page before was going, so pages pressed quickly add
+    // up; and never past the row the cursor lands on.
+    var target = within(
+      (_pageTarget ?? _vertical.offset) + direction * rows * rowHeight,
     );
+    final top = row * rowHeight;
+    if (top < target) {
+      target = within(top);
+    } else if (top + rowHeight > target + _viewHeight) {
+      target = within(top + rowHeight - _viewHeight);
+    }
     setState(() => _row = row);
-    _revealRow(row);
+    final motion = context.tokens.motion;
+    if (motion.reduceMotion) {
+      _pageTarget = null;
+      _vertical.jumpTo(target);
+      return;
+    }
+    _pageTarget = target;
+    unawaited(
+      _vertical
+          .animateTo(target, duration: motion.base, curve: motion.baseCurve)
+          .whenComplete(() {
+            // Arrived, or the wheel or a key took over.
+            if (_pageTarget == target) _pageTarget = null;
+          }),
+    );
   }
 
   void _revealRow(int row) {

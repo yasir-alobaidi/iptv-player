@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,8 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/data/db/app_database.dart' show ChannelsCompanion;
+import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
+import 'package:iptv_player/features/guide/presentation/guide_grid.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_picker.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_sheet.dart';
@@ -15,6 +19,7 @@ import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 
 import '../../../app/app_harness.dart';
+import '../../settings/appearance_fakes.dart';
 import '../guide_grid_fakes.dart';
 
 /// The fixture of the test running, so its end can stop what it started.
@@ -28,6 +33,7 @@ void main() {
     bool source = true,
     bool guide = true,
     bool offline = false,
+    bool reduceMotion = false,
     Future<void> Function(GuideFixture fixture)? before,
   }) async {
     final fixture = GuideFixture();
@@ -40,9 +46,14 @@ void main() {
     final app = await pumpApp(
       tester,
       initialLocation: AppDestination.guide.path,
+      withAppearance: reduceMotion,
       overrides: [
         ...fixture.overrides,
         appOfflineProvider.overrideWith((ref) => Stream.value(offline)),
+        if (reduceMotion)
+          ...appearanceOverrides(
+            settings: const AppearanceSettings(reduceMotion: SystemSwitch.on),
+          ),
       ],
     );
     await _settle(tester);
@@ -231,6 +242,51 @@ void main() {
       expect(_ringed(), 'No guide information');
       await _key(tester, LogicalKeyboardKey.pageUp);
       expect(_ringed(), 'Continental Cup · Semi-final');
+      await _finish(tester);
+    });
+
+    // A page is a glide, not a jump: a jump builds a whole screen of new
+    // rows in one frame (ADR-016, step 8).
+    testWidgets('PageDown glides a screen down, and two pressed quickly add '
+        'up', (tester) async {
+      await pump(tester, before: _manyChannels);
+      await _focusGrid(tester);
+      expect(_scrolled(tester), 0);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final onTheWay = _scrolled(tester);
+      await _settle(tester);
+      final page = _scrolled(tester);
+      expect(onTheWay, greaterThan(0));
+      expect(onTheWay, lessThan(page), reason: 'part of the way after 50 ms');
+
+      // The second lands a whole page past where the first was going.
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await _settle(tester);
+      expect(_scrolled(tester), page * 3);
+
+      await _key(tester, LogicalKeyboardKey.pageUp);
+      expect(_scrolled(tester), page * 2);
+      await _finish(tester);
+    });
+
+    testWidgets('with reduce motion, PageDown is there in one frame', (
+      tester,
+    ) async {
+      await pump(tester, reduceMotion: true, before: _manyChannels);
+      await _focusGrid(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pump();
+      final there = _scrolled(tester);
+      expect(there, greaterThan(0));
+      await _settle(tester);
+      expect(_scrolled(tester), there);
       await _finish(tester);
     });
   });
@@ -722,6 +778,33 @@ String? _selectedPill(WidgetTester tester) {
   final selected = pills.value;
   return pills.options.where((o) => o.value == selected).firstOrNull?.label;
 }
+
+/// Sixty channels more, so the grid has screens to page through.
+Future<void> _manyChannels(GuideFixture fixture) =>
+    fixture.db.channelsDao.upsertAll([
+      for (var i = 0; i < 60; i++)
+        ChannelsCompanion.insert(
+          sourceId: 'src-1',
+          remoteKey: '${400 + i}',
+          name: 'Extra ${i + 1}',
+          number: Value(400 + i),
+          categoryId: Value(fixture.sports),
+          position: Value(400 + i),
+        ),
+    ]);
+
+/// How far down the grid's rows are scrolled.
+double _scrolled(WidgetTester tester) => tester
+    .stateList<ScrollableState>(
+      find.descendant(
+        of: find.byType(GuideGrid),
+        matching: find.byType(Scrollable),
+      ),
+    )
+    .where((state) => state.position.axis == Axis.vertical)
+    .first
+    .position
+    .pixels;
 
 Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.sendKeyEvent(key);
