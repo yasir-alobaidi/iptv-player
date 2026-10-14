@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
@@ -14,7 +15,6 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/home/data/home_providers.dart';
 import 'package:iptv_player/features/home/domain/home.dart';
-import 'package:iptv_player/features/home/presentation/home_state.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -64,12 +64,12 @@ void main() {
     return (home, app);
   }
 
-  testWidgets('offline: Home says downloads and local files still play, '
-      'and opens the Library', (tester) async {
+  testWidgets('offline: over Home too the shell says downloads and local '
+      'files still play, and opens the Library', (tester) async {
     final (_, app) = await open(
       tester,
       extra: [
-        homeOfflineProvider.overrideWith((ref) => Stream.value(true)),
+        appOfflineProvider.overrideWith((ref) => Stream.value(true)),
         libraryScanStateProvider.overrideWith(
           (ref) => Stream.value(const LibraryScanState()),
         ),
@@ -92,7 +92,7 @@ void main() {
   testWidgets('online: no banner', (tester) async {
     await open(
       tester,
-      extra: [homeOfflineProvider.overrideWith((ref) => Stream.value(false))],
+      extra: [appOfflineProvider.overrideWith((ref) => Stream.value(false))],
     );
     expect(find.textContaining("You're offline"), findsNothing);
   });

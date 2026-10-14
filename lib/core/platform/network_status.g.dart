@@ -108,3 +108,47 @@ final class NetworkStatusProvider
 }
 
 String _$networkStatusHash() => r'f8dd03ddce7561671bdebd3180576a7547a8183b';
+
+/// Whether the app is offline, as it changes: what "You're offline" on
+/// every screen reads (the shell's banner, the Guide's line), so no
+/// screen works it out from its own last failure.
+
+@ProviderFor(appOffline)
+final appOfflineProvider = AppOfflineProvider._();
+
+/// Whether the app is offline, as it changes: what "You're offline" on
+/// every screen reads (the shell's banner, the Guide's line), so no
+/// screen works it out from its own last failure.
+
+final class AppOfflineProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
+    with $FutureModifier<bool>, $StreamProvider<bool> {
+  /// Whether the app is offline, as it changes: what "You're offline" on
+  /// every screen reads (the shell's banner, the Guide's line), so no
+  /// screen works it out from its own last failure.
+  AppOfflineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appOfflineProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appOfflineHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<bool> create(Ref ref) {
+    return appOffline(ref);
+  }
+}
+
+String _$appOfflineHash() => r'fc578f12743473776446c575cf633bf3a6d65100';

@@ -1552,11 +1552,27 @@ The sixteen, in short: **1** Phase 9 starts while the TV sitting waits. **2** Ap
     - **The provider's Series page swapped its season when a mark moved Continue: fixed.** The season shown is the one to continue in as the page opens (once the marks are read); from then on only the user changes it, as a library show's page already did.
     - **A subtitle the TV refuses said nothing: fixed.** The casting view went back to what the TV shows, silently. It now also says "<TV> couldn't show those subtitles" (`CastSubtitleRefused`). A TV that just isn't ready is told again when it plays, and nothing is said.
     - **Favorites' drag keeps Flutter's gap: decided, not built.** The four lists that reorder by dragging (Favorites, Sources, Categories, Downloads) all use Flutter's reorderable list, which opens a gap the height of the row where it will land. The canvas's accent line would take a reorderable list of our own for all four. The gap says where the row lands as plainly as a line would, and it is the same in every list; Alt+↑/↓ is the keyboard's way and unchanged.
-- **Left of step 7:**
-  - **Scenes for the states no golden draws:** loading, empty, error and offline of each screen (the Guide's grid, its sheet, Reminders and "no guide yet" are in `guide_audit_test.dart` as the model), and the screens with no golden at all (a movie's and a series' page, Connect, Sync, Settings → Casting, the Match picker, the cast picker's states).
-  - **The table of screens by state** for this ADR.
-  - **The keyboard walks at 130 %** under Xvfb.
-  - **Offline from the network status** on every screen that needs the network (the Guide's "Offline" still reads its last failure).
+  - **Offline is said from the app's network status, on every screen.** "You're offline — downloads and local files still play." was Home's own banner; it is the shell's now, under the top bar of every destination, with Open Library (not on the Library itself). The Guide's "Offline · guide from 2 h ago" reads the same status (`appOfflineProvider`), not what its last refresh failed with: a guide server that doesn't answer while the internet is up says "Couldn't refresh".
+  - **Scenes for what no golden draws** (`test/audit/states_audit_test.dart`, 25 scenes): every destination with no source; offline over Movies, Series, Live TV, Home, Favorites, the Library and Settings; a movie's page (its details, details that can't be fetched, a provider with no plot); a series' page (its episodes, episodes that can't be fetched, no episodes); Connect; Sync running and failed; Settings → Casting. **They found one fault:** the provider's Series page overflowed in the smallest window at 115 % (2 px) and 130 % (14 px) — its left column had nothing that could give. It scrolls from its bottom now (the actions stay in view), and in a window narrower than 1280 px the column takes the same share of the width instead of a fixed 560 px, which had cut the episodes' titles to "Low …".
+- **The table of screens by state.** "golden" is a picture that is also audited in all twelve looks; "audit" is a scene with no picture, audited the same way; "widget test" is tested at one size and text size only, and is not drawn by the audit. The golden and audit cells are the scenes that exist; the widget-test cells are what each screen's own test file is there to cover (hard rule 4), found by its tests' names, not re-read one by one for this table.
+
+  | Screen | Content | Empty | Error | Offline | Loading |
+  |---|---|---|---|---|---|
+  | Home | golden | golden (first run); audit (no source) | widget test | audit | widget test |
+  | Live TV | golden | audit (no source); widget test (no channels, no match) | widget test | audit | widget test |
+  | The Guide | golden; audit (grid, a sheet, reminders) | audit (no guide yet, no source) | widget test (a refresh that failed) | widget test (its line) | widget test |
+  | Movies, Series | golden (Movies) | audit (no source); widget test (nothing in a category) | widget test | audit | widget test |
+  | A movie's page | audit | audit (no plot) | audit | — | widget test |
+  | A series' page | audit | audit (no episodes) | audit | — | widget test |
+  | Favorites | golden | audit (no source); widget test (none yet) | widget test | audit | widget test |
+  | The Library | golden (five tabs, a movie, a show) | golden (the first run) | widget test | audit | widget test |
+  | Search | golden (results, a reminder set) | golden (recent, no results) | widget test | — (it reads this computer) | widget test |
+  | The player | golden (a channel, a movie paused, an episode) | — | golden (the failure card) | — | widget test (Preparing…) |
+  | Casting | golden (the view, a movie, the picker) | widget test (no devices) | golden (it failed) | — | widget test |
+  | Settings | golden (ten sections and two dialogs); audit (Casting) | audit (no source) | widget test | audit | widget test |
+  | Onboarding | golden (Welcome, Pick categories); audit (Connect, Sync running) | — | audit (Sync failed); widget test (a test that fails) | widget test | widget test |
+  | Reminders | golden | audit (none set) | widget test | — | — |
+- **Left of step 7, said plainly:** the loading states and most error states are tested by each screen's widget tests at one window and text size, and are **not** drawn by the audit; the exit criterion "every screen passes the audit at 100, 115 and 130 %" is met for the content, empty and offline states above and not yet for those. **The keyboard walks at 130 %** under Xvfb are not run yet.
 
 ### CI after the first push of steps 1–5 (2026-10-13, run 38365432183)
 - **Windows, 13 failed:** `dbus_notifier_test.dart` ran there and every test that needs a session bus timed out. The file is `@TestOn('linux')` now, like the other D-Bus tests. Ten of the thirteen were named; **GitHub shows ten annotations a step**, so `tools/ci/failed_tests.dart` now puts one annotation with every failed test's name first when ten or more fail. The three unnamed ones are taken to be the same file's: it has 15 tests, one uses no bus and one expects a bus that doesn't answer, which leaves 13. The next run says.

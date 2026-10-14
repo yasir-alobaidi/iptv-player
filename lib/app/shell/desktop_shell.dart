@@ -10,6 +10,7 @@ import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -149,6 +150,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     final sourceChoices = ref.watch(shellSourceChoicesProvider);
     final syncStatus = ref.watch(shellSyncStatusProvider);
     final notice = ref.watch(shellNoticeProvider);
+    final offline = ref.watch(appOfflineProvider).value ?? false;
     final downloads = ref.watch(shellDownloadsProvider);
     final cast = ref.watch(shellCastSessionProvider);
     final castButton = ref.watch(shellCastButtonProvider);
@@ -212,6 +214,13 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                             ),
                           if (notice != null && !widget.immersive)
                             _NoticeBar(notice: notice),
+                          if (offline && !widget.immersive)
+                            _OfflineBar(
+                              // Already there: nothing to open.
+                              onOpenLibrary: _current == AppDestination.library
+                                  ? null
+                                  : () => _go(AppDestination.library),
+                            ),
                           Expanded(
                             child: _ContentPane(
                               controller: _contentPane,
@@ -300,6 +309,34 @@ class _NoticeBar extends StatelessWidget {
           actionLabel: notice.actionLabel,
           onAction: notice.onAction,
           onDismiss: notice.onDismiss,
+        ),
+      ),
+    );
+  }
+}
+
+/// "You're offline", under the top bar of every screen while the app's
+/// network status says so (Phase 8 decision 11; on every screen since
+/// Phase 9 step 7): what is on this computer still plays, and the Library
+/// is where it is.
+class _OfflineBar extends StatelessWidget {
+  const new({required this.onOpenLibrary});
+
+  /// Null on the Library itself.
+  final VoidCallback? onOpenLibrary;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.tokens.spacing;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(spacing.s24, spacing.s12, spacing.s24, 0),
+      child: Semantics(
+        liveRegion: true,
+        child: AppBanner(
+          message: "You're offline — downloads and local files still play.",
+          tone: BannerTone.warning,
+          actionLabel: onOpenLibrary == null ? null : 'Open Library',
+          onAction: onOpenLibrary,
         ),
       ),
     );

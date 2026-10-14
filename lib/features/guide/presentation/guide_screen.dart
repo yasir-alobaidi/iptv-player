@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -243,7 +244,14 @@ class _GuideViewState extends ConsumerState<_GuideView> {
             status: value.isImporting
                 ? _Status(line: importProgressLine(progress))
                 : failed
-                ? _Status(line: guideStaleLine(value, now), warning: true)
+                ? _Status(
+                    line: guideStaleLine(
+                      value,
+                      now,
+                      offline: ref.watch(appOfflineProvider).value ?? false,
+                    ),
+                    warning: true,
+                  )
                 : null,
           ),
         ),

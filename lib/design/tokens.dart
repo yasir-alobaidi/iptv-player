@@ -397,6 +397,14 @@ class AppDetailsTokens {
   /// A series' left column: poster, title, plot, actions.
   double get seriesColumnWidth => 560;
 
+  /// The column in a [window] this wide: the canvas's 560 px from
+  /// 1280 px up, and the same share of a narrower window, so the
+  /// episodes beside it keep the room their titles need (ADR-017).
+  double seriesColumnFor(double window) {
+    final shared = window * seriesColumnWidth / 1280;
+    return shared < seriesColumnWidth ? shared : seriesColumnWidth;
+  }
+
   /// A series' page: 40 around, 24 at the top.
   EdgeInsets get seriesPadding => const EdgeInsets.fromLTRB(40, 24, 40, 40);
 

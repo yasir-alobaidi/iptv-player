@@ -661,7 +661,9 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
             left: 0,
             top: 0,
             bottom: 0,
-            width: layout.seriesColumnWidth + tokens.spacing.s64,
+            width:
+                layout.seriesColumnFor(MediaQuery.sizeOf(context).width) +
+                tokens.spacing.s64,
             child: DetailsBackdrop(
               backdropUrl: details?.backdropUrl ?? series.backdropUrl,
               posterUrl: series.posterUrl,
@@ -672,7 +674,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: layout.seriesColumnWidth,
+                width: layout.seriesColumnFor(MediaQuery.sizeOf(context).width),
                 child: Padding(
                   padding: layout.seriesPadding,
                   child: _SeriesColumn(
@@ -837,94 +839,112 @@ class _SeriesColumn extends StatelessWidget {
     final layout = tokens.details;
     final seasons = details?.seasons.length;
     final nextUp = this.nextUp;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Spacer(),
-        DetailsPoster(
-          title: series.name,
-          url: series.posterUrl,
-          size: layout.seriesPoster,
-        ),
-        SizedBox(height: tokens.spacing.s16 + 2),
-        Text(
-          series.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: tokens.text.seriesTitle.copyWith(color: colors.textPrimary),
-        ),
-        SizedBox(height: tokens.spacing.s16 + 2),
-        DetailsMetaLine(
-          year: series.year,
-          runtime: switch (seasons) {
-            null || 0 => null,
-            1 => '1 season',
-            final n => '$n seasons',
-          },
-          rating: series.rating,
-          genre: (details?.genre ?? series.genre)?.split(',').first,
-        ),
-        SizedBox(height: tokens.spacing.s16 + 2),
-        _About(
-          details: state,
-          plot: details?.plot ?? series.plot,
-          credits: const [],
-          onRetry: onRetry,
-        ),
-        SizedBox(height: tokens.spacing.s16 + 2),
-        Row(
-          children: [
-            if (nextUp != null) ...[
-              Flexible(
-                child: AppButton(
-                  label: switch (nextUp.kind) {
-                    NextUpKind.again => 'Play again',
-                    NextUpKind.start => 'Play ${_episodeLabel(nextUp.episode)}',
-                    _ => 'Continue ${_episodeLabel(nextUp.episode)}',
-                  },
-                  icon: AppIcons.play,
-                  size: AppButtonSize.xl,
-                  autofocus: true,
-                  focusNode: primaryFocus,
-                  onPressed: () => onPlay(nextUp.episode, from: nextUp.from),
+    // At the bottom of the column, as the canvas draws it. Where it
+    // doesn't all fit (the smallest window at a larger text size, a long
+    // plot) it scrolls, from its bottom: the actions stay in view and the
+    // poster's top gives way. It used to overflow there.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        reverse: true,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DetailsPoster(
+                title: series.name,
+                url: series.posterUrl,
+                size: layout.seriesPoster,
+              ),
+              SizedBox(height: tokens.spacing.s16 + 2),
+              Text(
+                series.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.seriesTitle.copyWith(
+                  color: colors.textPrimary,
                 ),
               ),
-              SizedBox(width: tokens.spacing.s12),
-            ],
-            AppIconButton(
-              icon: series.isFavorite ? AppIcons.starFilled : AppIcons.star,
-              tooltip: series.isFavorite
-                  ? 'Remove from favorites'
-                  : 'Add to favorites',
-              shortcut: 'F',
-              selected: series.isFavorite,
-              bordered: true,
-              // Only once the page knows there is nothing to play: the
-              // Play button, arriving with the episodes, takes it then.
-              autofocus: nextUp == null && state is DetailsReady,
-              focusNode: nextUp == null ? primaryFocus : null,
-              size: layout.movieActionHeight,
-              onPressed: onFavorite,
-            ),
-            if (nextUp != null) ...[
-              SizedBox(width: tokens.spacing.s12),
-              AppIconButton(
-                icon: AppIcons.cast,
-                tooltip: 'Cast',
-                bordered: true,
-                size: layout.movieActionHeight,
-                onPressed: () => unawaited(
-                  castFrom(
-                    context,
-                    item: PlayableEpisode(series, nextUp.episode),
-                    from: nextUp.from,
+              SizedBox(height: tokens.spacing.s16 + 2),
+              DetailsMetaLine(
+                year: series.year,
+                runtime: switch (seasons) {
+                  null || 0 => null,
+                  1 => '1 season',
+                  final n => '$n seasons',
+                },
+                rating: series.rating,
+                genre: (details?.genre ?? series.genre)?.split(',').first,
+              ),
+              SizedBox(height: tokens.spacing.s16 + 2),
+              _About(
+                details: state,
+                plot: details?.plot ?? series.plot,
+                credits: const [],
+                onRetry: onRetry,
+              ),
+              SizedBox(height: tokens.spacing.s16 + 2),
+              Row(
+                children: [
+                  if (nextUp != null) ...[
+                    Flexible(
+                      child: AppButton(
+                        label: switch (nextUp.kind) {
+                          NextUpKind.again => 'Play again',
+                          NextUpKind.start =>
+                            'Play ${_episodeLabel(nextUp.episode)}',
+                          _ => 'Continue ${_episodeLabel(nextUp.episode)}',
+                        },
+                        icon: AppIcons.play,
+                        size: AppButtonSize.xl,
+                        autofocus: true,
+                        focusNode: primaryFocus,
+                        onPressed: () =>
+                            onPlay(nextUp.episode, from: nextUp.from),
+                      ),
+                    ),
+                    SizedBox(width: tokens.spacing.s12),
+                  ],
+                  AppIconButton(
+                    icon: series.isFavorite
+                        ? AppIcons.starFilled
+                        : AppIcons.star,
+                    tooltip: series.isFavorite
+                        ? 'Remove from favorites'
+                        : 'Add to favorites',
+                    shortcut: 'F',
+                    selected: series.isFavorite,
+                    bordered: true,
+                    // Only once the page knows there is nothing to play: the
+                    // Play button, arriving with the episodes, takes it then.
+                    autofocus: nextUp == null && state is DetailsReady,
+                    focusNode: nextUp == null ? primaryFocus : null,
+                    size: layout.movieActionHeight,
+                    onPressed: onFavorite,
                   ),
-                ),
+                  if (nextUp != null) ...[
+                    SizedBox(width: tokens.spacing.s12),
+                    AppIconButton(
+                      icon: AppIcons.cast,
+                      tooltip: 'Cast',
+                      bordered: true,
+                      size: layout.movieActionHeight,
+                      onPressed: () => unawaited(
+                        castFrom(
+                          context,
+                          item: PlayableEpisode(series, nextUp.episode),
+                          from: nextUp.from,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
-          ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }

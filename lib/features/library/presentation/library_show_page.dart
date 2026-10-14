@@ -188,7 +188,9 @@ class _ShowPageState extends ConsumerState<_ShowPage> {
           left: 0,
           top: 0,
           bottom: 0,
-          width: layout.seriesColumnWidth + tokens.spacing.s64,
+          width:
+              layout.seriesColumnFor(MediaQuery.sizeOf(context).width) +
+              tokens.spacing.s64,
           child: DetailsBackdrop(
             backdropUrl: text('series_backdrop_url'),
             posterUrl: posterUrl,
@@ -199,7 +201,7 @@ class _ShowPageState extends ConsumerState<_ShowPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              width: layout.seriesColumnWidth,
+              width: layout.seriesColumnFor(MediaQuery.sizeOf(context).width),
               child: Padding(
                 padding: layout.seriesPadding,
                 child: Column(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components.dart';
 
@@ -19,6 +21,68 @@ double _railWidth(WidgetTester tester) =>
     tester.getSize(find.byType(NavRail)).width;
 
 void main() {
+  group("You're offline (Phase 9 step 7: from the app's network status, on "
+      'every screen)', () {
+    const words = "You're offline — downloads and local files still play.";
+
+    testWidgets('online: nothing is said', (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [
+          appOfflineProvider.overrideWith((ref) => Stream.value(false)),
+        ],
+      );
+
+      expect(find.text(words), findsNothing);
+    });
+
+    testWidgets('offline: said under the top bar of every destination, with '
+        'the way to the Library; on the Library, without it', (tester) async {
+      final app = await pumpApp(
+        tester,
+        overrides: [
+          appOfflineProvider.overrideWith((ref) => Stream.value(true)),
+          ...emptyLibraryOverrides,
+        ],
+      );
+
+      for (final destination in AppDestination.values) {
+        app.router.go(destination.path);
+        await settleApp(tester);
+        expect(find.text(words), findsOneWidget, reason: destination.label);
+        expect(
+          find.text('Open Library'),
+          destination == AppDestination.library ? findsNothing : findsOneWidget,
+          reason: destination.label,
+        );
+      }
+
+      app.router.go(AppDestination.guide.path);
+      await settleApp(tester);
+      await tester.tap(find.text('Open Library'));
+      await settleApp(tester);
+      expect(app.location, AppDestination.library.path);
+    });
+
+    testWidgets('the network coming back takes the words away', (tester) async {
+      final network = StreamController<bool>();
+      addTearDown(network.close);
+      await pumpApp(
+        tester,
+        overrides: [appOfflineProvider.overrideWith((ref) => network.stream)],
+      );
+      expect(find.text(words), findsNothing);
+
+      network.add(true);
+      await settleApp(tester);
+      expect(find.text(words), findsOneWidget);
+
+      network.add(false);
+      await settleApp(tester);
+      expect(find.text(words), findsNothing);
+    });
+  });
+
   group('nav rail', () {
     testWidgets('shows every destination and marks the current one', (
       tester,

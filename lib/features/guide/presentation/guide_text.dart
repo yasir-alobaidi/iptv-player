@@ -164,10 +164,15 @@ String guideChannelLine(String name, int? number) =>
     number == null ? name : '$name · $number';
 
 /// The Guide toolbar's line about a refresh that failed while an older
-/// guide stays in use: "Offline · guide from 2 h ago".
-String guideStaleLine(GuideCoverage coverage, DateTime now) {
-  final code = coverage.lastImport?.failureCode;
-  final offline = code != null && AppFailure.fromCode(code) is NetworkFailure;
+/// guide stays in use: "Offline · guide from 2 h ago" while the app is
+/// [offline] (its network status, not what this refresh failed with: a
+/// guide server that doesn't answer isn't the internet being down),
+/// else "Couldn't refresh · guide from 2 h ago".
+String guideStaleLine(
+  GuideCoverage coverage,
+  DateTime now, {
+  required bool offline,
+}) {
   final updated = coverage.updatedAt;
   final age = updated == null ? '' : ' · guide from ${formatAgo(updated, now)}';
   return '${offline ? 'Offline' : "Couldn't refresh"}$age';

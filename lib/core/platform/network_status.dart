@@ -128,3 +128,9 @@ NetworkStatus networkStatus(Ref ref) {
   ref.onDispose(status.dispose);
   return status;
 }
+
+/// Whether the app is offline, as it changes: what "You're offline" on
+/// every screen reads (the shell's banner, the Guide's line), so no
+/// screen works it out from its own last failure.
+@riverpod
+Stream<bool> appOffline(Ref ref) => ref.watch(networkStatusProvider).watch();

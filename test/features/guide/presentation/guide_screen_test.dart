@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
@@ -26,6 +27,7 @@ void main() {
     WidgetTester tester, {
     bool source = true,
     bool guide = true,
+    bool offline = false,
     Future<void> Function(GuideFixture fixture)? before,
   }) async {
     final fixture = GuideFixture();
@@ -38,7 +40,10 @@ void main() {
     final app = await pumpApp(
       tester,
       initialLocation: AppDestination.guide.path,
-      overrides: fixture.overrides,
+      overrides: [
+        ...fixture.overrides,
+        appOfflineProvider.overrideWith((ref) => Stream.value(offline)),
+      ],
     );
     await _settle(tester);
     return (fixture, app);
@@ -620,10 +625,11 @@ void main() {
       await _finish(tester);
     });
 
-    testWidgets('a refresh that failed offline: said in the toolbar, the '
-        'guide still drawn', (tester) async {
+    testWidgets('a refresh that failed while the app is offline: said in '
+        'the toolbar, the guide still drawn', (tester) async {
       await pump(
         tester,
+        offline: true,
         before: (fixture) async {
           final run = await fixture.startImport();
           await fixture.failImport(run, NetworkFailure());
@@ -632,6 +638,24 @@ void main() {
 
       expect(find.text('Offline · guide from just now'), findsOneWidget);
       expect(find.text('‹ Continental Cup · Semi-final'), findsOneWidget);
+      await _finish(tester);
+    });
+
+    testWidgets('a refresh that got no answer while the app is online: the '
+        "guide's server, not the internet", (tester) async {
+      await pump(
+        tester,
+        before: (fixture) async {
+          final run = await fixture.startImport();
+          await fixture.failImport(run, NetworkFailure());
+        },
+      );
+
+      expect(
+        find.text("Couldn't refresh · guide from just now"),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Offline'), findsNothing);
       await _finish(tester);
     });
   });
