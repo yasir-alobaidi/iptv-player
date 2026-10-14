@@ -14,9 +14,9 @@ import 'package:iptv_player/features/sources/domain/sync.dart';
 const expiryWarningDays = 7;
 
 String sourceTypeLabel(SourceType type) => switch (type) {
-  SourceType.xtream => 'Xtream',
-  SourceType.m3uUrl => 'M3U URL',
-  SourceType.m3uFile => 'M3U file',
+  SourceType.xtream => 'Server login',
+  SourceType.m3uUrl => 'Playlist link',
+  SourceType.m3uFile => 'Playlist file',
 };
 
 /// True unless the panel said something other than Active.

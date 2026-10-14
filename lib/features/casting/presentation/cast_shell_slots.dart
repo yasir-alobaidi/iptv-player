@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/core_providers.dart';
@@ -171,7 +172,7 @@ Future<void> Function() windowsFirewallNotice(
       primaryLabel: 'Got it',
       onPrimary: () => Navigator.of(dialog).pop(),
       child: Text(
-        'Windows asks whether IPTV Player may accept connections on your '
+        'Windows asks whether $appName may accept connections on your '
         "network. Allow it on private networks, or your TV won't be able "
         'to play what you cast.',
         style: dialog.tokens.text.body.copyWith(

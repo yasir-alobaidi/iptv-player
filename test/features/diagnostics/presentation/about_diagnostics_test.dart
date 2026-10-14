@@ -230,7 +230,7 @@ void main() {
       await tabTo(tester, 'Save to file…');
       await press(tester, LogicalKeyboardKey.enter);
 
-      expect(saveNames, ['iptv-player-diagnostics-2026-10-13.txt']);
+      expect(saveNames, ['bijou-diagnostics-2026-10-13.txt']);
       expect(diagnostics.saved, [
         ('/home/me/Documents/report.txt', diagnostics.text),
       ]);

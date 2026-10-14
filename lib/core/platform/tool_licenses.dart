@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_player/core/app_identity.dart';
 
 /// Adds the licences of the programs the app runs or loads, which no
 /// Dart package brings: FFmpeg and ffprobe (run as separate processes)
@@ -44,7 +45,7 @@ const toolLicenses = [
   ToolLicense(
     name: 'FFmpeg',
     notice:
-        'IPTV Player runs the ffmpeg and ffprobe programs as separate '
+        '$appName runs the ffmpeg and ffprobe programs as separate '
         'processes, to read what a stream or a file holds, to convert it '
         'for a TV when casting, and to save downloads. They are the builds '
         'of the FFmpeg project (https://ffmpeg.org) published at '
@@ -57,7 +58,7 @@ const toolLicenses = [
   ToolLicense(
     name: 'mpv (libmpv)',
     notice:
-        'IPTV Player plays video with libmpv, the library of the mpv '
+        '$appName plays video with libmpv, the library of the mpv '
         'player (https://mpv.io). On Linux it loads the libmpv installed '
         'on your system, which distributions build under the GNU General '
         'Public License, version 2 or later. On Windows it uses the build '

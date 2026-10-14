@@ -132,14 +132,14 @@ void main() {
       await pump(tester);
 
       expect(find.text('Northwind TV'), findsWidgets);
-      expect(find.text('Xtream · Active · exp Nov 3'), findsOneWidget);
+      expect(find.text('Server login · Active · exp Nov 3'), findsOneWidget);
       expect(
         find.text('12,340 channels · 8,021 movies · synced 12 min ago'),
         findsOneWidget,
       );
       expect(find.text('Refresh'), findsOneWidget);
 
-      expect(find.text('M3U URL · never synced'), findsOneWidget);
+      expect(find.text('Playlist link · never synced'), findsOneWidget);
       expect(
         find.text('Last attempt failed: The server took too long to answer.'),
         findsOneWidget,
@@ -163,7 +163,7 @@ void main() {
       );
       await pump(tester);
 
-      expect(find.text('Xtream · Expired Sep 1, 2026'), findsOneWidget);
+      expect(find.text('Server login · Expired Sep 1, 2026'), findsOneWidget);
     });
 
     testWidgets('a failed sync says what the server answered', (tester) async {

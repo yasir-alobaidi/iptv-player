@@ -1,6 +1,8 @@
-# IPTV Player (working name)
+# Bijou
 
-Personal IPTV player for Linux and Windows with Chromecast / Google TV casting at original quality, plus downloads and a local library for offline viewing. Google TV version planned after desktop v1.
+*Your own little cinema.* A fast, keyboard-first video player for Linux and Windows: your own video files, the playlists and program guides you add (M3U, XMLTV) and the services you sign in to, cast to Chromecast / Google TV at original quality, with downloads for offline viewing. It comes with no content of its own. A Google TV version follows the desktop v1.
+
+The name, the icon and how the app describes itself: docs/05-design-system.md, "Brand" (ADR-018). The repository, the Dart package and the application id keep their first name, `iptv-player`.
 
 ## Start here
 1. Do the system setup in `docs/setup.md` (sudo steps are manual).

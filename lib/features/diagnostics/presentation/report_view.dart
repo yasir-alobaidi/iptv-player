@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/result.dart';
@@ -11,11 +12,11 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
 
-/// `iptv-player-diagnostics-2026-10-13.txt`, the name Save suggests.
+/// `bijou-diagnostics-2026-10-13.txt`, the name Save suggests.
 String diagnosticsFileName(DateTime now) {
   final day = now.toLocal();
   String two(int value) => '$value'.padLeft(2, '0');
-  return 'iptv-player-diagnostics-${day.year}-${two(day.month)}-'
+  return '$appFileSlug-diagnostics-${day.year}-${two(day.month)}-'
       '${two(day.day)}.txt';
 }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
@@ -109,7 +110,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     MediaKit.ensureInitialized();
     final player = Player(
       configuration: PlayerConfiguration(
-        title: 'IPTV Player',
+        title: appName,
         logLevel: MPVLogLevel.warn,
         vo: video ? null : 'null',
       ),

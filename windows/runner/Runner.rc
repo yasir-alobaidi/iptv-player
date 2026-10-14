@@ -85,12 +85,17 @@ VS_VERSION_INFO VERSIONINFO
  FILETYPE VFT_APP
  FILESUBTYPE 0x0L
 BEGIN
+    // The name people read is FileDescription (ADR-018). ProductName stays
+    // "IPTV Player": with CompanyName it names the app's data folder
+    // (%APPDATA%\io.github.yasiralobaidi\IPTV Player, path_provider) and the
+    // file flutter_secure_storage keeps the passwords in, so changing it
+    // would lose both. Phase 10's installer decides how to move them.
     BLOCK "StringFileInfo"
     BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "io.github.yasiralobaidi" "\0"
-            VALUE "FileDescription", "IPTV Player" "\0"
+            VALUE "FileDescription", "Bijou" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "iptv_player" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 io.github.yasiralobaidi. All rights reserved." "\0"

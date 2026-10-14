@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/system_notifier.dart';
 
@@ -38,7 +39,7 @@ final class WindowsNotifier implements SystemNotifier {
       final ok = await _plugin.initialize(
         settings: const InitializationSettings(
           windows: WindowsInitializationSettings(
-            appName: 'IPTV Player',
+            appName: appName,
             appUserModelId: appUserModelId,
             guid: guid,
           ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/design/text_scale.dart';
@@ -27,7 +28,7 @@ class IptvPlayerApp extends ConsumerWidget {
     return ArtworkScope(
       images: ref.watch(artworkImagesProvider),
       child: MaterialApp.router(
-        title: 'IPTV Player',
+        title: appName,
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(
           accent: look.accent,

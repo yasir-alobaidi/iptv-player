@@ -160,7 +160,7 @@ void main() {
     expect(await inhibitor.hold('Casting'), isTrue);
     expect(logind.inhibits.single, const [
       DBusString('sleep:idle'),
-      DBusString('IPTV Player'),
+      DBusString('Bijou'),
       DBusString('Casting'),
       DBusString('block'),
     ]);

@@ -160,7 +160,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('Xtream · Active · exp'), findsOneWidget);
+    expect(find.textContaining('Server login · Active · exp'), findsOneWidget);
 
     final requestsBefore = panel.liveRequests;
     await k.tabTo(find.text('Refresh'));
@@ -225,7 +225,7 @@ void main() {
     await k.tabTo(find.text('Add source'));
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('Connect your provider'));
-    await k.tabTo(find.textContaining('M3U link'), back: true);
+    await k.tabTo(find.textContaining('Playlist link'), back: true);
     await k.press(LogicalKeyboardKey.enter);
     await k.tabTo(input('Playlist URL'));
     await k.type(

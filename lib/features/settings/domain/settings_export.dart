@@ -1,20 +1,22 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:meta/meta.dart';
 
 /// The settings file's format, written by this version. A file with a
 /// higher number was made by a newer app and is refused, not guessed at.
 const settingsExportFormat = 1;
 
-/// What marks a file as ours.
+/// What marks a file as ours: the format's own mark, from before the
+/// app had its name, kept so that every file made since still imports.
 const settingsExportApp = 'iptv-player';
 
-/// `iptv-player-settings-2026-10-13.json`, the name Export suggests.
+/// `bijou-settings-2026-10-13.json`, the name Export suggests.
 String settingsExportFileName(DateTime now) {
   final day = now.toLocal();
   String two(int value) => '$value'.padLeft(2, '0');
-  return 'iptv-player-settings-${day.year}-${two(day.month)}-'
+  return '$appFileSlug-settings-${day.year}-${two(day.month)}-'
       '${two(day.day)}.json';
 }
 

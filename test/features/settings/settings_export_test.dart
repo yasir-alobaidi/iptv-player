@@ -262,10 +262,16 @@ void main() {
     });
   });
 
-  test('the suggested file name carries the local date', () {
+  test('the suggested file name carries the app and the local date', () {
     expect(
       settingsExportFileName(DateTime(2026, 10, 3, 23, 59)),
-      'iptv-player-settings-2026-10-03.json',
+      'bijou-settings-2026-10-03.json',
     );
+  });
+
+  test('a file made before the app had its name still imports: the '
+      "format's own mark is unchanged", () {
+    final made = parseSettingsExport('{"app": "iptv-player", "format": 1}');
+    expect(made, isA<SettingsExport>());
   });
 }

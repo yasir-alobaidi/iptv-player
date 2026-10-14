@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
@@ -50,7 +51,7 @@ class AppWindow with WindowListener {
         size: bounds.size,
         minimumSize: WindowSizes.minimum,
         center: bounds.position == null,
-        title: 'IPTV Player',
+        title: appName,
       ),
       () async {
         final position = bounds.position;

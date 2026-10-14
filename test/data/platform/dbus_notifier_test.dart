@@ -138,7 +138,7 @@ void main() {
     expect(await made.show(notice), isTrue);
 
     final sent = desktop.shown.single;
-    expect(sent[0].asString(), 'IPTV Player');
+    expect(sent[0].asString(), 'Bijou');
     expect(sent[1].asUint32(), 0, reason: 'replaces nothing');
     expect(sent[3].asString(), 'The Harbor Pilot');
     expect(sent[4].asString(), 'Starting now on Blue Water');

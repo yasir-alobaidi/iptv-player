@@ -10,7 +10,7 @@ import 'package:iptv_player/features/diagnostics/domain/log_lines.dart';
 /// A report a test scripts.
 final class FakeDiagnostics implements DiagnosticsService {
   String text =
-      'IPTV Player 0.1.0+1 · Ubuntu 22.04.5 LTS · Wayland · GNOME\n'
+      'Bijou 0.1.0+1 · Ubuntu 22.04.5 LTS · Wayland · GNOME\n'
       'Graphics: Intel UHD Graphics 630 (i915)\n'
       'Player: mpv 0.34.1\n'
       'Decoding: H.264 1080p → vaapi · HEVC 2160p → vaapi\n'

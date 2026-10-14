@@ -326,7 +326,7 @@ void main() {
       await tabTo(tester, 'Export…');
       await press(tester, LogicalKeyboardKey.enter);
 
-      expect(saveNames, ['iptv-player-settings-2026-10-13.json']);
+      expect(saveNames, ['bijou-settings-2026-10-13.json']);
       expect(transfer.exported, ['/home/me/Documents/export.json']);
       // The button was busy for a moment; the focus is back on it.
       expect(focusedLabelOf(tester), 'Export…');
@@ -456,12 +456,8 @@ void main() {
 
     for (final (problem, format, words) in [
       (SettingsFileProblem.damaged, null, 'damaged or incomplete'),
-      (
-        SettingsFileProblem.notOurs,
-        null,
-        "isn't a settings file from IPTV Player",
-      ),
-      (SettingsFileProblem.newer, 3, 'newer version of IPTV Player (format 3)'),
+      (SettingsFileProblem.notOurs, null, "isn't a settings file from Bijou"),
+      (SettingsFileProblem.newer, 3, 'newer version of Bijou (format 3)'),
     ]) {
       testWidgets('a file that is ${problem.name} is refused with what is '
           'wrong, and nothing is applied', (tester) async {

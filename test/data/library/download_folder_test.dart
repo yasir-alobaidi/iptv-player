@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/downloads/download_settings.dart';
@@ -50,20 +52,33 @@ void main() {
     });
   });
 
-  test(
-    'downloads go to the chosen folder, else Videos + IPTV Player',
-    () async {
-      Future<String> videos() async => '/home/me/Videos';
-      expect(
-        await downloadFolderPath(videos: videos),
-        p.join('/home/me/Videos', 'IPTV Player'),
-      );
-      expect(
-        await downloadFolderPath(chosen: '/media/data/Films', videos: videos),
-        '/media/data/Films',
-      );
-    },
-  );
+  test('downloads go to the chosen folder, else Videos + Bijou', () async {
+    final temp = await Directory.systemTemp.createTemp('download_folder');
+    addTearDown(() => temp.delete(recursive: true));
+    Future<String> videos() async => temp.path;
+    expect(
+      await downloadFolderPath(videos: videos),
+      p.join(temp.path, 'Bijou'),
+    );
+    expect(
+      await downloadFolderPath(chosen: '/media/data/Films', videos: videos),
+      '/media/data/Films',
+    );
+  });
+
+  test('Videos + IPTV Player, where the downloads made before the app had '
+      'its name already are: nothing is moved, nothing split', () async {
+    final temp = await Directory.systemTemp.createTemp('download_folder');
+    addTearDown(() => temp.delete(recursive: true));
+    final earlier = Directory(p.join(temp.path, 'IPTV Player'))..createSync();
+    File(p.join(earlier.path, 'Film (2019).mp4')).writeAsStringSync('x');
+    expect(
+      await downloadFolderPath(videos: () async => temp.path),
+      earlier.path,
+    );
+    expect(Directory(p.join(temp.path, 'Bijou')).existsSync(), isFalse);
+    expect(File(p.join(earlier.path, 'Film (2019).mp4')).existsSync(), isTrue);
+  });
 
   group('the download folder in the library', () {
     late AppDatabase db;
@@ -112,10 +127,10 @@ void main() {
       await db.close();
     });
 
-    test('is Videos + IPTV Player until a folder is chosen', () async {
+    test('is Videos + Bijou until a folder is chosen', () async {
       expect(
         await container.read(downloadFolderProvider.future),
-        p.join('/home/me/Videos', 'IPTV Player'),
+        p.join('/home/me/Videos', 'Bijou'),
       );
       await container
           .read(downloadSettingsControllerProvider.notifier)

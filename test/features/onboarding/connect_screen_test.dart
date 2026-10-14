@@ -62,7 +62,7 @@ void main() {
 
       expect(find.text('Connect your provider'), findsOneWidget);
       final xtream = tester.widget<ChoiceCard>(
-        find.widgetWithText(ChoiceCard, 'Xtream Codes'),
+        find.widgetWithText(ChoiceCard, 'Server login'),
       );
       expect(xtream.selected, isTrue);
       expect(focusIsOn(tester, field('Server address')), isTrue);
@@ -363,7 +363,7 @@ void main() {
         ),
       );
       await pump(tester);
-      await tester.tap(find.text('M3U link'));
+      await tester.tap(find.text('Playlist link'));
       await settleApp(tester);
 
       expect(field('Username'), findsNothing);
@@ -392,7 +392,7 @@ void main() {
         ),
       );
       await pump(tester);
-      await tester.tap(find.text('M3U file'));
+      await tester.tap(find.text('Playlist file'));
       await settleApp(tester);
 
       await press(tester, 'Choose file');
@@ -407,7 +407,7 @@ void main() {
     testWidgets('a file that is gone says to choose it again', (tester) async {
       fakes.checker.result = Err(NotFoundFailure('playlist file'));
       await pump(tester);
-      await tester.tap(find.text('M3U file'));
+      await tester.tap(find.text('Playlist file'));
       await settleApp(tester);
       await type(tester, 'Playlist file', '/gone.m3u');
 
@@ -477,9 +477,9 @@ void main() {
     expect(
       reached,
       containsAll([
-        'Xtream Codes. Server, username, password',
-        'M3U link. Playlist URL',
-        'M3U file. From this computer',
+        'Server login. Server, username, password',
+        'Playlist link. An M3U address',
+        'Playlist file. M3U, from this computer',
         'Server address',
         'Username',
         'Password',

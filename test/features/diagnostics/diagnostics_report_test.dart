@@ -69,7 +69,7 @@ void main() {
     );
 
     expect(report.split('\n'), [
-      'IPTV Player 0.1.0+1 · Ubuntu 22.04.5 LTS · Linux 6.8.0-138-generic · '
+      'Bijou 0.1.0+1 · Ubuntu 22.04.5 LTS · Linux 6.8.0-138-generic · '
           'Wayland · GNOME',
       'Graphics: Intel UHD Graphics 630 (i915) · NVIDIA GeForce GTX 1650 Ti '
           '(nvidia)',
@@ -98,7 +98,7 @@ void main() {
     final report = buildDiagnosticsReport(DiagnosticsFacts(now: now));
 
     expect(report.split('\n'), [
-      'IPTV Player unknown',
+      'Bijou unknown',
       'Graphics: not known',
       'Player: not available',
       'Decoding: nothing played yet',

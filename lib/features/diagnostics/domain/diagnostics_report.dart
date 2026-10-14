@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
@@ -203,7 +204,7 @@ String buildDiagnosticsReport(
   };
   final out = <String>[
     [
-      'IPTV Player ${facts.appVersion}',
+      '$appName ${facts.appVersion}',
       ?system.os,
       ?system.kernel,
       ?system.session,

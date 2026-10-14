@@ -70,7 +70,8 @@ class DownloadSettingsController extends _$DownloadSettingsController {
 Future<String> systemVideos(Ref ref) => systemVideosFolder();
 
 /// Where new downloads go now (docs/09): the folder chosen in Settings,
-/// else the system's Videos folder + `IPTV Player`.
+/// else the system's Videos folder + `Bijou` (`IPTV Player` where that
+/// one is already: `downloadFolderPath`).
 @Riverpod(keepAlive: true)
 Future<String> downloadFolder(Ref ref) async {
   final stored = await ref

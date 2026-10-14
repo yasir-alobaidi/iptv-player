@@ -409,7 +409,7 @@ class ImportPreviewDialog extends StatelessWidget {
 
   final ImportPlan plan;
 
-  /// `iptv-player-settings-2026-10-12.json`: the file's own name, the
+  /// `bijou-settings-2026-10-12.json`: the file's own name, the
   /// folder left off.
   static String fileName(String path) =>
       path

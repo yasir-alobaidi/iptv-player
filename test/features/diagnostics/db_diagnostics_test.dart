@@ -102,7 +102,7 @@ void main() {
     final report = (await diagnostics().report()).valueOrNull!;
 
     expect(report.split('\n'), [
-      'IPTV Player 0.1.0+1 · Ubuntu 22.04.5 LTS · Wayland · GNOME',
+      'Bijou 0.1.0+1 · Ubuntu 22.04.5 LTS · Wayland · GNOME',
       'Graphics: Intel UHD Graphics 630 (i915)',
       'Player: not available',
       'Decoding: nothing played yet',

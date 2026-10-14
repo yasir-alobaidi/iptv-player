@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/design/components.dart';
@@ -61,8 +62,7 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
                     ),
                     SizedBox(height: tokens.spacing.s4),
                     Text(
-                      'A player for your own IPTV subscription. It comes '
-                      'with no channels, movies or series of its own.',
+                      appDescription,
                       style: tokens.text.caption.copyWith(
                         color: colors.textTertiary,
                       ),
@@ -104,7 +104,7 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
   }
 }
 
-/// "IPTV Player 0.1.0 (build 1) · Linux". [version] null is still being
+/// "Bijou 0.1.0 (build 1) · Linux". [version] null is still being
 /// read.
 String aboutLine(AppVersion? version, TargetPlatform platform) => [
   if (version == null)

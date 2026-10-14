@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dbus/dbus.dart';
+import 'package:iptv_player/core/app_identity.dart' as identity;
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/system_notifier.dart';
 
@@ -30,7 +31,7 @@ final class DbusNotifier implements SystemNotifier {
   new({
     required this._log,
     DBusClient Function()? session,
-    this.appName = 'IPTV Player',
+    this.appName = identity.appName,
     this.desktopEntry = 'io.github.yasiralobaidi.iptvplayer',
     this.timeout = const Duration(seconds: 5),
   }) : _session = session ?? DBusClient.session;

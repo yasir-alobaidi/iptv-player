@@ -56,7 +56,7 @@ void main() {
     expect(app.location, addSourceRoutePath);
     expect(find.text('/home/me/tv/list.m3u'), findsOneWidget);
     final file = tester.widget<ChoiceCard>(
-      find.widgetWithText(ChoiceCard, 'M3U file'),
+      find.widgetWithText(ChoiceCard, 'Playlist file'),
     );
     expect(file.selected, isTrue);
   });

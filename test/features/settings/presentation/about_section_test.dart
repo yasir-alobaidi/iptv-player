@@ -75,7 +75,7 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     await open(tester);
 
-    expect(find.text('IPTV Player 0.1.0 (build 1) · Linux'), findsOneWidget);
+    expect(find.text('Bijou 0.1.0 (build 1) · Linux'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -85,12 +85,12 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     await open(tester, version: AppVersion.unknown);
 
-    expect(find.text('IPTV Player version unknown · Windows'), findsOneWidget);
+    expect(find.text('Bijou version unknown · Windows'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
   test('the line while the version is still being read', () {
-    expect(aboutLine(null, TargetPlatform.linux), 'IPTV Player · Linux');
+    expect(aboutLine(null, TargetPlatform.linux), 'Bijou · Linux');
   });
 
   testWidgets('Licences, by keyboard: the list has the focus on the first '
@@ -104,9 +104,7 @@ void main() {
 
     expect(find.byType(LicensesDialog), findsOneWidget);
     expect(
-      find.text(
-        'What IPTV Player is built with: 3 packages, fonts and programs.',
-      ),
+      find.text('What Bijou is built with: 3 packages, fonts and programs.'),
       findsOneWidget,
     );
     expect(focusedLabelOf(tester), 'FFmpeg');

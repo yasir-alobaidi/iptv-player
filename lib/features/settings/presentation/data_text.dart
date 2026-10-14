@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/features/settings/domain/settings_export.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
@@ -78,10 +79,10 @@ String fileProblem(SettingsFileProblem problem, {int? format}) =>
         "The file is damaged or incomplete: it can't be read as a "
             'settings file. Export it again on the other computer.',
       SettingsFileProblem.notOurs =>
-        "This isn't a settings file from IPTV Player. Choose a file made "
+        "This isn't a settings file from $appName. Choose a file made "
             'with Export… on Settings → Data.',
       SettingsFileProblem.newer =>
-        'This file was made by a newer version of IPTV Player'
+        'This file was made by a newer version of $appName'
             '${format == null ? '' : ' (format $format)'}. Update this '
             'app, then import it.',
     };

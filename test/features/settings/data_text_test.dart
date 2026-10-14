@@ -71,8 +71,8 @@ void main() {
 
     expect({damaged, notOurs, newer}, hasLength(3));
     expect(damaged, contains('damaged or incomplete'));
-    expect(notOurs, contains("isn't a settings file from IPTV Player"));
-    expect(newer, contains('newer version of IPTV Player (format 3)'));
+    expect(notOurs, contains("isn't a settings file from Bijou"));
+    expect(newer, contains('newer version of Bijou (format 3)'));
     expect(newer, contains('Update this app'));
     expect(fileProblem(SettingsFileProblem.newer), isNot(contains('format')));
   });

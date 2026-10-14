@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/daos/library_dao.dart';
 import 'package:path/path.dart' as p;
@@ -10,7 +11,11 @@ import 'package:xdg_directories/xdg_directories.dart' as xdg;
 
 /// The folder inside the system's Videos folder that downloads go to by
 /// default (docs/09).
-const downloadFolderName = 'IPTV Player';
+const String downloadFolderName = appName;
+
+/// The default folder's name before the app had its own (ADR-018): where
+/// it is already, downloads go on going there, and nothing is moved.
+const earlierDownloadFolderName = 'IPTV Player';
 
 /// What the library calls the download folder (the canvas: "Downloads ·
 /// 38 videos · 42.3 GB").
@@ -77,11 +82,18 @@ String? _windowsVideos() {
 }
 
 /// Where new downloads go: the user's choice, else the system's Videos
-/// folder + `IPTV Player`.
+/// folder + `Bijou` — or + `IPTV Player` where that folder already is,
+/// so that the downloads made before the app's name stay in one place.
 Future<String> downloadFolderPath({
   String? chosen,
   Future<String> Function() videos = systemVideosFolder,
-}) async => chosen ?? p.join(await videos(), downloadFolderName);
+}) async {
+  if (chosen != null) return chosen;
+  final folder = await videos();
+  final earlier = p.join(folder, earlierDownloadFolderName);
+  if (Directory(earlier).existsSync()) return earlier;
+  return p.join(folder, downloadFolderName);
+}
 
 /// Makes [path] the library's download folder (docs/09): added the first
 /// time, and the folder the library marks as such. The folder itself is

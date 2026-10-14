@@ -116,19 +116,22 @@ final class SystemVideosProvider
 String _$systemVideosHash() => r'490029835b9a8a31c48c952e7a93f73738008568';
 
 /// Where new downloads go now (docs/09): the folder chosen in Settings,
-/// else the system's Videos folder + `IPTV Player`.
+/// else the system's Videos folder + `Bijou` (`IPTV Player` where that
+/// one is already: `downloadFolderPath`).
 
 @ProviderFor(downloadFolder)
 final downloadFolderProvider = DownloadFolderProvider._();
 
 /// Where new downloads go now (docs/09): the folder chosen in Settings,
-/// else the system's Videos folder + `IPTV Player`.
+/// else the system's Videos folder + `Bijou` (`IPTV Player` where that
+/// one is already: `downloadFolderPath`).
 
 final class DownloadFolderProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
     with $FutureModifier<String>, $FutureProvider<String> {
   /// Where new downloads go now (docs/09): the folder chosen in Settings,
-  /// else the system's Videos folder + `IPTV Player`.
+  /// else the system's Videos folder + `Bijou` (`IPTV Player` where that
+  /// one is already: `downloadFolderPath`).
   DownloadFolderProvider._()
     : super(
         from: null,

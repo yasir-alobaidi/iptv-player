@@ -8,6 +8,7 @@ import 'package:iptv_player/app/app.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/window_setup.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
@@ -95,7 +96,7 @@ Future<void> bootstrap() async {
   }
 
   final errors = ErrorReporter(log)..install();
-  log.info('bootstrap', 'Starting IPTV Player');
+  log.info('bootstrap', 'Starting $appName');
 
   final database = await _openDatabase(paths, log);
   final settings = SettingsRepository(database);

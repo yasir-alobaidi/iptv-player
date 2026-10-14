@@ -1,5 +1,5 @@
 name: iptv_player
-description: Personal IPTV player for Linux and Windows, with casting, downloads, and a local library.
+description: Bijou, a video player for your own videos, playlists and services, for Linux and Windows, with casting, downloads and a local library.
 publish_to: none
 version: 0.1.0+1
 

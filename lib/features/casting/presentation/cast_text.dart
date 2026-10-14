@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/cast/cast_relay.dart';
@@ -157,8 +158,8 @@ const castTroubleshooting = [
     'Firewall',
     'The TV fetches the stream from this computer on ports $castPortRange. '
         'On Ubuntu with ufw on: sudo ufw allow '
-        '$castRelayFirstPort:$castRelayLastPort/tcp. On Windows, allow IPTV '
-        'Player when Windows asks, or in Windows Security → Firewall → '
+        '$castRelayFirstPort:$castRelayLastPort/tcp. On Windows, allow '
+        '$appName when Windows asks, or in Windows Security → Firewall → '
         'Allow an app.',
   ),
   (

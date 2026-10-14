@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/data/cast/cast_frames.dart';
 import 'package:iptv_player/data/cast/cast_transport.dart';
@@ -106,7 +107,7 @@ final class CastChannel {
     send(destination, CastNamespace.connection, const {
       'type': 'CONNECT',
       'origin': <String, Object?>{},
-      'userAgent': 'IPTV Player',
+      'userAgent': appName,
       'senderInfo': {
         'sdkType': 2,
         'version': '1.0',

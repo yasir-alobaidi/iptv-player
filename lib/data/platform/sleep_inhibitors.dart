@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/sleep_inhibitor.dart';
 import 'package:win32/win32.dart';
@@ -78,7 +79,7 @@ final class DbusSleepInhibitor implements SleepInhibitor {
         name: 'Inhibit',
         values: [
           const DBusString('sleep:idle'),
-          const DBusString('IPTV Player'),
+          const DBusString(appName),
           DBusString(why),
           const DBusString('block'),
         ],

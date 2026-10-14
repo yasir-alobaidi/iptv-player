@@ -731,8 +731,8 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         SourceType.m3uFile => 'Playlist file',
       },
       hint: switch (_type) {
-        SourceType.xtream => 'http://line.example-provider.tv:8080',
-        SourceType.m3uUrl => 'http://lists.example-provider.tv/get.php?…',
+        SourceType.xtream => 'http://media.example.com:8080',
+        SourceType.m3uUrl => 'https://media.example.com/playlist.m3u',
         SourceType.m3uFile => 'Choose a file, or type its path',
       },
       keyboardType: _type == SourceType.m3uFile ? null : TextInputType.url,
@@ -864,20 +864,20 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     (DraftProblem.missing, SourceType.m3uUrl) => 'Enter the playlist URL.',
     (DraftProblem.missing, SourceType.m3uFile) => 'Choose a playlist file.',
     (_, SourceType.xtream) =>
-      'Enter a web address, like http://line.example.tv:8080.',
+      'Enter a web address, like http://media.example.com:8080.',
     (_, _) => 'Enter a web address that starts with http:// or https://.',
   };
 
   static String _typeTitle(SourceType type) => switch (type) {
-    SourceType.xtream => 'Xtream Codes',
-    SourceType.m3uUrl => 'M3U link',
-    SourceType.m3uFile => 'M3U file',
+    SourceType.xtream => 'Server login',
+    SourceType.m3uUrl => 'Playlist link',
+    SourceType.m3uFile => 'Playlist file',
   };
 
   static String _typeSubtitle(SourceType type) => switch (type) {
     SourceType.xtream => 'Server, username, password',
-    SourceType.m3uUrl => 'Playlist URL',
-    SourceType.m3uFile => 'From this computer',
+    SourceType.m3uUrl => 'An M3U address',
+    SourceType.m3uFile => 'M3U, from this computer',
   };
 }
 

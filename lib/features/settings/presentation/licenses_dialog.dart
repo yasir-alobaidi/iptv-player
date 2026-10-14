@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/platform/licenses.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -30,8 +31,8 @@ class _LicensesDialogState extends ConsumerState<LicensesDialog> {
     return AppDialog(
       title: 'Licences',
       subtitle: packages == null || packages.isEmpty
-          ? 'What IPTV Player is built with.'
-          : 'What IPTV Player is built with: '
+          ? 'What $appName is built with.'
+          : 'What $appName is built with: '
                 '${formatCount(packages.length)} packages, fonts and '
                 'programs.',
       width: 880,

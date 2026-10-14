@@ -68,9 +68,9 @@ class WelcomeScreen extends ConsumerWidget {
                     ),
                     SizedBox(height: spacing.s16),
                     Text(
-                      'Add the provider you already pay for. Nothing is '
-                      'uploaded anywhere; your credentials stay on this '
-                      'computer.',
+                      'Add a playlist, or sign in to a service you '
+                      'subscribe to. Nothing is uploaded anywhere; your '
+                      'passwords stay on this computer.',
                       textAlign: TextAlign.center,
                       style: tokens.text.body.copyWith(
                         color: colors.textSecondary,
