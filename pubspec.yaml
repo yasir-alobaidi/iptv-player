@@ -76,6 +76,8 @@ dev_dependencies:
   riverpod_generator: ^4.0.9
   riverpod_lint: ^3.1.9
   very_good_analysis: ^11.0.0
+  # The soak's heap snapshots after each round (IPTV_SOAK_HEAP=1).
+  vm_service: ^15.0.0
 
 # Our patched media_kit_video (media_kit #1404), rebuilt by tools/vendor_media_kit_video.sh (ADR-003).
 dependency_overrides:

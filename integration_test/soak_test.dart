@@ -41,7 +41,9 @@
 // fake TV: nothing of a real provider, no real TV.
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
@@ -75,6 +77,8 @@ import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/presentation/title_grid.dart';
 import 'package:path/path.dart' as p;
+import 'package:vm_service/vm_service.dart' as vm;
+import 'package:vm_service/vm_service_io.dart';
 
 import 'support/cast_tv.dart';
 import 'support/fake_panel.dart';
@@ -104,6 +108,9 @@ void main() {
   final roundMinutes =
       int.tryParse(environment['IPTV_SOAK_ROUND_MINUTES'] ?? '') ?? 20;
   final video = environment['IPTV_PLAYER_VIDEO'] != '0';
+  // A heap snapshot of every isolate before the first round and after
+  // each, to build/soak/heap.txt: what a round leaves behind, by class.
+  final heap = environment['IPTV_SOAK_HEAP'] == '1';
   final binaries = castBinaries();
 
   testWidgets(
@@ -199,6 +206,11 @@ void main() {
       final queue = container.listen(downloadTasksProvider, (_, _) {});
       addTearDown(queue.close);
 
+      if (heap) {
+        File('build/soak/heap.txt')
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync('');
+      }
       final csv = File('build/soak/soak.csv')
         ..parent.createSync(recursive: true)
         ..writeAsStringSync(
@@ -531,6 +543,9 @@ void main() {
           if (end.difference(now) < apart) continue;
           rounds++;
           final channel = coordinator.current ?? lineup[0];
+          if (heap && rounds == 1) {
+            await tester.runAsync(() => _heapSnapshot('before round 1'));
+          }
           await castRound();
           await downloadAndWalk();
           lastAction = 'round $rounds: playing again';
@@ -544,6 +559,9 @@ void main() {
           } else if (video &&
               !await until(pictureDrawn, const Duration(seconds: 30))) {
             trouble('the picture was not drawn again after the round');
+          }
+          if (heap) {
+            await tester.runAsync(() => _heapSnapshot('after round $rounds'));
           }
           downSince = null;
           nextAction = DateTime.now().add(_actionEvery);
@@ -647,6 +665,46 @@ Future<FakeReceiver> _startTv(String ffprobe, int? port) async {
     }
   }
   return await FakeReceiver.start(playback: playback());
+}
+
+/// Every isolate's heap after a full collection, and the main isolate's
+/// classes by the bytes they hold, appended to build/soak/heap.txt.
+Future<void> _heapSnapshot(String label) async {
+  final info = await developer.Service.getInfo();
+  final uri = info.serverWebSocketUri;
+  if (uri == null) return;
+  final service = await vmServiceConnectUri(uri.toString());
+  try {
+    final out = StringBuffer(
+      '== $label, RSS ${ProcessInfo.currentRss ~/ (1024 * 1024)} MB\n',
+    );
+    final main = developer.Service.getIsolateId(Isolate.current);
+    final machine = await service.getVM();
+    for (final isolate in machine.isolates ?? const <vm.IsolateRef>[]) {
+      final id = isolate.id;
+      if (id == null) continue;
+      final profile = await service.getAllocationProfile(id, gc: true);
+      final usage = await service.getMemoryUsage(id);
+      int mb(int? bytes) => (bytes ?? 0) ~/ (1024 * 1024);
+      out.writeln(
+        '${isolate.name}: heap ${mb(usage.heapUsage)} MB of '
+        '${mb(usage.heapCapacity)}, external ${mb(usage.externalUsage)} MB',
+      );
+      if (id != main) continue;
+      final members = [...?profile.members]
+        ..sort((a, b) => (b.bytesCurrent ?? 0).compareTo(a.bytesCurrent ?? 0));
+      for (final member in members.take(40)) {
+        out.writeln(
+          '  ${member.classRef?.name}: ${member.instancesCurrent} '
+          'instances, ${(member.bytesCurrent ?? 0) ~/ 1024} KB',
+        );
+      }
+    }
+    File('build/soak/heap.txt')
+        .writeAsStringSync('$out\n', mode: FileMode.append);
+  } finally {
+    await service.dispose();
+  }
 }
 
 /// This process's CPU time so far, in clock ticks (100 a second on
