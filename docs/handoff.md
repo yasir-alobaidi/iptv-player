@@ -1,196 +1,178 @@
-# Handoff — 2026-10-13, second session (Phase 9: steps 1–6 built; step 7, the audit, part done)
+# Handoff — 2026-10-13, third session (the player rebuilt, every window size, Phase 9 steps 7–9, the first real TV, a cast bug the soak found)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md,
-**docs/plans/phase-9-settings-diagnostics-polish.md** (steps 7–9, decisions
-14–16), **ADR-016 in docs/decisions.md** (a section per step; "The audit"
-says what step 7 has and what is left of it), docs/05-design-system.md (the
-text-size rule's "What grows, as built") and docs/06-quality.md (the Audit
-row, the budgets, the soak).
+it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-016 and
+ADR-017 in docs/decisions.md** (ADR-016: "The audit" has the table of
+screens by state; "Performance in profile mode" and "The soak plays the
+whole app" are this session's steps 8 and 9; "The exit" says which of the
+phase's criteria are met; ADR-017 is the player's controls and the window
+sizes; ADR-014's last section is the first run on a real TV),
+docs/05-design-system.md (§4 the player as rebuilt, "Every window size"
+under App shell, the Tab rules under Focus system) and docs/06-quality.md
+(the budgets, the soak as it runs now).
 
 ## Before you start the next session (user)
-1. **Push** the local commits when you like: 2c4910a (CI fixes), 29fbbff
-   (step 6), 3594b38 and b19bcc7 (step 7, parts 1 and 2) and the docs
-   commit after them.
-2. **CI was red at 97155cc** (run 38365432183), on both systems, **in
-   tests, not in the app**; both are fixed in 2c4910a:
-   - Windows: the notifier's D-Bus tests ran there and timed out (13).
-     They are Linux only now.
-   - Linux: one relay test expected nobody on a port it had just freed.
-   Nothing after the test step ran, so **this push is still the first to
-   build Windows with the notification package** (flutter_local_
-   notifications): if the Windows **Build** step fails, that package is
-   the likely cause, and a build's log needs your rights to read.
-3. **One real reminder, about five minutes at the laptop** (step 6's last
-   item; nothing has been shown on your desktop yet): set one a minute
-   ahead from the app, cover its window, click the notification's text one
-   time and its Watch button another, and say what the window did.
-4. **Steps 8 and 9 take your display** for a few minutes at a time
-   (profile runs) and for an hour (the soak's new mix); the session asks
-   first.
-5. **The Google TV version: start TV-0 when Phase 9 is done, before Phase
-   10** (this session's recommendation, as you asked). Phase 10 waits on
-   your Windows PC and the app's name and icon; TV-0 waits on nothing of
-   ours. What it needs from you, any time before: the Android SDK, JDK 17
-   and `adb` on the laptop (none is installed), Developer options and USB
-   debugging on the TV, and the laptop and the TV on one network (the
-   laptop is on 192.168.26.x, the TV was on 192.168.1.x).
-6. **What this session decided for you** (say if you want any otherwise):
-   - The bell icon is drawn here (the canvas has none); "Remind me" in
-     search is the canvas's words.
-   - The search footer says what Ctrl+R does while the cursor is on an
-     upcoming programme.
-   - The programme sheet is 640 px wide (was 520) so its three buttons
-     share a line.
-   - Settings → Guide's Reminders row is one line.
-   - **The nav rail's items stay 48 px at every text size** (ten must fit
-     the smallest window); everything else that holds text grows.
-   - At 130 % in the smallest window Settings' list of sections scrolls.
+1. **Push** the local commits when you like (`git log origin/main..HEAD`
+   lists them; the first is e039738, CI's fix).
+2. **CI was red at 38b501b** (run 38379155096) **on Linux only, in one
+   integration test** (`library_cast_walk`), fixed in e039738. **Windows
+   was green end to end,** so the notification package builds there.
+3. **A bug you may have met is fixed: after casting, the next thing you
+   played could open no player** (sound, no picture, the casting view
+   instead). It happened when the cast was started from a player opened
+   anywhere but Live TV. The new soak found it.
+4. **One real reminder is still owed** (you chose to leave the second try).
+   It is quick now: `flutter test integration_test/manual/real_reminder.dart
+   -d linux` opens the app on the fake provider; click another window to
+   cover it, and 15 seconds later a notification appears. Click its text
+   the first time and its Watch button the second, and say what the window
+   did. The first try showed nothing on the desktop because both reminders
+   came due while the app was in front (they were in-app messages, as
+   designed).
+5. **The Bedroom TV plays** (192.168.1.231; the short check, after a bug
+   that would have stopped every cast was fixed). **The full matrix on a
+   real TV has still never run** (about 30 minutes of test patterns on the
+   TV; you chose the short check only). Say when you want it.
+6. **The Living Room TV was never contacted** and must not be until you
+   say it is free. The two real-TV tools no longer have its address as
+   their default.
+7. **What this session decided for you** (say if you want any otherwise):
+   - **The player:** Netflix's arrangement with larger controls; words on
+     Audio and Subtitles only (a word under every icon doesn't fit the
+     smallest window); + and − for the volume everywhere, ↑ ↓ for it only
+     while a file plays (on a channel they zap); the mouse wheel is the
+     volume; a click on the picture pauses a file but does nothing to a
+     channel; Speed 0.5× to 2×, back to 1× when the player closes.
+   - **Wide windows:** pages of rows and forms stop at 1336 px, at the
+     left (not centred: a page whose tabs differ would jump sideways);
+     onboarding pages are centred; Home shows more cards rather than
+     larger ones; Live TV's preview grows and its list stops at 900 px.
+   - **Tab goes round the whole window** (nav rail, top bar, screen), from
+     a list as from any control; a list is entered where it was left.
+   - **Offline** is one banner under the top bar of every screen (it was
+     Home's only).
+   - **Favorites' drag keeps Flutter's gap** instead of the canvas's
+     accent line (all four draggable lists share it).
+   - **The Guide's PageUp and PageDown glide** a screen instead of jumping
+     (a jump with reduce motion).
+   - **The canvas's player artboard is out of date:** the app is the
+     reference for the player until it is redrawn.
+8. **Phase 9's exit, as it stands** (ADR-016, "The exit"): all nine steps built and run; ADR-016 is accepted with what the
+   exit did not meet written down: **the 8-hour soak (your choice), with
+   the hour's memory 10 MB over its 50 MB budget** (every cast, download,
+   walk and fault was clean; heap snapshots show the app's own memory
+   levelling off, the rest rising and falling); **a frame or two over
+   budget** on a few jumps and the fastest scrolls (everything at a
+   person's pace is within budget); **loading and most error states not
+   drawn by the audit**; **one real reminder not yet seen.** Whether
+   these close Phase 9 is yours to say.
+9. **The Google TV version: start TV-0 when Phase 9 is done, before Phase
+   10** (unchanged). It still needs from you: the Android SDK, JDK 17 and
+   `adb` on the laptop, Developer options and USB debugging on the TV.
+   The laptop and the TVs are on one network now (192.168.1.x).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-docs/plans/phase-9-settings-diagnostics-polish.md (steps 7–9), ADR-016 in docs/decisions.md
-(its section "The audit"), docs/05-design-system.md and docs/06-quality.md first. Check CI on
-the last push and fix what it names. Then finish Phase 9 step 7 (the audit: the scenes for the
-states no golden draws, the loose ends, Offline from the network status, the 130 % goldens and
-walks, the table), and go on to steps 8 and 9 without the 8-hour soak.
-<I am at the laptop for the real reminder | I am not: leave the real reminder for later>
+ADR-016 and ADR-017 in docs/decisions.md, docs/05-design-system.md and docs/06-quality.md
+first. Check CI on the last push and fix what it names. Then: what the handoff lists
+under "What is left of Phase 9", and after it <TV-0 of the Google TV version | Phase 10>.
+<I am at the laptop for the real reminder | I am not: leave it for later>
+<You may use the Bedroom TV for the full matrix after asking | Don't use any TV>
 ```
 
 ## Where things stand
 - **Phases 7 and 8: accepted 2026-10-13 without the TV sitting** (ADR-014,
-  ADR-015). Open, for when the TV is reachable: `test/tools/cast_tv_test.dart`
-  and `test/tools/cast_matrix_tv_test.dart` (rows 1–23), after asking.
-- **Phase 9: steps 1–6 built; step 7 part done; steps 8 and 9 left.**
-  ADR-016 is Proposed and has a section per step.
-- **Checks at this session's end:** see "The session's end, as run" below.
-- **Schema is v10**; no new dependency this session.
-- **The test suite is 4,192 tests** (19 skipped), about 4 minutes: 364 of
-  them are the audit (every golden in seven looks), 30 s.
+  ADR-015). **A real TV has now been used once:** the Bedroom TV plays a
+  file sent directly (ADR-014, "The first run on a real TV"). Still open:
+  `test/tools/cast_matrix_tv_test.dart` rows 1–23 on a real TV.
+- **Phase 9: all nine steps built and run.** ADR-016's "The exit" lists what is
+  not met: the night's soak (the user's choice) with the hour's memory 10 MB
+  over, a few frame-budget misses on jumps, the audit's undrawn loading
+  and error states, the real reminder.
+- **ADR-016 is Accepted (2026-10-14, with "The exit")** (a section per step, and "The exit");
+  **ADR-017 is Accepted** (the player and the window sizes, by the user's
+  request).
+- **Schema is v10**; no new dependency this session. One new settings key:
+  `player.sound` (the volume and mute).
+- **The test suite is about 4,860 tests** (20 skipped), 4½ minutes: 55
+  goldens and 26 scenes, each audited in twelve looks.
 
 ## What is left of Phase 9
-**Step 6 — one thing:** the real reminder on the user's desktop (above).
-Everything else of it is built and tested; `integration_test/
-reminder_walk_test.dart` is its walk.
+Nothing to build. What the exit did not meet (ADR-016, "The exit"):
+1. **The night's soak**, if the user wants it: `tools/soak/run.sh 480` on
+   the real display, under `gnome-session-inhibit --inhibit idle`. It
+   would settle whether the hour's 60 MB levels off. If it shows a
+   slope, start from `IPTV_SOAK_HEAP=1` and the slow drifts ADR-016
+   names (the guide's programmes, `DateTime`, `ProviderMeta`).
+2. **The frame-budget misses** (docs/progress.md, Known issues): the
+   Guide's Home (2 of 56 frames, 43.6 ms) and sideways moves (a frame or
+   two, ≤ 21 ms), the poster grid's fastest flings (7 of 11,900) and its
+   End and Home (one frame each), one frame while ↓ is held in the
+   channel list (37 ms). All are a jump or the fastest scroll. The
+   Guide's Home could jump instead of gliding through hours (one heavy
+   frame instead of two); the rest needs the timeline first.
+3. **The audit's undrawn states:** loading states and most error states
+   (`test/audit/states_audit_test.dart` is the model; a loading scene
+   needs a fake that doesn't answer), and the four walks with no
+   `WALK_TEXT` switch (Live TV's, the Guide's two, the sources').
+4. **The real reminder** on the user's desktop.
+5. **The walks don't see the picture** (a fixed test-window size stops it
+   being drawn). Finding why would let them check it.
 
-**Step 7 — The audit** (decision 14). In place: the harness, every golden
-as a scene, and two sweeps (ADR-016 "The audit" lists what was found).
-**Left, in the order I would take it:**
-1. **The single-line clip check.** `_clippedText` in
-   `test/audit/audit_harness.dart` compares the laid-out width, which a
-   clipped single line never exceeds: compare
-   `paragraph.getMaxIntrinsicWidth(double.infinity)` with the box for a
-   one-line `TextOverflow.clip`. Expect the Guide's channel numbers at
-   130 % (`AppGuideTokens.channelNumberWidth`, 26 px) and narrow cells'
-   times; some will be meant (a cell sliding under the edge) and get an
-   `allow`.
-2. **Scenes for what no golden draws**, as `auditScreen` scenes
-   (`test/audit/guide_audit_test.dart` is the model: a fixture, `pumpApp`,
-   a state): each screen's loading, empty, error and offline states, and
-   the screens with no golden — a movie's and a series' page, Connect,
-   Sync, Settings → Casting, the Match picker, the cast picker's states,
-   Favorites' and Home's empty states, Live TV with no channels. The
-   widget tests of each screen already build these states: lift their
-   setups. Then **the table of screens by state** into ADR-016.
-3. **Decision 14's loose ends**, all still open:
-   - Tab on a two-column details page passes Play;
-   - the provider's Series page swaps its season when a mark moves
-     Continue;
-   - Live TV's categories pane forgets the chosen category when Tab comes
-     round — and Shift+Tab into any one-stop list lands at its near end
-     (`FocusPane(tabStop: true)`; a `FocusPaneController` remembers the
-     last item, nobody calls `focusLast()` on the way in);
-   - the Guide's "Offline" reads its last failure, not
-     `networkStatusProvider`; then **every screen that needs the network
-     says Offline from it**;
-   - a subtitle the TV refuses says nothing;
-   - Favorites' drag draws Flutter's gap, not the canvas's accent line.
-4. **Goldens at 130 %** for the screens with the most text (Live TV, the
-   Guide, a details page, Search, the Library), each looked at; and **the
-   keyboard walks at 130 %** under Xvfb (the walks take the app's
-   container: override `appearanceStoreProvider` in `PanelApp.open`'s
-   `overrides`).
-
-**Step 8 — Performance in profile mode** (decision 16): unchanged from the
-plan. Say before each run on the display.
-
-**Step 9 — The exit, without the night's soak:** extend the soak's mix
-(cast to the fake TV, a download, a walk of the Guide, Movies and Search
-about every 20 minutes), run it for an hour after asking, then the docs
-and ADR-016 Accepted, **with "8-hour soak" written as unmet by the user's
-choice** in the ADR and in docs/progress.md.
-
-## Done this session (2026-10-13, the second)
-- **CI's failures after the push of steps 1–5** (2c4910a): the notifier's
-  bus tests are `@TestOn('linux')`; the relay test accepts a 404 from
-  whoever took the freed port; `tools/ci/failed_tests.dart` names every
-  failed test in one annotation when ten or more fail (GitHub shows ten).
-- **Step 6, reminders on screen** (29fbbff): ADR-016 "Reminders on
-  screen".
-- **Step 7, part 1** (3594b38): the audit harness; loading placeholders
-  (`SkeletonColumn`), the Guide's rows, poster captions, search's rows,
-  the cast preview card, the channel row's progress bar, the casting
-  view's focus node.
-- **Step 7, part 2** (b19bcc7): every other fixed height that held text.
+## Done this session (2026-10-13, the third)
+- **CI** (e039738): `library_cast_walk` takes a short film's MP4 being
+  whole before the first seek.
+- **The player's controls** (f93bcfe, ADR-017) and **every window size**
+  (f932187, ADR-017).
+- **Step 7:** the clip check and the Guide's channel numbers (7008083);
+  pictures at 130 % (bd2874b); the loose ends (4349b5b); Offline and the
+  scenes (797fac0); the walks at 130 % and the casting view's row
+  (542ed18).
+- **Cast: this computer's address** (aed5e53): the first run on a real TV
+  found that no cast through the app could have played.
+- **Tools** (c8ce752): `WALK_TEXT`, `integration_test/manual/
+  real_reminder.dart`.
+- **Step 8** (8299aaa): every row of docs/06's table measured again;
+  three new measurements (`channel_list_scroll_test`,
+  `idle_memory_benchmark_test`, `playback_cpu_test`); the Guide's page
+  glides.
+- **Step 9** (c0889b4; the fix 87b25af; the heap snapshots and the docs in the last commit): the soak plays the whole app; the cast bug it
+  found, fixed (`currentThenChanges`).
 
 ## The session's end, as run
-At b19bcc7, all green:
-- `flutter analyze`; `dart format --set-exit-if-changed lib test
-  integration_test tools`; `build_runner` leaves no diff.
-- `TZ=UTC flutter test`: **4,192 passed**, 19 skipped, 4 min.
-- The fake panel's own suite (`tools/fake_provider`): 146. The fake TV's
-  (`tools/fake_receiver`): 41. (Neither was run the session before.)
-- Integration, each its own run under Xvfb (X11) with a picture:
-  `app_launch` (29 s), `live_tv_keyboard` (48 s), `sources_keyboard`
-  (78 s), `search_keyboard` (54 s), `guide_keyboard` (43 s),
-  `guide_settings_keyboard` (49 s), `favorites_walk` (57 s),
-  `library_walk` (60 s), `vod_walk` (75 s), `cast_walk` (70 s),
-  `reminder_walk` (47 s).
-- **Not run this session:** `guide_watch` after step 7 (it passed after
-  step 6), `hiding_walk`, `home_continue`, `large_sync`,
-  `library_cast_walk`, `library_playback`, `library_scan`,
-  `playback_faults`, `player_engine`, `player_engine_vod`, `vod_player`,
-  the scroll and typing measurements, the soak, and the real-provider
-  files (never without the user's yes). CI runs all but the last group.
-- **Not run as CI runs them:** with FFmpeg 4.4 and CI's short samples
-  (nothing that runs FFmpeg changed this session).
+- **CI:** not checked again this session after the start (the user
+  hasn't pushed since 38b501b).
+- **Step 8 on the real display** (profile mode, one at a time): zap,
+  Guide scroll (three runs), poster grid, search typing, cold start,
+  channel list, idle memory, the player's processor use (twice: the
+  first measured nothing), then sync, the guide's import, search and the
+  library scan with no window. Numbers in docs/progress.md.
+- **The soak:** an 8-minute trial under Xvfb (its own mistakes), a
+  rehearsal on the display (found the cast bug), the probes under Xvfb,
+  the fix, **the hour on the display** (memory 10 MB over, everything
+  else clean), and **a 30-minute run with heap snapshots** under Xvfb
+  (passed).
+- **Checks:** analyze clean; format clean; `build_runner` with no diff;
+  **4,860 app tests under `TZ=UTC`** (20 skipped; the last full run after
+  the fix and before the soak's heap switch, which only touches the
+  soak); all 21 integration walks under Xvfb with a picture, and
+  `guide_scroll`, `channel_list_scroll` and `playback_cpu` as CI runs
+  them; the fake provider's suite (146) and the fake TV's (41).
+- **Not run this session:** the full casting matrix on a real TV (not
+  approved), the real reminder (the user chose later), the night's soak
+  (the user's choice).
 
 ## What's next
-1. **Whatever CI names after the push.**
-2. **Phase 9 step 7, the rest** (above), then 8 and 9.
+1. **Whatever CI names after the push.** New for CI in this push:
+   `channel_list_scroll_test` runs there (debug, Xvfb, like the other two
+   scroll measurements); `playback_cpu_test` and the soak skip.
+2. **What is left of Phase 9** (above).
 3. **The real reminder,** when the user is at the laptop.
-4. **TV-0,** once Phase 9 is done and the user has installed what it needs.
-
-## The road to v1 (what is still needed to go live)
-Desktop v1 is Linux and Windows. The Google TV app follows it (docs/07);
-its first step (TV-0) doesn't depend on Phase 10.
-- **CI green on both systems:** red at 97155cc in tests, fixed locally;
-  Phase 9's Windows build has still not been seen. Keep to `p.join` for
-  every path a test expects, and don't tie a test to the samples' length
-  (CI's are 30 s live and 2 minutes VOD). **A test that needs a session
-  bus is Linux only.**
-- **Phases 7 and 8:** accepted. Open only: the matrices on the real TV.
-- **Phase 9:** steps 1–6 built (one real reminder owed); the audit part
-  done; left: the rest of the audit, every docs/06 budget in profile mode,
-  the 1-hour soak of the new mix. The 8-hour soak is dropped by the user's
-  choice.
-- **Phase 10 — Packaging:** a Windows installer bundling libmpv and FFmpeg
-  (MSIX vs Inno Setup: recommend, then build; it also registers the app
-  id the Windows notifications use); a Linux AppImage tested on clean
-  Ubuntu 22.04 and 24.04 VMs (with the bundled libva); **what the
-  installers carry of FFmpeg's and mpv's licences** (the texts are in
-  `assets/licenses/` already); semantic versioning, CHANGELOG.md,
-  docs/release.md, a final regression, and the tag v1.0.0.
-- **Only the user can unblock:** the Windows PC (playback, hardware
-  decoding and its Off, the relay, sleep inhibition, the notification,
-  the diagnostics' graphics cards have never run on real Windows; ADR-007's
-  GO covers Linux only); the app's name and icon; access to their TV;
-  permission for each real-provider stream; five minutes at the laptop
-  for the real reminder; the Android tools for TV-0.
-
+4. **The matrix on the Bedroom TV,** after asking.
+5. **TV-0,** once the user has installed what it needs; or Phase 10.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -199,9 +181,11 @@ its first step (TV-0) doesn't depend on Phase 10.
     reminder asks for one.
   - **Before playing from the user's real provider**, show a pop-up and
     wait for a yes: the plan allows one connection.
-  - **Before casting to the Living Room TV**, ask, unless allowed this
-    session. The TV is off the network for now: wait for the user to say
-    it's back.
+  - **Before anything is sent to a TV, ask with a pop-up and wait,** every
+    time. **The Living Room TV (192.168.1.155) is off limits until the
+    user says it is free;** the Bedroom TV (192.168.1.231) may be used
+    after asking. Always pass `CAST_HOST=<address>`; confirm which address
+    is which first (`avahi-browse -rtp _googlecast._tcp`).
   - **Decide UX yourself**: pick the option with the best experience and
     record it; don't ask.
   - Read CI with `curl` on the public Actions API (no `gh`).
@@ -282,7 +266,74 @@ its first step (TV-0) doesn't depend on Phase 10.
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
-- **Lessons of this session (Phase 9 steps 6–7):**
+- **Lessons of this session (the player, the windows, step 7's rest, the
+  first real TV):**
+  - **A fake on this computer's own address can't show which address is
+    whose.** The Cast client took `Socket.address` for the local address;
+    in dart:io it is the address the socket was connected **to**. The fake
+    TV is on 127.0.0.1, so every cast test passed for three phases, and
+    the first real TV showed that none could have played. When a fake
+    stands in for another machine, list what only another machine can
+    show, and say so in the phase's exit.
+  - **A tool that touches a shared device must not have that device as
+    its default,** and must undo what it did whatever fails: `cast_tv_test`
+    threw before its `try` and left the receiver open on the TV.
+  - **`pkill -f <pattern>` kills the shell that runs it** when the pattern
+    is in its own command line. Kill by PID.
+  - **A measurement of nothing passes.** The player's processor use first
+    read 6.5 % of a core: nothing was being drawn. The channel list's
+    End and Home read 0.3 ms: the list has neither key. The Guide's
+    PageDown number had the Home press in it. **Every measurement checks
+    that the thing measured happened** (the picture at the stream's size,
+    the list moved), and one number is one action.
+  - **A test window with a fixed size never draws the player's picture**
+    (`tester.view.physicalSize`, as every whole-app walk sets it). The
+    texture stays 1 × 1 and mpv drops every frame. The app is fine
+    (`integration_test/manual/picture_probe.dart` shows both). So the
+    walks prove Playing, not a picture; the soak and `playback_cpu_test`
+    use the window as it is. Why the fixed size does it: not looked into.
+  - **A state stream forwarded as it is replays its past** to the next
+    screen that watches (Riverpod pauses a provider nobody watches).
+    That was the cast bug the soak found; `currentThenChanges` is the
+    rule now (CLAUDE.md, docs/01). **Still forwarded as they are, and
+    harmless only because the last value is all that matters:** the
+    download queue's list, the player's size and tracks, drift's watch
+    streams. A long pause with many changes replays them all in one go.
+  - **A regression test must fail without the fix.** The first test for
+    the cast bug passed on the old code: its fake cast changed state
+    once, the real one keeps changing. Stash the fix and run the test
+    before believing it.
+  - **Run the thing the way a person meets it, for long enough.** Three
+    phases of cast tests never played anything after a cast. The soak's
+    second act did, in its first eight minutes.
+  - **Riverpod's listeners are told on the provider's word:** before
+    acting on a state that starts something (a hand-over, a navigation),
+    ask the object that owns the state as well.
+  - **The audit's checks pass on screens that look wrong.** A row that
+    stretches, a name cut with "…", a word broken in two: none is an
+    overflow. `AUDIT_SHOTS=<folder>` draws every scene in every look; make
+    contact sheets (PIL) and look. This session's real findings all came
+    from looking: Live TV's names, Home's cards, the Guide's column, the
+    Series page's titles.
+  - **A new scene or a walk at 130 % finds what the old ones couldn't:**
+    the Series page's overflow (no scene had it), the casting view's row
+    with subtitles (no scene had a film with subtitles).
+  - **A timed step that needs the user must wait for the user, not for a
+    clock:** the first reminder run counted from the launch and both
+    reminders came due while the window was in front.
+  - **A golden with `sceneTest(large:)` is a second picture at 130 %;**
+    `AuditLook` windows are in `test/audit/audit_look.dart`.
+  - **A `PageMeasure` must stay in the tree on every tab** (pass
+    `double.infinity` for a grid): wrapping one tab's body in it rebuilds
+    the page and drops the focus.
+  - **Tab in a one-stop list:** `FocusPane._leave` puts the focus on the
+    pane's edge item for a moment so that Flutter's own `next` / `previous`
+    walk on from there; the scope's focused child moves at once, the
+    primary focus only once. An item removed in the same frame still has
+    its focus node: ask nothing of its element (`_rectOf`).
+  - **Don't run `flutter analyze` or anything heavy while a profile-mode
+    measurement runs on the display:** it is the thing being measured.
+- **Lessons of the session before (Phase 9 steps 6–7):**
   - **A failing widget test whose screens still watch the database waits
     out its whole timeout** on the fixture's close. The audit pumps an
     empty widget before it fails (`auditRun`); a failing golden comparison
@@ -351,7 +402,84 @@ its first step (TV-0) doesn't depend on Phase 10.
 
 
 ## Codebase notes by area
-New this session (Phase 9 steps 6–7):
+New this session (steps 8 and 9):
+- **State providers:** `lib/core/streams/current_state_stream.dart`
+  (`currentThenChanges(() => x.state, x.states)`) under
+  `playbackStateProvider`, `castingStateProvider`, `castTimelineProvider`
+  and `libraryScanStateProvider`. A new coordinator's provider is built
+  the same way. `PlayerScreen` hands over to the casting view only when
+  `_coordinator.casting` agrees with the provider.
+- **The measurements on the display** (profile mode, one at a time, the
+  window in front, nothing else running — not even the analyzer):
+  `flutter drive --profile -d linux --driver=test_driver/integration_test.dart
+  --target=integration_test/<name>_test.dart` for `guide_scroll` (flings,
+  wheel down, wheel sideways, →, PageDown, Home, each its own number),
+  `poster_grid_scroll`, `channel_list_scroll` (a stand-in player that
+  "plays" at once; its first frame goes out in a microtask, because the
+  fake engine's events don't nest), `search_typing`, `playback_cpu`
+  (no fixed window size; `PLAYBACK_CPU_SECONDS`). The numbers print and
+  go to `build/integration_response_data.json`. **`flutter drive
+  --profile` leaves the test's app in `build/linux/x64/profile/bundle`:**
+  run `flutter build linux --profile` again before
+  `cold_start_benchmark_test` or `idle_memory_benchmark_test`
+  (`IDLE_MINUTES`, default 10).
+- **The soak** (`integration_test/soak_test.dart`, `tools/soak/run.sh
+  [minutes]`): `PanelApp.open(panel, video:, maxConnections: 1,
+  overrides: [...castOverrides, ...downloadShellOverrides, …])`, then
+  what `bootstrap()` does after launch (the download folder registered,
+  the queue started, the cast's toasts). `tick()` is a quarter second of
+  the app plus the minute's row; `until(done, limit)` and `hold(time)`
+  wait through it, so a round's waits are sampled too. `castRound()`,
+  `downloadAndWalk()`, `pictureDrawn()`, `trouble(what)`.
+  `IPTV_SOAK_ROUND_MINUTES=3` with `IPTV_SOAK_MINUTES=8` is the
+  rehearsal (two rounds; memory not judged under 26 minutes). On the
+  display run it under `gnome-session-inhibit --inhibit idle`.
+  `build/soak/soak.csv` has a row a minute, `summary.txt` the line.
+- **Probes kept as tools** (`integration_test/manual/`, run by hand, not
+  by CI): `picture_probe.dart` (`PROBE_LATE`, `PROBE_SIZE`: is the
+  picture drawn), `picture_probe_app.dart` (`PROBE=stop|leave|cast`: is
+  it drawn again, and what the player is told as it opens),
+  `real_reminder.dart`.
+- **The Guide's page** (`_page` in `guide_grid.dart`): `_pageTarget` is
+  where a glide is going, so a second page starts from there; cleared
+  when the glide ends or something else scrolls.
+
+Earlier this session (the player, the windows, step 7's rest):
+- **The player's OSD:** `lib/design/components/osd_controls.dart`
+  (`OsdButton`, `OsdVolume`, `OsdControlRow` — which decides when Audio and
+  Subtitles carry words — `OsdCenterPlay`, `OsdScale`), `tokens.player`
+  (`AppPlayerTokens`: sizes, `scaleFor(window)`), `AppSlider(overVideo:)`.
+  `lib/features/playback/presentation/player_overlays.dart` (`OsdShade`,
+  `OsdBack`, `OsdTop`, `OsdBottom(leading:, trailing:)`), `vod_osd.dart`,
+  `player_screen.dart` (`_controls`, `_channelControls`, `_volume`, the
+  menus), `player_sound.dart` (`playerSoundControllerProvider`; the level
+  is kept in `UiPreferences.playerSound`, key `player.sound`).
+  `PlayerSurface(onPictureTap:, onPictureDoubleTap:)` hears the picture's
+  clicks under whatever is laid over it. `PlayerEngine.setSpeed`.
+- **Window sizes:** `tokens.layout` (`AppLayoutTokens`: `pageMeasure`,
+  Home's card widths and `across` / `cardWidth`, Live TV's panes),
+  `PageMeasure` (`lib/design/components/page_measure.dart`),
+  `live_tv_screen.dart`'s `_panes`, `tokens.details.seriesColumnFor`,
+  `guideChannelColumnWidth(context)`.
+- **Offline:** `appOfflineProvider` (`lib/core/platform/
+  network_status.dart`); the shell's `_OfflineBar`; `guideStaleLine(…,
+  offline:)`.
+- **Tab:** `lib/design/focus/focus_pane.dart` (`_leave`, `_remembered`,
+  `_onFocusChanged`'s redirect while Tab is held).
+- **Cast:** `pickLocalAddress` in `lib/data/cast/cast_transport.dart`;
+  `CastSubtitleRefused` (a notice).
+- **The audit:** `test/audit/states_audit_test.dart` (scenes with no
+  picture), `AUDIT_SHOTS`, `sceneTest(large:)`, twelve looks.
+- **Tests' support:** `test/features/playback/support/vod_player_rig.dart`
+  (`VodPlayerRig`: a movie or an episode in the player), `WALK_TEXT=130`
+  in `integration_test/support/panel_app.dart`,
+  `integration_test/manual/` (by-hand runs, not CI's).
+- **Measurements:** `integration_test/channel_list_scroll_test.dart`
+  (new), beside `guide_scroll_test`, `poster_grid_scroll_test`,
+  `search_typing_test` (all `flutter drive --profile` on the real
+  display).
+
+From the session before (Phase 9 steps 6–7):
 - **Reminders on screen:** `lib/features/reminders/presentation/` —
   `reminder_actions.dart` (`toggleReminder`, `removeReminder`,
   `reminderFor`, `showReminderInGuide`, `reminderChannel`; all take the
