@@ -85,6 +85,10 @@ void main() {
         castNoticeText(const CastStoppedOnDevice('Bedroom')),
         'Stopped on Bedroom',
       );
+      expect(
+        castNoticeText(const CastSubtitleRefused('Bedroom')),
+        "Bedroom couldn't show those subtitles",
+      );
     });
 
     test("the cast's notices become the app's toasts", () async {

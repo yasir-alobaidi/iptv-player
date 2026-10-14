@@ -252,8 +252,21 @@ void main() {
       isNull,
       reason: "a row's Rename is not a stop",
     );
+    // Nothing of the page comes after the list: Tab goes on round the
+    // window, to the nav rail, as it does from any last control.
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<FocusableSurface>()
+          ?.semanticLabel,
+      'Home',
+    );
 
-    expect(focusIsOn(tester, find.text('Sources').first), isTrue);
+    // Back into the list: where it was left, not at its far end.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(focusIsOn(tester, find.text('UK | News')), isTrue);
   });
 
   testWidgets("the menu key: a row's Rename…, Move up and Move down", (

@@ -125,6 +125,8 @@ void castNoticeToasts(Ref ref) {
 String castNoticeText(CastNotice notice) => switch (notice) {
   CastSessionClosed() => castClosedText(notice),
   CastStoppedOnDevice(:final deviceName) => 'Stopped on $deviceName',
+  CastSubtitleRefused(:final deviceName) =>
+    "$deviceName couldn't show those subtitles",
   CastPlanChanged(:final deviceName, :final before, :final after) =>
     castPlanChangedText(before, after, deviceName),
 };

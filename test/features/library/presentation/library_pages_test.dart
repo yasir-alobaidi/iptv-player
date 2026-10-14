@@ -375,8 +375,12 @@ void main() {
       await tester.pump();
       expect(focusedLabel(), 'S1 · E2, Ledger');
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
+      // Out of the page's last stop Tab goes round the window (the nav
+      // rail), then down the page again from its top.
+      for (var i = 0; i < 24 && focusedLabel() != 'Back to Library'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
       expect(focusedLabel(), 'Back to Library');
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
@@ -388,11 +392,20 @@ void main() {
       await tester.pump();
       expect(focusedLabel(), 'Season 1');
 
-      // Play is beside the list: ← from an episode, → past Cast back to
-      // it.
+      // Tab comes back to Play (it used to pass it for good), then Cast,
+      // then the episodes — on the one they were left on.
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
-      expect(focusedLabel(), startsWith('S1 · E'));
+      expect(focusedLabel(), 'Play S1 · E1');
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(focusedLabel(), 'Cast');
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(focusedLabel(), 'S1 · E2, Ledger');
+
+      // Play is beside the list: ← from an episode, → past Cast back to
+      // it.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
       expect(focusedLabel(), 'Play S1 · E1');

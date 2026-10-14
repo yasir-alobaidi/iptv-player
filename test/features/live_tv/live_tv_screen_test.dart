@@ -361,7 +361,8 @@ void main() {
   });
 
   testWidgets('Tab goes round the screen: the categories, Manage, the '
-      'filter, the sort, the list', (tester) async {
+      "filter, the sort, the list, the preview's buttons, and comes back "
+      'to the category it left', (tester) async {
     await pump(tester);
     String? stop() {
       final focused = FocusManager.instance.primaryFocus?.context;
@@ -380,21 +381,27 @@ void main() {
     Focus.of(tester.element(find.text('Sports').first)).requestFocus();
     await tester.pump();
     final stops = <String?>[];
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 5; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
       stops.add(stop());
     }
 
-    expect(stops, [
-      'Manage',
-      'filter',
-      'No.',
-      'A–Z',
-      'row Arena Sports 1',
-      // Back into the categories pane, on its first item.
-      'Favorites, 0',
-    ]);
+    expect(stops, ['Manage', 'filter', 'No.', 'A–Z', 'row Arena Sports 1']);
+
+    // On to the preview's buttons, round the window (the nav rail, the
+    // top bar), and back into the categories: on Sports, where they were
+    // left, not on their first item.
+    final round = <String?>[];
+    for (var i = 0; i < 30 && round.lastOrNull != 'Sports, 3'; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      round.add(stop());
+    }
+    expect(round.take(2), ['Watch full screen', 'Add to favorites']);
+    expect(round, contains('Home'));
+    expect(round.last, 'Sports, 3');
+    expect(round, isNot(contains('Favorites, 0')));
     await _finish(tester);
   });
 

@@ -509,9 +509,10 @@ void main() {
       expect(focusedLabelOf(tester), rowLabel(courtside));
       await _key(tester, LogicalKeyboardKey.tab);
       expect(_focusedButton(), 'Close');
-      // Back into the list, at its near end.
+      // Back into the list, where it was left (it used to land on the
+      // row nearest Close).
       await _shiftTab(tester);
-      expect(focusedLabelOf(tester), rowLabel(weekend));
+      expect(focusedLabelOf(tester), rowLabel(courtside));
       // Nothing else to stop at: Tab comes round to Close again.
       await _key(tester, LogicalKeyboardKey.tab);
       expect(_focusedButton(), 'Close');

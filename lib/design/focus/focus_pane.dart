@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Remembers which item a [FocusPane] last had focused, so Left/Right
 /// between panes returns to where the user was (docs/05). The shell holds
@@ -91,9 +92,11 @@ class FocusPane extends StatefulWidget {
   final Widget child;
 
   /// Makes the pane one Tab stop, for lists that can be hundreds of items
-  /// long (a provider's categories): arrows move inside it, Tab leaves it
-  /// for the nearest control below, Shift+Tab for the nearest above
-  /// (docs/05, "each pane is a group").
+  /// long (a provider's categories): arrows move inside it, and Tab and
+  /// Shift+Tab leave it for the stop after and before it in the screen's
+  /// own order, as if the whole pane were one control (docs/05, "each
+  /// pane is a group"). Tab into it lands on the item it was left from,
+  /// or on its first.
   final bool tabStop;
 
   /// Supply one to move focus back into this pane later (step 4's
@@ -143,35 +146,76 @@ class _FocusPaneState extends State<FocusPane> {
     super.dispose();
   }
 
-  void _onFocusChanged() {
-    final controller = widget.controller;
-    if (controller == null) return;
-    final focused = FocusManager.instance.primaryFocus;
-    if (focused == null) return;
-    if (focused.ancestors.contains(_marker)) controller._remember(focused);
+  /// The item the focus was last on in here, whoever asks: a pane with
+  /// no controller remembers it too, for Tab coming back in.
+  FocusNode? _last;
+
+  /// Whether the focus was inside the pane at its last change.
+  bool _inside = false;
+
+  /// The item Tab comes back to: the one the pane was left from (or the
+  /// one its controller was told to remember), while it is still there.
+  FocusNode? get _remembered {
+    final node = widget.controller?.lastFocused ?? _last;
+    if (node == null || !node.canRequestFocus || _rectOf(node) == null) {
+      return null;
+    }
+    return node.ancestors.contains(_marker) ? node : null;
   }
 
-  /// Focuses the nearest control outside the pane, below it ([forward])
-  /// or above it, in reading order; past the last one, wraps around as
-  /// Tab does. False when the screen has nothing else to focus.
-  bool _leave({required bool forward}) {
-    final scope = _marker.nearestScope;
-    if (scope == null) return false;
-    final pane = _marker.rect;
-    final outside = [
-      for (final node in scope.traversalDescendants)
-        if (node.canRequestFocus && !node.ancestors.contains(_marker))
+  /// The pane's items in reading order, as [FocusPaneController.focusFirst]
+  /// has them.
+  List<FocusNode> get _items => [
+    for (final (node, _) in [
+      for (final node in _marker.traversalDescendants)
+        if (node is! FocusScopeNode && node.canRequestFocus)
           if (_rectOf(node) case final rect?) (node, rect),
-    ]..sort((a, b) => _readingOrder(a.$2, b.$2));
-    if (outside.isEmpty) return false;
-    (forward
-            ? outside.where((n) => n.$2.top >= pane.bottom - 1).firstOrNull ??
-                  outside.first
-            : outside.where((n) => n.$2.bottom <= pane.top + 1).lastOrNull ??
-                  outside.last)
-        .$1
-        .requestFocus();
-    return true;
+    ]..sort((a, b) => _readingOrder(a.$2, b.$2)))
+      node,
+  ];
+
+  void _onFocusChanged() {
+    final focused = FocusManager.instance.primaryFocus;
+    if (focused == null) return;
+    final inside = focused.ancestors.contains(_marker);
+    final entered = inside && !_inside;
+    _inside = inside;
+    if (!inside) return;
+    // Tab came in from outside: a one-stop pane is entered where it was
+    // left, not at whichever end is nearer. A click, an arrow or a screen
+    // placing the focus says exactly which item, and is left alone.
+    if (entered && widget.tabStop && _tabHeld) {
+      final wanted = _remembered ?? _items.firstOrNull;
+      if (wanted != null && wanted != focused) {
+        FocusTraversalPolicy.defaultTraversalRequestFocusCallback(wanted);
+        return;
+      }
+    }
+    _last = focused;
+    widget.controller?._remember(focused);
+  }
+
+  static bool get _tabHeld => HardwareKeyboard.instance.logicalKeysPressed
+      .contains(LogicalKeyboardKey.tab);
+
+  /// Tab or Shift+Tab out of the pane: to the stop after it ([forward])
+  /// or before it in the screen's traversal order, in which the pane is
+  /// one stop. False when the pane has nothing to leave from.
+  ///
+  /// The order is Flutter's own, groups taken as units — the one Tab
+  /// follows between plain controls — so a pane sits in the walk where
+  /// the eye puts it. (It used to be "the nearest control below", which
+  /// on a page of two columns skipped everything beside the pane: Tab
+  /// never came back to a series' Play.)
+  bool _leave({required bool forward}) {
+    final items = _items;
+    if (items.isEmpty) return false;
+    // The walk goes on from the scope's focused child: for a moment that
+    // is the pane's edge. The focus itself only moves once, to where the
+    // walk lands.
+    final edge = (forward ? items.last : items.first)..requestFocus();
+    final walk = widget.policy ?? ReadingOrderTraversalPolicy();
+    return forward ? walk.next(edge) : walk.previous(edge);
   }
 
   @override
@@ -201,9 +245,14 @@ class _FocusPaneState extends State<FocusPane> {
   }
 }
 
-/// Where [node] is on screen; null before it is laid out.
+/// Where [node] is on screen; null before it is laid out, and for an
+/// item that has just left the tree: a row removed in this frame keeps
+/// its focus node until the frame ends, and nothing may be asked of its
+/// element by then.
 Rect? _rectOf(FocusNode node) {
-  final box = node.context?.findRenderObject();
+  final context = node.context;
+  if (context is! Element) return null;
+  final box = context.renderObject;
   if (box == null || !box.attached) return null;
   if (box is RenderBox && !box.hasSize) return null;
   return node.rect;

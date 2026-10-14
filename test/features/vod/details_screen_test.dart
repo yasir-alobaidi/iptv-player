@@ -282,8 +282,9 @@ void main() {
       await tester.pump();
       expect(focusedLabel(), 'Play S1 · E1');
 
-      // Round to the seasons: → and ← between them, ← on the first to Play.
-      for (var i = 0; i < 8 && focusedLabel() != 'Season 1'; i++) {
+      // Round to the seasons (by way of the nav rail, as Tab goes from
+      // any last control): → and ← between them, ← on the first to Play.
+      for (var i = 0; i < 24 && focusedLabel() != 'Season 1'; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
       }
@@ -363,6 +364,121 @@ void main() {
       await settle(tester);
 
       expect(find.text('Continue S1 · E2'), findsOneWidget);
+    });
+
+    testWidgets('Tab goes round the page in its own order, and comes back '
+        'to Play (Phase 9 decision 14)', (tester) async {
+      await open(tester, '/series/src-1/77');
+      Future<String?> tab({bool back = false}) async {
+        if (back) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        if (back) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        return focusedLabel();
+      }
+
+      // The column beside the list, then the list, as one stop.
+      expect(focusedLabel(), 'Play S1 · E1');
+      expect(await tab(), 'Add to favorites');
+      expect(await tab(), 'Cast');
+      expect(await tab(), 'Episode 1, Low Water');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(focusedLabel(), 'Episode 2, Ledger');
+
+      // Out of the page's last stop: the nav rail, then the page again
+      // from its top — the way back, the seasons as one stop, what is
+      // beside them, and Play. It used to pass Play for good.
+      final round = <String?>[];
+      for (var i = 0; i < 24 && round.lastOrNull != 'Play S1 · E1'; i++) {
+        round.add(await tab());
+      }
+      expect(round.first, 'Home');
+      expect(round.sublist(round.indexOf('Back to Series')), [
+        'Back to Series',
+        'Season 1',
+        'Download season',
+        'Play S1 · E1',
+      ]);
+
+      // And back the same way: the list is entered where it was left, not
+      // at its far end.
+      expect(await tab(back: true), 'Download season');
+      expect(await tab(back: true), 'Season 1');
+      for (var i = 0; i < 24 && !focusedLabel()!.startsWith('Episode'); i++) {
+        await tab(back: true);
+      }
+      expect(focusedLabel(), 'Episode 2, Ledger');
+    });
+
+    testWidgets('a mark that moves Continue to another season leaves the '
+        'season shown where it is', (tester) async {
+      final (vod, _, _) = await open(
+        tester,
+        '/series/src-1/77',
+        before: (vod) => vod.db.watchHistoryDao.touch(
+          UserItemType.episode,
+          'src-1',
+          '7101',
+          vod.now,
+          positionMs: 52 * 60000,
+          durationMs: 52 * 60000,
+          completed: true,
+          seriesKey: '77',
+        ),
+      );
+      await settle(tester);
+      expect(find.text('Continue S1 · E2'), findsOneWidget);
+      expect(find.text('Ledger'), findsOneWidget);
+
+      // The last episode of season 1, watched: season 2 is next.
+      unawaited(
+        vod.db.watchHistoryDao.touch(
+          UserItemType.episode,
+          'src-1',
+          '7102',
+          vod.now.add(const Duration(minutes: 1)),
+          positionMs: 48 * 60000,
+          durationMs: 48 * 60000,
+          completed: true,
+          seriesKey: '77',
+        ),
+      );
+      await settle(tester);
+
+      expect(find.text('Continue S2 · E1'), findsOneWidget);
+      // Still season 1's list, with what was just marked in it.
+      expect(find.text('Ledger'), findsOneWidget);
+      expect(find.text('Undertow'), findsNothing);
+    });
+
+    testWidgets('opened with season 2 to continue: season 2 is shown', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        '/series/src-1/77',
+        before: (vod) async {
+          // In the order they were watched.
+          for (final (at, key, minutes) in [(0, '7101', 52), (1, '7102', 48)]) {
+            await vod.db.watchHistoryDao.touch(
+              UserItemType.episode,
+              'src-1',
+              key,
+              vod.now.add(Duration(minutes: at)),
+              positionMs: minutes * 60000,
+              durationMs: minutes * 60000,
+              completed: true,
+              seriesKey: '77',
+            );
+          }
+        },
+      );
+      await settle(tester);
+
+      expect(find.text('Continue S2 · E1'), findsOneWidget);
+      expect(find.text('Undertow'), findsOneWidget);
+      expect(find.text('Ledger'), findsNothing);
     });
 
     testWidgets('another season on its tab; its episode plays', (tester) async {

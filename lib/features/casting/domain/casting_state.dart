@@ -171,3 +171,9 @@ final class CastPlanChanged extends CastNotice {
 final class CastStoppedOnDevice extends CastNotice {
   const new(super.deviceName);
 }
+
+/// The TV refused the subtitle that was chosen, and went on showing what
+/// it showed before: said once, so the choice doesn't just spring back.
+final class CastSubtitleRefused extends CastNotice {
+  const new(super.deviceName);
+}

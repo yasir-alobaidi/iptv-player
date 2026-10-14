@@ -124,6 +124,133 @@ void main() {
 
         expect(label(), 'above');
       });
+
+      testWidgets('Tab comes back into it where it was left, from either '
+          'side', (tester) async {
+        await pumpDesign(tester, screen());
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expect(label(), 'i3');
+
+        // Out below and back: on i3, not on the row nearest "back".
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'back');
+        await press(tester, LogicalKeyboardKey.tab, shift: true);
+        expect(label(), 'i3');
+
+        // Out above and back: on i3, not on the first row.
+        await press(tester, LogicalKeyboardKey.tab, shift: true);
+        expect(label(), 'above');
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'i3');
+      });
+
+      testWidgets('Shift+Tab into one never entered lands on its first '
+          'item, not its last', (tester) async {
+        await pumpDesign(tester, screen());
+        await tester.pumpAndSettle();
+        Focus.of(tester.element(find.text('back'))).requestFocus();
+        await tester.pumpAndSettle();
+
+        await press(tester, LogicalKeyboardKey.tab, shift: true);
+
+        expect(label(), 'i0');
+      });
+
+      testWidgets('a remembered item that has gone is not asked for: Tab '
+          'lands on the first', (tester) async {
+        Widget list(int rows) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppButton(label: 'above', onPressed: () {}),
+            FocusPane(tabStop: true, child: _buttons('i', rows)),
+            AppButton(label: 'back', onPressed: () {}),
+          ],
+        );
+        await pumpDesign(tester, list(6));
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        for (var i = 0; i < 4; i++) {
+          await press(tester, LogicalKeyboardKey.arrowDown);
+        }
+        expect(label(), 'i4');
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'back');
+
+        // The list is shorter now: i4 is no more.
+        await pumpDesign(tester, list(3));
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab, shift: true);
+
+        expect(tester.takeException(), isNull);
+        expect(label(), 'i0');
+      });
+
+      testWidgets('a click on an item is that item, whatever was '
+          'remembered', (tester) async {
+        await pumpDesign(tester, screen());
+        await tester.pumpAndSettle();
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        await press(tester, LogicalKeyboardKey.tab);
+        expect(label(), 'back');
+
+        Focus.of(tester.element(find.text('i4'))).requestFocus();
+        await tester.pumpAndSettle();
+
+        expect(label(), 'i4');
+      });
+
+      testWidgets('a control beside it is not passed: Tab goes round in the '
+          "screen's order, the pane one stop in it", (tester) async {
+        // A details page: actions at the left, a list at the right, the
+        // way back above both.
+        await pumpDesign(
+          tester,
+          SizedBox(
+            width: 900,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppButton(label: 'back', onPressed: () {}),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    AppButton(label: 'play', onPressed: () {}),
+                    AppButton(label: 'cast', onPressed: () {}),
+                    const Spacer(),
+                    FocusPane(tabStop: true, child: _buttons('e', 5)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final walk = <String?>[];
+        for (var i = 0; i < 9; i++) {
+          await press(tester, LogicalKeyboardKey.tab);
+          walk.add(label());
+        }
+        expect(walk, [
+          'back', 'play', 'cast', 'e0', //
+          'back', 'play', 'cast', 'e0', 'back',
+        ]);
+
+        final back = <String?>[];
+        for (var i = 0; i < 4; i++) {
+          await press(tester, LogicalKeyboardKey.tab, shift: true);
+          back.add(label());
+        }
+        expect(back, ['e0', 'cast', 'play', 'back']);
+      });
     });
 
     testWidgets('it remembers the item focus left from', (tester) async {

@@ -1117,6 +1117,8 @@ final class CastCoordinator implements RemotePlayback {
         if (cast.textTrack == wanted) {
           cast.textTrack = cast.shownTrack;
           _set(_state.copyWith(subtitle: cast.shownTrack));
+          // The view goes back to what the TV shows: say why.
+          _notice(CastSubtitleRefused(deviceName));
         }
     }
   }

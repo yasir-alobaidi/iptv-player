@@ -566,7 +566,8 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
   final _rows = <String, FocusNode>{};
   final _rowKeys = <String, GlobalKey>{};
 
-  /// The season shown; the continue episode's until the user picks one.
+  /// The season shown: the one to continue in as the page opens, then
+  /// whichever the user picks.
   int? _season;
 
   /// Whether the list was already placed on the episode to continue.
@@ -624,17 +625,23 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
     final state = ref
         .watch(seriesDetailsProvider(series.sourceId, series.remoteKey))
         .value;
-    final marks =
-        ref
-            .watch(seriesMarksProvider(series.sourceId, series.remoteKey))
-            .value ??
-        const <String, WatchMark>{};
+    final marked = ref.watch(
+      seriesMarksProvider(series.sourceId, series.remoteKey),
+    );
+    final marks = marked.value ?? const <String, WatchMark>{};
     final details = switch (state) {
       DetailsReady(:final value) => value,
       _ => null,
     };
     final nextUp = details == null ? null : nextUpFor(details, marks);
-    if (nextUp != null) _placeOn(nextUp.episode);
+    // Once the marks are read, the page opens on the season to continue
+    // in. From then on only the user changes the season: a mark that
+    // moves Continue to another one (the last episode of this season
+    // marked watched) must not swap the list under whoever is in it.
+    if (nextUp != null && marked.hasValue) {
+      _placeOn(nextUp.episode);
+      _season ??= nextUp.episode.season;
+    }
     final seasons = details?.seasons ?? const <Season>[];
     final wanted = _season ?? nextUp?.episode.season;
     final shown =

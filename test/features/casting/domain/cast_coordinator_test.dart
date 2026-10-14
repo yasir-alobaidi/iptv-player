@@ -1095,6 +1095,23 @@ void main() {
               const CastRefused(CastRefusal.invalidRequest);
           await rig.coordinator.setSubtitle(2);
           expect(rig.state.subtitle, 1);
+          // Said, so the choice doesn't just spring back.
+          await rig.until(() => rig.notices.isNotEmpty);
+          expect(rig.notices.single, isA<CastSubtitleRefused>());
+        });
+
+        test("a TV that isn't ready for the switch is told later, and "
+            'nothing is said', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          rig.tv.playing();
+          await rig.phase(CastPhase.playing);
+          rig.tv.onTextTrack = (_) =>
+              const CastRefused(CastRefusal.invalidState);
+          await rig.coordinator.setSubtitle(2);
+          await pumpEventQueue();
+          expect(rig.state.subtitle, 2);
+          expect(rig.notices, isEmpty);
         });
 
         test('chosen while it loads: the TV is told once it plays', () async {
