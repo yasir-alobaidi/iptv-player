@@ -1,9 +1,9 @@
-// Phase 7 step 2 on a real Cast device (the user's Living Room TV): the
-// client's first LAUNCH and LOAD. Only with the user's go-ahead, and with
-// them watching — it shows on the TV for about half a minute:
+// Phase 7 step 2 on a real Cast device, the one CAST_HOST names (there is
+// no default): the client's first LAUNCH and LOAD. Only with the user's
+// go-ahead for that TV — it shows on it for about half a minute:
 //
-//     CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped \
-//       test/tools/cast_tv_test.dart
+//     CAST_HOST=<the TV's address> flutter test --tags real_cast \
+//       --run-skipped test/tools/cast_tv_test.dart
 //
 // 1. Who is there, asked two ways, nothing on screen: the direct DNS-SD
 //    query (step 1) and a Cast connection's GET_STATUS and multizone
@@ -35,7 +35,10 @@ import 'package:logger/logger.dart';
 const _sample = 'tools/media_samples/out/vod_h264_aac_10min.mp4';
 
 void main() {
-  final host = Platform.environment['CAST_HOST'] ?? '192.168.1.155';
+  // No default: a TV is only ever used because it was named (a shared
+  // TV once stood here, and a run without CAST_HOST would have cast to
+  // it).
+  final host = Platform.environment['CAST_HOST'] ?? '';
   final logFile = File('build/real_cast_run/tv.log');
   final clock = Stopwatch()..start();
   void say(String line) {
@@ -53,92 +56,101 @@ void main() {
     level: Level.debug,
   );
 
-  test('LAUNCH, LOAD the sample, PAUSE, SEEK, PLAY, STOP on $host', () async {
-    logFile
-      ..createSync(recursive: true)
-      ..writeAsStringSync('');
-    expect(File(_sample).existsSync(), isTrue, reason: 'generate $_sample');
-    final address = CastAddress.tryParse(host)!;
+  test(
+    'LAUNCH, LOAD the sample, PAUSE, SEEK, PLAY, STOP on $host',
+    () async {
+      logFile
+        ..createSync(recursive: true)
+        ..writeAsStringSync('');
+      expect(File(_sample).existsSync(), isTrue, reason: 'generate $_sample');
+      final address = CastAddress.tryParse(host)!;
 
-    // 1. Who is there.
-    final txt = await UnicastCastAddressCheck(log: log).check(address);
-    final cast = await CastConnectionCheck(log: log).check(address);
-    String? idOf(CastAddressAnswer answer) =>
-        answer is CastDeviceAnswered ? answer.device.id : null;
-    say('DNS-SD: ${_describe(txt)}');
-    say('Cast:   ${_describe(cast)}');
+      // 1. Who is there.
+      final txt = await UnicastCastAddressCheck(log: log).check(address);
+      final cast = await CastConnectionCheck(log: log).check(address);
+      String? idOf(CastAddressAnswer answer) =>
+          answer is CastDeviceAnswered ? answer.device.id : null;
+      say('DNS-SD: ${_describe(txt)}');
+      say('Cast:   ${_describe(cast)}');
 
-    // 2. Join.
-    final joining = Stopwatch()..start();
-    final joined = await CastV2Receivers(log: log).join(address);
-    if (joined is CastJoinFailed) {
-      fail('join failed: ${joined.reason} ${joined.detail ?? ''}');
-    }
-    final session = (joined as CastJoined).session;
-    say(
-      'joined after ${joining.elapsedMilliseconds} ms '
-      '(${joined.launched ? 'launched' : 'already running'}); this '
-      'computer is ${session.localAddress} on that connection',
-    );
-    final states = session.states.listen(
-      (s) => say(
-        'state: ${s.link.name} '
-        '${s.media?.playerState.name ?? 'no media'}'
-        '${s.media?.idleReason == null ? '' : '/${s.media!.idleReason!.name}'} '
-        't=${s.media?.position.inMilliseconds ?? '-'} ms',
-      ),
-    );
-    final server = await _RangeServer.start(session.localAddress, say);
-    try {
-      // 3. LOAD.
-      final loading = Stopwatch()..start();
-      final load = await session.load(
-        CastLoad(
-          url: server.url,
-          contentType: 'video/mp4',
-          live: false,
-          title: 'IPTV Player · casting test',
-          subtitle: 'Phase 7 step 2: the MP4 sample, direct with Range',
+      // 2. Join.
+      final joining = Stopwatch()..start();
+      final joined = await CastV2Receivers(log: log).join(address);
+      if (joined is CastJoinFailed) {
+        fail('join failed: ${joined.reason} ${joined.detail ?? ''}');
+      }
+      final session = (joined as CastJoined).session;
+      say(
+        'joined after ${joining.elapsedMilliseconds} ms '
+        '(${joined.launched ? 'launched' : 'already running'}); this '
+        'computer is ${session.localAddress} on that connection',
+      );
+      final states = session.states.listen(
+        (s) => say(
+          'state: ${s.link.name} '
+          '${s.media?.playerState.name ?? 'no media'}'
+          '${_idle(s.media)}'
+          ' t=${s.media?.position.inMilliseconds ?? '-'} ms',
         ),
       );
-      say(
-        'LOAD answered ${load.runtimeType} after '
-        '${loading.elapsedMilliseconds} ms',
-      );
-      expect(load, isA<CastDone>());
-      await _until(session, (s) => _is(s, CastPlayerState.playing));
-      say('PLAYING ${loading.elapsedMilliseconds} ms after LOAD');
-      await Future<void>.delayed(const Duration(seconds: 8));
+      // Everything after the join is inside the try: the receiver is
+      // closed whatever fails (a server that couldn't start once left the
+      // TV on the receiver's idle screen).
+      _RangeServer? server;
+      try {
+        server = await _RangeServer.start(session.localAddress, say);
+        // 3. LOAD.
+        final loading = Stopwatch()..start();
+        final load = await session.load(
+          CastLoad(
+            url: server.url,
+            contentType: 'video/mp4',
+            live: false,
+            title: 'IPTV Player · casting test',
+            subtitle: 'Phase 7 step 2: the MP4 sample, direct with Range',
+          ),
+        );
+        say(
+          'LOAD answered ${load.runtimeType} after '
+          '${loading.elapsedMilliseconds} ms',
+        );
+        expect(load, isA<CastDone>());
+        await _until(session, (s) => _is(s, CastPlayerState.playing));
+        say('PLAYING ${loading.elapsedMilliseconds} ms after LOAD');
+        await Future<void>.delayed(const Duration(seconds: 8));
 
-      // 4. PAUSE, SEEK, PLAY.
-      say('PAUSE → ${_short(await session.pause())}');
-      await Future<void>.delayed(const Duration(seconds: 2));
-      final seeking = Stopwatch()..start();
-      final seek = await session.seek(const Duration(seconds: 60));
-      say('SEEK 60 s → ${_short(seek)}');
-      say('PLAY → ${_short(await session.play())}');
-      await _until(
-        session,
-        (s) =>
-            _is(s, CastPlayerState.playing) &&
-            s.media!.position >= const Duration(seconds: 60),
-      );
-      say('playing from 1:00 ${seeking.elapsedMilliseconds} ms after SEEK');
-      await Future<void>.delayed(const Duration(seconds: 4));
-    } finally {
-      // 5. STOP, whatever happened.
-      await session.stop();
-      say('STOP: the receiver closed (${session.state.end?.name})');
-      await states.cancel();
-      await server.close();
-      say('Range requests served: ${server.requests}');
-    }
-    expect(session.state.end, CastEnd.stopped);
-    expect(server.requests, greaterThanOrEqualTo(1));
-    if (idOf(txt) != null && idOf(cast) != null) {
-      expect(idOf(cast), idOf(txt), reason: 'multizone id vs TXT id');
-    }
-  }, timeout: const Timeout(Duration(minutes: 2)));
+        // 4. PAUSE, SEEK, PLAY.
+        say('PAUSE → ${_short(await session.pause())}');
+        await Future<void>.delayed(const Duration(seconds: 2));
+        final seeking = Stopwatch()..start();
+        final seek = await session.seek(const Duration(seconds: 60));
+        say('SEEK 60 s → ${_short(seek)}');
+        say('PLAY → ${_short(await session.play())}');
+        await _until(
+          session,
+          (s) =>
+              _is(s, CastPlayerState.playing) &&
+              s.media!.position >= const Duration(seconds: 60),
+        );
+        say('playing from 1:00 ${seeking.elapsedMilliseconds} ms after SEEK');
+        await Future<void>.delayed(const Duration(seconds: 4));
+      } finally {
+        // 5. STOP, whatever happened.
+        await session.stop();
+        say('STOP: the receiver closed (${session.state.end?.name})');
+        await states.cancel();
+        await server?.close();
+        say('Range requests served: ${server?.requests ?? 0}');
+      }
+      expect(session.state.end, CastEnd.stopped);
+      expect(server.requests, greaterThanOrEqualTo(1));
+      if (idOf(txt) != null && idOf(cast) != null) {
+        expect(idOf(cast), idOf(txt), reason: 'multizone id vs TXT id');
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+    skip: host.isEmpty ? 'set CAST_HOST to the TV to cast to' : null,
+  );
 }
 
 Future<void> _until(
@@ -256,3 +268,7 @@ final class _Lines extends LogOutput {
   @override
   void output(OutputEvent event) => event.lines.forEach(_say);
 }
+
+/// "/finished" after the player's state, when the TV says why it is idle.
+String _idle(CastMediaStatus? media) =>
+    media?.idleReason == null ? '' : '/${media!.idleReason!.name}';

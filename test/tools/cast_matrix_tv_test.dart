@@ -1,12 +1,13 @@
 // Phase 7 step 8 on a real Cast device: docs/04's casting matrix through
 // the app — the fake panel's channels and movies on one connection, the
 // relay with FFmpeg, ffprobe, the encoders this laptop has, our Cast
-// client, the coordinators — on the user's Living Room TV. Only with the
-// user's go-ahead, and with them watching: each row plays on the TV for
-// CAST_HOLD seconds (30), about 20 minutes in all.
+// client, the coordinators — on the TV CAST_HOST names (there is no
+// default). Only with the user's go-ahead for that TV, and with them
+// watching: each row plays on the TV for CAST_HOLD seconds (30), about 20
+// minutes in all.
 //
-//     CAST_HOST=192.168.1.155 flutter test --tags real_cast --run-skipped \
-//       test/tools/cast_matrix_tv_test.dart
+//     CAST_HOST=<the TV's address> flutter test --tags real_cast \
+//       --run-skipped test/tools/cast_matrix_tv_test.dart
 //
 // CAST_ROWS=1,4,9 runs those rows only. Two rows ask something of the
 // user first and run only when named: 6 (Input Signal Plus off, so the
@@ -78,7 +79,8 @@ void main() {
   // flutter_test answers every HTTP request with 400 unless told not to.
   setUpAll(() => HttpOverrides.global = null);
 
-  final host = Platform.environment['CAST_HOST'] ?? '192.168.1.155';
+  // No default: a TV is only ever used because it was named.
+  final host = Platform.environment['CAST_HOST'] ?? '';
   final fake = host == 'fake';
   final named = {
     for (final row in (Platform.environment['CAST_ROWS'] ?? '').split(','))
@@ -116,15 +118,17 @@ void main() {
         reason: 'rows that failed (see the summary)',
       );
     },
-    skip: relaySkip([
-      'h264_1080p50_aac',
-      'h264_1080p25_ac3',
-      'hevc_1080p50_aac',
-      'h264_1080i50_mp2',
-      'mpeg2_576i25_mp2',
-      'hevc_2160p25_eac3',
-      'h264_2160p25_aac',
-    ]),
+    skip: host.isEmpty
+        ? 'set CAST_HOST to the TV to cast to, or to "fake"'
+        : relaySkip([
+            'h264_1080p50_aac',
+            'h264_1080p25_ac3',
+            'hevc_1080p50_aac',
+            'h264_1080i50_mp2',
+            'mpeg2_576i25_mp2',
+            'hevc_2160p25_eac3',
+            'h264_2160p25_aac',
+          ]),
     timeout: Timeout.none,
   );
 }
