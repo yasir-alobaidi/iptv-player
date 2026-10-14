@@ -17,9 +17,12 @@ import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
 import 'package:iptv_player/data/process/process_providers.dart';
+import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/settings/data/appearance_providers.dart';
+import 'package:iptv_player/features/settings/domain/appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
@@ -101,11 +104,24 @@ final class PanelApp {
         startLocationProvider.overrideWithValue('/'),
         playerEngineProvider.overrideWithValue(engine),
         ...sourceShellOverrides,
+        // WALK_TEXT=130 walks the app at that text size (Phase 9
+        // decision 14: the keyboard walks once more at 130 %).
+        if (_walkText case final text?)
+          appearanceStoreProvider.overrideWithValue(
+            InMemoryAppearanceStore(AppearanceSettings(textSize: text)),
+          ),
         ...overrides,
       ],
     );
     return (container, db);
   }
+
+  static TextSizeChoice? get _walkText =>
+      switch (Platform.environment['WALK_TEXT']) {
+        '115' => TextSizeChoice.s115,
+        '130' => TextSizeChoice.s130,
+        _ => null,
+      };
 
   final ProviderContainer container;
   final Directory _directory;
