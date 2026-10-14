@@ -19,6 +19,8 @@ Data layer (Xtream/M3U/XMLTV, sync, drift DB) · domain interfaces · Riverpod p
 | Distribution | Sideloaded APK via adb for personal use |
 
 ## TV-0 — player engine spike (before any TV screens)
+**Status (2026-10-14, ADR-020):** the toolchain, the Android project (`io.github.yasiralobaidi.bijou`, banner, leanback), start-up by form factor and the CI build are done; the app runs its shared code on a Google TV emulator (no picture there: mpv's EGL context fails on the emulator). Left, on a real TV: running on the device and the comparison below.
+
 Compare on a real Google TV device:
 | Criterion | (a) media_kit on Android (libmpv + mediacodec) | (b) native Media3/ExoPlayer plugin |
 |---|---|---|

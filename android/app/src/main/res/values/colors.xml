@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark look's background (lib/design/tokens.dart, bg), so a
+         TV never flashes white before the first frame. -->
+    <color name="launch_background">#FF0A0C10</color>
+</resources>

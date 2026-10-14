@@ -11,6 +11,9 @@ Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
 - linux/packaging/icons/hicolor/<n>x<n>/apps/<app id>.png and
   scalable/apps/<app id>.svg (the desktop entry's icon, Phase 10);
 - windows/runner/resources/app_icon.ico (16 to 256 px);
+- android/app/src/main/res/mipmap-<density>/ic_launcher.png (48 to
+  192 px) and drawable-xhdpi/banner.png (Google TV's 320 x 180 home
+  screen banner: the jewel and the name on the accent);
 - design/brand/bijou_icon_1024.png and bijou_sizes.png (a look at
   every size).
 
@@ -20,7 +23,7 @@ Needs Pillow; nothing else. Re-run it after changing the drawing.
 import os
 import sys
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 APP_ID = "io.github.yasiralobaidi.iptvplayer"
 
@@ -79,7 +82,29 @@ def mix(a, b, t):
     return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def draw(size):
+def gradient(w, h):
+    """The accent's diagonal gradient, from the top left to its deep
+    shade at the bottom right."""
+    grad = Image.new("RGB", (w, h))
+    gd = ImageDraw.Draw(grad)
+    steps = 256
+    span = w + h
+    for i in range(steps):
+        t = i / (steps - 1)
+        gd.polygon(
+            [
+                (0, span * i / steps),
+                (span * i / steps, 0),
+                (span * (i + 1) / steps, 0),
+                (0, span * (i + 1) / steps),
+            ],
+            fill=mix(ACCENT, DEEP, t),
+        )
+    return grad
+
+
+def draw(size, tile=True):
+    """The icon at [size]; with no [tile], the jewel alone on nothing."""
     small = size <= 32
     k = 8  # supersampling
     s = 1024 * k
@@ -88,27 +113,13 @@ def draw(size):
     def pt(p):
         return (p[0] * scale, p[1] * scale)
 
-    # The tile: a diagonal gradient from the accent to its deep shade.
-    grad = Image.new("RGB", (s, s))
-    gd = ImageDraw.Draw(grad)
-    steps = 256
-    for i in range(steps):
-        t = i / (steps - 1)
-        gd.polygon(
-            [
-                (0, 2 * s * i / steps),
-                (2 * s * i / steps, 0),
-                (2 * s * (i + 1) / steps, 0),
-                (0, 2 * s * (i + 1) / steps),
-            ],
-            fill=mix(ACCENT, DEEP, t),
-        )
-    mask = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(mask).rounded_rectangle(
-        [v * scale for v in TILE], radius=TILE_RADIUS * scale, fill=255
-    )
     image = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    image.paste(grad, (0, 0), mask)
+    if tile:
+        mask = Image.new("L", (s, s), 0)
+        ImageDraw.Draw(mask).rounded_rectangle(
+            [v * scale for v in TILE], radius=TILE_RADIUS * scale, fill=255
+        )
+        image.paste(gradient(s, s), (0, 0), mask)
 
     d = ImageDraw.Draw(image)
     outer, table, play = geometry(small)
@@ -182,6 +193,43 @@ def svg():
 """
 
 
+# Android's launcher densities (48 dp).
+ANDROID_ICONS = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
+
+BANNER = (320, 180)
+
+
+def banner(font_path):
+    """Google TV's home screen banner: the jewel and the name, white on
+    the accent, edge to edge (the launcher rounds its corners), the two
+    centred as one."""
+    k = 4
+    w, h = BANNER[0] * k, BANNER[1] * k
+    image = gradient(w, h).convert("RGBA")
+    jewel = draw(124 * k, tile=False)
+    # The part of the jewel's square it fills (geometry(False)'s outer).
+    jl, jt, jr, jb = (v * jewel.width / 1024 for v in (232, 288, 792, 736))
+    font = ImageFont.truetype(font_path, 54 * k)
+    font.set_variation_by_axes([700])
+    d = ImageDraw.Draw(image)
+    text_left, _, text_right, _ = d.textbbox((0, 0), "Bijou", font=font, anchor="ls")
+    _, cap_top, _, _ = d.textbbox((0, 0), "B", font=font, anchor="ls")
+    gap = 18 * k
+    group = (jr - jl) + gap + (text_right - text_left)
+    x = (w - group) / 2
+    middle = h / 2
+    image.alpha_composite(jewel, (round(x - jl), round(middle - (jt + jb) / 2)))
+    # The capitals' middle on the jewel's.
+    d.text(
+        (x + (jr - jl) + gap - text_left, middle - cap_top / 2),
+        "Bijou",
+        font=font,
+        fill=WHITE,
+        anchor="ls",
+    )
+    return image.resize(BANNER, Image.LANCZOS)
+
+
 def main():
     root = os.getcwd()
     if not os.path.exists(os.path.join(root, "pubspec.yaml")):
@@ -211,6 +259,13 @@ def main():
         out("windows", "runner", "resources", "app_icon.ico"),
         sizes=[(n, n) for n in ico],
         append_images=[frames[n] for n in ico if n != 256],
+    )
+
+    res = ("android", "app", "src", "main", "res")
+    for density, n in ANDROID_ICONS.items():
+        draw(n).save(out(*res, f"mipmap-{density}", "ic_launcher.png"))
+    banner(os.path.join(root, "assets", "fonts", "Manrope[wght].ttf")).save(
+        out(*res, "drawable-xhdpi", "banner.png")
     )
 
     draw(1024).save(out("design", "brand", "bijou_icon_1024.png"))

@@ -20,6 +20,7 @@ import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_paths.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/platform/system_notifier.dart';
@@ -110,9 +111,25 @@ Future<void> bootstrap() async {
   }
   final firstRun = await _hasNoSources(database, log);
 
-  final window = AppWindow(store: windowBounds, log: log);
+  // The TV is the player: no casting, no downloads, no library, no
+  // FFmpeg (docs/07).
+  final formFactor = detectFormFactor(platform: defaultTargetPlatform);
+  final onDesktop = formFactor == FormFactor.desktop;
+  log.info('bootstrap', 'Form factor: ${formFactor.name}');
+  if (!onDesktop) {
+    // Android starts in touch mode, which draws no focus; a remote has
+    // no touch, and focus is all a TV shows of where you are (docs/07).
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+  }
+
+  // A window of its own only on a desktop system; on Android the
+  // activity is the window (`FORM_FACTOR=tv` on the laptop keeps it).
+  final window = _hasDesktopWindow
+      ? AppWindow(store: windowBounds, log: log)
+      : null;
   try {
-    await window.setUp();
+    await window?.setUp();
   } on Object catch (error, stackTrace) {
     // A window we could not size still opens; failing to start would be
     // worse than a wrong size.
@@ -140,7 +157,9 @@ Future<void> bootstrap() async {
   final container = ProviderContainer(
     overrides: [
       playerEngineProvider.overrideWithValue(player),
-      windowControlsProvider.overrideWithValue(const WindowManagerControls()),
+      formFactorProvider.overrideWithValue(formFactor),
+      if (window != null)
+        windowControlsProvider.overrideWithValue(const WindowManagerControls()),
       fileRevealProvider.overrideWithValue(platformFileReveal(log)),
       systemNetworkProvider.overrideWithValue(platformSystemNetwork(log)),
       systemFactsReaderProvider.overrideWithValue(platformSystemFacts()),
@@ -190,22 +209,26 @@ Future<void> bootstrap() async {
         ),
     ],
   );
-  // Before anything starts a process: FFmpeg or ffprobe left running by a
-  // run that didn't get to stop them (hard rule 8).
-  // Then the relay's segments from those runs (docs/04 "On app start").
-  unawaited(
-    container
-        .read(processSupervisorProvider)
-        .sweep()
-        .then(
-          (_) =>
-              sweepRelayFolders(container.read(relayFolderProvider), log: log),
-        ),
-  );
-  window.beforeClose = () => _quit(container, log);
-  container
+  if (onDesktop) {
+    // Before anything starts a process: FFmpeg or ffprobe left running by
+    // a run that didn't get to stop them (hard rule 8).
+    // Then the relay's segments from those runs (docs/04 "On app start").
+    unawaited(
+      container
+          .read(processSupervisorProvider)
+          .sweep()
+          .then(
+            (_) => sweepRelayFolders(
+              container.read(relayFolderProvider),
+              log: log,
+            ),
+          ),
+    );
     // The cast's quiet fallbacks and unexpected ends, as toasts.
-    ..read(castNoticeToastsProvider)
+    container.read(castNoticeToastsProvider);
+  }
+  window?.beforeClose = () => _quit(container, log);
+  container
     // What each play says about the network, for "You're offline".
     ..read(playbackReachabilityProvider)
     // The volume as the user left it, before the first thing plays.
@@ -216,8 +239,12 @@ Future<void> bootstrap() async {
       child: const IptvPlayerApp(),
     ),
   );
-  _syncAfterLaunch(container, artwork);
+  _syncAfterLaunch(container, artwork, onDesktop: onDesktop);
 }
+
+/// Linux, Windows and macOS: a window the app sizes, titles and closes.
+bool get _hasDesktopWindow =>
+    Platform.isLinux || Platform.isWindows || Platform.isMacOS;
 
 /// What quitting stops, of what ran: the cast (its TV goes home), the
 /// relay and its FFmpegs, the downloads (flushed, to resume next time),
@@ -250,7 +277,14 @@ Future<void> _quit(ProviderContainer container, AppLog log) async {
 /// A guide import the last session was killed during is recorded the
 /// same way, and the rows it staged go with it: they are the one thing
 /// an interrupted import leaves behind (Phase 4 decision 2).
-void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
+///
+/// Downloads and the library are the desktop's ([onDesktop]): a TV has
+/// neither (docs/07).
+void _syncAfterLaunch(
+  ProviderContainer container,
+  ArtworkCache? artwork, {
+  required bool onDesktop,
+}) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
       Future<void>.delayed(_launchSyncDelay, () async {
@@ -264,14 +298,16 @@ void _syncAfterLaunch(ProviderContainer container, ArtworkCache? artwork) {
         // one can show.
         container.read(reminderWatchesProvider);
         unawaited(container.read(reminderServiceProvider).start());
-        // The download folder is a library folder (docs/09), and what
-        // was downloading when the app went picks up again.
-        await _registerDownloadFolder(container);
-        // The queue's news as toasts, from before it starts.
-        container.read(downloadToastsProvider);
-        await container.read(downloadQueueProvider).startUp();
-        // The library's folders: scanned now, watched from then on.
-        unawaited(container.read(libraryScansProvider).startUp());
+        if (onDesktop) {
+          // The download folder is a library folder (docs/09), and what
+          // was downloading when the app went picks up again.
+          await _registerDownloadFolder(container);
+          // The queue's news as toasts, from before it starts.
+          container.read(downloadToastsProvider);
+          await container.read(downloadQueueProvider).startUp();
+          // The library's folders: scanned now, watched from then on.
+          unawaited(container.read(libraryScansProvider).startUp());
+        }
         await container.read(epgRepositoryProvider).recoverInterrupted();
         // Before the syncs, which write names of their own (ADR-013).
         await container.read(channelNameFillProvider).run();

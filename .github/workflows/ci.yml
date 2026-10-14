@@ -1,7 +1,8 @@
 # CI for the IPTV player (docs/06-quality.md, docs/plans/phase-1-foundation.md
 # step 8). Every push and pull request: generated code is up to date, the
 # analyzer and formatter are clean, the tests pass on both desktop targets,
-# and release bundles build and are kept as artifacts.
+# and release bundles build and are kept as artifacts — the desktop ones
+# and the Google TV APK (docs/07, ADR-020).
 name: CI
 
 on:
@@ -208,4 +209,44 @@ jobs:
         with:
           name: iptv-player-windows-x64
           path: build/windows/x64/runner/Release
+          if-no-files-found: error
+
+  android:
+    # The Google TV app (docs/07): the same code, built as the APK that is
+    # sideloaded. Built only: the tests above run the shared code, and
+    # there is no TV here to run it on (TV-0 measures on the device).
+    name: Android
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # The JDK the laptop builds with (docs/setup.md); Gradle 9 and
+      # AGP 9 need 17 or newer. The runner's Android SDK has accepted
+      # licences, so Gradle fetches what is missing by itself.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Build the APK
+        run: flutter build apk --release
+        # Every ABI in one file: armeabi-v7a (the Chromecast with Google
+        # TV is said to run a 32-bit system on its 64-bit chip; TV-0 reads
+        # it off the device), arm64-v8a, and x86_64 for the emulator.
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bijou-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error

@@ -18,7 +18,8 @@
 | mDNS (avahi-daemon) | installed and running |
 | Firewall (ufw) | inactive |
 | multiverse repository | enabled |
-| Android SDK / adb / Java | not installed (needed only for the Google TV phase) |
+| Java | Temurin JDK 21.0.12.1 in `~/develop/jdk` (a link to `~/develop/jdk-21.0.12.1+1`), installed 2026-10-14; Flutter is pointed at it (`flutter config --jdk-dir`) |
+| Android SDK / adb | `~/Android/Sdk`, installed 2026-10-14 (ADR-020): command-line tools 23, platform-tools 37.0.1 (`adb`), platforms 35 and 36, build-tools 36.0.0, NDK 28.2.13676358, emulator 37.2.12, the Google TV image `android-36;google-tv;x86_64`; AVD `bijou_google_tv` |
 
 ## 1. System packages (run yourself — needs sudo)
 ```bash
@@ -78,5 +79,29 @@ flutter doctor -v
 - If `ufw` is active: `sudo ufw allow 38400:38499/tcp`
 - Tested device: "Living Room TV", a Chromecast with Google TV (4K) (ADR-004)
 
-## 7. Google TV phase (later)
-Android Studio (SDK, platform-tools/adb, an Android TV emulator image for layout checks), a real Google TV device, developer options with network or USB debugging enabled on the device.
+## 7. Google TV (Android)
+Installed in the home folder, no sudo (ADR-020). To do it again on another machine:
+```bash
+# JDK 21 (Gradle 9 and AGP 9 need 17 or newer)
+curl -LO https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz
+tar -xzf OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz -C ~/develop && ln -sfn ~/develop/jdk-21.0.12.1+1 ~/develop/jdk
+# The SDK's command-line tools, then what the build and the emulator need
+curl -LO https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip
+mkdir -p ~/Android/Sdk/cmdline-tools && unzip -q commandlinetools-linux-16111833_latest.zip -d ~/Android/Sdk/cmdline-tools \
+  && mv ~/Android/Sdk/cmdline-tools/cmdline-tools ~/Android/Sdk/cmdline-tools/latest
+export JAVA_HOME=~/develop/jdk
+yes | ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --install platform-tools platforms/android-36 build-tools/36.0.0 \
+  ndk/28.2.13676358 emulator system-images/android-36/google-tv/x86_64
+flutter config --android-sdk ~/Android/Sdk --jdk-dir ~/develop/jdk
+# A Google TV emulator (Android 16; 2 GB like the Chromecast with Google TV)
+echo no | ~/Android/Sdk/cmdline-tools/latest/bin/avdmanager create avd -n bijou_google_tv \
+  -k "system-images;android-36;google-tv;x86_64" -d tv_1080p
+```
+Fish: `fish_add_path ~/Android/Sdk/platform-tools` puts `adb` on PATH (scripts call it by its full path).
+
+**Build and run:**
+- `flutter build apk --release`: `build/app/outputs/flutter-apk/app-release.apk`, every ABI in one file (armeabi-v7a, arm64-v8a, x86_64), signed with the debug key until TV-5. `flutter build apk --debug` for the emulator.
+- **Never build while the emulator runs** (2026-10-14 the two together ran the laptop out of memory and killed the desktop session): build, then `cd android && ./gradlew --stop`, then start the emulator; `adb emu kill` before the next build. Gradle is capped at 3 GB in `android/gradle.properties`.
+- The emulator, headless: `~/Android/Sdk/emulator/emulator -avd bijou_google_tv -no-window -no-audio -no-boot-anim -no-snapshot-save -gpu swiftshader_indirect -memory 2048 &`, then `adb install -r <apk>`, `adb shell am start -W -n io.github.yasiralobaidi.bijou/.MainActivity`, `adb exec-out screencap -p > shot.png`, remote keys with `adb shell input keyevent KEYCODE_DPAD_DOWN` (…`_CENTER`, `KEYCODE_BACK`, `KEYCODE_TAB`) and text with `adb shell input text`. The laptop is `10.0.2.2` from inside it: the fake panel at `http://10.0.2.2:8899` (test / test). **mpv draws no picture on the emulator** (its EGL refuses mpv's context, ADR-020): sound, the decoder and the controls run, the picture needs a real TV.
+- **A real Google TV:** Settings → System → About → press Android TV OS build seven times; Settings → System → Developer options → USB debugging (and Network debugging where offered); then `adb connect <TV address>:5555`, accept the prompt on the TV, `adb install -r app-release.apk`. Ask the user before every TV session; the Living Room TV is off limits until they say otherwise.
