@@ -8,27 +8,16 @@
   </defs>
   <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#tile)"/>
   <g>
-    <polygon points="332,288 692,288 792,388 792,636 692,736 332,736 232,636 232,388" fill="#FFFFFF"/>
-    <polygon points="332,288 692,288 646,368 378,368" fill="#FFFFFF"/>
-    <polygon points="692,288 792,388 712,434 646,368" fill="#EBEFFA"/>
-    <polygon points="792,388 792,636 712,590 712,434" fill="#DFE5F7"/>
-    <polygon points="792,636 692,736 646,656 712,590" fill="#D0D9F4"/>
-    <polygon points="692,736 332,736 378,656 646,656" fill="#C4CFF1"/>
-    <polygon points="332,736 232,636 312,590 378,656" fill="#D8DFF6"/>
-    <polygon points="232,636 232,388 312,434 312,590" fill="#EBEFFA"/>
-    <polygon points="232,388 332,288 378,368 312,434" fill="#F7F9FD"/>
-    <polygon points="378,368 646,368 712,434 712,590 646,656 378,656 312,590 312,434" fill="#FFFFFF"/>
+    <polygon points="304,260 752,512 304,764" fill="#FFFFFF"/>
+    <polygon points="304,260 528,386 378.7,386" fill="#FFFFFF"/>
+    <polygon points="378.7,386 528,386 602.7,512" fill="#EFF2FB"/>
+    <polygon points="528,386 752,512 602.7,512" fill="#E3E9F8"/>
+    <polygon points="752,512 528,638 602.7,512" fill="#B6C4EE"/>
+    <polygon points="602.7,512 528,638 378.7,638" fill="#C6D1F1"/>
+    <polygon points="528,638 304,764 378.7,638" fill="#A8B9EA"/>
+    <polygon points="304,764 304,512 378.7,638" fill="#CAD4F2"/>
+    <polygon points="378.7,638 304,512 378.7,386" fill="#DEE4F7"/>
+    <polygon points="304,512 304,260 378.7,386" fill="#EDF1FB"/>
+    <polygon points="378.7,386 602.7,512 378.7,638" fill="#FFFFFF"/>
   </g>
-  <g stroke="#B4C2ED" stroke-width="5" fill="none">
-    <line x1="332" y1="288" x2="378" y2="368"/>
-    <line x1="692" y1="288" x2="646" y2="368"/>
-    <line x1="792" y1="388" x2="712" y2="434"/>
-    <line x1="792" y1="636" x2="712" y2="590"/>
-    <line x1="692" y1="736" x2="646" y2="656"/>
-    <line x1="332" y1="736" x2="378" y2="656"/>
-    <line x1="232" y1="636" x2="312" y2="590"/>
-    <line x1="232" y1="388" x2="312" y2="434"/>
-    <polygon points="378,368 646,368 712,434 712,590 646,656 378,656 312,590 312,434"/>
-  </g>
-  <polygon points="474,450.1 474,573.9 581,512" fill="#3A5FD0" stroke="#3A5FD0" stroke-width="44" stroke-linejoin="round"/>
 </svg>

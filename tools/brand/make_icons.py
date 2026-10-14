@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Bijou's icon, drawn from one set of coordinates (docs/05 "Brand").
 
-An emerald-cut jewel seen from above, its step facets lit from the top
-left, a play button in its table, on the default accent's tile. Small
-sizes (32 px and under) drop the facets and grow the jewel, so the play
-button still reads at 16 px.
+A trillion, the triangular cut of a jewel, pointing right: the jewel is
+the play button. Its nine crown facets are lit from the top left, on the
+default accent's tile. Smaller, they merge: one band along each edge
+under 64 px, the triangle alone under 32 px (JewelPainter and
+JewelDetail in lib/design/components/app_mark.dart draw the same).
 
 Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
 - design/brand/bijou_icon.svg: the master, for docs and packaging;
@@ -37,45 +38,51 @@ TILE = (64, 64, 960, 960)
 TILE_RADIUS = 208
 
 
-def octagon(x0, y0, x1, y1, c):
-    return [
-        (x0 + c, y0), (x1 - c, y0), (x1, y0 + c), (x1, y1 - c),
-        (x1 - c, y1), (x0 + c, y1), (x0, y1 - c), (x0, y0 + c),
-    ]
+# The trillion's corners, clockwise from the top left; the second is the
+# play button's point.
+CORNERS = [(304, 260), (752, 512), (304, 764)]
+
+# The table is the outline at this scale about its middle.
+TABLE_SCALE = 0.5
+
+# How dark each face is (the deep accent over white), lit from the top
+# left: each edge's three crown facets, clockwise from the top edge and
+# from its first corner; and each edge's one band, when they merge.
+FACET_SHADE = [(0.00, 0.08, 0.14), (0.37, 0.29, 0.44), (0.27, 0.17, 0.09)]
+BAND_SHADE = [0.14, 0.46, 0.26]
 
 
-def geometry(small):
-    """The jewel's outline, its table, and the play button's corners."""
-    if small:
-        outer = octagon(176, 248, 848, 776, 150)
-        table = octagon(276, 336, 748, 672, 104)
-        play = [(440, 392), (440, 632), (648, 512)]
-    else:
-        outer = octagon(232, 288, 792, 736, 100)
-        table = octagon(312, 368, 712, 656, 66)
-        play = [(452, 412), (452, 612), (625, 512)]
-    return outer, table, play
+def lerp(a, b, t):
+    return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
 
 
-# How dark each step facet is (the deep accent over white), from the top
-# edge clockwise: lit from the top left.
-FACET_SHADE = [0.00, 0.10, 0.16, 0.24, 0.30, 0.20, 0.10, 0.04]
+def detail(tile):
+    """How much of the cut shows on a tile [tile] pixels wide."""
+    if tile >= 56:
+        return "full"
+    if tile >= 28:
+        return "bands"
+    return "flat"
 
 
-def rounded(play, r):
-    """The play button's corners moved in by twice [r] (a 60-degree
-    corner's inset), so a disc of [r] at each gives back its size."""
-    cx = sum(p[0] for p in play) / 3
-    cy = sum(p[1] for p in play) / 3
-    inset = []
-    for x, y in play:
-        dx, dy = cx - x, cy - y
-        n = (dx * dx + dy * dy) ** 0.5
-        inset.append((x + dx / n * 2 * r, y + dy / n * 2 * r))
-    return inset
-
-
-PLAY_RADIUS = {True: 34, False: 22}
+def facets(level):
+    """The jewel's faces at [level], back to front: (corners, shade)."""
+    faces = [(CORNERS, 0.0)]
+    if level == "flat":
+        return faces
+    middle = (sum(c[0] for c in CORNERS) / 3, sum(c[1] for c in CORNERS) / 3)
+    table = [lerp(middle, c, TABLE_SCALE) for c in CORNERS]
+    for i in range(3):
+        j = (i + 1) % 3
+        a, b, ta, tb = CORNERS[i], CORNERS[j], table[i], table[j]
+        if level == "bands":
+            faces.append(([a, b, tb, ta], BAND_SHADE[i]))
+            continue
+        half = lerp(a, b, 0.5)
+        first, between, last = FACET_SHADE[i]
+        faces += [([a, half, ta], first), ([ta, half, tb], between), ([half, b, tb], last)]
+    faces.append((table, 0.0))
+    return faces
 
 
 def mix(a, b, t):
@@ -105,7 +112,6 @@ def gradient(w, h):
 
 def draw(size, tile=True):
     """The icon at [size]; with no [tile], the jewel alone on nothing."""
-    small = size <= 32
     k = 8  # supersampling
     s = 1024 * k
     scale = s / 1024
@@ -122,54 +128,20 @@ def draw(size, tile=True):
         image.paste(gradient(s, s), (0, 0), mask)
 
     d = ImageDraw.Draw(image)
-    outer, table, play = geometry(small)
-    d.polygon([pt(p) for p in outer], fill=WHITE)
-    if small:
-        # No lines at this size: the lower facets alone, darker, so it
-        # still reads as a jewel rather than a box.
-        for i in (3, 4, 5):
-            facet = [outer[i], outer[(i + 1) % 8], table[(i + 1) % 8], table[i]]
-            d.polygon([pt(p) for p in facet], fill=mix(WHITE, DEEP, 0.34))
-    else:
-        for i in range(8):
-            facet = [outer[i], outer[(i + 1) % 8], table[(i + 1) % 8], table[i]]
-            d.polygon([pt(p) for p in facet], fill=mix(WHITE, DEEP, FACET_SHADE[i]))
-        d.polygon([pt(p) for p in table], fill=WHITE)
-        line = mix(WHITE, DEEP, 0.38)
-        width = max(1, round(5 * scale))
-        for i in range(8):
-            d.line([pt(outer[i]), pt(table[i])], fill=line, width=width)
-        d.line([pt(p) for p in table + [table[0]]], fill=line, width=width)
-
-    # The play button, its corners rounded: the triangle drawn smaller,
-    # then grown by a disc at each corner and a band along each edge.
-    r = PLAY_RADIUS[small] * scale
-    corners = [pt(p) for p in rounded(play, PLAY_RADIUS[small])]
-    d.polygon(corners, fill=DEEP)
-    for x, y in corners:
-        d.ellipse([x - r, y - r, x + r, y + r], fill=DEEP)
-    for i in range(3):
-        d.line([corners[i], corners[(i + 1) % 3]], fill=DEEP, width=round(2 * r))
+    for corners, shade in facets(detail(size * (TILE[2] - TILE[0]) / 1024)):
+        d.polygon([pt(p) for p in corners], fill=mix(WHITE, DEEP, shade))
 
     return image.resize((size, size), Image.LANCZOS)
 
 
 def svg():
-    outer, table, play = geometry(False)
-
     def points(ps):
         return " ".join(f"{x:.1f},{y:.1f}".replace(".0,", ",").removesuffix(".0") for x, y in ps)
 
-    facets = "\n".join(
-        f'    <polygon points="{points([outer[i], outer[(i + 1) % 8], table[(i + 1) % 8], table[i]])}" '
-        f'fill="#{"%02X%02X%02X" % mix(WHITE, DEEP, FACET_SHADE[i])}"/>'
-        for i in range(8)
+    faces = "\n".join(
+        f'    <polygon points="{points(corners)}" fill="#{"%02X%02X%02X" % mix(WHITE, DEEP, shade)}"/>'
+        for corners, shade in facets("full")
     )
-    edges = "\n".join(
-        f'    <line x1="{outer[i][0]}" y1="{outer[i][1]}" x2="{table[i][0]}" y2="{table[i][1]}"/>'
-        for i in range(8)
-    )
-    line = "#%02X%02X%02X" % mix(WHITE, DEEP, 0.38)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <title>Bijou</title>
   <defs>
@@ -180,15 +152,8 @@ def svg():
   </defs>
   <rect x="64" y="64" width="896" height="896" rx="{TILE_RADIUS}" fill="url(#tile)"/>
   <g>
-    <polygon points="{points(outer)}" fill="#FFFFFF"/>
-{facets}
-    <polygon points="{points(table)}" fill="#FFFFFF"/>
+{faces}
   </g>
-  <g stroke="{line}" stroke-width="5" fill="none">
-{edges}
-    <polygon points="{points(table)}"/>
-  </g>
-  <polygon points="{points(rounded(play, PLAY_RADIUS[False]))}" fill="#3A5FD0" stroke="#3A5FD0" stroke-width="{2 * PLAY_RADIUS[False]}" stroke-linejoin="round"/>
 </svg>
 """
 
@@ -207,8 +172,9 @@ def banner(font_path):
     w, h = BANNER[0] * k, BANNER[1] * k
     image = gradient(w, h).convert("RGBA")
     jewel = draw(124 * k, tile=False)
-    # The part of the jewel's square it fills (geometry(False)'s outer).
-    jl, jt, jr, jb = (v * jewel.width / 1024 for v in (232, 288, 792, 736))
+    # The part of the jewel's square it fills (CORNERS' bounds).
+    xs, ys = [c[0] for c in CORNERS], [c[1] for c in CORNERS]
+    jl, jt, jr, jb = (v * jewel.width / 1024 for v in (min(xs), min(ys), max(xs), max(ys)))
     font = ImageFont.truetype(font_path, 54 * k)
     font.set_variation_by_axes([700])
     d = ImageDraw.Draw(image)

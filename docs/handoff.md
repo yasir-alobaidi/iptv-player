@@ -1,4 +1,32 @@
-# Handoff — 2026-10-14, fifth session (TV-0 begun without a TV: the Android build, the app on a Google TV emulator; Start over)
+# Handoff — 2026-10-14, sixth session (the mark: a trillion), on top of the fifth (TV-0 begun without a TV: the Android build, the app on a Google TV emulator; Start over)
+
+**The sixth session, short:** by your request it drew logo concepts on a
+canvas (https://claude.ai/artifact/7dUdNr7Ry8W5Lw4GYZp7as: Trillion,
+Solitaire, Glint, and the emerald cut for comparison), and you chose
+**Trillion**: the triangular cut of a jewel, pointing right, so the jewel
+is the play button. It replaced the emerald cut everywhere (ADR-022,
+docs/05 "Brand"): `JewelPainter` in the app, and every icon
+`tools/brand/make_icons.py` writes. `JewelDetail` says how much of the cut
+shows by the tile's width (every facet from 56 px, one band per edge from
+28 px, the triangle alone below); the script's `detail()` is the same.
+`test/design/components/app_mark_test.dart` fails if the painter and the
+master SVG drift apart. The screen goldens with the rail or the
+onboarding header were re-recorded. Nothing else changed; the rest of
+this file is the fifth session's and still stands, except that item 4's
+"Bijou and its jewel" now means the trillion. **To see it in the dock:**
+`flutter build linux --release`, then `tools/install_desktop_entry.sh`
+(the installed icons are the old ones until then).
+
+**CI on e281dbb (the fifth session's last push) failed twice:** Linux on
+the known `cast_e2e_library_test.dart` failure (below), and Windows on
+`relay_runtime_test.dart`'s "served by its type on the TV's address; gone
+once unserved": the request right after `unserve` got
+`HttpException: Connection closed before full header` (the closing
+server cut it) where the test allows a refused connection or a 404. It
+passed on 788e0f1's Windows run, so it is a race; a cut connection also
+means nobody serves the picture, so the fix is a third accepted answer.
+Not fixed in the sixth session (it was about the mark).
+
 
 For the next Claude Code session on this project, and for the user starting
 it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-020 and
@@ -23,7 +51,8 @@ TV's bar and Phase 9.
    build" seven times; Settings → System → Developer options → USB
    debugging). I ask before every TV session; the Living Room TV stays
    off limits until you say so.
-4. Still from before: **Bijou and its jewel** (keep, or say otherwise);
+4. Still from before: **Bijou** (keep, or say otherwise; the mark is the
+   trillion you chose, ADR-022);
    **the progress-bar fix on the Bedroom TV** (after my pop-up, about 10
    minutes); **the one real reminder** at the laptop
    (`flutter test integration_test/manual/real_reminder.dart -d linux`);

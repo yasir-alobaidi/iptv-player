@@ -1770,3 +1770,16 @@ Every row of docs/06's table was run again on 2026-10-13 and is in docs/progress
 - **After the seeks, not beside Play:** the controls are reached with →/Tab from Play, and a stray press there would lose the place, which nothing gives back.
 - **The cast too:** a cast starts where the laptop's player is, and the casting view had no way to the start but dragging its bar.
 - **The icon:** the set's replay arrow (as Back 10 s) with a play triangle in it, so it reads as "play again" and not as "back 10 s" or "previous episode" (⏮ beside Next episode would).
+
+## ADR-022 · 2026-10-14 · Accepted (the user's request: "design a better and more creative logo", then of the concepts drawn: "use it and add it to the project properly") — The mark: a trillion, the jewel that is the play button
+**Decision:** Bijou's mark is a **trillion** — the triangular cut of a jewel — pointing right, so the jewel *is* the play button: nine crown facets around a half-size table, lit from the top left, white over the accent's deep shade, on the accent's tile. It replaces ADR-018's emerald cut with a play button in its table. Smaller, the facets merge: one band along each edge from a 28 px tile, the triangle alone under it (`JewelDetail`). docs/05 "Brand" has the rules; the concepts are on the canvas https://claude.ai/artifact/7dUdNr7Ry8W5Lw4GYZp7as.
+
+### Why
+- **One idea, not two stacked:** the emerald cut held a play button like a sticker on a box; the trillion is a real cut whose outline is the play symbol, so "a jewel" (the name) and "a player" (the app) are the same shape at every size.
+- **It degrades on its own terms:** the emerald cut needed a second drawing under 64 px (a bigger jewel, deeper corners, three shaded facets) so it would not read as YouTube's white box. The trillion keeps its outline at every size and only loses facets: at 16 px it is a play triangle on a tile, which is right for a player.
+- **ADR-018 rejected "a faceted play triangle" as Google Play's mark.** The user chose this one knowing the concepts side by side, and it keeps clear of Play: one color, sharp corners, a cut stone's table and crown facets, always on its rounded tile; Play's mark is a rounded triangle in four colored pieces on nothing. Store review (Phase 10, the Google TV listing) should still be read with this in mind.
+- **Also drawn:** Solitaire (a ring whose stone is a small screen: says "jewel" at once, but a blur under 24 px) and Glint (a TV with a sparkle on its screen: clear, but generic).
+
+### How it is kept one drawing
+- `JewelPainter.corners`, `tableScale`, `facetShades`, `bandShades` and `JewelDetail.forTile` in `lib/design/components/app_mark.dart` and `CORNERS`, `TABLE_SCALE`, `FACET_SHADE`, `BAND_SHADE` and `detail()` in `tools/brand/make_icons.py` are the same numbers; `test/design/components/app_mark_test.dart` compares the painter's faces and shades with `design/brand/bijou_icon.svg`, which the script writes, so changing one side alone fails a test.
+- The script wrote every icon again: the SVG master and its Linux scalable copy, the Linux hicolor PNGs, the Windows `.ico`, Android's launcher icons and Google TV's banner. `brand_mark_sizes.png` (and its amber twin: the mark takes the accent) is the golden of every size.

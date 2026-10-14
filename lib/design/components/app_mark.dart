@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/core/app_identity.dart' as identity;
 import 'package:iptv_player/design/tokens.dart';
 
-/// The app's mark (docs/05 "Brand"): Bijou's jewel, an emerald cut seen
-/// from above with a play button in its table, on an accent tile —
-/// optionally followed by the app's name. The tile and the jewel take
-/// the user's accent.
+/// The app's mark (docs/05 "Brand"): Bijou's jewel, a trillion — the
+/// triangular cut — pointing right, so the jewel is the play button, on
+/// an accent tile; optionally followed by the app's name. The tile and
+/// the jewel take the user's accent.
 class AppMark extends StatelessWidget {
   /// The nav rail's 40 px tile.
   const new({this.showName = false, super.key}) : _small = false;
@@ -59,117 +59,103 @@ class AppMark extends StatelessWidget {
   }
 }
 
+/// How much of the trillion's cut shows at a size.
+enum JewelDetail {
+  /// Nine crown facets and the table: 56 px tiles and up (64 px icons).
+  full,
+
+  /// One band along each edge and the table: 28 px tiles and up (32 px
+  /// icons), the rail's and onboarding's.
+  bands,
+
+  /// The triangle alone: a facet would be under a pixel wide.
+  flat;
+
+  /// The detail for a tile [side] pixels wide.
+  static JewelDetail forTile(double side) => side >= 56
+      ? JewelDetail.full
+      : side >= 28
+      ? JewelDetail.bands
+      : JewelDetail.flat;
+}
+
+/// One face of the jewel: its corners in the icon's 1024 units and how
+/// far it is shaded from the jewel's color to the deep accent.
+typedef JewelFacet = ({List<(double, double)> points, double shade});
+
 /// Bijou's jewel inside its tile, from the icon's own drawing
-/// (`tools/brand/make_icons.py`): a 1024-unit canvas whose tile runs
-/// from 64 to 960. Under 64 px the facet lines would be a blur, so the
-/// jewel grows, its corners cut deeper, and only its lower facets are
-/// shaded, as the small icons are.
+/// (`tools/brand/make_icons.py`, `design/brand/bijou_icon.svg`): a
+/// 1024-unit canvas whose tile runs from 64 to 960. A trillion pointing
+/// right, its facets lit from the top left; smaller, they merge
+/// ([JewelDetail]).
 class JewelPainter extends CustomPainter {
   const new({required this.jewel, required this.deep});
 
-  /// The jewel's body (`onAccent`) and its shade and play button
-  /// (`accentDeep`).
+  /// The jewel's light (`onAccent`) and the shade its facets turn
+  /// towards (`accentDeep`).
   final Color jewel;
   final Color deep;
+
+  /// The trillion's corners, clockwise from the top left; the second is
+  /// the play button's point.
+  static const corners = [(304.0, 260.0), (752.0, 512.0), (304.0, 764.0)];
+
+  /// The table is the outline at this scale about its middle.
+  static const tableScale = 0.5;
+
+  /// Each edge's three crown facets, clockwise from the top edge and
+  /// from its first corner (the deep accent over the jewel's color).
+  static const facetShades = [
+    (0.00, 0.08, 0.14),
+    (0.37, 0.29, 0.44),
+    (0.27, 0.17, 0.09),
+  ];
+
+  /// Each edge's one band, when the facets merge.
+  static const bandShades = [0.14, 0.46, 0.26];
+
+  /// The jewel's faces at [detail], back to front.
+  static List<JewelFacet> facets(JewelDetail detail) {
+    (double, double) lerp((double, double) a, (double, double) b, double t) =>
+        (a.$1 + (b.$1 - a.$1) * t, a.$2 + (b.$2 - a.$2) * t);
+
+    final faces = <JewelFacet>[(points: corners, shade: 0)];
+    if (detail == JewelDetail.flat) return faces;
+    final middle = (
+      (corners[0].$1 + corners[1].$1 + corners[2].$1) / 3,
+      (corners[0].$2 + corners[1].$2 + corners[2].$2) / 3,
+    );
+    final table = [for (final c in corners) lerp(middle, c, tableScale)];
+    for (var i = 0; i < 3; i++) {
+      final j = (i + 1) % 3;
+      final (from, to) = (corners[i], corners[j]);
+      final (inFrom, inTo) = (table[i], table[j]);
+      if (detail == JewelDetail.bands) {
+        faces.add((points: [from, to, inTo, inFrom], shade: bandShades[i]));
+        continue;
+      }
+      final half = lerp(from, to, 0.5);
+      final (first, between, last) = facetShades[i];
+      faces
+        ..add((points: [from, half, inFrom], shade: first))
+        ..add((points: [inFrom, half, inTo], shade: between))
+        ..add((points: [half, to, inTo], shade: last));
+    }
+    return faces..add((points: table, shade: 0));
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final side = size.shortestSide;
-    final small = side < 64;
     double at(double unit) => (unit - 64) / 896 * side;
-    Offset point((double, double) p) => Offset(at(p.$1), at(p.$2));
-    Path polygon(List<(double, double)> points) =>
-        Path()..addPolygon([for (final p in points) point(p)], true);
-
-    final outer = small
-        ? _octagon(176, 248, 848, 776, 150)
-        : _octagon(232, 288, 792, 736, 100);
-    final table = small
-        ? _octagon(276, 336, 748, 672, 104)
-        : _octagon(312, 368, 712, 656, 66);
     final fill = Paint()..isAntiAlias = true;
-    canvas.drawPath(polygon(outer), fill..color = jewel);
-
-    // Lit from the top left: each step facet a shade of the deep accent,
-    // from the top edge clockwise; small, the lower three alone.
-    const shades = [0.0, 0.10, 0.16, 0.24, 0.30, 0.20, 0.10, 0.04];
-    for (var i = 0; i < 8; i++) {
-      final shade = small ? (i >= 3 && i <= 5 ? 0.34 : 0.0) : shades[i];
-      if (shade == 0) continue;
-      final facet = [
-        outer[i],
-        outer[(i + 1) % 8],
-        table[(i + 1) % 8],
-        table[i],
-      ];
-      canvas.drawPath(
-        polygon(facet),
-        fill..color = Color.lerp(jewel, deep, shade)!,
-      );
+    for (final face in facets(JewelDetail.forTile(side))) {
+      final path = Path()
+        ..addPolygon([
+          for (final (x, y) in face.points) Offset(at(x), at(y)),
+        ], true);
+      canvas.drawPath(path, fill..color = Color.lerp(jewel, deep, face.shade)!);
     }
-    if (!small) {
-      final line = Paint()
-        ..isAntiAlias = true
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5 / 896 * side
-        ..color = Color.lerp(jewel, deep, 0.38)!;
-      for (var i = 0; i < 8; i++) {
-        canvas.drawLine(point(outer[i]), point(table[i]), line);
-      }
-      canvas.drawPath(polygon(table), line);
-    }
-
-    // The play button: drawn smaller, then stroked round to its size.
-    final play = small
-        ? const [(440.0, 392.0), (440.0, 632.0), (648.0, 512.0)]
-        : const [(452.0, 412.0), (452.0, 612.0), (625.0, 512.0)];
-    final radius = small ? 34.0 : 22.0;
-    final inset = _inset(play, radius);
-    final button = Paint()
-      ..isAntiAlias = true
-      ..color = deep
-      ..strokeWidth = 2 * radius / 896 * side
-      ..strokeJoin = StrokeJoin.round;
-    canvas
-      ..drawPath(polygon(inset), button..style = PaintingStyle.fill)
-      ..drawPath(polygon(inset), button..style = PaintingStyle.stroke);
-  }
-
-  static List<(double, double)> _octagon(
-    double x0,
-    double y0,
-    double x1,
-    double y1,
-    double c,
-  ) => [
-    (x0 + c, y0),
-    (x1 - c, y0),
-    (x1, y0 + c),
-    (x1, y1 - c),
-    (x1 - c, y1),
-    (x0 + c, y1),
-    (x0, y1 - c),
-    (x0, y0 + c),
-  ];
-
-  /// Each corner of [play] moved towards its middle by twice [radius]
-  /// (a 60° corner's inset), so a round join of [radius] gives back its
-  /// size.
-  static List<(double, double)> _inset(
-    List<(double, double)> play,
-    double radius,
-  ) {
-    final middle = Offset(
-      (play[0].$1 + play[1].$1 + play[2].$1) / 3,
-      (play[0].$2 + play[1].$2 + play[2].$2) / 3,
-    );
-    final inset = <(double, double)>[];
-    for (final (x, y) in play) {
-      final toward = middle - Offset(x, y);
-      final moved = Offset(x, y) + toward / toward.distance * 2 * radius;
-      inset.add((moved.dx, moved.dy));
-    }
-    return inset;
   }
 
   @override
