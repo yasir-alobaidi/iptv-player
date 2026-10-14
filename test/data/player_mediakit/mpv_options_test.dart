@@ -72,7 +72,8 @@ void main() {
   });
 
   test("a library file's subtitle files become its tracks; a path holding "
-      "the list's separator is left out, and none clears the last file's", () {
+      "the list's separator is left out, and with none the option is left "
+      'out (open clears the list: a newer mpv reads "" as one file)', () {
     final separator = Platform.isWindows ? ';' : ':';
     final english = p.join('films', 'Paper Kites (2019).en.srt');
     final forced = p.join('films', 'Paper Kites (2019).en.forced.srt');
@@ -84,7 +85,10 @@ void main() {
       ),
     );
     expect(options['sub-files'], '$english$separator$forced');
-    expect(mpvOptionsFor(const PlayRequest(url: 'u'))['sub-files'], '');
+    expect(
+      mpvOptionsFor(const PlayRequest(url: 'u')),
+      isNot(contains('sub-files')),
+    );
   });
 
   group('hardware decoding (Settings → Playback)', () {

@@ -63,28 +63,34 @@ const hwdecOff = 'no';
 /// [picture] false is a player with no video output: there Automatic
 /// leaves `hwdec` alone (nothing for a graphics card to draw to), and Off
 /// still says no.
-Map<String, String> mpvOptionsFor(PlayRequest request, {bool picture = true}) =>
-    {
-      ..._presetOptions[request.preset]!,
-      // Read when the file's decoder starts, so a change in Settings applies
-      // to the next thing played.
-      if (!request.hardwareDecoding)
-        'hwdec': hwdecOff
-      else if (picture)
-        'hwdec': hwdecAutomatic,
-      'demuxer-max-back-bytes': request.live ? _liveBackBytes : _vodBackBytes,
-      'user-agent': request.userAgent ?? '',
-      'alang': request.audioLanguages.join(','),
-      'slang': request.subtitleLanguages.join(','),
-      if (request.deinterlace != null)
-        'deinterlace': request.deinterlace! ? 'yes' : 'no',
-      // A library file's subtitle files (docs/09), as tracks; empty clears the
-      // last file's. mpv's list option parts paths at ':' (';' on Windows),
-      // so a path holding one is left out.
-      'sub-files': request.subtitleFiles
-          .where((path) => !path.contains(_listSeparator))
-          .join(_listSeparator),
-    };
+Map<String, String> mpvOptionsFor(PlayRequest request, {bool picture = true}) {
+  // mpv's list option parts paths at ':' (';' on Windows), so a path
+  // holding one is left out.
+  final subtitleFiles = request.subtitleFiles.where(
+    (path) => !path.contains(_listSeparator),
+  );
+  return {
+    ..._presetOptions[request.preset]!,
+    // Read when the file's decoder starts, so a change in Settings applies
+    // to the next thing played.
+    if (!request.hardwareDecoding)
+      'hwdec': hwdecOff
+    else if (picture)
+      'hwdec': hwdecAutomatic,
+    'demuxer-max-back-bytes': request.live ? _liveBackBytes : _vodBackBytes,
+    'user-agent': request.userAgent ?? '',
+    'alang': request.audioLanguages.join(','),
+    'slang': request.subtitleLanguages.join(','),
+    if (request.deinterlace != null)
+      'deinterlace': request.deinterlace! ? 'yes' : 'no',
+    // A library file's subtitle files (docs/09), as tracks. With none the
+    // option is left out and `open` clears the last file's: the libmpv
+    // media_kit ships for Android and Windows reads an empty string as
+    // one file named "", and every play then fails (0.34.1 cleared).
+    if (subtitleFiles.isNotEmpty)
+      'sub-files': subtitleFiles.join(_listSeparator),
+  };
+}
 
 final _listSeparator = Platform.isWindows ? ';' : ':';
 
@@ -251,6 +257,14 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     final options = mpvOptionsFor(request, picture: _controller != null);
     for (final MapEntry(:key, :value) in options.entries) {
       await _set(key, value);
+    }
+    if (!options.containsKey('sub-files')) {
+      await _native.command([
+        'change-list',
+        'sub-files',
+        'clr',
+        '',
+      ], waitForInitialization: false);
     }
     if (request.deinterlace == null) {
       await _set('deinterlace', 'no');
