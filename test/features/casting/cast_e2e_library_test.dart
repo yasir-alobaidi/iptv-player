@@ -359,7 +359,7 @@ void main() {
         // What the TV's own bar shows: the film's length from the first
         // picture, not what it has read so far (the Bedroom TV, 2026-10).
         final stream = rig.tv.checks.last;
-        expect(stream.length!.inMilliseconds, _tenMinutes);
+        expect(stream.length!.inMilliseconds, _wholeLengthOf(mkv));
         expect(stream.start!.inMilliseconds, inInclusiveRange(0, 200));
 
         // A seek to 67 s: this file has a key frame every 2 s, so the
@@ -387,7 +387,7 @@ void main() {
           what: "the TV's check of the stream after the seek",
         );
         final after = rig.tv.checks.last;
-        expect(after.length!.inMilliseconds, _tenMinutes);
+        expect(after.length!.inMilliseconds, _wholeLengthOf(mkv));
         expect(after.start!.inMilliseconds, inInclusiveRange(65800, 66200));
         await until(
           () => rig.tv.playerState == 'PLAYING',
@@ -489,7 +489,17 @@ void main() {
   });
 }
 
-/// Ten minutes as a TV's demuxer reads the header: the film's length, or
-/// as much more as its first picture is shown late (80 ms in this file,
-/// counted or not depending on how much of the stream was read).
-final Matcher _tenMinutes = inInclusiveRange(600000, 600200);
+/// [sample]'s length as a TV's demuxer reads the relay's header: the
+/// file's own (10 minutes here, 2 on CI, which makes its samples with
+/// `VOD_SECONDS=120`), or as much more as its first picture is shown late
+/// (80 ms in this file, counted or not depending on how much of the
+/// stream was read).
+Matcher _wholeLengthOf(String sample) {
+  final probe = Process.runSync(relayBinaries()!.ffprobe, [
+    ...['-v', 'error', '-show_entries', 'format=duration'],
+    ...['-of', 'csv=p=0', p.join(samples.path, sample)],
+  ]);
+  final seconds = double.parse((probe.stdout as String).trim());
+  final ms = (seconds * 1000).round();
+  return inInclusiveRange(ms, ms + 200);
+}

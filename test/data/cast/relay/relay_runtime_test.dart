@@ -575,12 +575,13 @@ void main() {
         // Nothing else served there: the server is closed, and nobody
         // answers. Unless another test file's relay took the freed port
         // that instant, as it did on CI (run 38365432183): it answers,
-        // and knows nothing of this picture.
+        // and knows nothing of this picture. Or the closing server cut the
+        // request before it answered, as on Windows (CI, e281dbb).
         final after = await _get(url).then<Object>(
           (answer) => answer.status,
           onError: (Object error) => error,
         );
-        expect(after, anyOf(isA<SocketException>(), 404));
+        expect(after, anyOf(isA<SocketException>(), isA<HttpException>(), 404));
       },
     );
 
