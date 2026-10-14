@@ -1,178 +1,162 @@
-# Handoff — 2026-10-13, third session (the player rebuilt, every window size, Phase 9 steps 7–9, the first real TV, a cast bug the soak found)
+# Handoff — 2026-10-14, fourth session (a name and a mark: Bijou; the TV's own progress bar fixed)
 
 For the next Claude Code session on this project, and for the user starting
-it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-016 and
-ADR-017 in docs/decisions.md** (ADR-016: "The audit" has the table of
-screens by state; "Performance in profile mode" and "The soak plays the
-whole app" are this session's steps 8 and 9; "The exit" says which of the
-phase's criteria are met; ADR-017 is the player's controls and the window
-sizes; ADR-014's last section is the first run on a real TV),
-docs/05-design-system.md (§4 the player as rebuilt, "Every window size"
-under App shell, the Tab rules under Focus system) and docs/06-quality.md
-(the budgets, the soak as it runs now).
+it. Read this file whole, then CLAUDE.md, docs/progress.md, **ADR-018 and
+ADR-019 in docs/decisions.md** (ADR-018: the name, the mark, how the app
+describes itself and what keeps the first name; ADR-019: the relay's
+stream on the film's own clock), **docs/05 "Brand"**, **docs/04 "The TV's
+own bar"**, and ADR-016 "The exit" for what Phase 9 left.
 
 ## Before you start the next session (user)
-1. **Push** the local commits when you like (`git log origin/main..HEAD`
-   lists them; the first is e039738, CI's fix).
-2. **CI was red at 38b501b** (run 38379155096) **on Linux only, in one
-   integration test** (`library_cast_walk`), fixed in e039738. **Windows
-   was green end to end,** so the notification package builds there.
-3. **A bug you may have met is fixed: after casting, the next thing you
-   played could open no player** (sound, no picture, the casting view
-   instead). It happened when the cast was started from a player opened
-   anywhere but Live TV. The new soak found it.
-4. **One real reminder is still owed** (you chose to leave the second try).
-   It is quick now: `flutter test integration_test/manual/real_reminder.dart
-   -d linux` opens the app on the fake provider; click another window to
-   cover it, and 15 seconds later a notification appears. Click its text
-   the first time and its Watch button the second, and say what the window
-   did. The first try showed nothing on the desktop because both reminders
-   came due while the app was in front (they were in-app messages, as
-   designed).
-5. **The Bedroom TV plays** (192.168.1.231; the short check, after a bug
-   that would have stopped every cast was fixed). **The full matrix on a
-   real TV has still never run** (about 30 minutes of test patterns on the
-   TV; you chose the short check only). Say when you want it.
-6. **The Living Room TV was never contacted** and must not be until you
-   say it is free. The two real-TV tools no longer have its address as
-   their default.
-7. **What this session decided for you** (say if you want any otherwise):
-   - **The player:** Netflix's arrangement with larger controls; words on
-     Audio and Subtitles only (a word under every icon doesn't fit the
-     smallest window); + and − for the volume everywhere, ↑ ↓ for it only
-     while a file plays (on a channel they zap); the mouse wheel is the
-     volume; a click on the picture pauses a file but does nothing to a
-     channel; Speed 0.5× to 2×, back to 1× when the player closes.
-   - **Wide windows:** pages of rows and forms stop at 1336 px, at the
-     left (not centred: a page whose tabs differ would jump sideways);
-     onboarding pages are centred; Home shows more cards rather than
-     larger ones; Live TV's preview grows and its list stops at 900 px.
-   - **Tab goes round the whole window** (nav rail, top bar, screen), from
-     a list as from any control; a list is entered where it was left.
-   - **Offline** is one banner under the top bar of every screen (it was
-     Home's only).
-   - **Favorites' drag keeps Flutter's gap** instead of the canvas's
-     accent line (all four draggable lists share it).
-   - **The Guide's PageUp and PageDown glide** a screen instead of jumping
-     (a jump with reduce motion).
-   - **The canvas's player artboard is out of date:** the app is the
-     reference for the player until it is redrawn.
-8. **Phase 9's exit, as it stands** (ADR-016, "The exit"): all nine steps built and run; ADR-016 is accepted with what the
-   exit did not meet written down: **the 8-hour soak (your choice), with
-   the hour's memory 10 MB over its 50 MB budget** (every cast, download,
-   walk and fault was clean; heap snapshots show the app's own memory
-   levelling off, the rest rising and falling); **a frame or two over
-   budget** on a few jumps and the fastest scrolls (everything at a
-   person's pace is within budget); **loading and most error states not
-   drawn by the audit**; **one real reminder not yet seen.** Whether
-   these close Phase 9 is yours to say.
-9. **The Google TV version: start TV-0 when Phase 9 is done, before Phase
-   10** (unchanged). It still needs from you: the Android SDK, JDK 17 and
-   `adb` on the laptop, Developer options and USB debugging on the TV.
-   The laptop and the TVs are on one network now (192.168.1.x).
+**Your list** — what this session needed you for and left for you, as you
+asked ("keep them in the list and let me know later"):
+1. **Push** this session's commits (`git log origin/main..HEAD`). The
+   last session's are pushed, and CI was green on them (62d1291).
+2. **Bijou and its jewel: keep them, or say otherwise.** The name is one
+   constant (`appName`, `lib/core/app_identity.dart`) plus the window
+   titles in `linux/runner/my_application.cc` and
+   `windows/runner/main.cpp` and `FileDescription` in
+   `windows/runner/Runner.rc`; the mark is `JewelPainter`
+   (`lib/design/components/app_mark.dart`) and
+   `tools/brand/make_icons.py` for the icon files. A look at every size:
+   `design/brand/bijou_sizes.png`.
+3. **The progress-bar fix on the Bedroom TV.** It is tested on this
+   laptop (headless Chrome, the real FFmpeg, the fake TV), not on a TV.
+   When you say yes to the pop-up, the casting matrix's file rows run
+   (`CAST_HOST=192.168.1.231 CAST_ROWS=17,18,19,20,21,22,23`, about 10
+   minutes of test films; the TV's own reports judge the bar, nobody
+   needs to watch). **And by hand**, the next time you cast a film
+   through the app: pause with the TV's remote — the length should be the
+   film's, and after a resume the place should be the film's too.
+4. **The one real reminder,** at the laptop:
+   `flutter test integration_test/manual/real_reminder.dart -d linux`;
+   cover the window; click the notification's text the first time and
+   its Watch button the second; say what the window did.
+5. **If you want them:** the night's soak (`tools/soak/run.sh 480`, the
+   laptop's screen for a night); the full casting matrix on the Bedroom
+   TV (about 30 minutes, after the pop-up).
+6. **Phase 9's close is yours to say** (ADR-016 "The exit": the night's
+   soak not run, the hour's memory 10 MB over, a frame or two over budget
+   on a few jumps, loading and error states not drawn by the audit, the
+   real reminder).
+7. **For TV-0** (the Google TV version, before Phase 10): the Android
+   SDK, JDK 17 and `adb` on the laptop; Developer options and USB
+   debugging on the TV.
+8. **To see the icon in the dock and the app grid now:**
+   `flutter build linux --release`, then `tools/install_desktop_entry.sh`
+   (`--remove` undoes it).
+
+**What this session decided for you** (say if you want any otherwise):
+- **The name Bijou** ("Your own little cinema"), **the jewel mark**, and
+  **the app describing itself as a player for your videos, playlists and
+  services that comes with nothing to watch of its own** — no "IPTV" in
+  the name, About, README, desktop entry or a store listing.
+- **The source types are now Server login, Playlist link and Playlist
+  file** (they were Xtream Codes, M3U link, M3U file): "Xtream Codes" is
+  the name of the panel software of the services police shut down in
+  2019, the first thing a store's review would flag. The M3U and server
+  words stay in their descriptions; the diagnostics report still says
+  "Xtream" (it is technical).
+- **What a system knows the app by keeps its first name**, so nothing
+  saved is lost: the application id (Linux data folder, desktop entry,
+  notifications), the Windows product name (the Windows data folder and
+  the file the passwords are kept in), the package, the database, the
+  executable `iptv_player`, the temp folders, the settings file's own
+  mark (old exports import). Phase 10 decides whether an installer moves
+  them.
+- **Downloads** go to Videos/Bijou on a new install, and on to
+  Videos/IPTV Player where that folder is already. Nothing is moved.
+- **The TV's bar shows the film's time and length,** not only the length:
+  after a resume at 30:00 of an hour, 30:05 of 1:00:00 (not 0:05 of 30:00).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
-Continue the IPTV player project. Read docs/handoff.md, CLAUDE.md, docs/progress.md,
-ADR-016 and ADR-017 in docs/decisions.md, docs/05-design-system.md and docs/06-quality.md
-first. Check CI on the last push and fix what it names. Then: what the handoff lists
-under "What is left of Phase 9", and after it <TV-0 of the Google TV version | Phase 10>.
+Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
+CLAUDE.md, docs/progress.md, ADR-018 and ADR-019 in docs/decisions.md first.
+Check CI on the last push and fix what it names.
+<You may use the Bedroom TV for the matrix's file rows after asking | Don't use any TV>
 <I am at the laptop for the real reminder | I am not: leave it for later>
-<You may use the Bedroom TV for the full matrix after asking | Don't use any TV>
+Then: <TV-0 of the Google TV version | Phase 10 | what is left of Phase 9>
 ```
 
 ## Where things stand
 - **Phases 7 and 8: accepted 2026-10-13 without the TV sitting** (ADR-014,
-  ADR-015). **A real TV has now been used once:** the Bedroom TV plays a
-  file sent directly (ADR-014, "The first run on a real TV"). Still open:
-  `test/tools/cast_matrix_tv_test.dart` rows 1–23 on a real TV.
-- **Phase 9: all nine steps built and run.** ADR-016's "The exit" lists what is
-  not met: the night's soak (the user's choice) with the hour's memory 10 MB
-  over, a few frame-budget misses on jumps, the audit's undrawn loading
-  and error states, the real reminder.
-- **ADR-016 is Accepted (2026-10-14, with "The exit")** (a section per step, and "The exit");
-  **ADR-017 is Accepted** (the player and the window sizes, by the user's
-  request).
-- **Schema is v10**; no new dependency this session. One new settings key:
-  `player.sound` (the volume and mute).
-- **The test suite is about 4,860 tests** (20 skipped), 4½ minutes: 55
-  goldens and 26 scenes, each audited in twelve looks.
+  ADR-015). A real TV has played a file sent directly; the casting matrix
+  (rows 1–23) has never run on one.
+- **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
+  what is not met. Its close is the user's call.
+- **ADR-018 (the name and mark) and ADR-019 (the TV's own bar):
+  Accepted** this session; ADR-018 can be overridden at will.
+- **Schema is v10**; no new dependency, no new settings key this session.
+- **The test suite is 4,882 tests** (20 skipped), about 5 minutes alone
+  (14 under heavy load): 55 goldens and 26 scenes in twelve looks.
 
 ## What is left of Phase 9
-Nothing to build. What the exit did not meet (ADR-016, "The exit"):
+Unchanged from the third session (ADR-016, "The exit"):
 1. **The night's soak**, if the user wants it: `tools/soak/run.sh 480` on
-   the real display, under `gnome-session-inhibit --inhibit idle`. It
-   would settle whether the hour's 60 MB levels off. If it shows a
-   slope, start from `IPTV_SOAK_HEAP=1` and the slow drifts ADR-016
-   names (the guide's programmes, `DateTime`, `ProviderMeta`).
+   the real display, under `gnome-session-inhibit --inhibit idle`. If it
+   shows a slope, start from `IPTV_SOAK_HEAP=1` and the slow drifts
+   ADR-016 names (the guide's programmes, `DateTime`, `ProviderMeta`).
 2. **The frame-budget misses** (docs/progress.md, Known issues): the
-   Guide's Home (2 of 56 frames, 43.6 ms) and sideways moves (a frame or
-   two, ≤ 21 ms), the poster grid's fastest flings (7 of 11,900) and its
-   End and Home (one frame each), one frame while ↓ is held in the
-   channel list (37 ms). All are a jump or the fastest scroll. The
-   Guide's Home could jump instead of gliding through hours (one heavy
-   frame instead of two); the rest needs the timeline first.
+   Guide's Home and sideways moves, the poster grid's fastest flings and
+   its End and Home, one frame while ↓ is held in the channel list.
 3. **The audit's undrawn states:** loading states and most error states
-   (`test/audit/states_audit_test.dart` is the model; a loading scene
-   needs a fake that doesn't answer), and the four walks with no
-   `WALK_TEXT` switch (Live TV's, the Guide's two, the sources').
+   (`test/audit/states_audit_test.dart` is the model), and the four walks
+   with no `WALK_TEXT` switch.
 4. **The real reminder** on the user's desktop.
 5. **The walks don't see the picture** (a fixed test-window size stops it
-   being drawn). Finding why would let them check it.
+   being drawn).
 
-## Done this session (2026-10-13, the third)
-- **CI** (e039738): `library_cast_walk` takes a short film's MP4 being
-  whole before the first seek.
-- **The player's controls** (f93bcfe, ADR-017) and **every window size**
-  (f932187, ADR-017).
-- **Step 7:** the clip check and the Guide's channel numbers (7008083);
-  pictures at 130 % (bd2874b); the loose ends (4349b5b); Offline and the
-  scenes (797fac0); the walks at 130 % and the casting view's row
-  (542ed18).
-- **Cast: this computer's address** (aed5e53): the first run on a real TV
-  found that no cast through the app could have played.
-- **Tools** (c8ce752): `WALK_TEXT`, `integration_test/manual/
-  real_reminder.dart`.
-- **Step 8** (8299aaa): every row of docs/06's table measured again;
-  three new measurements (`channel_list_scroll_test`,
-  `idle_memory_benchmark_test`, `playback_cpu_test`); the Guide's page
-  glides.
-- **Step 9** (c0889b4; the fix 87b25af; the heap snapshots and the docs in the last commit): the soak plays the whole app; the cast bug it
-  found, fixed (`currentThenChanges`).
+## Done this session (2026-10-14, the fourth)
+- **The TV's own progress bar** (ADR-019, docs/04 "The TV's own bar"):
+  the user saw a film's length on the Bedroom TV as about 40 s, growing
+  as it played. Reproduced in headless Chrome with a relay-like server
+  (the receiver's media stack); FFmpeg can't write the length or keep the
+  start (every option tried writes 0); `Fmp4Timeline` rewrites
+  `mvhd`/`tkhd`/`mdhd`, adds `mehd`, moves every `tfdt`, drops `mfra`;
+  the coordinator measures where the stream begins before the relay
+  starts, LOADs there, reads the TV's time as the film's (floored at the
+  start), falls back if a TV counts from 0, and logs a wrong length the
+  TV reports. The fake TV reads a stream's length and start as a TV's
+  demuxer does; the matrix's file rows check both on a real TV.
+- **The name and the mark** (ADR-018, docs/05 "Brand"): Bijou;
+  `lib/core/app_identity.dart`; `AppMark` with `JewelPainter`; the icon
+  files from `tools/brand/make_icons.py`; the Linux desktop entry and
+  `tools/install_desktop_entry.sh`; every user-visible "IPTV Player"
+  replaced; the source types and the onboarding's words made
+  store-safe; downloads' folder kept where it is; README and pubspec.
 
 ## The session's end, as run
-- **CI:** not checked again this session after the start (the user
-  hasn't pushed since 38b501b).
-- **Step 8 on the real display** (profile mode, one at a time): zap,
-  Guide scroll (three runs), poster grid, search typing, cold start,
-  channel list, idle memory, the player's processor use (twice: the
-  first measured nothing), then sync, the guide's import, search and the
-  library scan with no window. Numbers in docs/progress.md.
-- **The soak:** an 8-minute trial under Xvfb (its own mistakes), a
-  rehearsal on the display (found the cast bug), the probes under Xvfb,
-  the fix, **the hour on the display** (memory 10 MB over, everything
-  else clean), and **a 30-minute run with heap snapshots** under Xvfb
-  (passed).
-- **Checks:** analyze clean; format clean; `build_runner` with no diff;
-  **4,860 app tests under `TZ=UTC`** (20 skipped; the last full run after
-  the fix and before the soak's heap switch, which only touches the
-  soak); all 21 integration walks under Xvfb with a picture, and
-  `guide_scroll`, `channel_list_scroll` and `playback_cpu` as CI runs
-  them; the fake provider's suite (146) and the fake TV's (41).
-- **Not run this session:** the full casting matrix on a real TV (not
-  approved), the real reminder (the user chose later), the night's soak
-  (the user's choice).
+- **CI** at the start: the user had pushed the third session's commits;
+  green at 62d1291.
+- **Checks:** analyze clean; format clean; `build_runner` regenerated one
+  file (a provider's doc comment), no other diff; **4,882 app tests under
+  `TZ=UTC`** (20 skipped); the casting, relay and download tests again
+  with CI's FFmpeg 4.4 (`RELAY_FFMPEG_DIR=/usr/bin`, 734); the fake TV's
+  suite (41); under Xvfb, one file per run: `sources_keyboard`,
+  `cast_walk`, `library_cast_walk` (also with FFmpeg 4.4) and
+  `app_launch`; the matrix's rows 17–23 against the fake TV
+  (`CAST_HOST=fake`, all ok); the new end-to-end test 6 of 6 under heavy
+  CPU load after its tolerance fix (below).
+- **All 60 re-recorded goldens looked at:** 53 changed only in the rail's
+  mark; the onboarding header, Welcome's words, About, the licences'
+  title, the sources' type labels and the shortcuts panel's background
+  changed as meant, nothing else.
+- **Not run this session:** any TV (none asked for: the user was away),
+  the other 17 walks (they touch nothing that changed but the rail's
+  mark), the fake provider's suite (unchanged), the real reminder, the
+  soak.
 
 ## What's next
-1. **Whatever CI names after the push.** New for CI in this push:
-   `channel_list_scroll_test` runs there (debug, Xvfb, like the other two
-   scroll measurements); `playback_cpu_test` and the soak skip.
-2. **What is left of Phase 9** (above).
-3. **The real reminder,** when the user is at the laptop.
-4. **The matrix on the Bedroom TV,** after asking.
-5. **TV-0,** once the user has installed what it needs; or Phase 10.
+1. **Whatever CI names after the push.** New for CI: `fmp4_timeline_test`,
+   `relay_file_clock_test` (runs FFmpeg: CI's 4.4 passed here).
+2. **The matrix's file rows on the Bedroom TV,** after the pop-up: they
+   settle ADR-019 on a real receiver.
+3. **The user's list above;** then TV-0 (the Google TV app needs an
+   `applicationId` without "iptv": choose it with the name, ADR-018) or
+   Phase 10.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -266,7 +250,40 @@ Nothing to build. What the exit did not meet (ADR-016, "The exit"):
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
-- **Lessons of this session (the player, the windows, step 7's rest, the
+- **Lessons of this session (the name, the TV's bar):**
+  - **A receiver's behaviour can be seen without the TV:** the Default
+    Media Receiver is Chrome's media stack, so headless Chrome playing
+    what the relay serves shows what the TV will. A small server in the
+    scratchpad (FFmpeg with the relay's arguments, chunked, as the TV
+    reads it) and a page logging `video.duration`, `currentTime`,
+    `buffered` and `seekable` reproduced the Bedroom TV's growing length
+    in a minute, and tried each fix before any code:
+    `google-chrome --headless=new --autoplay-policy=no-user-gesture-required
+    --user-data-dir=<scratchpad>/prof <page>`. What it can't show: the
+    receiver's own UI and its handling of a LOAD's `currentTime`.
+  - **The LOAD's `media.duration` is not what a TV shows:** the receiver
+    shows its media element's length, which comes from the stream.
+  - **FFmpeg's fragmented MP4 always counts from 0** (8.1:
+    `-output_ts_offset`, `-copyts`, `-use_editlist 0`, `frag_discont`
+    all leave `tfdt` at 0), and `empty_moov` writes the length as 0.
+  - **The relay's isolate is plain Dart, and so is everything it imports:**
+    `relay_job.dart` importing `lib/core/cast/cast_relay.dart` pulled in
+    Flutter (through `cast_encoders.dart`), and the SIGKILL tests failed
+    with "Bad state: No element" (their victim never said "ready"). `dart
+    run test/data/cast/relay/support/relay_victim.dart` prints the import
+    chain. Hence `RelayTimeline` beside `CastTimeline`.
+  - **A provider's generated file copies its doc comment:** edit the
+    comment, run `build_runner`.
+  - **A length ffprobe reads from part of a fragmented MP4 can include
+    the first picture's display offset** (80 ms here), depending on how
+    much was read: compare a stream's length with a tolerance.
+  - **`pkill -f` killed the shell again** while stopping a scratch server
+    (exit 144): keep the server's PID and kill that.
+  - **On Windows, `flutter_secure_storage` and `path_provider` both name
+    their folders from the exe's version information** (CompanyName +
+    ProductName), read natively: changing the product name loses the
+    passwords and the data. The name people read is `FileDescription`.
+- **Lessons of the session before (the player, the windows, step 7's rest, the
   first real TV):**
   - **A fake on this computer's own address can't show which address is
     whose.** The Cast client took `Socket.address` for the local address;
@@ -402,7 +419,29 @@ Nothing to build. What the exit did not meet (ADR-016, "The exit"):
 
 
 ## Codebase notes by area
-New this session (steps 8 and 9):
+New this session (the fourth):
+- **The name:** `lib/core/app_identity.dart` (`appName`, `appFileSlug`,
+  `appDescription`), read by every place a person sees the name; never
+  a literal. `AppMark.appName` points at it.
+- **The mark:** `AppMark` paints `JewelPainter` on the accent's tile (the
+  icon's 1024-unit coordinates; under 64 px the small variant).
+  `tools/brand/make_icons.py` writes the SVG master, the Windows `.ico`,
+  the Linux hicolor icons and the previews from the same coordinates.
+- **The relay's clock:** `Fmp4Timeline` (`lib/data/cast/relay/
+  fmp4_timeline.dart`) sits between FFmpeg's stdout and the TV's socket
+  in `_ContinuousSession._serve` when the job has a `RelayTimeline`
+  (`castRelayJob` makes one from `CastTimeline` for a file's continuous
+  stream only). The coordinator awaits `_startOf` before the relay
+  starts or renews, passes `_clockOf(cast, begins)`, LOADs at
+  `cast.starts`, and turns the TV's time into the file's with
+  `_fileTime` (the floor, the from-0 fallback); `_checkLength` logs a
+  wrong length the TV reports.
+- **The fake TV** reads each continuous stream's `start` and `length`
+  (`FakeMediaCheck`) with ffprobe, as a TV's demuxer would; its own
+  `MEDIA_STATUS` still reports the LOAD's duration and counts from the
+  LOAD's `currentTime`.
+
+New the session before (steps 8 and 9):
 - **State providers:** `lib/core/streams/current_state_stream.dart`
   (`currentThenChanges(() => x.state, x.states)`) under
   `playbackStateProvider`, `castingStateProvider`, `castTimelineProvider`
@@ -1582,6 +1621,7 @@ From earlier sessions (still true):
     overwrite this file, and commit.
 
 ## Don't reopen without new evidence
+- ADR-018/019 (2026-10-14): the name Bijou and its jewel until the user says otherwise; "Server login / Playlist link / Playlist file"; identifiers that name saved things keep `iptv`; the TV's bar on the film's time (not only its length); the length written only from the stream's own facts; the from-0 fallback decided at the first report past a second, for streams that began 10 s in or more; `mfra` dropped rather than rewritten.
 - Phase 9 steps 1–5 (ADR-016): text size held to 100–130 %, and heights that hold text scaled through `context.scaled` (the argument untouched at 100 %, so the goldens stay as they were); Live TV's category rows at 40 px in Compact; the clock's style a required argument of every formatter; the shortcuts as one table with docs/05 written from it; hardware decoding as Automatic (`auto-safe`) or Off (`no`), no list of decoders; the report and the log as two views; a source in an export known by a SHA-256 of type, server and username, never by the server, and named "Xtream source N" when its name says the server or the username; an import as one transaction, a guide-days change taking hold at the next refresh; the report's masking (`<address>`, `<server>`, `Source N`, `~`) before `redact()`; a reminder taken out of the store before it is shown (never twice, at the price of one lost if the app dies in that moment); a reminder following its programme by title and guide channel within 12 hours, a move of 5 minutes or more said; a system notification only while the window is covered; no default action on GNOME Shell's notices (measured on 42.9: it raises the window itself and sends no token); flutter_local_notifications pinned at 22.3.1.
 - Phase 7 step 3 (ADR-014): the probe's 2 s window (measured 0.5–1.7 s); the planner pure in `lib/core/cast/`; only Chromecast Ultra seeded by `md`; HEVC and 4K tried until refused; the user's HEVC "Yes" over a learned refusal; 10-bit/4:2:2/4:4:4 H.264, HEVC beyond Main 10, unknown codecs and VP8/VP9/AV1 re-encoded; an unknown height held at 1080p; deinterlacing one picture per field (≤ 60); bit rates by pixels with floors and ceilings; `aac_latm` converted; direct only without a custom User-Agent, on the first audio track, and not in Low-latency mode; files through the relay as one continuous fMP4; `refusedInterlaced` learned; the process supervisor moved to step 3; the sweep only killing what still runs the recorded executable while its app is gone; facts remembered for the run (LRU 256).
 - Phase 7 step 2 (ADR-014): sealed command and join results rather than `AppFailure`; a LOAD done once taken, a later LOAD_FAILED as IDLE/ERROR; the heartbeat lost after 3 intervals with nothing heard (any message counts); reconnect for 30 s, rejoining by session id; a RECEIVER_STATUS whose `status` isn't an object never ends a session; the fake receiver's own hand-written codec; Add by address's fallback over a Cast connection named by MULTIZONE_STATUS (its id assumed to equal TXT `id` until the TV run checks it).
@@ -1704,7 +1744,9 @@ From earlier sessions (still true):
 - The second Google TV doesn't answer on the network. Is it on another
   network, and should later casting tests include it?
 - When the Windows PC is available for the Windows playback run.
-- App name and icon (placeholder "IPTV Player").
+- Bijou and its jewel (ADR-018): kept, or another name? And the Google
+  TV app's `applicationId` (it can drop "iptv" from the start: nothing is
+  saved under it yet).
 - Light theme: tokens allow one, but it is out of scope for v1 (docs/05).
 - Windows installer type (MSIX or Inno Setup) is Phase 10's to recommend,
   but the user decides.
