@@ -42,6 +42,7 @@ typedef StreamFailureClassifier = PlaybackProblem Function({
 final class CastTimings {
   const new({
     this.reach = const Duration(seconds: 10),
+    this.liveEnd = const Duration(seconds: 10),
     this.learnWithin = const Duration(seconds: 15),
     this.directWithin = const Duration(seconds: 10),
     this.recasts = 3,
@@ -58,6 +59,11 @@ final class CastTimings {
   /// The TV must ask for the relay's stream within this of the LOAD;
   /// otherwise it can't reach this computer (a firewall, a VPN).
   final Duration reach;
+
+  /// A live continuous stream that ended is loaded again when the TV
+  /// hasn't said IDLE/FINISHED within this: the Bedroom TV never says it
+  /// and stays BUFFERING (2026-10-14, the matrix's row 11).
+  final Duration liveEnd;
 
   /// A refusal this soon after a relayed LOAD teaches the device's limits
   /// (docs/04 "Learning").
@@ -1354,26 +1360,48 @@ final class CastCoordinator implements RemotePlayback {
     }
   }
 
+  /// The relay's live continuous stream ended: the TV plays out what it
+  /// has and says IDLE/FINISHED (ADR-004), which loads it again. A TV
+  /// that says nothing within [CastTimings.liveEnd] (the Bedroom TV stays
+  /// BUFFERING) is taken as having said it.
+  void _awaitLiveEnd(_Cast cast) {
+    if (cast.plan?.live != true) return;
+    final loads = cast.loads;
+    cast.endTimer?.cancel();
+    cast.endTimer = Timer(timings.liveEnd, () {
+      if (!identical(cast, _cast) || cast.loads != loads) return;
+      _log.info(
+        _tag,
+        '$deviceName said nothing of the stream ending: as if it had',
+      );
+      unawaited(_liveEnded(cast));
+    });
+  }
+
+  /// A live stream ended on the TV: loaded again, a few times.
+  Future<void> _liveEnded(_Cast cast) async {
+    cast.endTimer?.cancel();
+    if (!_recast(cast)) {
+      return await _fail(
+        cast,
+        const CastProblem(
+          CastProblemKind.relay,
+          detail: 'The stream kept ending on the TV',
+        ),
+      );
+    }
+    _log.info(_tag, 'The live stream ended on the TV: loading it again');
+    _set(_state.copyWith(buffering: true));
+    return await _reload(cast);
+  }
+
   /// IDLE/FINISHED: a live stream dropped (on a continuous stream that is
   /// how it ends, ADR-004) and is loaded again; a file cut short carries
   /// on where it was; a file at its end has been watched.
   Future<void> _finished(_Cast cast, CastMediaStatus media) async {
     final plan = cast.plan;
     if (plan == null) return;
-    if (plan.live) {
-      if (!_recast(cast)) {
-        return await _fail(
-          cast,
-          const CastProblem(
-            CastProblemKind.relay,
-            detail: 'The stream kept ending on the TV',
-          ),
-        );
-      }
-      _log.info(_tag, 'The live stream ended on the TV: loading it again');
-      _set(_state.copyWith(buffering: true));
-      return await _reload(cast);
-    }
+    if (plan.live) return await _liveEnded(cast);
     final position = _fileTime(cast, media.position);
     final length = _length(cast);
     if (length != null && position + timings.earlyEnd < length) {
@@ -1546,6 +1574,7 @@ final class CastCoordinator implements RemotePlayback {
           _tag,
           tvLeft ? 'The TV left the stream' : 'The continuous stream ended',
         );
+        if (!tvLeft) _awaitLiveEnd(cast);
       case CastRelayFailed(:final failure):
         unawaited(_relayFailed(cast, failure));
     }
@@ -1715,6 +1744,7 @@ final class CastCoordinator implements RemotePlayback {
 
   Future<void> _stopRelay(_Cast cast) async {
     cast.reachTimer?.cancel();
+    cast.endTimer?.cancel();
     final session = cast.relay;
     cast.relay = null;
     final events = cast.relayEvents;
@@ -2062,6 +2092,9 @@ final class _Cast {
   bool loadPending = false;
   bool fetched = false;
   Timer? reachTimer;
+
+  /// Waits for the TV to say a live continuous stream ended.
+  Timer? endTimer;
 
   bool played = false;
   bool failed = false;

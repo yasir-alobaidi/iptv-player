@@ -705,6 +705,33 @@ void main() {
       expect(rig.tv.loads.last.contentType, 'video/mp4');
     });
 
+    test('a continuous stream that ends with the TV saying nothing (the '
+        'Bedroom TV stays BUFFERING) is loaded again all the same', () async {
+      rig.probe.next = const StreamProbed(hevc4kFacts);
+      await castChannel();
+      rig.relay.last.emit(const CastRelayEnded(tvLeft: false));
+      await rig.loaded(2);
+      expect(rig.relay.last.renews.single.startAt, isNull);
+    });
+
+    test('the TV saying FINISHED in time: loaded again once', () async {
+      rig.probe.next = const StreamProbed(hevc4kFacts);
+      await castChannel();
+      rig.relay.last.emit(const CastRelayEnded(tvLeft: false));
+      rig.tv.idle(CastIdleReason.finished);
+      await rig.loaded(2);
+      await Future<void>.delayed(fastTimings.liveEnd * 2);
+      expect(rig.tv.loads, hasLength(2));
+    });
+
+    test('the TV leaving the stream is not an end', () async {
+      rig.probe.next = const StreamProbed(hevc4kFacts);
+      await castChannel();
+      rig.relay.last.emit(const CastRelayEnded(tvLeft: true));
+      await Future<void>.delayed(fastTimings.liveEnd * 2);
+      expect(rig.tv.loads, hasLength(1));
+    });
+
     test('a renew that fails fails the cast', () async {
       rig.probe.next = const StreamProbed(hevc4kFacts);
       await castChannel();

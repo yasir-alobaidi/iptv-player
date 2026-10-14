@@ -578,6 +578,7 @@ final class FakePictures implements CastPictures {
 /// Short waits, so every rule runs in a test's time.
 const fastTimings = CastTimings(
   reach: Duration(milliseconds: 400),
+  liveEnd: Duration(milliseconds: 400),
   learnWithin: Duration(seconds: 2),
   directWithin: Duration(seconds: 2),
   picture: Duration(milliseconds: 200),
