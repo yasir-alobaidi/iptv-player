@@ -331,7 +331,7 @@ final class LibraryScanStateProvider
   }
 }
 
-String _$libraryScanStateHash() => r'9d51a84867c986423752fd3dfa823a3782818a70';
+String _$libraryScanStateHash() => r'3a6f277160af3b6526a13067a6c1c6ba26da94ed';
 
 /// F on a library item.
 

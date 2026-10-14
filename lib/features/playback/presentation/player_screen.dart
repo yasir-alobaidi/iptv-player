@@ -130,8 +130,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _hasNext = hasNext;
     // While casting, the casting view takes the player's place (Phase 7
     // decision 2): a play that opened the player, or Cast from its OSD.
+    // The coordinator is asked too: what the provider says may be from
+    // before this screen was there to hear it.
     _castWatch = ref.listenManual(playbackStateProvider, (_, next) {
-      if (next.value is PlaybackCasting) _handOffToCast();
+      if (next.value is PlaybackCasting && _coordinator.casting) {
+        _handOffToCast();
+      }
     });
     if (_coordinator.casting) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handOffToCast());

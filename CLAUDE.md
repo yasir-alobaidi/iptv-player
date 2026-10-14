@@ -42,7 +42,8 @@ Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO /
 - `flutter test` (unit/widget/golden) · `flutter test integration_test/<file>_test.dart -d linux` (integration, one file per run: a multi-file run on Linux desktop never starts the second app; `xvfb-run -a` for a headless run)
 - `flutter run -d linux` · `flutter run -d windows`
 - `dart run tools/fake_provider/bin/server.dart --port 8899` (fake IPTV server, see docs/06-quality.md)
-- `tools/soak/run.sh [minutes]` (soak on the real display) · `IPTV_BENCHMARK=1 flutter test integration_test/zap_benchmark_test.dart -d linux` (zap budget) · `IPTV_PLAYER_VIDEO=0` plays with no picture
+- `tools/soak/run.sh [minutes]` (soak on the real display: the whole app on the fake panel and the fake TV) · `IPTV_BENCHMARK=1 flutter test integration_test/zap_benchmark_test.dart -d linux` (zap budget) · `IPTV_PLAYER_VIDEO=0` plays with no picture
+- `flutter drive --profile -d linux --driver=test_driver/integration_test.dart --target=integration_test/<name>_test.dart` (the profile-mode measurements on the real display: `guide_scroll`, `poster_grid_scroll`, `channel_list_scroll`, `search_typing`, `playback_cpu`). A test that needs the player's picture drawn must not set `tester.view.physicalSize` (ADR-016, step 8)
 
 ## Hard rules
 1. **Never crash on provider data.** Parsing is tolerant (numbers as strings, "" as null, [] vs {}). Bad rows are skipped and logged, never thrown to the UI.
@@ -60,6 +61,7 @@ Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO /
 ## Conventions
 - Feature-first folders: `lib/features/<feature>/{data,domain,presentation}`; shared code in `lib/core`, `lib/data`, `lib/design`.
 - Riverpod code-gen providers; no global mutable singletons; dispose resources with `ref.onDispose`.
+- A provider of state fed by a stream uses `currentThenChanges` (`lib/core/streams/`), never `yield*` of the stream: Riverpod pauses a provider nobody watches, and a forwarded stream then replays its past to the next screen (ADR-016, step 9).
 - Repositories return sealed `Result<T>` types; no exceptions across layers.
 - Models are immutable (freezed). DB rows map to domain models inside repositories.
 - Files `snake_case.dart`, types `PascalCase`, members `camelCase`.

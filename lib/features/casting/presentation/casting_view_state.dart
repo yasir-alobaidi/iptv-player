@@ -1,4 +1,5 @@
 import 'package:iptv_player/core/cast/cast_device.dart';
+import 'package:iptv_player/core/streams/current_state_stream.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -8,18 +9,16 @@ part 'casting_view_state.g.dart';
 
 /// The cast as it changes, for the screens.
 @Riverpod(keepAlive: true)
-Stream<CastingState> castingState(Ref ref) async* {
+Stream<CastingState> castingState(Ref ref) {
   final coordinator = ref.watch(castCoordinatorProvider);
-  yield coordinator.state;
-  yield* coordinator.states;
+  return currentThenChanges(() => coordinator.state, coordinator.states);
 }
 
 /// Where a movie or an episode is on the TV.
 @Riverpod(keepAlive: true)
-Stream<VodTimeline> castTimeline(Ref ref) async* {
+Stream<VodTimeline> castTimeline(Ref ref) {
   final coordinator = ref.watch(castCoordinatorProvider);
-  yield coordinator.timeline;
-  yield* coordinator.timelines;
+  return currentThenChanges(() => coordinator.timeline, coordinator.timelines);
 }
 
 /// Whether the casting view shows in place of the screen (the canvas

@@ -95,6 +95,9 @@ iptv-player/
 | Lints | very_good_analysis | strict flutter_lints |
 | Tests | flutter_test, mocktail, integration_test, golden files | — |
 
+## State that comes from a stream
+A coordinator keeps its state and announces each change on a broadcast stream (`state` and `states`). The provider the screens watch is built with `currentThenChanges(() => x.state, x.states)` (`lib/core/streams/current_state_stream.dart`): it hands over the state as it is at that moment, nothing while its listener is paused, and the current state once when the listener is back. **Never `yield*` the stream itself:** Riverpod pauses a provider nobody watches, a paused subscription keeps every event, and the next screen to watch is handed the past (the player, opened after a cast had ended, was told "casting" and closed itself: ADR-016, step 9). Changes made in one go arrive as the last of them. A stream of events that each matter (notices, the player engine's events) is listened to directly, not through such a provider.
+
 ## Key domain interfaces
 ```dart
 abstract interface class PlayerEngine {

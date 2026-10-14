@@ -10,6 +10,7 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 
 import '../../../app/app_harness.dart';
 import '../support/cast_fakes.dart';
@@ -112,5 +113,73 @@ void main() {
     expect(find.byType(CastingView), findsOneWidget);
     expect(ui.live.rig.state, isA<PlaybackCasting>());
     expect(ui.cast.coordinator.state.phase, CastPhase.playing);
+  });
+
+  // Found by the soak (ADR-016, step 9): on a screen that doesn't watch
+  // playback, the state's provider is paused and used to keep everything
+  // it missed. The player opened after a cast was then told "casting"
+  // first, closed itself and opened the casting view, and the channel
+  // played with no picture.
+  castTest('after a cast has ended, the player opens and stays, wherever '
+      'it is opened from', (tester) async {
+    ui = CastUi();
+    addTearDown(() => tester.runAsync(ui.live.db.close));
+    addTearDown(ui.dispose);
+    await tester.runAsync(ui.live.seed);
+    arena = (await tester.runAsync(() => ui.channel('201')))!;
+    // Settings: nothing on it shows what plays.
+    app = await pumpApp(
+      tester,
+      initialLocation: AppDestination.settings.path,
+      overrides: ui.overrides,
+    );
+    await settleCast(tester);
+    final router = app.router;
+    final playback = ui.live.rig.coordinator;
+
+    Future<void> watch() async {
+      unawaited(playback.playLive(arena));
+      unawaited(router.push<void>(playerRoutePath));
+      await settleCast(tester);
+      ui.live.rig.engine.firstFrame();
+      await settleCast(tester);
+    }
+
+    await watch();
+    expect(router.state.uri.path, playerRoutePath);
+    expect(ui.live.rig.state, isA<PlaybackPlaying>());
+
+    // Cast from the player: it hands over, and the cast plays.
+    unawaited(ui.cast.coordinator.connect(tvDevice));
+    await settleCast(tester);
+    ui.cast.relay.last.emit(const CastRelayFetched());
+    ui.cast.tv.playing();
+    await settleCast(tester);
+    expect(router.state.uri.path, AppDestination.settings.path);
+    expect(find.byType(CastingView), findsOneWidget);
+
+    // Another channel, on the TV: the state changes again with no screen
+    // here watching it.
+    final other = (await tester.runAsync(() => ui.channel('202')))!;
+    unawaited(playback.playLive(other));
+    await settleCast(tester);
+    ui.cast.relay.last.emit(const CastRelayFetched());
+    ui.cast.tv.playing();
+    await settleCast(tester);
+    expect(ui.cast.tv.loads, hasLength(2));
+
+    // Stop casting: the view closes, nothing plays.
+    unawaited(ui.cast.coordinator.disconnect());
+    await settleCast(tester, rounds: 8);
+    expect(find.byType(CastingView), findsNothing);
+    expect(ui.live.rig.state, isA<PlaybackIdle>());
+
+    await watch();
+    expect(router.state.uri.path, playerRoutePath, reason: 'the player');
+    expect(find.byType(PlayerScreen), findsOneWidget);
+    expect(find.byType(CastingView), findsNothing);
+    expect(ui.live.rig.state, isA<PlaybackPlaying>());
+    router.pop();
+    await settleCast(tester);
   });
 }

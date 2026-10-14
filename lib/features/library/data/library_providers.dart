@@ -5,6 +5,7 @@ import 'package:drift/isolate.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/core/streams/current_state_stream.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/library/library_scan.dart';
 import 'package:iptv_player/data/library/library_thumbnails.dart';
@@ -84,10 +85,9 @@ Future<String?> libraryThumbnail(Ref ref, int itemId) =>
 
 /// The scan's progress, for the Library's header.
 @Riverpod(keepAlive: true)
-Stream<LibraryScanState> libraryScanState(Ref ref) async* {
+Stream<LibraryScanState> libraryScanState(Ref ref) {
   final scans = ref.watch(libraryScansProvider);
-  yield scans.state;
-  yield* scans.states;
+  return currentThenChanges(() => scans.state, scans.states);
 }
 
 /// F on a library item.

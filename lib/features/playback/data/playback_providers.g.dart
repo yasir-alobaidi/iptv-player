@@ -358,7 +358,7 @@ final class PlaybackStateProvider
   }
 }
 
-String _$playbackStateHash() => r'e2580c6462b0085057e71cd841b62a8419d25f65';
+String _$playbackStateHash() => r'617c01a3388034d9396a9adbbfa42d03af53b3c9';
 
 /// The picture's size while something plays; null between streams.
 

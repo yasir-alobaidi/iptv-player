@@ -50,7 +50,7 @@ final class CastingStateProvider
   }
 }
 
-String _$castingStateHash() => r'12fcc8f3a48cce251d38adea0e307767776a04f4';
+String _$castingStateHash() => r'6c4c23a6ac8a954b4deccd52b46826d3ed7c3829';
 
 /// Where a movie or an episode is on the TV.
 
@@ -94,7 +94,7 @@ final class CastTimelineProvider
   }
 }
 
-String _$castTimelineHash() => r'ee172c0e9a2a5ade2d953b030d4e7f38a1717dce';
+String _$castTimelineHash() => r'024be453eceb18099a4ef5044889c23afcfcf5d3';
 
 /// Whether the casting view shows in place of the screen (the canvas
 /// draws it inside the shell). It closes by itself when the session ends.

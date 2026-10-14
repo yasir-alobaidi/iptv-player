@@ -6,6 +6,7 @@ import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/core/streams/current_state_stream.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/features/diagnostics/data/db_decoder_notes.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -99,10 +100,9 @@ PlaybackCoordinator playbackCoordinator(Ref ref) {
 
 /// What plays, as it changes.
 @Riverpod(keepAlive: true)
-Stream<PlaybackState> playbackState(Ref ref) async* {
+Stream<PlaybackState> playbackState(Ref ref) {
   final coordinator = ref.watch(playbackCoordinatorProvider);
-  yield coordinator.state;
-  yield* coordinator.states;
+  return currentThenChanges(() => coordinator.state, coordinator.states);
 }
 
 /// The picture's size while something plays; null between streams.
