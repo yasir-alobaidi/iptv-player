@@ -101,8 +101,14 @@ abstract class AudioFacts with _$AudioFacts {
 
 /// The facts the laptop's player has about what it plays (Phase 7
 /// decision 4's first source), or null when it has too few to plan with
-/// (no codec read yet). Ask once it has shown a picture.
-StreamFacts? streamFactsFromPlayer(StreamInfo info, {PlayerTracks? tracks}) {
+/// (no codec read yet). Ask once it has shown a picture. [duration] is
+/// the length the player read from the stream, which the relay writes
+/// into a file's stream for the TV's own bar (docs/04).
+StreamFacts? streamFactsFromPlayer(
+  StreamInfo info, {
+  PlayerTracks? tracks,
+  Duration? duration,
+}) {
   final videoCodec = _firstWord(info.videoCodec);
   final audio = <AudioFacts>[
     if (tracks != null && tracks.audio.isNotEmpty)
@@ -124,6 +130,7 @@ StreamFacts? streamFactsFromPlayer(StreamInfo info, {PlayerTracks? tracks}) {
   if (videoCodec == null && audio.every((a) => a.codec == null)) return null;
   return StreamFacts(
     origin: StreamFactsOrigin.player,
+    duration: duration != null && duration > Duration.zero ? duration : null,
     video: videoCodec == null
         ? null
         : VideoFacts(

@@ -586,7 +586,11 @@ final class CastCoordinator implements RemotePlayback {
     final cast = _cast = _Cast(item, from: from);
     if (handover != null && handover.item == item) {
       if (handover.info case final info?) {
-        cast.fromPlayer = streamFactsFromPlayer(info, tracks: handover.tracks);
+        cast.fromPlayer = streamFactsFromPlayer(
+          info,
+          tracks: handover.tracks,
+          duration: handover.duration,
+        );
       }
       if (handover.tracks case final tracks?) {
         cast.audioTrack = playerAudioIndex(tracks);

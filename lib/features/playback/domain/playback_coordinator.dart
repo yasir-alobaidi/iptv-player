@@ -234,6 +234,7 @@ final class PlaybackCoordinator {
         : PlaybackHandover(
             item: item,
             position: item.live ? null : _position,
+            duration: item.live ? null : _duration,
             info: state is PlaybackPlaying ? await _streamInfo() : null,
             tracks: state is PlaybackPlaying ? _tracks : null,
           );

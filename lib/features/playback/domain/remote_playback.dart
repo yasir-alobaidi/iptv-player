@@ -26,12 +26,22 @@ abstract interface class RemotePlayback {
 /// to the TV; a movie keeps its position").
 @immutable
 final class PlaybackHandover {
-  const new({required this.item, this.position, this.info, this.tracks});
+  const new({
+    required this.item,
+    this.position,
+    this.duration,
+    this.info,
+    this.tracks,
+  });
 
   final Playable item;
 
   /// Where a file was; null for live.
   final Duration? position;
+
+  /// A file's length as the player read it from the stream; null for
+  /// live, or before it knew. Never the catalogue's runtime.
+  final Duration? duration;
 
   /// What the player knew of the stream while it showed it (Phase 7
   /// decision 4's cheapest facts); null when it had no picture yet.

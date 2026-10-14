@@ -943,6 +943,37 @@ void main() {
       expect(rig.tv.loads.single.duration, const Duration(minutes: 98));
     });
 
+    test('Cast while watching a film: the length the player read from the '
+        "stream is written into the relay's, as a probe's would be (the "
+        'Bedroom TV showed what it had read as the length)', () async {
+      final playback = rig.playback;
+      await playback.coordinator.playVod(
+        PlayableMovie(movie(7, runtime: const Duration(minutes: 98))),
+      );
+      playback.engine
+        ..info = const StreamInfo(
+          videoCodec: 'h264 (H.264 / AVC)',
+          width: 1280,
+          height: 720,
+          fps: 24,
+          audioCodec: 'aac',
+          audioChannels: 2,
+        )
+        ..duration(const Duration(minutes: 100))
+        ..firstFrame();
+      await rig.coordinator.connect(tvDevice);
+      await rig.loaded();
+      expect(rig.probe.inputs, isEmpty, reason: "the player's facts");
+      expect(
+        rig.relay.last.request.plan.delivery,
+        CastDelivery.relayContinuous,
+      );
+      expect(
+        rig.relay.last.request.timeline!.length,
+        const Duration(minutes: 100),
+      );
+    });
+
     test('pause and play go to the TV; a pause saves the place', () async {
       await castMovie();
       rig.tv.playing(position: const Duration(minutes: 1));

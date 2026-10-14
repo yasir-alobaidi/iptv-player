@@ -17,7 +17,8 @@
 // computer, with no provider in them — read by the TV itself, through
 // the relay, with the MP4 made beside it, with subtitles, a downloaded
 // title, and a resume. About 10 more minutes; CAST_ROWS=17,18,19,20,21,22,23
-// runs them alone.
+// runs them alone. Row 24 is Cast while the laptop plays a film, the way
+// the TV's bar once showed the wrong length (ADR-019).
 //
 // CAST_HOST=fake runs every row against the fake receiver in-process
 // (rows 6 and 16 included, with shorter holds): the runner's own check,
@@ -48,6 +49,7 @@ import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/data/cast/cast_connection_check.dart';
+import 'package:iptv_player/data/cast/cast_transport.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
 import 'package:iptv_player/data/cast/ffmpeg_cast_mp4_copies.dart';
 import 'package:iptv_player/data/cast/ffmpeg_cast_subtitles.dart';
@@ -520,6 +522,39 @@ List<_Row> _rows({required bool fake}) {
         m.expectNoProvider(r);
       },
     ),
+    _Row(
+      24,
+      'Cast while the laptop plays a film (MKV, AC-3) at 3:00',
+      "the film moving to the TV at 3:00, the TV's bar 10:00 long",
+      (m, r) async {
+        // What the laptop's player read from the stream: the cast plans
+        // from these, not a probe, and the length goes into the relay's
+        // stream (the Bedroom TV showed 45:48 of 1:40:00 as the length).
+        m.engine.watching = (
+          info: const StreamInfo(
+            videoCodec: 'h264',
+            width: 1920,
+            height: 1080,
+            fps: 25,
+            audioCodec: 'ac3',
+            audioChannels: 6,
+          ),
+          duration: const Duration(minutes: 10),
+        );
+        final movie = PlayableMovie(_movie(100001, 'mkv'));
+        unawaited(m.playback.playVod(movie, from: const Duration(minutes: 3)));
+        await m.until(
+          () => m.engine.reading,
+          'the laptop reading the stream',
+          within: const Duration(seconds: 20),
+        );
+        r.note('the laptop played it');
+        await m.castFile(r, movie, moving: true);
+        final at = m.coordinator.timeline.position;
+        r.note('moved at ${_clock(at)}');
+        await m.hold(r);
+      },
+    ),
   ];
 }
 
@@ -643,8 +678,14 @@ final class _Matrix {
         cast.port,
         timeout: const Duration(seconds: 5),
       );
-      address = socket.address.address;
+      // `socket.address` is the TV's (cast_transport.dart): this
+      // computer's is the one on the TV's network.
+      final tvAddress = socket.remoteAddress;
       socket.destroy();
+      final own = await NetworkInterface.list(type: tvAddress.type);
+      address = pickLocalAddress(tvAddress, [
+        for (final each in own) ...each.addresses,
+      ])!.address;
       say('${device.name} at $host; this computer is $address');
     }
 
@@ -873,12 +914,17 @@ final class _Matrix {
     say('   playing ${_seconds(clock.elapsed)} after Cast');
   }
 
-  Future<void> castFile(_Result r, Playable item, {Duration? from}) async {
+  Future<void> castFile(
+    _Result r,
+    Playable item, {
+    Duration? from,
+    bool moving = false,
+  }) async {
     final clock = Stopwatch()..start();
     final playing = _playingCount;
     final logged = lines.length;
     await coordinator.connect(device);
-    unawaited(playback.playVod(item, from: from));
+    if (!moving) unawaited(playback.playVod(item, from: from));
     await _playing(item, after: playing);
     r.start ??= clock.elapsed;
     say('   playing ${_seconds(clock.elapsed)} after Cast');
@@ -1126,6 +1172,10 @@ final class _ReadingEngine implements PlayerEngine {
   HttpClient? _client;
   bool reading = false;
 
+  /// What the player reads from a film once it shows a picture; null
+  /// reports nothing.
+  ({StreamInfo info, Duration duration})? watching;
+
   @override
   Stream<PlayerEvent> get events => _fake.events;
 
@@ -1142,6 +1192,11 @@ final class _ReadingEngine implements PlayerEngine {
         await for (final _ in response) {
           if (!reading && _fake.generation == generation) {
             reading = true;
+            if (watching case (:final info, :final duration)) {
+              _fake
+                ..info = info
+                ..duration(duration);
+            }
             _fake.firstFrame();
           }
         }

@@ -84,6 +84,22 @@ void main() {
       expect(facts.audio.single.codec, 'aac');
     });
 
+    test("a file's length as the player read it; none when it read 0", () {
+      const info = StreamInfo(videoCodec: 'h264', audioCodec: 'aac');
+      expect(
+        streamFactsFromPlayer(
+          info,
+          duration: const Duration(minutes: 100),
+        )!.duration,
+        const Duration(minutes: 100),
+      );
+      expect(streamFactsFromPlayer(info)!.duration, isNull);
+      expect(
+        streamFactsFromPlayer(info, duration: Duration.zero)!.duration,
+        isNull,
+      );
+    });
+
     test('nothing read yet is too little to plan with', () {
       expect(streamFactsFromPlayer(const StreamInfo()), isNull);
       expect(
