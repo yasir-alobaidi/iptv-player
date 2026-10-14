@@ -277,7 +277,7 @@ final class FakeRelaySession implements CastRelaySession {
 
   final _ready = Completer<CastRelayFailure?>();
   final _events = StreamController<CastRelayEvent>();
-  final renews = <({Duration? startAt, bool plan})>[];
+  final renews = <({Duration? startAt, bool plan, CastTimeline? timeline})>[];
   CastRelayFailure? renewFailure;
   bool stopped = false;
 
@@ -302,8 +302,12 @@ final class FakeRelaySession implements CastRelaySession {
   Stream<CastRelayEvent> get events => _events.stream;
 
   @override
-  Future<CastRelayFailure?> renew({Duration? startAt, CastPlan? plan}) async {
-    renews.add((startAt: startAt, plan: plan != null));
+  Future<CastRelayFailure?> renew({
+    Duration? startAt,
+    CastPlan? plan,
+    CastTimeline? timeline,
+  }) async {
+    renews.add((startAt: startAt, plan: plan != null, timeline: timeline));
     log.add('renew:$id');
     if (renewFailure case final failure?) {
       fail(failure);

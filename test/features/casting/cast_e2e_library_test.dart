@@ -326,8 +326,9 @@ void main() {
 
     test(
       'a subtitle file beside a Matroska film, through the relay: the TV '
-      'reads it as WebVTT and shows it from the start; after a seek its '
-      'cues count from the key frame the stream starts at; S turns it off',
+      'reads it as WebVTT and shows it from the start; the stream is on '
+      "the film's own clock, its whole length and its time the film's, so "
+      "after a seek the cues keep the film's times; S turns it off",
       () async {
         const mkv = 'vod_h264_ac3_10min.mkv';
         rig = await CastE2E.start();
@@ -355,10 +356,14 @@ void main() {
         expect(rig.tv.activeTrackIds, [1], reason: 'a file beside the video');
         expect(rig.state.subtitle, 1);
         expect(rig.state.subtitles.single.beside, isTrue);
+        // What the TV's own bar shows: the film's length from the first
+        // picture, not what it has read so far (the Bedroom TV, 2026-10).
+        final stream = rig.tv.checks.last;
+        expect(stream.length!.inMilliseconds, _tenMinutes);
+        expect(stream.start!.inMilliseconds, inInclusiveRange(0, 200));
 
         // A seek to 67 s: this file has a key frame every 2 s, so the
-        // copied stream starts at 66 s, and the cue of 70 s is 4 s in. The
-        // cue of 60–64 s is over by then.
+        // copied stream starts at 66 s, which is the TV's time there.
         final first = rig.tv.loaded!['contentId'];
         await rig.playback.seek(const Duration(seconds: 67));
         await until(
@@ -369,14 +374,21 @@ void main() {
         final moved = rig.tv.textTracks.single;
         expect(moved.problem, isNull, reason: '$moved');
         expect(moved.url, isNot(whole.url));
-        expect(moved.firstText, 'External English subtitle 8 at 70 s');
+        expect(moved.cues, whole.cues, reason: "the film's own times");
+        expect(moved.firstText, whole.firstText);
+        expect(rig.tv.activeTrackIds, [1], reason: 'the choice is kept');
         expect(
-          moved.firstCue!.inMilliseconds,
-          inInclusiveRange(4000, 4200),
+          (rig.tv.requests('LOAD').last.payload['currentTime']! as num) * 1000,
+          inInclusiveRange(65800, 66200),
           reason: 'from the key frame at 66 s, not from 67 s',
         );
-        expect(moved.cues, whole.cues - 7);
-        expect(rig.tv.activeTrackIds, [1], reason: 'the choice is kept');
+        await until(
+          () => rig.tv.checks.last.start! > const Duration(seconds: 1),
+          what: "the TV's check of the stream after the seek",
+        );
+        final after = rig.tv.checks.last;
+        expect(after.length!.inMilliseconds, _tenMinutes);
+        expect(after.start!.inMilliseconds, inInclusiveRange(65800, 66200));
         await until(
           () => rig.tv.playerState == 'PLAYING',
           what: 'playing after the seek',
@@ -476,3 +488,8 @@ void main() {
     );
   });
 }
+
+/// Ten minutes as a TV's demuxer reads the header: the film's length, or
+/// as much more as its first picture is shown late (80 ms in this file,
+/// counted or not depending on how much of the stream was read).
+final Matcher _tenMinutes = inInclusiveRange(600000, 600200);

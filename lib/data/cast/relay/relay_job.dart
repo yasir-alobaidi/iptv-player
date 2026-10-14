@@ -18,6 +18,7 @@ final class RelayJob {
     this.transcode = false,
     this.segmentSeconds = 2,
     this.localInput,
+    this.timeline,
   });
 
   /// The bundled FFmpeg.
@@ -47,10 +48,23 @@ final class RelayJob {
   /// itself, and the proxy has no part in it.
   final String? localInput;
 
+  /// A file's own clock, which the continuous stream is put on
+  /// (`Fmp4Timeline`); null leaves FFmpeg's.
+  final RelayTimeline? timeline;
+
   @override
   String toString() =>
       'RelayJob(${output.name}, ${live ? 'live' : 'file'}'
       '${transcode ? ', transcode' : ''})';
+}
+
+/// A relayed file's own clock (`CastTimeline`, which the relay's isolate
+/// can't import): where its stream begins in the file, and its length.
+final class RelayTimeline {
+  const new({required this.start, this.length});
+
+  final Duration start;
+  final Duration? length;
 }
 
 enum RelayOutput {

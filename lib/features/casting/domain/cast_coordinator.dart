@@ -336,21 +336,25 @@ final class CastCoordinator implements RemotePlayback {
     final generation = _restart(cast);
     cast
       ..from = to
-      ..offset = to;
+      ..starts = to;
     _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
-    final begins = _startOf(cast, to);
-    final failure = await session.renew(startAt: to);
+    final begins = await _startOf(cast, to);
+    if (!_current(cast, session, generation)) return;
+    final failure = await session.renew(
+      startAt: to,
+      timeline: _clockOf(cast, begins),
+    );
     if (failure != null || !_current(cast, session, generation)) return;
     final tv = await _joined;
     if (tv == null || !_current(cast, session, generation)) return;
-    cast.offset = await begins;
-    if (!_current(cast, session, generation)) return;
+    cast.starts = begins;
     await _load(
       cast,
       tv,
       generation,
       url: session.url,
       contentType: session.contentType,
+      start: begins,
     );
   }
 
@@ -781,7 +785,7 @@ final class CastCoordinator implements RemotePlayback {
       cast
         ..directOnTv = true
         // The TV's own time is the file's.
-        ..offset = Duration.zero;
+        ..starts = Duration.zero;
       _countCast(stream.info.sourceId);
       await _load(
         cast,
@@ -803,7 +807,10 @@ final class CastCoordinator implements RemotePlayback {
     if (plan.video is CastVideoTranscode) {
       cast.encoder ??= (await _encoders).best;
     }
-    final begins = _startOf(cast, cast.from ?? Duration.zero);
+    // Where the stream will begin in the file, which the relay counts it
+    // from (docs/04 "The TV's own bar").
+    final begins = await _startOf(cast, cast.from ?? Duration.zero);
+    if (!_fresh(cast, generation)) return;
     final started = await _relay.start(
       CastRelayRequest(
         plan: plan,
@@ -812,6 +819,7 @@ final class CastCoordinator implements RemotePlayback {
         localAddress: local,
         encoder: plan.video is CastVideoTranscode ? cast.encoder : null,
         startAt: plan.live ? null : cast.from,
+        timeline: plan.live ? null : _clockOf(cast, begins),
       ),
     );
     switch (started) {
@@ -824,7 +832,7 @@ final class CastCoordinator implements RemotePlayback {
         }
         cast
           ..relay = session
-          ..offset = plan.live ? Duration.zero : cast.from ?? Duration.zero;
+          ..starts = plan.live ? Duration.zero : begins;
         cast.relayEvents = session.events.listen(
           (event) => _onRelay(cast, session, event),
         );
@@ -834,14 +842,13 @@ final class CastCoordinator implements RemotePlayback {
         if (failure != null || !_current(cast, session, generation)) return;
         final tv = await _joined;
         if (tv == null || !_current(cast, session, generation)) return;
-        if (!plan.live) cast.offset = await begins;
-        if (!_current(cast, session, generation)) return;
         await _load(
           cast,
           tv,
           generation,
           url: session.url,
           contentType: session.contentType,
+          start: cast.starts,
         );
     }
   }
@@ -878,7 +885,7 @@ final class CastCoordinator implements RemotePlayback {
     cast
       ..served = served
       // The TV's own time is the file's.
-      ..offset = Duration.zero;
+      ..starts = Duration.zero;
     final tv = await _joined;
     if (tv == null || !_fresh(cast, generation)) return;
     await _load(
@@ -977,8 +984,7 @@ final class CastCoordinator implements RemotePlayback {
   // A file's subtitles.
 
   /// The file's subtitles for a LOAD: each WebVTT file served by the
-  /// relay, its cues counted from where the TV's time 0 is (a relayed
-  /// stream's start; a file the TV plays itself keeps its own times).
+  /// relay, its cues at the file's own times, which are the TV's.
   /// What the first LOAD names decides which shows from the start.
   Future<List<CastTextTrack>> _textTracks(
     _Cast cast,
@@ -998,9 +1004,10 @@ final class CastCoordinator implements RemotePlayback {
     await _closeTracks(cast);
     final subtitles = set.subtitles;
     if (subtitles.isEmpty || !_fresh(cast, generation)) return const [];
-    final files = await set.files(
-      by: _tvReads(cast) ? Duration.zero : cast.offset,
-    );
+    // On the file's own clock, which is the TV's: a relayed stream is
+    // counted from where it begins in the file (docs/04 "The TV's own
+    // bar").
+    final files = await set.files();
     final served = <CastServedFile>[];
     final tracks = <CastTextTrack>[];
     for (final (index, subtitle) in subtitles.indexed) {
@@ -1130,7 +1137,7 @@ final class CastCoordinator implements RemotePlayback {
     final position = _position(cast);
     cast
       ..from = position
-      ..offset = position
+      ..starts = position
       ..anchor = position
       ..running = false;
     _publishTimeline(cast);
@@ -1190,7 +1197,7 @@ final class CastCoordinator implements RemotePlayback {
     cast
       ..onMp4 = true
       ..from = at
-      ..offset = Duration.zero;
+      ..starts = Duration.zero;
     _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
     await _stopRelay(cast);
     if (!_fresh(cast, generation)) return;
@@ -1207,7 +1214,7 @@ final class CastCoordinator implements RemotePlayback {
     cast
       ..mp4Refused = true
       ..from = at
-      ..offset = at;
+      ..starts = at;
     _dropMp4(cast);
     _set(_state.copyWith(phase: CastPhase.preparing, buffering: false));
     // The MP4's URL goes with it.
@@ -1226,10 +1233,10 @@ final class CastCoordinator implements RemotePlayback {
       ..onMp4 = false;
   }
 
-  /// Where the TV's time 0 is in a relayed file asked to start at [at]:
-  /// the key frame before it when the picture is copied (docs/04). The
-  /// timeline, the saved place and the subtitles' times all count from
-  /// there. [at] itself for anything but a file on this computer.
+  /// Where a relayed file's stream really begins when asked to start at
+  /// [at]: the key frame before it when the picture is copied (docs/04).
+  /// The relay counts the stream from there, so the TV's time is the
+  /// file's. [at] itself for anything but a file on this computer.
   Future<Duration> _startOf(_Cast cast, Duration at) async {
     final file = cast.stream?.upstream.file;
     final plan = cast.plan;
@@ -1276,11 +1283,14 @@ final class CastCoordinator implements RemotePlayback {
       // A continuous stream that ended needs a new one (ADR-004), from
       // the place this one was asked for.
       final at = cast.from ?? Duration.zero;
-      final begins = _startOf(cast, at);
-      final failure = await session.renew(startAt: plan.live ? null : at);
-      if (failure != null || !_current(cast, session, generation)) return;
-      if (!plan.live) cast.offset = await begins;
+      final begins = await _startOf(cast, at);
       if (!_current(cast, session, generation)) return;
+      final failure = await session.renew(
+        startAt: plan.live ? null : at,
+        timeline: plan.live ? null : _clockOf(cast, begins),
+      );
+      if (failure != null || !_current(cast, session, generation)) return;
+      if (!plan.live) cast.starts = begins;
     }
     await _load(
       cast,
@@ -1288,6 +1298,7 @@ final class CastCoordinator implements RemotePlayback {
       generation,
       url: session.url,
       contentType: session.contentType,
+      start: cast.starts,
     );
   }
 
@@ -1313,6 +1324,7 @@ final class CastCoordinator implements RemotePlayback {
     cast.fetched = true;
     cast.reachTimer?.cancel();
     _clockFrom(cast, media, running: true);
+    _checkLength(cast, media);
     if (!cast.played) {
       cast.played = true;
       final loadedAt = cast.loadedAt;
@@ -1358,7 +1370,7 @@ final class CastCoordinator implements RemotePlayback {
       _set(_state.copyWith(buffering: true));
       return await _reload(cast);
     }
-    final position = cast.offset + media.position;
+    final position = _fileTime(cast, media.position);
     final length = _length(cast);
     if (length != null && position + timings.earlyEnd < length) {
       if (!_recast(cast)) {
@@ -1373,7 +1385,7 @@ final class CastCoordinator implements RemotePlayback {
       _log.info(_tag, 'The file ended at $position of $length: carrying on');
       cast
         ..from = position
-        ..offset = position
+        ..starts = position
         ..anchor = position;
       if (plan.delivery.direct || cast.relay == null) {
         return await _deliver(cast, _restart(cast));
@@ -1772,10 +1784,61 @@ final class CastCoordinator implements RemotePlayback {
   void _clockFrom(_Cast cast, CastMediaStatus media, {required bool running}) {
     if (cast.item.live) return;
     cast
-      ..anchor = cast.offset + media.position
+      ..anchor = _fileTime(cast, media.position)
       ..anchorAt = _clock.elapsed
       ..running = running;
     _publishTimeline(cast);
+  }
+
+  /// A relayed file's own clock for the relay (docs/04 "The TV's own
+  /// bar"), from [begins]: its length only as the stream itself says it.
+  /// A catalogue's runtime is rounded, or wrong, and a TV told a length
+  /// shorter than the film's would stop at it.
+  CastTimeline _clockOf(_Cast cast, Duration begins) =>
+      CastTimeline(start: begins, length: cast.facts?.duration);
+
+  /// The file's time for the TV's [tv]. A relayed stream is counted from
+  /// where it begins in the file (docs/04 "The TV's own bar"), so the
+  /// TV's time is the file's, never before that start: a TV says 0:00
+  /// until its first picture, which must not be saved as where the film
+  /// is. A TV that counts the stream from 0 anyway shows itself in its
+  /// first report past a second, well before where the stream began; its
+  /// time is then added to the start, for the rest of the cast.
+  Duration _fileTime(_Cast cast, Duration tv) {
+    final starts = cast.starts;
+    if (!cast.clockChecked &&
+        tv > const Duration(seconds: 1) &&
+        starts >= const Duration(seconds: 10)) {
+      cast.clockChecked = true;
+      if (tv + const Duration(seconds: 5) < starts) {
+        cast.countsFromZero = true;
+        _log.warning(
+          _tag,
+          '$deviceName counts the stream from 0, not the film: its own '
+          "bar and the subtitles' times are off",
+        );
+      }
+    }
+    if (cast.countsFromZero) return starts + tv;
+    return tv < starts ? starts : tv;
+  }
+
+  /// What the TV says a file's length is while it plays, which its own
+  /// bar shows (docs/04 "The TV's own bar"). The app's timeline doesn't
+  /// use it; a length that isn't the file's is logged, once per LOAD, so
+  /// that a TV showing the wrong one is in the diagnostics.
+  void _checkLength(_Cast cast, CastMediaStatus media) {
+    final length = _length(cast);
+    final says = media.duration;
+    if (cast.item.live || length == null || says == null) return;
+    if (cast.lengthWrongAt == cast.loads) return;
+    if ((says - length).abs() <= const Duration(seconds: 2)) return;
+    cast.lengthWrongAt = cast.loads;
+    _log.warning(
+      _tag,
+      '$deviceName says the file is ${says.inSeconds} s long, '
+      'not ${length.inSeconds} s',
+    );
   }
 
   Duration? _length(_Cast cast) =>
@@ -2001,8 +2064,18 @@ final class _Cast {
   int lessons = 0;
   final recasts = <Duration>[];
 
-  /// A relayed file's start: the TV's time 0.
-  Duration offset = Duration.zero;
+  /// Where a relayed file's stream begins in the file: the relay counts
+  /// it from there (docs/04 "The TV's own bar"), so the TV's time is the
+  /// file's from that point on. Zero for anything the TV reads itself.
+  Duration starts = Duration.zero;
+
+  /// Whether the TV's time was checked against [starts], and found to
+  /// count from 0 after all (`_fileTime`).
+  bool clockChecked = false;
+  bool countsFromZero = false;
+
+  /// The LOAD whose length the TV said wrong (`_checkLength`).
+  int? lengthWrongAt;
 
   /// Where the file was at [anchorAt] on the coordinator's clock, and
   /// whether it moves on from there.

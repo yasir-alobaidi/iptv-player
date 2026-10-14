@@ -108,6 +108,7 @@ final class CastRelayRequest {
     required this.localAddress,
     this.encoder,
     this.startAt,
+    this.timeline,
   });
 
   final CastPlan plan;
@@ -121,6 +122,34 @@ final class CastRelayRequest {
 
   /// Where a file starts (a resume, a seek: Phase 7 decision 1).
   final Duration? startAt;
+
+  /// A file's own clock for the TV's, from [startAt]: null for live.
+  final CastTimeline? timeline;
+}
+
+/// A relayed file's own clock (docs/04 "The TV's own bar"): the relay
+/// writes the file's [length] into the stream and counts it from [start],
+/// where it really begins in the file (the key frame at or before where
+/// it was asked to), so the TV's time and length are the film's.
+@immutable
+final class CastTimeline {
+  const new({required this.start, this.length});
+
+  final Duration start;
+
+  /// The file's length as its stream says (`StreamFacts.duration`); null
+  /// when unknown, and the TV's length then grows as it reads.
+  final Duration? length;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CastTimeline && other.start == start && other.length == length;
+
+  @override
+  int get hashCode => Object.hash(start, length);
+
+  @override
+  String toString() => 'CastTimeline($start, length: $length)';
 }
 
 @immutable
@@ -162,10 +191,14 @@ abstract interface class CastRelaySession {
 
   /// The same session under a new URL, for a new LOAD: a continuous
   /// stream that ended (ADR-004), a file from [startAt] (a seek, decision
-  /// 1), or [plan] after a change. Counted against the restart budget (5
-  /// within 2 minutes). Null when renewed, else why not; the session is
-  /// over then.
-  Future<CastRelayFailure?> renew({Duration? startAt, CastPlan? plan});
+  /// 1) on [timeline], or [plan] after a change. Counted against the
+  /// restart budget (5 within 2 minutes). Null when renewed, else why
+  /// not; the session is over then.
+  Future<CastRelayFailure?> renew({
+    Duration? startAt,
+    CastPlan? plan,
+    CastTimeline? timeline,
+  });
 
   /// Ends it: its FFmpeg, its provider connection and its files.
   Future<void> stop();

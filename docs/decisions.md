@@ -1706,3 +1706,17 @@ Every row of docs/06's table was run again on 2026-10-13 and is in docs/progress
 - **The canvas's player artboard is out of date** (above).
 - **Menus opened from the OSD are the app's usual size,** not scaled with the window.
 - **The words on Audio and Subtitles are cut with "…" past 140 px** (a track titled at length); the menu shows the whole name.
+
+## ADR-019 · 2026-10-14 · Accepted (a bug the user found on the Bedroom TV) — A relayed file on its own clock: the TV's bar shows the film's length and time
+**Decision:** the relay rewrites the boxes of its continuous fragmented MP4 so the TV reads the file's length and the file's time (docs/04 "The TV's own bar"): the length into `mvhd`/`tkhd`/`mdhd` and a new `mehd`, every `tfdt` moved by where the stream begins in the file, `mfra` left out. The app treats the TV's time as the file's, floored at the stream's start, and falls back to adding the start when a TV turns out to count from 0. The user, 2026-10-14: "lets say the movie is one hour and when u pause it on tv to see the progress bar, u see the full length is 40 seconds and once we reach to the end of it it will extend to a new number so its nver true, it feels like a buffer load not the actual progress bar".
+
+### Why this way
+- **Reproduced before fixed:** headless Chrome (the receiver's media stack) playing the relay's stream showed the duration growing with what it had read: 2 s, 12 s, ... — the TV's symptom. The LOAD already carried the film's length; the receiver shows its media element's.
+- **FFmpeg can't be told:** with `empty_moov` the header precedes any length, and its MP4 muxer starts every fragment at 0 (tried `-output_ts_offset`, `-copyts`, `-use_editlist 0`, `frag_discont`, on 8.1). So the relay edits the few boxes that carry times, between FFmpeg and the TV, which costs nothing per picture.
+- **The film's time, not just its length:** with only the length, a resume at 30:00 of an hour would read 0:05 of 30:00 on the TV — another bar that "is never true". Chrome takes a stream whose first fragment is at 10:01 as 10:01 of the whole (measured), and a LOAD's `currentTime` there lands on the first picture.
+- **The length only from the stream:** a catalogue's runtime may be minutes off, and a TV told too short a length would end the film early. With no measured length, the header stays as it was (the TV's length then grows, as before).
+- **A safety net because no real TV has run it yet:** if a TV counted the stream from 0 after all, adding nothing would make the app's timeline and saved place wrong after every seek. The first report past a second, when the stream began 10 s or more in, tells the two apart (the film's time is never below the stream's start), and a "counts the stream from 0" line goes to the log. The matrix's file rows fail on that line, or on "says the file is … long", so its run on the Bedroom TV answers both.
+
+### Not done
+- Not yet run on a real TV (the Bedroom TV's matrix rows 17–23, about 10 minutes, need the user's yes).
+- A seek with the TV's own remote in a relayed stream still goes back to the stream's start: the stream has no index to seek in. The app's seek (laptop, phone) is the way, as before.

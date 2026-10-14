@@ -876,11 +876,14 @@ final class _Matrix {
   Future<void> castFile(_Result r, Playable item, {Duration? from}) async {
     final clock = Stopwatch()..start();
     final playing = _playingCount;
+    final logged = lines.length;
     await coordinator.connect(device);
     unawaited(playback.playVod(item, from: from));
     await _playing(item, after: playing);
     r.start ??= clock.elapsed;
     say('   playing ${_seconds(clock.elapsed)} after Cast');
+    await Future<void>.delayed(const Duration(seconds: 3));
+    expectFilmClock(logged);
   }
 
   /// Another channel while casting: how long until it plays.
@@ -896,6 +899,7 @@ final class _Matrix {
   /// relayed file plays from the key frame before it.
   Future<String> seekTo(_Result r, Duration to) async {
     final clock = Stopwatch()..start();
+    final from = lines.length;
     await playback.seek(to);
     await _until(
       () =>
@@ -905,7 +909,22 @@ final class _Matrix {
       within: const Duration(seconds: 40),
       what: () => 'playing from ${_clock(to)} (${state.phase.name})',
     );
-    return _seconds(clock.elapsed);
+    final took = _seconds(clock.elapsed);
+    // Its first reports, which say how it counts.
+    await Future<void>.delayed(const Duration(seconds: 3));
+    expectFilmClock(from);
+    return took;
+  }
+
+  /// The TV's own bar shows the film (docs/04 "The TV's own bar"): its
+  /// whole length, and after a seek the film's time. Nobody needs to
+  /// watch for it: the TV's reports say both, and the app logs either
+  /// going wrong.
+  void expectFilmClock(int from) {
+    for (final wrong in ['counts the stream from 0', 'says the file is']) {
+      final line = lines.skip(from).where((l) => l.contains(wrong));
+      if (line.isNotEmpty) throw StateError("the TV's bar: ${line.first}");
+    }
   }
 
   /// The row's plan is delivered as [delivery], or the row fails.

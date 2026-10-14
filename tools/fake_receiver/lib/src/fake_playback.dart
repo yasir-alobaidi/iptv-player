@@ -73,6 +73,8 @@ final class FakeMediaCheck {
     this.videoPackets = 0,
     this.audioPackets = 0,
     this.discontinuity = false,
+    this.start,
+    this.length,
   });
 
   /// The segment's URI, or `stream`.
@@ -89,6 +91,12 @@ final class FakeMediaCheck {
 
   /// The playlist marks a discontinuity before it (a relay restart).
   final bool discontinuity;
+
+  /// Where it starts and how long it says it is, as a TV's demuxer reads
+  /// them: what a TV's own bar shows of a continuous stream (docs/04 "The
+  /// TV's own bar"). Null when it doesn't say.
+  final Duration? start;
+  final Duration? length;
 
   bool get hasVideo => videoCodec != null && videoPackets > 0;
 
@@ -642,16 +650,19 @@ final class FakeWatch {
       videoPackets: check.videoPackets,
       audioPackets: check.audioPackets,
       discontinuity: discontinuity,
+      start: check.start,
+      length: check.length,
     );
   }
+
+  static const _entries =
+      'stream=codec_type,codec_name,height,channels,nb_read_packets'
+      ':format=start_time,duration';
 
   Future<FakeMediaCheck> _probe(File file, String name) async {
     final result = await Process.run(playback.ffprobe, [
       ...['-v', 'error', '-of', 'json', '-count_packets'],
-      ...[
-        '-show_entries',
-        'stream=codec_type,codec_name,height,channels,nb_read_packets',
-      ],
+      ...['-show_entries', _entries],
       file.path,
     ]);
     String? videoCodec;
@@ -660,10 +671,23 @@ final class FakeWatch {
     int? channels;
     var videoPackets = 0;
     var audioPackets = 0;
+    Duration? start;
+    Duration? length;
     int packets(Map<Object?, Object?> stream) =>
         int.tryParse('${stream['nb_read_packets']}') ?? 0;
+    Duration? seconds(Object? value) => switch (double.tryParse('$value')) {
+      final s? when s.isFinite && s >= 0 => Duration(
+        microseconds: (s * 1e6).round(),
+      ),
+      _ => null,
+    };
     try {
-      final streams = (jsonDecode('${result.stdout}') as Map)['streams'];
+      final json = jsonDecode('${result.stdout}') as Map;
+      if (json['format'] case final Map<Object?, Object?> format) {
+        start = seconds(format['start_time']);
+        length = seconds(format['duration']);
+      }
+      final streams = json['streams'];
       for (final stream in streams is List ? streams : const []) {
         if (stream is! Map) continue;
         switch (stream['codec_type']) {
@@ -690,6 +714,8 @@ final class FakeWatch {
       audioChannels: channels,
       videoPackets: videoPackets,
       audioPackets: audioPackets,
+      start: start,
+      length: length,
     );
   }
 

@@ -791,43 +791,156 @@ void main() {
       rig.relay.sessions.lastOrNull?.emit(const CastRelayFetched());
     }
 
-    test(
-      'through the relay from its place: the TV time plus the start',
-      () async {
-        await castMovie(from: const Duration(minutes: 10));
-        final request = rig.relay.last.request;
-        expect(request.plan.delivery, CastDelivery.relayContinuous);
-        expect(request.startAt, const Duration(minutes: 10));
-        final load = rig.tv.loads.single;
-        expect(load.live, isFalse);
-        expect(load.start, Duration.zero);
-        expect(load.duration, const Duration(minutes: 100));
-        rig.tv.playing(position: const Duration(seconds: 5));
-        await rig.phase(CastPhase.playing);
-        expect(
-          rig.coordinator.timeline.position,
-          greaterThanOrEqualTo(const Duration(minutes: 10, seconds: 5)),
-        );
-        expect(rig.coordinator.timeline.duration, const Duration(minutes: 100));
-      },
-    );
+    test("through the relay from its place, on the film's own clock: the "
+        "relay told where the stream begins and the film's length, the "
+        "LOAD starting there, the TV's time the film's", () async {
+      await castMovie(from: const Duration(minutes: 10));
+      final request = rig.relay.last.request;
+      expect(request.plan.delivery, CastDelivery.relayContinuous);
+      expect(request.startAt, const Duration(minutes: 10));
+      expect(
+        request.timeline,
+        const CastTimeline(
+          start: Duration(minutes: 10),
+          length: Duration(minutes: 100),
+        ),
+      );
+      final load = rig.tv.loads.single;
+      expect(load.live, isFalse);
+      expect(load.start, const Duration(minutes: 10));
+      expect(load.duration, const Duration(minutes: 100));
+      rig.tv.playing(position: const Duration(minutes: 10, seconds: 5));
+      await rig.phase(CastPhase.playing);
+      expect(
+        rig.coordinator.timeline.position,
+        _between(
+          const Duration(minutes: 10, seconds: 5),
+          const Duration(minutes: 10, seconds: 6),
+        ),
+      );
+      expect(rig.coordinator.timeline.duration, const Duration(minutes: 100));
+    });
 
-    test('a seek starts the relay again there, with a new LOAD', () async {
+    test("a TV that says 0:00 until its first picture: the film's place "
+        'is where the stream begins, never 0:00, and is saved so', () async {
+      await castMovie(from: const Duration(minutes: 10));
+      rig.tv.playing();
+      await rig.phase(CastPhase.playing);
+      expect(
+        rig.coordinator.timeline.position,
+        _between(
+          const Duration(minutes: 10),
+          const Duration(minutes: 10, seconds: 1),
+        ),
+      );
+      rig.tv.playing(position: const Duration(minutes: 10, seconds: 1));
+      await rig.until(
+        () =>
+            rig.coordinator.timeline.position >=
+            const Duration(minutes: 10, seconds: 1),
+      );
+      await rig.coordinator.disconnect();
+      expect(
+        rig.playback.progress.lastPosition,
+        _between(
+          const Duration(minutes: 10, seconds: 1),
+          const Duration(minutes: 10, seconds: 2),
+        ),
+      );
+    });
+
+    test('a TV that counts the stream from 0 after all: its time is added '
+        'to where the stream begins, for the rest of the cast', () async {
+      await castMovie(from: const Duration(minutes: 10));
+      rig.tv.playing(position: const Duration(seconds: 3));
+      await rig.phase(CastPhase.playing);
+      expect(
+        rig.coordinator.timeline.position,
+        _between(
+          const Duration(minutes: 10, seconds: 3),
+          const Duration(minutes: 10, seconds: 4),
+        ),
+      );
+      expect(rig.logLines.join('\n'), contains('counts the stream from 0'));
+      await rig.playback.coordinator.seek(const Duration(minutes: 30));
+      await rig.loaded(2);
+      rig.tv.playing(position: const Duration(seconds: 2));
+      await rig.phase(CastPhase.playing);
+      expect(
+        rig.coordinator.timeline.position,
+        _between(
+          const Duration(minutes: 30, seconds: 2),
+          const Duration(minutes: 30, seconds: 3),
+        ),
+      );
+    });
+
+    test("a TV whose own bar shows a length that isn't the film's: "
+        'logged once for the LOAD, for the diagnostics', () async {
+      await castMovie();
+      for (final seconds in [4, 12, 40]) {
+        rig.tv.media(
+          CastPlayerState.playing,
+          position: const Duration(seconds: 1),
+          duration: Duration(seconds: seconds),
+        );
+        await rig.phase(CastPhase.playing);
+      }
+      rig.tv.media(
+        CastPlayerState.playing,
+        position: const Duration(seconds: 2),
+        duration: const Duration(minutes: 100),
+      );
+      await Future<void>.delayed(Duration.zero);
+      final said = rig.logLines.where((l) => l.contains('says the file is'));
+      expect(said, hasLength(1));
+      expect(said.single, contains('says the file is 4 s long, not 6000 s'));
+    });
+
+    test('a seek starts the relay again there, on the same clock, with a '
+        'new LOAD', () async {
       await castMovie();
       rig.tv.playing();
       await rig.phase(CastPhase.playing);
       await rig.playback.coordinator.seek(const Duration(minutes: 30));
       await rig.loaded(2);
-      expect(rig.relay.last.renews.single.startAt, const Duration(minutes: 30));
+      final renewed = rig.relay.last.renews.single;
+      expect(renewed.startAt, const Duration(minutes: 30));
+      expect(
+        renewed.timeline,
+        const CastTimeline(
+          start: Duration(minutes: 30),
+          length: Duration(minutes: 100),
+        ),
+      );
       expect(rig.tv.loads.last.url, rig.relay.last.url);
+      expect(rig.tv.loads.last.start, const Duration(minutes: 30));
       expect(rig.state.phase, CastPhase.preparing);
       expect(rig.playback.progress.lastPosition, const Duration(minutes: 30));
-      rig.tv.playing(position: const Duration(seconds: 2));
+      rig.tv.playing(position: const Duration(minutes: 30, seconds: 2));
       await rig.phase(CastPhase.playing);
       expect(
         rig.coordinator.timeline.position,
-        greaterThanOrEqualTo(const Duration(minutes: 30, seconds: 2)),
+        _between(
+          const Duration(minutes: 30, seconds: 2),
+          const Duration(minutes: 30, seconds: 3),
+        ),
       );
+    });
+
+    test("a length the stream doesn't say is not written into it: the "
+        "catalogue's runtime is only the LOAD's", () async {
+      rig.probe.next = StreamProbed(mkvFacts.copyWith(duration: null));
+      await rig.coordinator.connect(tvDevice);
+      await rig.phase(CastPhase.idle);
+      unawaited(
+        rig.playback.coordinator.playVod(
+          PlayableMovie(movie(7, runtime: const Duration(minutes: 98))),
+        ),
+      );
+      await rig.loaded();
+      expect(rig.relay.last.request.timeline!.length, isNull);
+      expect(rig.tv.loads.single.duration, const Duration(minutes: 98));
     });
 
     test('pause and play go to the TV; a pause saves the place', () async {
@@ -1166,9 +1279,9 @@ void main() {
           expect(rig.tv.loads, hasLength(2));
         });
 
-        test('through the relay: the cues, the timeline and the saved '
-            'place count from the key frame the stream really starts '
-            'at, and again after a seek', () async {
+        test('through the relay: the stream begins at the key frame '
+            "before its place, on the film's own clock, so the cues keep "
+            "the film's times; and again after a seek", () async {
           rig.subtitles
             ..ready = [english]
             ..keyFrameBefore = const Duration(seconds: 4);
@@ -1181,32 +1294,34 @@ void main() {
           expect(asked.at, const Duration(minutes: 10));
           expect(asked.copied, (video: true, audioTrack: null));
           const start = Duration(minutes: 9, seconds: 56);
-          expect(rig.subtitles.last.moves, [start]);
+          expect(rig.relay.last.request.timeline!.start, start);
+          expect(rig.subtitles.last.moves, [Duration.zero]);
           final load = rig.tv.loads.single;
+          expect(load.start, start);
           expect(load.textTracks.single.url, endsWith('/media.vtt'));
           expect(load.activeTextTrack, 1);
 
-          rig.tv.playing(position: const Duration(seconds: 2));
+          rig.tv.playing(position: start + const Duration(seconds: 2));
           await rig.phase(CastPhase.playing);
           expect(
             rig.coordinator.timeline.position,
             _between(
               start + const Duration(seconds: 2),
-              const Duration(minutes: 10),
+              start + const Duration(seconds: 3),
             ),
           );
 
           await rig.playback.coordinator.seek(const Duration(minutes: 30));
           await rig.loaded(2);
+          final renewed = rig.relay.last.renews.single;
+          expect(renewed.startAt, const Duration(minutes: 30));
           expect(
-            rig.relay.last.renews.single.startAt,
-            const Duration(minutes: 30),
-          );
-          expect(
-            rig.subtitles.last.moves.last,
+            renewed.timeline!.start,
             const Duration(minutes: 29, seconds: 56),
           );
+          expect(rig.subtitles.last.moves.last, Duration.zero);
           final again = rig.tv.loads.last;
+          expect(again.start, const Duration(minutes: 29, seconds: 56));
           expect(again.activeTextTrack, 1, reason: 'the choice is kept');
           expect(
             again.textTracks.single.url,

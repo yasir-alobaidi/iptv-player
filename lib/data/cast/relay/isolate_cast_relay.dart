@@ -74,7 +74,12 @@ final class IsolateCastRelay implements CastRelay {
     _sessions[id] = session;
     final Object? answer;
     try {
-      final job = _job(request, plan: plan, startAt: request.startAt);
+      final job = _job(
+        request,
+        plan: plan,
+        startAt: request.startAt,
+        timeline: request.timeline,
+      );
       answer = await _call(
         (reply) => RelayStartCommand(
           replyId: reply,
@@ -202,12 +207,14 @@ final class IsolateCastRelay implements CastRelay {
     CastRelayRequest request, {
     required CastPlan plan,
     Duration? startAt,
+    CastTimeline? timeline,
   }) => castRelayJob(
     plan: plan,
     facts: request.facts,
     binaries: _binaries,
     encoder: request.encoder,
     startAt: startAt,
+    timeline: timeline,
     localInput: request.source.file,
   );
 
@@ -428,7 +435,11 @@ final class _Session implements CastRelaySession {
   Stream<CastRelayEvent> get events => _events.stream;
 
   @override
-  Future<CastRelayFailure?> renew({Duration? startAt, CastPlan? plan}) async {
+  Future<CastRelayFailure?> renew({
+    Duration? startAt,
+    CastPlan? plan,
+    CastTimeline? timeline,
+  }) async {
     if (_over) {
       return const CastRelayFailure(
         CastRelayFailureKind.couldNotStart,
@@ -437,12 +448,13 @@ final class _Session implements CastRelaySession {
     }
     final Object? answer;
     try {
-      final job = startAt == null && plan == null
+      final job = startAt == null && plan == null && timeline == null
           ? null
           : _relay._job(
               _request,
               plan: plan ?? _request.plan,
               startAt: startAt,
+              timeline: timeline,
             );
       answer = await _relay._call(
         (reply) => RelayRenewCommand(replyId: reply, sessionId: id, job: job),

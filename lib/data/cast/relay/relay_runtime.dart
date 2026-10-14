@@ -7,6 +7,7 @@ import 'dart:math' show max, min;
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/data/cast/relay/ffmpeg_log.dart';
+import 'package:iptv_player/data/cast/relay/fmp4_timeline.dart';
 import 'package:iptv_player/data/cast/relay/hls_playlists.dart';
 import 'package:iptv_player/data/cast/relay/relay_job.dart';
 import 'package:iptv_player/data/cast/relay/relay_proxy.dart';
@@ -971,6 +972,15 @@ final class _ContinuousSession extends _Session {
     var sent = 0;
     late StreamSubscription<List<int>> out;
     final body = StreamController<List<int>>(sync: true);
+    // A file on its own clock: the TV's bar shows the film's time and
+    // length (docs/04 "The TV's own bar").
+    final clock = switch (job.timeline) {
+      final timeline? => Fmp4Timeline(
+        start: timeline.start,
+        length: timeline.length,
+      ),
+      null => null,
+    };
     Timer? quiet;
     void end(RelayEndReason reason) {
       if (body.isClosed) return;
@@ -983,6 +993,16 @@ final class _ContinuousSession extends _Session {
     void watch() {
       quiet?.cancel();
       quiet = Timer(timings.quiet, () => end(RelayEndReason.quiet));
+    }
+
+    void send(List<int> bytes) {
+      if (body.isClosed || bytes.isEmpty) return;
+      sent += bytes.length;
+      // The chunk's frame around its bytes, never a copy of them.
+      body
+        ..add(ascii.encode('${bytes.length.toRadixString(16)}\r\n'))
+        ..add(bytes)
+        ..add(_lineEnd);
     }
 
     void drop() {
@@ -1003,15 +1023,13 @@ final class _ContinuousSession extends _Session {
         out = process.stdout.listen(
           (chunk) {
             if (body.isClosed || chunk.isEmpty) return;
-            sent += chunk.length;
             watch();
-            // The chunk's frame around its bytes, never a copy of them.
-            body
-              ..add(ascii.encode('${chunk.length.toRadixString(16)}\r\n'))
-              ..add(chunk)
-              ..add(_lineEnd);
+            send(clock?.add(chunk) ?? chunk);
           },
-          onDone: () => end(RelayEndReason.finished),
+          onDone: () {
+            if (clock != null) send(clock.close());
+            end(RelayEndReason.finished);
+          },
           onError: (Object _) => end(RelayEndReason.finished),
         );
         watch();

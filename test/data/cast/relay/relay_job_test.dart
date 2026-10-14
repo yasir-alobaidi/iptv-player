@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
+import 'package:iptv_player/core/cast/cast_relay.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/relay/relay_args.dart';
@@ -268,6 +269,35 @@ void main() {
         startAt: Duration.zero,
       );
       expect(start.inputArgs, isEmpty);
+    });
+
+    test("a file's continuous stream goes on the file's own clock; a live "
+        'channel and HLS never do', () {
+      const timeline = CastTimeline(
+        start: Duration(seconds: 2528),
+        length: Duration(minutes: 96),
+      );
+      final file = castRelayJob(
+        plan: plan(delivery: CastDelivery.relayContinuous, live: false),
+        facts: h264,
+        binaries: binaries,
+        startAt: const Duration(seconds: 2530),
+        timeline: timeline,
+      );
+      expect(file.timeline?.start, const Duration(seconds: 2528));
+      expect(file.timeline?.length, const Duration(minutes: 96));
+      for (final other in [
+        plan(delivery: CastDelivery.relayContinuous),
+        plan(live: false),
+      ]) {
+        final job = castRelayJob(
+          plan: other,
+          facts: h264,
+          binaries: binaries,
+          timeline: timeline,
+        );
+        expect(job.timeline, isNull, reason: '$other');
+      }
     });
 
     test('a direct plan, or a re-encode without an encoder, is refused', () {

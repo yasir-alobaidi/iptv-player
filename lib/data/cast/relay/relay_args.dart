@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_plan.dart';
+import 'package:iptv_player/core/cast/cast_relay.dart';
 import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/data/cast/ffmpeg_binaries.dart';
 import 'package:iptv_player/data/cast/ffmpeg_video_args.dart';
@@ -16,7 +17,8 @@ import 'package:iptv_player/data/cast/relay/relay_job.dart';
 /// - The sound: the plan's track (`0:a:<n>?`), copied (AAC into MP4
 ///   without its ADTS headers) or made AAC stereo at 192 kbps, or left
 ///   out.
-/// - A file starts at [startAt] (`-ss` before `-i`: a seek or a resume).
+/// - A file starts at [startAt] (`-ss` before `-i`: a seek or a resume),
+///   its continuous stream on [timeline] (docs/04 "The TV's own bar").
 ///
 /// Throws an [ArgumentError] for a direct plan, or a re-encode without
 /// an encoder: the caller checks both.
@@ -26,6 +28,7 @@ RelayJob castRelayJob({
   required FfmpegBinaries binaries,
   CastEncoder? encoder,
   Duration? startAt,
+  CastTimeline? timeline,
   bool? windows,
   String? localInput,
 }) {
@@ -93,5 +96,11 @@ RelayJob castRelayJob({
     environment: environment,
     transcode: plan.video is CastVideoTranscode,
     localInput: localInput,
+    timeline: switch (timeline) {
+      final CastTimeline clock
+          when output == RelayOutput.continuous && !plan.live =>
+        RelayTimeline(start: clock.start, length: clock.length),
+      _ => null,
+    },
   );
 }
