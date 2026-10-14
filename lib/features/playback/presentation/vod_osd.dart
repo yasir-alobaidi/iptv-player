@@ -132,9 +132,9 @@ int? channelCount(String? layout) {
 
 /// The bottom of a movie's or an episode's OSD (ADR-017): the "Resumed
 /// from" line, the seek bar with the time on each side, and the controls
-/// — Play or Pause, back and forward 10 s, the next episode when there is
-/// one, then [leading] (the volume) from the left; [trailing] at the
-/// right.
+/// — Play or Pause, back and forward 10 s, Start over, the next episode
+/// when there is one, then [leading] (the volume) from the left;
+/// [trailing] at the right.
 class VodOsdBottom extends StatelessWidget {
   const new({
     required this.timeline,
@@ -143,6 +143,7 @@ class VodOsdBottom extends StatelessWidget {
     required this.onTogglePause,
     required this.onNudge,
     required this.onDrag,
+    required this.onStartOver,
     required this.leading,
     required this.trailing,
     this.onNext,
@@ -161,6 +162,11 @@ class VodOsdBottom extends StatelessWidget {
   final VoidCallback onTogglePause;
   final void Function(Duration delta) onNudge;
   final void Function(Duration position, {bool commit}) onDrag;
+
+  /// Back to the very start (Home): always there, not only after a
+  /// resume, and after the seek buttons, where a stray press beside Play
+  /// can't lose the place.
+  final VoidCallback onStartOver;
 
   /// An episode with one after it: Next episode, after the seek buttons.
   final VoidCallback? onNext;
@@ -264,6 +270,12 @@ class VodOsdBottom extends StatelessWidget {
                   tooltip: 'Forward 10 seconds',
                   shortcut: '→',
                   onPressed: () => onNudge(step),
+                ),
+                OsdButton(
+                  icon: AppIcons.startOver,
+                  tooltip: 'Start over',
+                  shortcut: 'Home',
+                  onPressed: onStartOver,
                 ),
                 if (onNext != null)
                   OsdButton(

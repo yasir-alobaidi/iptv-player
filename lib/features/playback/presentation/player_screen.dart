@@ -998,6 +998,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               onTogglePause: _vod.togglePause,
               onNudge: _vod.nudge,
               onDrag: _vod.dragTo,
+              onStartOver: _vod.startOver,
               onNext: next == null ? null : _vod.playNext,
               leading: [_volume(sound)],
               trailing: _controls(tracks, vod: true),

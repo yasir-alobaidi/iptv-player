@@ -320,7 +320,7 @@ One list in the code (`lib/app/shortcut_table.dart`) is the truth: Settings → 
 | Space | Play or pause |
 | ← or → | Back or forward 10 seconds |
 | Shift ← or Shift → | Back or forward a minute |
-| Home | From the beginning (while playing) |
+| Home | Start over, from the beginning (while playing) |
 | ↑ ↓ + − | The volume up or down (while playing) |
 
 **The Guide**
@@ -351,6 +351,7 @@ One list in the code (`lib/app/shortcut_table.dart`) is the truth: Settings → 
 | ↑ ↓ | The previous or the next channel on the TV |
 | Space | Play or pause on the TV |
 | ← or → | Back or forward 10 seconds on the TV |
+| Home | Start over on the TV, from the beginning |
 | S | The next subtitle on the TV, then off |
 | M | Mute the TV |
 

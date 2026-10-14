@@ -146,7 +146,9 @@ void main() {
           at: const Duration(minutes: 12, seconds: 40),
           size: const Size(1920, 1080),
         );
-        for (var i = 0; i < 8; i++) {
+        // Play, back, forward, Start over, Next episode, the volume, Audio,
+        // then Subtitles.
+        for (var i = 0; i < 9; i++) {
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
           await tester.pump();
         }

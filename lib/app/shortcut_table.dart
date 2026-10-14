@@ -208,7 +208,7 @@ const shortcutTable = <ShortcutGroup>[
       ['Shift', '←'],
       ['Shift', '→'],
     ]),
-    ShortcutEntry('From the beginning (while playing)', [
+    ShortcutEntry('Start over, from the beginning (while playing)', [
       ['Home'],
     ]),
     ShortcutEntry('The volume up or down (while playing)', [
@@ -272,6 +272,9 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry('Back or forward 10 seconds on the TV', [
       ['←'],
       ['→'],
+    ]),
+    ShortcutEntry('Start over on the TV, from the beginning', [
+      ['Home'],
     ]),
     ShortcutEntry('The next subtitle on the TV, then off', [
       ['S'],

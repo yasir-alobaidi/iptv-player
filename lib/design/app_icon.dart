@@ -60,6 +60,7 @@ enum AppIcons {
   skipNext('skip-next'),
   star('star'),
   starFilled('star-filled'),
+  startOver('start-over'),
   stop('stop'),
   storage('storage'),
   subtitles('subtitles'),

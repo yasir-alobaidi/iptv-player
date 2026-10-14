@@ -25,6 +25,7 @@ const _handDrawn = <String, String>{
   'more': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>',
   'replay-10': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h3a8 8 0 1 1-8 8"/><path d="m11.5 2-3 3 3 3"/><path d="m8.9 11.3 1.5-1.1v5.6M13.1 12v2a1.6 1.6 0 0 0 3.2 0v-2a1.6 1.6 0 0 0-3.2 0z" stroke-width="1.5"/></svg>',
   'skip-next': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5v13l9.5-6.5z"/><path d="M18.5 5.5v13" fill="none"/></svg>',
+  'start-over': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h3a8 8 0 1 1-8 8"/><path d="m11.5 2-3 3 3 3"/><path d="M10.6 10.2v5.6l4.4-2.8z" fill="currentColor" stroke-width="1.4"/></svg>',
   'trash': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9L17.5 7M10 11v5M14 11v5"/></svg>',
 };
 

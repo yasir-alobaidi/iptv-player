@@ -139,6 +139,13 @@ class _CastingViewState extends ConsumerState<CastingView> {
     });
   }
 
+  /// Home, or Start over: the very start, at once, as in the player.
+  void _startOver() {
+    _seekTimer?.cancel();
+    setState(() => _seekTarget = null);
+    unawaited(ref.read(playbackCoordinatorProvider).seek(Duration.zero));
+  }
+
   Future<void> _togglePause(CastingState state) =>
       ref.read(playbackCoordinatorProvider).setPaused(paused: !state.paused);
 
@@ -189,6 +196,9 @@ class _CastingViewState extends ConsumerState<CastingView> {
         return KeyEventResult.handled;
       case LogicalKeyboardKey.space when !live && event is KeyDownEvent:
         unawaited(_togglePause(state));
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.home when !live && event is KeyDownEvent:
+        _startOver();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.keyS
           when !live && state.subtitles.isNotEmpty && event is KeyDownEvent:
@@ -512,6 +522,18 @@ class _CastingViewState extends ConsumerState<CastingView> {
                 onPressed: playing && timeline != null
                     ? () => _seekBy(CastingView.seekStep, timeline)
                     : null,
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              // After the seeks, as in the player: a stray press beside
+              // Play can't lose the place.
+              AppIconButton(
+                icon: AppIcons.startOver,
+                tooltip: 'Start over',
+                shortcut: 'Home',
+                filled: true,
+                bordered: true,
+                size: cast.controlSize,
+                onPressed: playing ? _startOver : null,
               ),
               SizedBox(width: tokens.spacing.s12),
               if (castSubtitlesLine(state) case final subtitles?) ...[
