@@ -19,7 +19,7 @@ Data layer (Xtream/M3U/XMLTV, sync, drift DB) · domain interfaces · Riverpod p
 | Distribution | Sideloaded APK via adb for personal use |
 
 ## TV-0 — player engine spike (before any TV screens)
-**Status (2026-10-14, ADR-020):** the toolchain, the Android project (`io.github.yasiralobaidi.bijou`, banner, leanback), start-up by form factor and the CI build are done; the app runs its shared code on a Google TV emulator (no picture there: mpv's EGL context fails on the emulator). Left, on a real TV: running on the device and the comparison below.
+**Status (2026-10-15, ADR-025): done on the Bedroom TV** (a Chromecast with Google TV 4K, 2 GB, a 32-bit system). **media_kit stays**, drawing straight into the surface (`vo=mediacodec_embed`, `hwdec=mediacodec`): 720p50 went from 904 dropped frames in 28 s (mpv's `gpu` output copying every frame back) to none, at a third less CPU. Media3 isn't built: on this TV it would win only on AC-3/E-AC-3 passthrough (media_kit's libmpv opens no audio output for it on Android), HDR and native 4K (a texture goes through Flutter's 1080p layer); frame-rate matching can't help, the TV takes no 50 Hz mode. Revisit with Media3 for those. (Before: ADR-020, the toolchain, the project and the emulator, where mpv draws no picture.)
 
 Compare on a real Google TV device:
 | Criterion | (a) media_kit on Android (libmpv + mediacodec) | (b) native Media3/ExoPlayer plugin |
@@ -32,6 +32,9 @@ Compare on a real Google TV device:
 | Memory on 2 GB device | measure | measure |
 | Flutter OSD over video | texture — simple | platform view z-order — verify |
 Decision rule: choose (b) if it wins on frame-rate matching or passthrough and overlays work cleanly; otherwise (a). Both implement `PlayerEngine`. Record the ADR.
+
+## Already the TV's (ADR-025, before TV-1)
+On a TV, gated on `FormFactor`; the desktop is unchanged: no Cast anywhere (the TV is the player); no keycaps, and hints in the remote's terms ("Hold OK"); no Library, downloads, keyboard page or playlist files; no volume or full-screen button in the player; the remote's Back, Channel Up/Down, Info, Guide and media keys; OK activates on release and held opens the item's menu; the first control focused at launch; playback stops when the app leaves the screen and plays again on return; "Still watching?" after 4 hours with no key; a 64 MB image cache and no blur.
 
 ## TV screens (shared logic, new layouts)
 1. Onboarding: large fields, on-screen keyboard, Test connection

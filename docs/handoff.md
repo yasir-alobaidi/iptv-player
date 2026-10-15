@@ -1,4 +1,74 @@
-# Handoff — 2026-10-14, eighth session (your film on the Bedroom TV; a Google TV that closes the receiver as a cast wakes it), on top of the seventh (the TV's bar, the matrix on a real TV), the sixth (the mark: a trillion) and the fifth (TV-0 begun without a TV)
+# Handoff — 2026-10-15, ninth session (TV-0 on the Bedroom TV; Bijou on a TV is the TV's), on top of the eighth (a Google TV that closes the receiver as a cast wakes it), the seventh (the TV's bar), the sixth (the mark) and the fifth (TV-0 begun without a TV)
+
+**The ninth session, short:** you turned on Wireless debugging on the
+Bedroom TV and network control on the Roku TV, wrote "continue the work",
+"use real testing since u have real provider", "on the tv version I dont
+need the streaming option", then "make sure the tv version is for tv, so
+no need for keyboard shortcuts or streaming options … keep the PC features
+for pc too", "if there is something will enhance the performance do it",
+and "lets stick to the google tv issues … keep the roku for later". You
+gave one go for the TV ("do everything u need") and one for your provider
+(about an hour, from 01:06).
+- **Installed over Wi-Fi, no cable:** `adb pair 192.168.1.231:<port>
+  <code>` with the code the TV showed, then `adb connect
+  192.168.1.231:<port>` (docs/setup.md §7). The laptop stays paired; the
+  connect port changes when the TV restarts (`avahi-browse -rtp
+  _adb-tls-connect._tcp`). **The APK is `dist/bijou-0.1.0.apk`** (121 MB,
+  every ABI; `dist/` is ignored by git), built last, and the same build is
+  installed on the TV with your provider signed in.
+- **The Bedroom TV is a Chromecast with Google TV 4K** ("sabrina", Android
+  14, 2 GB, a **32-bit** system) **in HDMI 3 of the Hisense Roku TV** (you
+  confirmed: same TV). Its HDMI output is 1080p 59.94; the TV takes **no
+  50 Hz mode**.
+- **TV-0 (ADR-025): media_kit stays, with mpv's direct output** on Android
+  (`vo=mediacodec_embed`, `hwdec=mediacodec`). The default (`gpu`,
+  `mediacodec-copy`) dropped 904 frames in 28 s on beIN 720p50 (the copy
+  thread at 88 % of a core); the direct output dropped none. 4K H.264 and
+  HEVC decode in hardware; 1080i is deinterlaced by the decoder; the OSD
+  draws over the picture. Passthrough doesn't work in media_kit's libmpv on
+  Android (left off), and a texture can't show HDR or native 4K: Media3's
+  only wins, not needed now (your list, item 4). The fake panel on the LAN
+  starts a channel in 0.7–0.8 s; your provider in 1.2–2.2 s, three times
+  in 8 s (the stream's opening; likely the one-connection panel).
+- **Bijou on a TV is the TV's** (ADR-025; the desktop unchanged, a test
+  pins both): no Cast anywhere; no keycaps (hints say "Hold OK"); no
+  Library, downloads, Keyboard shortcuts or playlist files; no volume or
+  full-screen button in the player; the remote's Back, Channel Up/Down,
+  Info, Guide, play/pause, FF/RW and Stop; OK activates on release, held
+  0.5 s opens the item's menu; the first control is focused at launch (Home,
+  Pick categories' Finish); "this TV" for "this computer" in onboarding and
+  Sources.
+- **Two stability fixes found on the TV:** (1) after the remote's Home,
+  the old build kept its connection to the panel open behind the launcher
+  (28 s and counting, measured on the laptop's side); now playback stops
+  within 4 s and plays again on return (a film where it was, paused if it
+  was). (2) The Roku TV switched off through its network control never told
+  the Chromecast, and Bijou (keeping the screen on, as a player must) went
+  on streaming at ~1.9 MB/s to a dark TV: **"Still watching?" after 4 hours
+  with no key**, and no answer in 60 s stops and goes Home.
+- **Performance on 2 GB:** the image cache is 64 MB on a TV (150 on the
+  desktop); a title with no backdrop no longer blurs its poster full-screen
+  (decoded 24 px wide and scaled). The app's log goes to logcat on Android,
+  and every play logs its first frame.
+- **ADR-024's relaunch still unseen on the real TV:** row 25 after 4 min of
+  sleep passed, but the Roku TV never came on (it had been switched off by
+  ECP), so nothing closed (ADR-024's addendum).
+- **The Roku:** ECP is open now; it has no "Play on Roku" (`/input/15985`
+  answers 404), so it can't play an address without installing Roku Media
+  Player or a channel of our own. Left for later, as you asked. I muted it
+  for one test and unmuted it after (Volume Up then Down), and put it back
+  on HDMI 3.
+- **One slip, owned:** at 02:42, after your provider's hour, a tap meant for
+  the TV's Settings landed on a "Recently watched" card and beIN SP 1 played
+  from your provider for about 10 seconds before I force-stopped Bijou.
+  Nothing else played from it outside your window. The test source I added
+  (the fake panel at 192.168.1.254) is removed from the TV's Bijou.
+- **Checks:** analyze and format clean; the full suite under `TZ=UTC`
+  (counts in docs/progress.md); under Xvfb `player_engine`, `app_launch`,
+  `live_tv_keyboard`; on the TV by remote keys over adb. **Not checked:**
+  holding OK on a real remote (adb can't hold a key), the relaunch.
+- **Left running: nothing.** The Bedroom TV is on, showing Bijou's
+  Settings; the fake panel is stopped; Gradle's daemon may idle.
 
 **The eighth session, short:** you wrote "continue and use the bed room tv
 only", then that the Hisense Roku TV and the Bedroom TV are free, and gave
@@ -132,32 +202,26 @@ TV's bar and Phase 9.
 
 ## Before you start the next session (user)
 **Your list** — what this session left for you:
-1. **Push** the eighth session's commits (`git log origin/main..HEAD`).
-2. **Check the launch again on the Bedroom TV** (ADR-024): when it has
-   been dark a few minutes and nobody minds it coming on, say so and I run
-   row 25 (`CAST_HOST=192.168.1.231 CAST_ROWS=25`: 40 s of the test film;
-   the TV comes on, may blink ~7 s in, and plays on). Or cast anything
-   yourself with the TV off. Your film's bar is checked (1:40:06).
-3. **TV-0 on the Bedroom TV** (it is a Google TV): Developer options and
-   USB debugging on it (Settings → System → About → click "Android TV OS
-   build" seven times; Settings → System → Developer options → USB
-   debugging). When I connect, the TV asks "Allow USB debugging?": tick
-   "Always allow", OK. Then I install Bijou over the network and run
-   docs/07's engine comparison. I ask before every TV session; the Living
-   Room TV stays off limits until you say so.
-4. **Casting to TVs that aren't Google** — answered below; say whether you
-   want it and when. **For the Roku probe:** on the Hisense Roku TV,
-   Settings → System → Advanced system settings → Control by mobile apps →
-   Network access → **Default** (it is "Limited").
-5. Still from before: **Bijou** (keep, or say otherwise; the mark is the
-   trillion, ADR-022); **the one real reminder** at the laptop
-   (`flutter test integration_test/manual/real_reminder.dart -d linux`);
-   if you want it, **the night's soak**; the matrix's **rows 6 and 16**
-   need you at the TV (6: Input Signal Plus off; 16: the remote in hand);
-   **Phase 9's close** is yours to say; **the dock icon**
+1. **Push** this session's commits (`git log origin/main..HEAD`).
+2. **Try Bijou on the TV with the remote:** hold OK on a channel (its menu,
+   with Add to favorites); Back; Channel Up/Down; Info; Home while a channel
+   plays, then back to Bijou (it stops and plays again).
+3. **The relaunch (ADR-024):** switch the Roku TV off with its own remote,
+   wait a few minutes, cast anything to the Bedroom TV: it should come on
+   and play, maybe after a blink. Or tell me and I run row 25.
+4. **A soundbar or AV receiver, or HDR films?** If yes, a Media3 player for
+   the TV is worth building (passthrough, HDR, native 4K); if not, media_kit
+   stays (ADR-025).
+5. **The Roku, when you want it:** Roku Media Player on it (or a Bijou
+   channel of ours) is the way to play an address there.
+6. **To copy the APK yourself:** `dist/bijou-0.1.0.apk` (send it with an app
+   like Send Files to TV, and let it install unknown apps). Or I install
+   over Wi-Fi: the laptop is paired with the TV.
+7. Still from before: **Bijou** and the trillion (ADR-018/022); **the one
+   real reminder** (`flutter test integration_test/manual/real_reminder.dart
+   -d linux`); the night's soak if you want it; the matrix's **rows 6 and
+   16** (you at the TV); **Phase 9's close**; **the dock icon**
    (`flutter build linux --release`, then `tools/install_desktop_entry.sh`).
-6. Optional: `fish_add_path ~/Android/Sdk/platform-tools` to have `adb`
-   in your own terminal.
 
 **What the fifth session did on your machine (outside the repository):**
 installed Temurin JDK 21 in `~/develop/jdk-21.0.12.1+1` (linked as
@@ -183,23 +247,21 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
-CLAUDE.md, docs/progress.md, ADR-024, ADR-020 and ADR-021 in docs/decisions.md
-first. Check CI on the last push.
-<USB debugging is on on the Bedroom TV: do TV-0 there | Don't use any TV>
-<I want casting to other TVs: plan it | Not now>
-Then: <TV-0's engine comparison on the Bedroom TV | TV-1 on the emulator (plan first) | Phase 10 | what is left of Phase 9>
+CLAUDE.md, docs/progress.md and ADR-025 in docs/decisions.md first. Check CI on
+the last push.
+<The Bedroom TV is free for N minutes | Don't use any TV>
+Then: <TV-1's rest (plan first) | Media3 for the TV | Phase 10 | what is left of Phase 9>
 ```
 
 ## Where things stand
-- **TV-0: begun (ADR-020).** Done: the toolchain, `android/`, start-up by
-  form factor, the CI job, the emulator run. Left: the app on a real TV
-  (the Bedroom TV, once USB debugging is on), and the engine comparison
-  (media_kit vs a Media3 plugin) there.
+- **TV-0: done (ADR-025).** media_kit with mpv's direct output on Android;
+  the release APK runs on the Bedroom TV (a Chromecast with Google TV 4K).
+- **TV-1: begun.** The TV-only gates, the remote's keys, OK on release and
+  held for the menu, first focus, playback off screen, "Still watching?".
+  The rest is in "What's next".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
-- **Phases 7 and 8: accepted without the TV sitting** (ADR-014/015).
 - **Schema is v10**; no new dependency in pubspec, no new settings key.
-- **The test suite is about 4,905 tests** (20 skipped).
 
 ## Casting to TVs that aren't Google (the user's question, answered)
 The user asked: "since most of the smart tvs they have air play or
@@ -299,19 +361,27 @@ not google?" Answer given, nothing built:
   are items 2 and 3 of "What's next".
 
 ## What's next
-1. ~~The CI failure above~~ — fixed in the seventh session, with the
-   Windows race; CI's first Android job passed on 54051d4.
-2. ~~The integration walks~~ — run in the eighth session, all passing.
-3. **TV-0's Media3 candidate:** a small plugin of our own in
-   `spike/tv_engine_spike/` (ExoPlayer 1.x, a `SurfaceView` platform view
-   for frame-rate matching, the decoder and passthrough reported), beside
-   media_kit in one comparison app, measured on the emulator first (does
-   Media3 draw where mpv can't?), then on a TV. `video_player`'s Android
-   side uses Media3 but exposes none of what the comparison measures.
-   Gradle and the emulator under one lock: `flock <scratchpad>/android.lock`.
-4. **The user's answers:** DLNA casting, and a TV for TV-0 (then
-   `adb connect <address>:5555`, install, and the comparison of docs/07).
-5. **Or TV-1 on the emulator** (plan first): ADR-020's list is its start.
+1. **TV-1's rest** (plan first; docs/07's TV screens), seen on the TV:
+   - "this computer" still in Settings → Data, the Guide's import error and
+     the reminders' error on a TV (`FormFactor.thisDevice` is there for it).
+   - The OSD on a TV: how the remote reaches its buttons (no Tab; ↑/↓ zap
+     in a channel, ←/→ seek in a film); docs/07 says OK/Info shows it,
+     Back closes it, then leaves.
+   - Text fields trap the D-pad (Tab leaves them; a remote has no Tab).
+   - Overscan-safe margins (48 × 27 dp) and the 10-foot sizes; the rail at
+     960 × 540 now fits without the Library.
+   - The Settings that mean nothing on a TV: Hardware decoding (the direct
+     output takes MediaCodec whatever it says; Off waits for a restart),
+     the buffer presets maybe.
+   - Back on Connect with a typed form leaves it (the form is lost).
+2. **Media3 for the TV,** only if the user wants passthrough, HDR or native
+   4K (ADR-025; `spike/tv_engine_spike/` as ADR-020 planned).
+3. **24p films at 24 Hz** (the window's `preferredDisplayModeId`, through a
+   small method channel in `MainActivity`), if the user wants it: this TV
+   takes 23.976/24 but no 50 Hz.
+4. **The relaunch on the real TV** (ADR-024), with the TV switched off by
+   its own remote.
+5. Phase 10 (packaging), or what is left of Phase 9.
 
 ## How to work in this project
 - **The user's standing rules** (also in memory):
@@ -423,6 +493,35 @@ not google?" Answer given, nothing built:
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
+- **Lessons of the ninth session (Bijou on a real Google TV):**
+  - **Count connections, not bytes:** "the stream goes on after Home"
+    first came from the TV's whole Wi-Fi counter, and the Google TV
+    launcher plays trailers. `ss -tn state established "( sport = :8899 )"
+    dst <TV>` on the laptop is the measure; it confirmed the old build
+    (open 28 s after Home) and the fix (closed within 4 s).
+  - **Test against the panel the walk doesn't start itself:** an
+    integration walk hung at 0 % processor for 11 minutes because the fake
+    panel I had started for the TV held port 8899. Stop it (its `dartvm`
+    child, not the `dart run` wrapper's PID) before the walks.
+  - **In `flutter test`, `defaultTargetPlatform` is Android:** a provider
+    that derived the form factor from it made every widget test a TV's.
+    `formFactorProvider` is the desktop unless set (`bootstrap()` sets it).
+  - **A route's scope takes the focus after the first frame:** a first
+    focus asked for on the first frame is taken back; check that a control
+    holds it, and ask again.
+  - **adb can't hold a key** (`--duration` and `--longpress` send both
+    events at once); a widget test covers holding OK, a real remote checks
+    it.
+  - **Taps are for setup, and only where nothing plays:** a tap meant for a
+    menu landed on a "Recently watched" card after the screen changed under
+    it, and played from the user's provider outside the agreed hour. Take a
+    screenshot before each tap on a screen with playable items, or use
+    keys.
+  - **The Roku TV can go dark without the Chromecast knowing** (ECP's
+    PowerOff sends no CEC standby): anything that plays keeps the device
+    awake, hence "Still watching?".
+  - **A Google TV's `isStandBy` is the Chromecast's, not the TV's:** the
+    Bedroom TV's "TV" is a Roku TV, which a cast may or may not switch on.
 - **Lessons of the eighth session (a TV that closes the receiver):**
   - **Is a TV a Google TV?** Not from `eureka_info`'s "mediashell" (the
     Cast receiver is called that on Android TV too). Ask the SSDP
@@ -636,6 +735,30 @@ not google?" Answer given, nothing built:
 
 
 ## Codebase notes by area
+New in the ninth session (ADR-025):
+- **The form factor:** `formFactorProvider` (desktop unless `bootstrap()`
+  sets it), `castsToTvsProvider` (every Cast control asks it),
+  `FormFactor.thisDevice` ("this computer" / "this TV"),
+  `AppDestination.primaryOn`, `SettingsSection.on`. `KeyHints` (in
+  `kbd.dart`, set in `app.dart`'s builder) hides keycaps on a TV; it is also
+  what `favoriteHint` reads.
+- **The TV's own widgets, in `app.dart`'s builder on a TV only:**
+  `TvSelectKey` (`lib/design/focus/`: OK on release, held for
+  `AppMenuIntent`) and `StillWatching` (`lib/app/`). `TvAwayObserver`
+  (`lib/features/playback/presentation/tv_away.dart`, added in `bootstrap()`
+  off the desktop) calls `PlaybackCoordinator.stopWhileAway` and
+  `resumeAfterAway`. The shell's `_focusFirstOnTv` gives the first screen
+  its focus.
+- **The engine on Android:** `MediaKitPlayerEngine.create` makes the video
+  controller with `vo: mediacodec_embed`, `hwdec: mediacodec` when
+  hardware decoding is on (`_direct`); `mpvOptionsFor(direct:)` keeps
+  `hwdec=mediacodec` per play; `streamInfo` reads `container-fps` first
+  there. `BIJOU_MPV_LOG` (a dart-define) logs mpv's modules. Every play
+  logs `First frame in N ms (hwdec, vo)`.
+- **The player's remote keys:** `_remoteLiveKey` / `_remoteVodKey` in
+  `player_screen.dart` map them onto the keyboard's; the channel panel
+  closes on `goBack` too.
+
 New this session (the fourth):
 - **The name:** `lib/core/app_identity.dart` (`appName`, `appFileSlug`,
   `appDescription`), read by every place a person sees the name; never
