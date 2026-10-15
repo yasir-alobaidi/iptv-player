@@ -13,8 +13,15 @@ Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
   scalable/apps/<app id>.svg (the desktop entry's icon, Phase 10);
 - windows/runner/resources/app_icon.ico (16 to 256 px);
 - android/app/src/main/res/mipmap-<density>/ic_launcher.png (48 to
-  192 px) and drawable-xhdpi/banner.png (Google TV's 320 x 180 home
-  screen banner: the jewel and the name on the accent);
+  192 px; Android before 8) and drawable-xhdpi/banner.png (Google TV's
+  320 x 180 home screen banner: the jewel and the name on the accent);
+- mipmap-<density>/ic_launcher_round.png, the round icon before
+  Android 8;
+- the adaptive icon Android 8 and up draws, round on Google TV (the
+  user: "more circular, same logo"): mipmap-anydpi-v26/ic_launcher.xml
+  and ic_launcher_round.xml, the accent's gradient as its background
+  (drawable/ic_launcher_background.xml) and the jewel alone as its
+  foreground (mipmap-<density>/ic_launcher_foreground.png, 108 dp);
 - design/brand/bijou_icon_1024.png and bijou_sizes.png (a look at
   every size).
 
@@ -163,6 +170,61 @@ ANDROID_ICONS = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 
 
 BANNER = (320, 180)
 
+# An adaptive icon's layers are 108 dp; a launcher shows the middle 72 dp
+# through its mask, and only the middle 66 dp is sure to show.
+ANDROID_LAYERS = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}
+LAYER_DP = 108
+VISIBLE_DP = 72
+
+
+def foreground(n):
+    """The adaptive icon's foreground at [n] px (108 dp): the jewel where
+    the tile's icon has it, the tile's 896 units scaled to the 72 dp the
+    mask shows, so the round icon reads as the square one does."""
+    canvas = round(n * VISIBLE_DP / LAYER_DP * 1024 / (TILE[2] - TILE[0]))
+    jewel = draw(canvas, tile=False)
+    layer = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    layer.alpha_composite(jewel, ((n - canvas) // 2, (n - canvas) // 2))
+    return layer
+
+
+def round_icon(n):
+    """The round icon before Android 8 (no adaptive icons there): the
+    adaptive one as a launcher masks it, drawn at [n] px."""
+    k = 4
+    layer = round(n * k * LAYER_DP / VISIBLE_DP)
+    icon = gradient(layer, layer).convert("RGBA")
+    icon.alpha_composite(foreground(layer))
+    o = (layer - n * k) // 2
+    icon = icon.crop((o, o, o + n * k, o + n * k))
+    mask = Image.new("L", icon.size, 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, n * k - 1, n * k - 1], fill=255)
+    out = Image.new("RGBA", icon.size, (0, 0, 0, 0))
+    out.paste(icon, (0, 0), mask)
+    return out.resize((n, n), Image.LANCZOS)
+
+
+ADAPTIVE = """<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tools/brand/make_icons.py: Bijou's icon, masked by the
+     launcher (round on Google TV). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+"""
+
+BACKGROUND = """<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tools/brand/make_icons.py: the accent's gradient, from the
+     top left to its deep shade (the tile's). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:endColor="#%02X%02X%02X"
+        android:startColor="#%02X%02X%02X" />
+</shape>
+""" % (DEEP + ACCENT)
+
 
 def banner(font_path):
     """Google TV's home screen banner: the jewel and the name, white on
@@ -230,6 +292,14 @@ def main():
     res = ("android", "app", "src", "main", "res")
     for density, n in ANDROID_ICONS.items():
         draw(n).save(out(*res, f"mipmap-{density}", "ic_launcher.png"))
+        round_icon(n).save(out(*res, f"mipmap-{density}", "ic_launcher_round.png"))
+    for density, n in ANDROID_LAYERS.items():
+        foreground(n).save(out(*res, f"mipmap-{density}", "ic_launcher_foreground.png"))
+    for name in ["ic_launcher.xml", "ic_launcher_round.xml"]:
+        with open(out(*res, "mipmap-anydpi-v26", name), "w") as f:
+            f.write(ADAPTIVE)
+    with open(out(*res, "drawable", "ic_launcher_background.xml"), "w") as f:
+        f.write(BACKGROUND)
     banner(os.path.join(root, "assets", "fonts", "Manrope[wght].ttf")).save(
         out(*res, "drawable-xhdpi", "banner.png")
     )
