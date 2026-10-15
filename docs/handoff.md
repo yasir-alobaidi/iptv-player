@@ -41,8 +41,11 @@ two yeses for your provider (the bar check, and once more when idle).
   MediaRenderer with AirPlay — you never mentioned it; left alone.
 - **Checks:** analyze and format clean; **4,905 app tests** under `TZ=UTC`
   (20 skipped); the casting, relay and download tests with FFmpeg 4.4
-  (751); the fake TV's suite (42). Not run: the integration walks (still
-  the fifth session's list).
+  (751); the fake TV's suite (42); **the integration walks the fifth
+  session left** (`live_tv_keyboard`, `library_walk`, `cast_walk`,
+  `library_cast_walk`, `player_engine`) under Xvfb, all passing, and
+  `cast_walk` again with FFmpeg 4.4. **CI on 1ceb281** (the seventh
+  session's push): Linux, Windows and Android all green.
 
 
 **The seventh session, short:** you wrote "do all the tasks related to
@@ -298,9 +301,7 @@ not google?" Answer given, nothing built:
 ## What's next
 1. ~~The CI failure above~~ — fixed in the seventh session, with the
    Windows race; CI's first Android job passed on 54051d4.
-2. **The integration walks** listed above, under Xvfb, one file per run
-   (in a git worktree if agents run beside other `flutter test` work: they
-   share `build/test_cache`).
+2. ~~The integration walks~~ — run in the eighth session, all passing.
 3. **TV-0's Media3 candidate:** a small plugin of our own in
    `spike/tv_engine_spike/` (ExoPlayer 1.x, a `SurfaceView` platform view
    for frame-rate matching, the decoder and passthrough reported), beside
