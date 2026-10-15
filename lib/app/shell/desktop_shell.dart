@@ -55,6 +55,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_keepFocusOnTv);
     _railPane.dispose();
     _topBarPane.dispose();
     _contentPane.dispose();
@@ -76,7 +77,46 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     // A remote has no pointer to start from: on a TV the first screen
     // opens with its first control focused, as every screen after it
     // does (docs/07). A desktop starts with nothing focused.
-    if (ref.read(formFactorProvider) == FormFactor.tv) _focusFirstOnTv();
+    if (ref.read(formFactorProvider) == FormFactor.tv) {
+      _focusFirstOnTv();
+      FocusManager.instance.addListener(_keepFocusOnTv);
+    }
+  }
+
+  bool _refocusing = false;
+
+  /// A remote has no pointer to put the focus back: on a TV something in
+  /// the shell always has it. Back from a page above (the sign-in, a
+  /// title) or a closed dialog can leave it on no control; then the
+  /// screen's remembered item, or its first, takes it.
+  void _keepFocusOnTv() {
+    final focused = FocusManager.instance.primaryFocus;
+    if (_refocusing || (focused != null && focused is! FocusScopeNode)) {
+      return;
+    }
+    _refocusing = true;
+    // After the frame that closed what had it; a lost focus asks for no
+    // frame of its own, so one is asked for.
+    WidgetsBinding.instance
+      ..addPostFrameCallback(
+        (_) => scheduleMicrotask(() {
+          _refocusing = false;
+          // After the screen's own autofocus (a title's Play), a microtask
+          // queued while it was built.
+          if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+          final now = FocusManager.instance.primaryFocus;
+          if (now != null && now is! FocusScopeNode) return;
+          // The pane may remember the route's own scope, which shows
+          // nothing focused: its first control then.
+          final last = _contentPane.lastFocused;
+          if (last != null && last is! FocusScopeNode && last.canRequestFocus) {
+            last.requestFocus();
+          } else if (!_contentPane.focusFirst()) {
+            _railPane.focusPane();
+          }
+        }),
+      )
+      ..scheduleFrame();
   }
 
   /// The first screen's controls come with its data (Home's rows), and
@@ -186,6 +226,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     }
     _hadOverlay = overlay != null;
 
+    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
     final shell = LayoutBuilder(
       builder: (context, constraints) {
         // Below 1280 px the rail collapses whatever the user chose
@@ -212,6 +253,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                       // Left/Right between panes return to the item the user
                       // left from, or the pane's first (docs/05).
                       onLeaveRight: _contentPane.focusPane,
+                      showToggle: !onTv,
                       destinations: AppDestination.primaryOn(
                         ref.watch(formFactorProvider),
                       ),
@@ -238,6 +280,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                               castConnected: castButton?.connected ?? false,
                               showCast: ref.watch(castsToTvsProvider),
                               paneController: _topBarPane,
+                              onLeaveDown: onTv ? _contentPane.focusPane : null,
                             ),
                           if (notice != null && !widget.immersive)
                             _NoticeBar(notice: notice),
@@ -252,6 +295,12 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                             child: _ContentPane(
                               controller: _contentPane,
                               onLeaveLeft: _railPane.focusPane,
+                              // A remote reaches the top bar (search, the
+                              // source) only so; a keyboard also by Tab.
+                              onLeaveUp: onTv && !widget.immersive
+                                  ? _topBarPane.focusPane
+                                  : null,
+                              textFieldsKeepArrows: !onTv,
                               child: overlay == null
                                   ? widget.navigationShell
                                   : Stack(
@@ -422,32 +471,48 @@ class _LeaveChromeAction extends Action<CloseTopIntent> {
   }
 }
 
-/// The destination's pane. Left at its edge hands focus back to the rail;
-/// a screen with its own horizontal movement (a rail of posters) binds
+/// The destination's pane. Left at its edge hands focus back to the rail,
+/// and on a TV Up at its top to the top bar: an arrow moves within the
+/// screen first, so Left in a row of tabs or buttons walks the row (the
+/// user, on the Bedroom TV: Left in Favorites' tabs jumped to the rail).
+/// A screen with its own horizontal movement (a rail of posters) binds
 /// Left first and this never fires.
 class _ContentPane extends StatelessWidget {
   const new({
     required this.controller,
     required this.onLeaveLeft,
     required this.child,
+    this.onLeaveUp,
+    this.textFieldsKeepArrows = true,
   });
 
   final FocusPaneController controller;
   final bool Function() onLeaveLeft;
+
+  /// Null: Up stays in the screen.
+  final bool Function()? onLeaveUp;
+
+  /// A keyboard's arrows move the caret in a text field (the desktop).
+  final bool textFieldsKeepArrows;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => Shortcuts(
-    shortcuts: const {
-      SingleActivator(LogicalKeyboardKey.arrowLeft): _LeaveContentIntent(),
+    shortcuts: {
+      const SingleActivator(LogicalKeyboardKey.arrowLeft):
+          const _LeaveContentIntent(TraversalDirection.left),
+      if (onLeaveUp != null)
+        const SingleActivator(LogicalKeyboardKey.arrowUp):
+            const _LeaveContentIntent(TraversalDirection.up),
     },
     child: Actions(
       actions: {
-        _LeaveContentIntent: CallbackAction<_LeaveContentIntent>(
-          onInvoke: (_) {
-            onLeaveLeft();
-            return null;
+        _LeaveContentIntent: _LeaveContentAction(
+          onLeave: (direction) => switch (direction) {
+            TraversalDirection.up => onLeaveUp?.call(),
+            _ => onLeaveLeft(),
           },
+          textFieldsKeepArrows: textFieldsKeepArrows,
         ),
       },
       child: FocusPane(
@@ -460,5 +525,32 @@ class _ContentPane extends StatelessWidget {
 }
 
 class _LeaveContentIntent extends Intent {
-  const new();
+  const new(this.direction);
+
+  final TraversalDirection direction;
+}
+
+class _LeaveContentAction extends Action<_LeaveContentIntent> {
+  new({required this.onLeave, required this.textFieldsKeepArrows});
+
+  final void Function(TraversalDirection direction) onLeave;
+  final bool textFieldsKeepArrows;
+
+  @override
+  bool isEnabled(_LeaveContentIntent intent, [BuildContext? context]) =>
+      !textFieldsKeepArrows ||
+      FocusManager.instance.primaryFocus?.context?.widget is! EditableText;
+
+  @override
+  Object? invoke(_LeaveContentIntent intent) {
+    final focused = FocusManager.instance.primaryFocus;
+    // Within the screen first; only at its edge to the chrome.
+    if (focused != null &&
+        focused is! FocusScopeNode &&
+        focused.focusInDirection(intent.direction)) {
+      return null;
+    }
+    onLeave(intent.direction);
+    return null;
+  }
 }

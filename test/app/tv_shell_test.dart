@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/app/shell/nav_rail.dart';
+import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
@@ -63,6 +65,18 @@ void main() {
     expect(find.byType(TvSelectKey), findsOneWidget);
   });
 
+  testWidgets('Settings → Data on a TV: no Export or Import (a TV has no '
+      'files), and nothing said of "this computer"', (tester) async {
+    await open(tester, formFactor: FormFactor.tv);
+    await tester.tap(find.text('Data'));
+    await settleApp(tester);
+
+    expect(find.text('Pictures'), findsOneWidget);
+    expect(find.text('Export…'), findsNothing);
+    expect(find.text('Import…'), findsNothing);
+    expect(find.textContaining('this computer'), findsNothing);
+  });
+
   testWidgets('on the desktop, all of it is there', (tester) async {
     await open(tester, formFactor: FormFactor.desktop);
 
@@ -90,6 +104,85 @@ void main() {
     await open(tester, formFactor: FormFactor.desktop, location: '/');
     await tester.pump(const Duration(milliseconds: 500));
     expect(FocusManager.instance.primaryFocus, isA<FocusScopeNode>());
+  });
+
+  group('a remote finds its way (the user, on the Bedroom TV)', () {
+    String? focused() {
+      final context = FocusManager.instance.primaryFocus?.context;
+      if (context == null) return null;
+      return (context.widget is FocusableSurface
+              ? context.widget as FocusableSurface
+              : context.findAncestorWidgetOfExactType<FocusableSurface>())
+          ?.semanticLabel;
+    }
+
+    bool inTopBar() =>
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<ShellTopBar>() !=
+        null;
+
+    Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await settleApp(tester);
+    }
+
+    testWidgets('Up at the top of the screen reaches the top bar (the '
+        'search, the source), and Down comes back', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(inTopBar(), isFalse);
+
+      for (var i = 0; i < 6 && !inTopBar(); i++) {
+        await press(tester, LogicalKeyboardKey.arrowUp);
+      }
+      expect(inTopBar(), isTrue);
+
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(inTopBar(), isFalse);
+      expect(FocusManager.instance.primaryFocus, isNot(isA<FocusScopeNode>()));
+    });
+
+    testWidgets('Left walks a row of buttons, and only at the edge of the '
+        'screen goes to the rail', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      Focus.of(tester.element(find.text('Edit').first)).requestFocus();
+      await settleApp(tester);
+      expect(focused(), 'Edit');
+
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focused(), 'Sync now');
+
+      bool inRail() =>
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<NavRail>() !=
+          null;
+      final walked = <String?>[];
+      for (var i = 0; i < 6 && !inRail(); i++) {
+        await press(tester, LogicalKeyboardKey.arrowLeft);
+        walked.add(focused());
+      }
+      expect(inRail(), isTrue);
+      // Through Settings' own list on the way.
+      expect(walked.length, greaterThan(1));
+    });
+
+    testWidgets('the rail has no expand toggle on a TV (it is too narrow '
+        'to expand); the desktop keeps it', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      expect(railItem('Expand menu'), findsNothing);
+
+      await open(tester, formFactor: FormFactor.desktop);
+      expect(railItem('Expand menu'), findsOneWidget);
+    });
+
+    testWidgets('something always has the focus: when it is lost (a page '
+        'or a dialog closed) the screen takes it back', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.pump(const Duration(milliseconds: 500));
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settleApp(tester);
+      expect(FocusManager.instance.primaryFocus, isNot(isA<FocusScopeNode>()));
+    });
   });
 
   group("a remote's Back (the system's back)", () {

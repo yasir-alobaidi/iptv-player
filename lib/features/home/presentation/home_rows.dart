@@ -133,7 +133,9 @@ KeyEventResult homeArrowKey(
 }
 
 /// A row of Home (canvas `Home`): its title with See all, and its cards
-/// in a rail that scrolls sideways past what fits. One Tab stop.
+/// in a rail that scrolls sideways past what fits. One Tab stop. On a TV
+/// See all is also the row's last card, where → at its end lands (the
+/// header's link is out of a remote's reach; Google TV's rows end so).
 class HomeRow extends StatefulWidget {
   const new({
     required this.title,
@@ -172,8 +174,11 @@ class _HomeRowState extends State<HomeRow> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final inset = HomeRow.inset(tokens);
+    final onSeeAll = widget.onSeeAll;
+    final seeAllCard = TvMode.of(context) && onSeeAll != null;
+    final count = widget.count + (seeAllCard ? 1 : 0);
     widget.controller
-      ..count = widget.count
+      ..count = count
       ..stride = widget.cardWidth + widget.gap;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -191,16 +196,74 @@ class _HomeRowState extends State<HomeRow> {
             height: widget.cardHeight + inset * 2,
             spacing: widget.gap,
             padding: EdgeInsets.all(inset),
-            itemCount: widget.count,
+            itemCount: count,
             itemBuilder: (context, index) => _RowCard(
               key: ValueKey(index),
               index: index,
               controller: widget.controller,
-              builder: (context, focus) => widget.card(context, index, focus),
+              builder: (context, focus) => index == widget.count
+                  ? _SeeAllCard(
+                      focus: focus,
+                      width: widget.cardWidth,
+                      height: widget.cardHeight,
+                      onPressed: onSeeAll!,
+                    )
+                  : widget.card(context, index, focus),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// See all as a row's last card (a TV).
+class _SeeAllCard extends StatelessWidget {
+  const new({
+    required this.focus,
+    required this.width,
+    required this.height,
+    required this.onPressed,
+  });
+
+  final FocusNode focus;
+  final double width;
+  final double height;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return SizedBox(
+      width: width,
+      height: height,
+      child: FocusableSurface(
+        focusNode: focus,
+        onPressed: onPressed,
+        growth: FocusGrowth.tile,
+        borderRadius: tokens.radii.mdAll,
+        background: colors.surface2,
+        hoverBackground: colors.surface3,
+        semanticLabel: 'See all',
+        builder: (context, states) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppIcon(
+              AppIcons.arrowRight,
+              size: tokens.spacing.s32,
+              color: states.highlighted
+                  ? colors.accentBase
+                  : colors.textSecondary,
+            ),
+            SizedBox(height: tokens.spacing.s8),
+            Text(
+              'See all',
+              style: tokens.text.titleSmall.copyWith(color: colors.textPrimary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

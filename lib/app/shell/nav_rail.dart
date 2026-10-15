@@ -18,6 +18,7 @@ class NavRail extends StatelessWidget {
     required this.onToggleExpanded,
     this.paneController,
     this.onLeaveRight,
+    this.showToggle = true,
     this.destinations,
     super.key,
   });
@@ -37,6 +38,10 @@ class NavRail extends StatelessWidget {
 
   /// Right arrow at the rail's edge hands focus to the content.
   final VoidCallback? onLeaveRight;
+
+  /// The expand/collapse toggle; not on a TV, whose 960-wide screen is
+  /// too narrow for the expanded rail (docs/05: under 1280 it collapses).
+  final bool showToggle;
 
   /// The destinations above the spacer; [AppDestination.primary] when
   /// null.
@@ -86,8 +91,10 @@ class NavRail extends StatelessWidget {
                   SizedBox(height: tokens.spacing.s8),
                 ],
                 const Spacer(),
-                _ToggleItem(expanded: expanded, onPressed: onToggleExpanded),
-                SizedBox(height: tokens.spacing.s8),
+                if (showToggle) ...[
+                  _ToggleItem(expanded: expanded, onPressed: onToggleExpanded),
+                  SizedBox(height: tokens.spacing.s8),
+                ],
                 _RailItem(
                   destination: AppDestination.settings,
                   selected: current == AppDestination.settings,

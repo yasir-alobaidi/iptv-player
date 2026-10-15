@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -15,6 +17,7 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/home/data/home_providers.dart';
 import 'package:iptv_player/features/home/domain/home.dart';
+import 'package:iptv_player/features/home/presentation/home_rows.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -24,6 +27,7 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
+import 'package:iptv_player/features/vod/presentation/title_cards.dart';
 
 import '../../app/app_harness.dart';
 import '../vod/vod_fakes.dart';
@@ -458,6 +462,47 @@ void main() {
       expect(app.location, AppDestination.movies.path);
       expect(find.text('Recently added'), findsWidgets);
     });
+  });
+
+  testWidgets('on a TV a row ends in a See all card, where → at its end '
+      "lands (the header link is out of a remote's reach)", (tester) async {
+    final (_, app) = await open(
+      tester,
+      extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    final row = find.ancestor(
+      of: find.text('Recently added movies'),
+      matching: find.byType(HomeRow),
+    );
+    tester
+        .widget<FocusableSurface>(
+          find
+              .descendant(
+                of: find.descendant(of: row, matching: find.byType(MovieCard)),
+                matching: find.byType(FocusableSurface),
+              )
+              .first,
+        )
+        .focusNode!
+        .requestFocus();
+    await settle(tester);
+    for (var i = 0; i < 40 && _focused() != 'See all'; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await settle(tester);
+    }
+    expect(_focused(), 'See all');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(app.location, AppDestination.movies.path);
+  });
+
+  testWidgets('the desktop has no See all card: its header links stay', (
+    tester,
+  ) async {
+    await open(tester);
+    expect(findByLabel('See all'), findsNothing);
+    expect(findByLabel('See all Recently added movies'), findsOneWidget);
   });
 
   group('states', () {

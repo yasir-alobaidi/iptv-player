@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -22,6 +23,7 @@ class ShellTopBar extends StatelessWidget {
     this.castConnected = false,
     this.showCast = true,
     this.paneController,
+    this.onLeaveDown,
     super.key,
   });
 
@@ -52,6 +54,10 @@ class ShellTopBar extends StatelessWidget {
   final bool showCast;
   final FocusPaneController? paneController;
 
+  /// Down from the bar, to the screen under it (a TV's remote); null:
+  /// the arrows move as everywhere.
+  final bool Function()? onLeaveDown;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -66,48 +72,53 @@ class ShellTopBar extends StatelessWidget {
       child: FocusPane(
         controller: paneController,
         debugLabel: 'top-bar',
-        child: Row(
-          children: [
-            Flexible(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.h2.copyWith(color: colors.textPrimary),
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.arrowDown): ?onLeaveDown,
+          },
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.h2.copyWith(color: colors.textPrimary),
+                ),
               ),
-            ),
-            SizedBox(width: tokens.spacing.s16),
-            _SourceChip(
-              source: source,
-              choices: sourceChoices,
-              onManage: onOpenSource,
-            ),
-            const Spacer(),
-            SizedBox(width: tokens.spacing.s16),
-            SearchField(width: searchWidth, onTap: onOpenSearch),
-            if (syncStatus != null) ...[
               SizedBox(width: tokens.spacing.s16),
-              _SyncStatus(status: syncStatus!),
-            ],
-            if (downloads != null) ...[
-              SizedBox(width: tokens.spacing.s16),
-              _DownloadIndicator(
-                downloads: downloads!,
-                onPressed: onOpenDownloads,
+              _SourceChip(
+                source: source,
+                choices: sourceChoices,
+                onManage: onOpenSource,
               ),
-            ],
-            if (showCast) ...[
+              const Spacer(),
               SizedBox(width: tokens.spacing.s16),
-              AppIconButton(
-                icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
-                tooltip: castConnected ? 'Casting' : 'Cast',
-                shortcut: 'C',
-                bordered: true,
-                selected: castConnected,
-                onPressed: onCast,
-              ),
+              SearchField(width: searchWidth, onTap: onOpenSearch),
+              if (syncStatus != null) ...[
+                SizedBox(width: tokens.spacing.s16),
+                _SyncStatus(status: syncStatus!),
+              ],
+              if (downloads != null) ...[
+                SizedBox(width: tokens.spacing.s16),
+                _DownloadIndicator(
+                  downloads: downloads!,
+                  onPressed: onOpenDownloads,
+                ),
+              ],
+              if (showCast) ...[
+                SizedBox(width: tokens.spacing.s16),
+                AppIconButton(
+                  icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
+                  tooltip: castConnected ? 'Casting' : 'Cast',
+                  shortcut: 'C',
+                  bordered: true,
+                  selected: castConnected,
+                  onPressed: onCast,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
