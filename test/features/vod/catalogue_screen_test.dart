@@ -6,8 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/app/shell/top_bar.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/search/data/search_providers.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
@@ -15,6 +19,7 @@ import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/title_details_screen.dart';
 
 import '../../app/app_harness.dart';
+import '../search/search_fakes.dart';
 import 'vod_fakes.dart';
 
 void main() {
@@ -24,12 +29,14 @@ void main() {
     bool movies = true,
     AppDestination at = AppDestination.movies,
     List<Override> overrides = const [],
+    Size size = const Size(1440, 900),
   }) async {
     final vod = VodFakes();
     addTearDown(() => tester.runAsync(vod.db.close));
     if (seed) await tester.runAsync(() => vod.seed(movies: movies));
     final app = await pumpApp(
       tester,
+      size: size,
       initialLocation: at.path,
       overrides: [
         // One override per provider: a test's own replaces the fake's.
@@ -115,6 +122,177 @@ void main() {
     );
     await settle(tester);
     expect(find.text('1 movie'), findsOneWidget);
+  });
+
+  testWidgets('on a TV, after typing in the filter and deleting it all, ↓ '
+      'leaves the filter for the posters (the user: stuck there)', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      size: const Size(960, 540),
+      overrides: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    String? focused() {
+      final context = FocusManager.instance.primaryFocus?.context;
+      if (context == null) return null;
+      if (context.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return 'field';
+      }
+      return (context.widget is FocusableSurface
+              ? context.widget as FocusableSurface
+              : context.findAncestorWidgetOfExactType<FocusableSurface>())
+          ?.semanticLabel;
+    }
+
+    // Browsing first (the user): a poster has the focus, then up to the
+    // filter.
+    tester
+        .widget<FocusableSurface>(
+          find
+              .descendant(
+                of: poster('Ember Road'),
+                matching: find.byType(FocusableSurface),
+              )
+              .first,
+        )
+        .focusNode!
+        .requestFocus();
+    await settle(tester);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<PosterCard>(),
+      isNotNull,
+    );
+    final up = <String?>[];
+    for (var i = 0; i < 4 && focused() != 'field'; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await settle(tester);
+      up.add(focused());
+    }
+    expect(focused(), 'field', reason: 'up: $up');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(find.byType(RemoteKeyboard), findsOneWidget);
+    Finder key(String label) => find.descendant(
+      of: find.byType(RemoteKeyboard),
+      matching: findByLabel(label),
+    );
+    // A filter that keeps the grid but drops the card last focused: its
+    // focus node goes with it.
+    await tester.tap(key('q'));
+    await settle(tester);
+    expect(poster('Ember Road'), findsNothing);
+    expect(poster('The Quiet Harbor'), findsOneWidget);
+    await tester.tap(key('Delete'));
+    await settle(tester);
+    await tester.tap(key('Done'));
+    await settle(tester);
+    expect(find.byType(RemoteKeyboard), findsNothing);
+    expect(focused(), 'field');
+
+    // ↓ from a category chip (on the TV the filter's ↓ lands on one)
+    // goes to the grid's remembered card: here, one the filter dropped.
+    Focus.of(
+      tester.element(
+        find.descendant(
+          of: find.widgetWithText(AppChip, 'All'),
+          matching: find.text('All'),
+        ),
+      ),
+    ).requestFocus();
+    await settle(tester);
+    expect(focused(), 'All');
+    // Up from the filter, at the screen's top, reaches the top bar.
+    final field = tester.widget<EditableText>(find.byType(EditableText));
+    field.focusNode.requestFocus();
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await settle(tester);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<ShellTopBar>(),
+      isNotNull,
+      reason: 'Up from the filter: ${focused()}',
+    );
+
+    Focus.of(
+      tester.element(
+        find.descendant(
+          of: find.widgetWithText(AppChip, 'All'),
+          matching: find.text('All'),
+        ),
+      ),
+    ).requestFocus();
+    await settle(tester);
+    final walked = <String?>[];
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await settle(tester);
+      walked.add(focused());
+    }
+    expect(walked.first, isNot('All'), reason: 'walked: $walked');
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<PosterCard>(),
+      isNotNull,
+      reason: 'walked: $walked',
+    );
+  });
+
+  testWidgets('on a TV, after Search from the top bar, typed in and '
+      'emptied and closed, ↓ reaches the posters', (tester) async {
+    await pump(
+      tester,
+      size: const Size(960, 540),
+      overrides: [
+        formFactorProvider.overrideWithValue(FormFactor.tv),
+        searchRepositoryProvider.overrideWithValue(ScriptedSearch()),
+      ],
+    );
+    bool onPoster() =>
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<PosterCard>() !=
+        null;
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await settle(tester);
+    final search = find.byWidgetPredicate(
+      (w) => w is SearchField && w.onTap != null,
+    );
+    tester
+        .widget<FocusableSurface>(
+          find.descendant(of: search, matching: find.byType(FocusableSurface)),
+        )
+        .focusNode!
+        .requestFocus();
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    await tester.pump(const Duration(milliseconds: 300));
+    await settle(tester);
+    expect(find.byType(RemoteKeyboard), findsOneWidget);
+    Finder key(String label) => find.descendant(
+      of: find.byType(RemoteKeyboard),
+      matching: findByLabel(label),
+    );
+    await tester.tap(key('z'));
+    await settle(tester);
+    await tester.tap(key('Delete'));
+    await settle(tester);
+    await tester.tap(key('Done'));
+    await settle(tester);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.byType(RemoteKeyboard), findsNothing);
+
+    for (var i = 0; i < 6 && !onPoster(); i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await settle(tester);
+    }
+    expect(onPoster(), isTrue);
   });
 
   testWidgets('a filter with no match says so, and Clear filter brings them '

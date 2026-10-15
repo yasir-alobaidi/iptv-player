@@ -231,8 +231,11 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
       builder: (context, constraints) {
         // Below 1280 px the rail collapses whatever the user chose
         // (docs/05); their choice comes back when the window grows.
+        // A TV's rail stays collapsed: its canvas is just 1280 wide, and
+        // it has no toggle (ADR-026).
         final expanded =
             wantsExpanded &&
+            !onTv &&
             constraints.maxWidth >= WindowSizes.railCollapseWidth;
 
         return Scaffold(
@@ -539,7 +542,10 @@ class _LeaveContentAction extends Action<_LeaveContentIntent> {
   @override
   bool isEnabled(_LeaveContentIntent intent, [BuildContext? context]) =>
       !textFieldsKeepArrows ||
-      FocusManager.instance.primaryFocus?.context?.widget is! EditableText;
+      // A text field's focus is a Focus inside its EditableText.
+      FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<EditableText>() ==
+          null;
 
   @override
   Object? invoke(_LeaveContentIntent intent) {

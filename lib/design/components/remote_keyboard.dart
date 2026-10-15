@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/focus/tv_mode.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// On a TV (`TvMode`), a text field the remote can use: Android's keyboard
@@ -29,22 +30,22 @@ class RemoteTextEntry extends StatelessWidget {
   /// The field, asking for [TextInputType.none] on a TV.
   final Widget child;
 
+  /// The arrows as an intent of our own: the field's EditableText answers
+  /// [DirectionalFocusIntent] itself and keeps the key even with nothing
+  /// that way, so at a screen's edge the shell never heard it (Up from
+  /// Movies' filter stayed there, on the Bedroom TV).
   static const Map<ShortcutActivator, Intent> _arrows = {
-    SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
+    SingleActivator(LogicalKeyboardKey.arrowUp): _FieldArrowIntent(
       TraversalDirection.up,
-      ignoreTextFields: false,
     ),
-    SingleActivator(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(
+    SingleActivator(LogicalKeyboardKey.arrowDown): _FieldArrowIntent(
       TraversalDirection.down,
-      ignoreTextFields: false,
     ),
-    SingleActivator(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(
+    SingleActivator(LogicalKeyboardKey.arrowLeft): _FieldArrowIntent(
       TraversalDirection.left,
-      ignoreTextFields: false,
     ),
-    SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(
+    SingleActivator(LogicalKeyboardKey.arrowRight): _FieldArrowIntent(
       TraversalDirection.right,
-      ignoreTextFields: false,
     ),
   };
 
@@ -61,7 +62,7 @@ class RemoteTextEntry extends StatelessWidget {
               return null;
             },
           ),
-          if (arrowsLeave) DirectionalFocusIntent: _LeaveField(),
+          if (arrowsLeave) _FieldArrowIntent: _LeaveField(),
         },
         child: child,
       ),
@@ -71,28 +72,35 @@ class RemoteTextEntry extends StatelessWidget {
 
 /// An arrow out of the field, when there is something that way; else the
 /// key goes on (the shell takes Left at the screen's edge to the rail).
-class _LeaveField extends Action<DirectionalFocusIntent> {
+class _FieldArrowIntent extends Intent {
+  const new(this.direction);
+
+  final TraversalDirection direction;
+}
+
+class _LeaveField extends Action<_FieldArrowIntent> {
   @override
-  Object? invoke(DirectionalFocusIntent intent) =>
+  Object? invoke(_FieldArrowIntent intent) =>
       FocusManager.instance.primaryFocus?.focusInDirection(intent.direction) ??
       false;
 
   @override
   KeyEventResult toKeyEventResult(
-    DirectionalFocusIntent intent,
+    _FieldArrowIntent intent,
     Object? invokeResult,
   ) => invokeResult == true ? KeyEventResult.handled : KeyEventResult.ignored;
 }
 
 /// Bijou's own keyboard for the remote (docs/07: Onboarding and Search
-/// type on an on-screen keyboard): a panel at the bottom with the text so
-/// far, ten keys a row, and the arrows and OK to type. It edits
-/// [controller] as each key is pressed, calling [onChanged] (a search
-/// shows results as the words come); Done closes it and calls
-/// [onSubmitted]; Back closes it and keeps what was typed.
+/// type on an on-screen keyboard), as a panel down the screen's left side:
+/// the screen stays in view beside it, undimmed, so what the words find
+/// (Search's results, a filtered grid) shows as they are typed. The panel
+/// shows the text itself, its end when it is long, after a blinking caret.
+/// It edits [controller] as each key is pressed, calling [onChanged]; Done
+/// closes it and calls [onSubmitted]; Back closes it and keeps the text.
 ///
 /// [keyboardType] chooses the extra row: an address's pieces for a URL,
-/// and the digits first for a number.
+/// and the digits first for a number. ADR-026.
 Future<void> showRemoteKeyboard(
   BuildContext context, {
   required TextEditingController controller,
@@ -108,31 +116,35 @@ Future<void> showRemoteKeyboard(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close keyboard',
-    barrierColor: tokens.colors.scrim,
+    // The screen beside the panel is what the words find: not dimmed.
+    barrierColor: Colors.transparent,
     transitionDuration: tokens.motion.fast,
     transitionBuilder: (context, animation, secondary, child) =>
         FadeTransition(opacity: animation, child: child),
     pageBuilder: (dialogContext, animation, secondary) => Material(
       type: MaterialType.transparency,
-      child: RemoteKeyboard(
-        controller: controller,
-        label: label,
-        obscure: obscure,
-        keyboardType: keyboardType,
-        onChanged: onChanged,
-        onDone: () {
-          if (submitted) return;
-          submitted = true;
-          Navigator.of(dialogContext).pop();
-          onSubmitted?.call(controller.text);
-        },
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: RemoteKeyboard(
+          controller: controller,
+          label: label,
+          obscure: obscure,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          onDone: () {
+            if (submitted) return;
+            submitted = true;
+            Navigator.of(dialogContext).pop();
+            onSubmitted?.call(controller.text);
+          },
+        ),
       ),
     ),
   );
 }
 
 /// The keyboard's panel ([showRemoteKeyboard] opens it). Public for the
-/// Component Gallery and tests.
+/// Component Gallery, tests, and the screens that make room for it.
 class RemoteKeyboard extends StatefulWidget {
   const new({
     required this.controller,
@@ -150,6 +162,10 @@ class RemoteKeyboard extends StatefulWidget {
   final bool obscure;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+
+  /// The panel's width: a screen that shows results beside it (Search)
+  /// starts them after this.
+  static const width = 460.0;
 
   static const _digits = '1234567890';
   static const _letters = ['qwertyuiop', 'asdfghjkl@', 'zxcvbnm.-_'];
@@ -206,9 +222,10 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     final letters = _symbols
         ? RemoteKeyboard._symbols
         : RemoteKeyboard._letters;
+    final gap = tokens.spacing.s8 - 2;
 
     Widget row(List<Widget> keys) => Padding(
-      padding: EdgeInsets.only(top: tokens.spacing.s8),
+      padding: EdgeInsets.only(top: gap),
       child: Row(children: keys),
     );
 
@@ -221,111 +238,213 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
       );
     }
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 880),
-        child: Container(
-          margin: EdgeInsets.all(tokens.spacing.s16),
-          padding: EdgeInsets.all(tokens.spacing.s16),
-          decoration: BoxDecoration(
-            color: colors.surface1,
-            borderRadius: tokens.radii.lgAll,
-            border: Border.all(color: colors.border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      width: RemoteKeyboard.width,
+      height: double.infinity,
+      padding: EdgeInsets.all(tokens.spacing.s20),
+      decoration: BoxDecoration(
+        color: colors.surface1,
+        border: Border(right: BorderSide(color: colors.border)),
+        boxShadow: tokens.elevation.overlay,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.label case final label?)
-                          Text(
-                            label,
-                            style: tokens.text.label.copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                        Text(
-                          // A caret after the text: where the next key goes.
-                          '$shown|',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.text.h3.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
+              Expanded(
+                child: Text(
+                  widget.label ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.label.copyWith(
+                    color: colors.textSecondary,
                   ),
-                  if (widget.obscure)
-                    SizedBox(
-                      width: 120,
-                      child: Row(
-                        children: [
-                          _Key(
-                            label: _revealed ? 'Hide' : 'Show',
-                            onPressed: () =>
-                                setState(() => _revealed = !_revealed),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                ),
               ),
-              if (_url && !_symbols)
-                row([
-                  for (final (piece, width) in RemoteKeyboard._addressRow)
-                    _Key(
-                      label: piece,
-                      flex: width,
-                      onPressed: () => _type(piece),
-                    ),
-                ]),
-              row([
-                for (final (i, c) in RemoteKeyboard._digits.characters.indexed)
-                  char(c, autofocus: _number && i == 0),
-              ]),
-              for (final (r, keys) in letters.indexed)
-                row([
-                  for (final (i, c) in keys.characters.indexed)
-                    char(c, autofocus: !_number && r == 0 && i == 0),
-                ]),
-              row([
-                _Key(
-                  label: _upper ? 'abc' : 'ABC',
-                  selected: _upper,
-                  enabled: !_symbols,
-                  onPressed: () => setState(() => _upper = !_upper),
+              if (widget.obscure)
+                SizedBox(
+                  width: tokens.spacing.s64 + tokens.spacing.s16,
+                  child: Row(
+                    children: [
+                      _Key(
+                        label: _revealed ? 'Hide' : 'Show',
+                        onPressed: () => setState(() => _revealed = !_revealed),
+                      ),
+                    ],
+                  ),
                 ),
-                _Key(
-                  label: _symbols ? 'abc' : '#+=',
-                  selected: _symbols,
-                  onPressed: () => setState(() => _symbols = !_symbols),
-                ),
-                _Key(label: 'Space', flex: 3, onPressed: () => _type(' ')),
-                _Key(label: 'Delete', flex: 2, onPressed: _delete),
-                _Key(label: 'Clear', onPressed: () => _edit('')),
-                _Key(
-                  label: 'Done',
-                  flex: 2,
-                  primary: true,
-                  onPressed: widget.onDone,
-                ),
-              ]),
             ],
           ),
+          SizedBox(height: tokens.spacing.s8),
+          // The words so far, in a box like the field's: where the
+          // next key goes, the caret blinks.
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: tokens.spacing.s12,
+              vertical: tokens.spacing.s8,
+            ),
+            decoration: BoxDecoration(
+              color: colors.surfaceSunken,
+              borderRadius: tokens.radii.controlAll,
+              border: Border.all(color: colors.accentBase),
+            ),
+            child: _Typed(
+              text: shown,
+              style: tokens.text.h3.copyWith(color: colors.textPrimary),
+            ),
+          ),
+          SizedBox(height: tokens.spacing.s8),
+          if (_url && !_symbols)
+            row([
+              for (final (piece, width) in RemoteKeyboard._addressRow)
+                _Key(label: piece, flex: width, onPressed: () => _type(piece)),
+            ]),
+          row([
+            for (final (i, c) in RemoteKeyboard._digits.characters.indexed)
+              char(c, autofocus: _number && i == 0),
+          ]),
+          for (final (r, keys) in letters.indexed)
+            row([
+              for (final (i, c) in keys.characters.indexed)
+                char(c, autofocus: !_number && r == 0 && i == 0),
+            ]),
+          row([
+            _Key(
+              label: _upper ? 'abc' : 'ABC',
+              flex: 2,
+              selected: _upper,
+              enabled: !_symbols,
+              onPressed: () => setState(() => _upper = !_upper),
+            ),
+            _Key(
+              label: _symbols ? 'abc' : '#+=',
+              flex: 2,
+              selected: _symbols,
+              onPressed: () => setState(() => _symbols = !_symbols),
+            ),
+            _Key(label: 'Space', flex: 6, onPressed: () => _type(' ')),
+          ]),
+          row([
+            _Key(label: 'Delete', flex: 3, onPressed: _delete),
+            _Key(label: 'Clear', flex: 3, onPressed: () => _edit('')),
+            _Key(
+              label: 'Done',
+              flex: 4,
+              primary: true,
+              onPressed: widget.onDone,
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// The words typed so far and the caret after them; when they are wider
+/// than the box, their end shows (where the typing is), cut at the left.
+class _Typed extends StatelessWidget {
+  const new({required this.text, required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final lineHeight = scaler.scale(style.fontSize!) * (style.height ?? 1.2);
+    // A new caret each time the text changes: it shows at once, then
+    // blinks, as a text field's does.
+    final line = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(text, maxLines: 1, softWrap: false, style: style),
+        _Caret(key: ValueKey(text), height: lineHeight),
+      ],
+    );
+    return SizedBox(
+      height: lineHeight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: Directionality.of(context),
+            textScaler: scaler,
+            maxLines: 1,
+          )..layout();
+          final wide = painter.width + _Caret.width * 2 > constraints.maxWidth;
+          painter.dispose();
+          // Clipped either way: a text a hair from the edge never
+          // overflows.
+          return ClipRect(
+            child: OverflowBox(
+              maxWidth: double.infinity,
+              alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+              child: line,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// A text field's caret: on for half a second, off for half, steady when
+/// motion is reduced.
+class _Caret extends StatefulWidget {
+  const new({required this.height, super.key});
+
+  final double height;
+
+  static const width = 2.0;
+
+  /// One on-and-off: a text field's rhythm.
+  static const period = Duration(milliseconds: 1060);
+
+  @override
+  State<_Caret> createState() => _CaretState();
+}
+
+class _CaretState extends State<_Caret> with SingleTickerProviderStateMixin {
+  late final _blink = AnimationController(vsync: this, duration: _Caret.period);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.tokens.motion.reduceMotion) {
+      _blink.stop();
+    } else if (!_blink.isAnimating) {
+      _blink.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return AnimatedBuilder(
+      animation: _blink,
+      builder: (context, _) => Opacity(
+        opacity: _blink.isAnimating && _blink.value >= 0.5 ? 0 : 1,
+        child: Container(
+          width: _Caret.width,
+          height: widget.height,
+          margin: const EdgeInsets.only(left: _Caret.width),
+          color: tokens.colors.accentBase,
         ),
       ),
     );
   }
 }
 
-/// One key: [flex] tenths of the row.
+/// One key: [flex] tenths of the row. Focused, it fills white with dark
+/// letters — the TV's keyboards' highlight — in place of the design
+/// system's ring, which its neighbours, a few pixels away, painted over.
 class _Key extends StatelessWidget {
   const new({
     required this.label,
@@ -350,36 +469,43 @@ class _Key extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final key = Padding(
-      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s4 / 2),
+      padding: EdgeInsets.symmetric(horizontal: (tokens.spacing.s8 - 2) / 2),
       child: FocusableSurface(
         onPressed: onPressed,
         autofocus: autofocus,
         enabled: enabled,
-        onAccent: primary,
+        ring: false,
         borderRadius: tokens.radii.smAll,
-        background: primary
-            ? colors.accentBase
-            : selected
-            ? colors.accentSoft
-            : colors.surface2,
-        hoverBackground: primary ? colors.accentHover : colors.surface3,
         semanticLabel: label,
-        builder: (context, states) => SizedBox(
-          height: tokens.spacing.s40,
-          child: Center(
+        builder: (context, states) {
+          final (fill, ink) = switch (states) {
+            SurfaceStates(focused: true) => (colors.textPrimary, colors.bg),
+            _ when primary => (colors.accentBase, colors.onAccent),
+            SurfaceStates(hovered: true) => (
+              colors.surface3,
+              colors.textPrimary,
+            ),
+            _ when selected => (colors.accentSoft, colors.textPrimary),
+            _ when !enabled => (colors.surface2, colors.textDisabled),
+            _ => (colors.surface2, colors.textPrimary),
+          };
+          return AnimatedContainer(
+            duration: tokens.motion.fast,
+            height: context.scaled(tokens.spacing.s40),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: tokens.radii.smAll,
+            ),
             child: Text(
               label,
               maxLines: 1,
-              style: tokens.text.bodyStrong.copyWith(
-                color: primary
-                    ? colors.onAccent
-                    : enabled
-                    ? colors.textPrimary
-                    : colors.textDisabled,
-              ),
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: tokens.text.bodyStrong.copyWith(color: ink),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
     return Expanded(flex: flex, child: key);

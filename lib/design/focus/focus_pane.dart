@@ -13,6 +13,13 @@ class FocusPaneController extends ChangeNotifier {
   FocusNode? get lastFocused {
     final node = _lastFocused;
     if (node == null || node.context == null) return null;
+    // Gone with its item (a card a filter dropped): its node may keep a
+    // context, but it is no longer in the pane, and asking it for the
+    // focus does nothing. The user, on the Bedroom TV: ↓ to the grid
+    // after a filter stayed on the chips.
+    final pane = _pane;
+    if (pane != null && !node.ancestors.contains(pane)) return null;
+    if (_rectOf(node) == null) return null;
     return node;
   }
 
