@@ -523,6 +523,33 @@ void main() {
       expect(hits[1].movie.year, 2024);
     });
 
+    test('Arabic: an alef with or without its hamza, a closing ة or ه, ى or '
+        'ي, and either kind of digit find the same names (ADR-027)', () async {
+      final catalogue = await _Catalogue.open();
+      await catalogue._movie('a', 'ar1', 'أرطغرل', null);
+      await catalogue._movie('a', 'ar2', 'شديد الخطوره', null);
+      await catalogue._movie('a', 'ar3', 'العميل ٧٧ (1969)', null);
+      await catalogue._movie('a', 'ar4', 'مدرسة المشاغبين', null);
+      await catalogue._movie('a', 'ar5', 'الأسكندرية ليه', null);
+      await catalogue._movie('a', 'ar6', 'إلى الأبد', null);
+      Future<List<String>> movies(String text) async => [
+        for (final hit in (await catalogue.search(text)).movies.hits)
+          hit.movie.name,
+      ];
+
+      expect(await movies('ارطغرل'), ['أرطغرل']);
+      expect(await movies('أرطغرل'), ['أرطغرل']);
+      expect(await movies('ارط'), ['أرطغرل']);
+      expect(await movies('الخطورة'), ['شديد الخطوره']);
+      expect(await movies('شديد الخطوره'), ['شديد الخطوره']);
+      expect(await movies('العميل 77'), ['العميل ٧٧ (1969)']);
+      expect(await movies('١٩٦٩'), ['العميل ٧٧ (1969)']);
+      expect(await movies('مدرسه'), ['مدرسة المشاغبين']);
+      expect(await movies('الاسكندريه'), ['الأسكندرية ليه']);
+      expect(await movies('الابد'), ['إلى الأبد']);
+      expect(await movies('اربع'), isEmpty);
+    });
+
     test('series, with their seasons once the episodes are in', () async {
       final catalogue = await _Catalogue.open();
       final hits = (await catalogue.search('arena')).series.hits;

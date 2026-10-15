@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
+import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/app/still_watching.dart';
 import 'package:iptv_player/core/app_identity.dart';
@@ -52,7 +53,7 @@ class IptvPlayerApp extends ConsumerWidget {
               child: AppToasts(child: child ?? const SizedBox.shrink()),
             ),
           );
-          return TvMode(
+          final tv = TvMode(
             on: onTv,
             child: KeyHints(
               shown: !onTv,
@@ -61,6 +62,16 @@ class IptvPlayerApp extends ConsumerWidget {
                       child: StillWatching(child: TvSelectKey(child: app)),
                     )
                   : app,
+            ),
+          );
+          // The keyboard's language, kept (ADR-027); only its own
+          // dependents rebuild when it changes.
+          return Consumer(
+            child: tv,
+            builder: (context, ref, tv) => RemoteKeyboardLanguage(
+              language: ref.watch(remoteKeyboardChoiceProvider),
+              onChanged: ref.read(remoteKeyboardChoiceProvider.notifier).choose,
+              child: tv!,
             ),
           );
         },

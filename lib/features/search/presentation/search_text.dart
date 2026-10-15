@@ -8,6 +8,7 @@ import 'package:iptv_player/features/library/presentation/library_text.dart';
 import 'package:iptv_player/features/live_tv/domain/channel_name_tags.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
+import 'package:iptv_player/features/search/domain/search_words.dart';
 
 /// The group headings, in the canvas's order.
 const channelsHeading = 'CHANNELS';
@@ -185,7 +186,8 @@ String recentLine(List<String> recent) =>
 
 /// Where in [name] the words typed are, to set in bold: each word where it
 /// starts a word of [name], compared as the index compares them — case,
-/// Latin accents and superscripts folded. Ranges are [start, end) in
+/// Latin accents and superscripts folded — and Arabic's spellings as one
+/// ([foldArabic]), as the query asks for them. Ranges are [start, end) in
 /// [name]'s code units, in order, never overlapping.
 List<(int, int)> highlightRanges(String name, List<String> words) {
   if (words.isEmpty || name.isEmpty) return const [];
@@ -238,7 +240,7 @@ List<(int, int)> highlightRanges(String name, List<String> words) {
   return merged;
 }
 
-String _fold(String text) => foldName(text.toLowerCase());
+String _fold(String text) => foldArabic(foldName(text.toLowerCase()));
 
 int _unitLength(String text, int at) {
   final unit = text.codeUnitAt(at);

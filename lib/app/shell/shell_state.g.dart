@@ -489,6 +489,69 @@ abstract class _$RailExpanded extends $Notifier<bool> {
   }
 }
 
+/// The language Bijou's keyboard for the remote opens in: the last one
+/// chosen, across launches (ADR-027).
+
+@ProviderFor(RemoteKeyboardChoice)
+final remoteKeyboardChoiceProvider = RemoteKeyboardChoiceProvider._();
+
+/// The language Bijou's keyboard for the remote opens in: the last one
+/// chosen, across launches (ADR-027).
+final class RemoteKeyboardChoiceProvider
+    extends $NotifierProvider<RemoteKeyboardChoice, KeyboardLanguage> {
+  /// The language Bijou's keyboard for the remote opens in: the last one
+  /// chosen, across launches (ADR-027).
+  RemoteKeyboardChoiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'remoteKeyboardChoiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$remoteKeyboardChoiceHash();
+
+  @$internal
+  @override
+  RemoteKeyboardChoice create() => RemoteKeyboardChoice();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(KeyboardLanguage value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<KeyboardLanguage>(value),
+    );
+  }
+}
+
+String _$remoteKeyboardChoiceHash() =>
+    r'59591b0df27e7d99ddbfb315ad738cdc0ef534da';
+
+/// The language Bijou's keyboard for the remote opens in: the last one
+/// chosen, across launches (ADR-027).
+
+abstract class _$RemoteKeyboardChoice extends $Notifier<KeyboardLanguage> {
+  KeyboardLanguage build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<KeyboardLanguage, KeyboardLanguage>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<KeyboardLanguage, KeyboardLanguage>,
+              KeyboardLanguage,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Non-fatal errors the global handlers caught, shown as toasts by the
 /// shell (step 2's `ErrorReporter`).
 

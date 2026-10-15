@@ -23,6 +23,12 @@ abstract interface class UiPreferences {
   PlayerSound get playerSound;
 
   Future<Result<void>> setPlayerSound(PlayerSound sound);
+
+  /// The language Bijou's keyboard for the remote last had ("en", "ar");
+  /// null until one was chosen (ADR-027).
+  String? get keyboardLanguage;
+
+  Future<Result<void>> setKeyboardLanguage(String code);
 }
 
 /// How loud the player is: [volume] 0–100, and [muted] over it (the
@@ -96,6 +102,15 @@ final class InMemoryUiPreferences implements UiPreferences {
   @override
   Future<Result<void>> setPlayerSound(PlayerSound sound) async {
     playerSound = sound;
+    return const Ok(null);
+  }
+
+  @override
+  String? keyboardLanguage;
+
+  @override
+  Future<Result<void>> setKeyboardLanguage(String code) async {
+    keyboardLanguage = code;
     return const Ok(null);
   }
 }

@@ -19,16 +19,25 @@ final class DbUiPreferences implements UiPreferences {
       SettingsKeys.playerSound,
       null,
     );
+    final keyboard = await settings.readValue<Object?>(
+      SettingsKeys.keyboardLanguage,
+      null,
+    );
     return DbUiPreferences(settings)
       .._railExpanded = expanded.valueOrNull ?? false
       .._currentSourceId = source.valueOrNull
-      .._playerSound = PlayerSound.fromJson(sound.valueOrNull);
+      .._playerSound = PlayerSound.fromJson(sound.valueOrNull)
+      .._keyboardLanguage = switch (keyboard.valueOrNull) {
+        final String code => code,
+        _ => null,
+      };
   }
 
   final SettingsRepository _settings;
   bool _railExpanded = false;
   String? _currentSourceId;
   PlayerSound _playerSound = const PlayerSound();
+  String? _keyboardLanguage;
 
   @override
   bool get railExpanded => _railExpanded;
@@ -57,5 +66,14 @@ final class DbUiPreferences implements UiPreferences {
   Future<Result<void>> setPlayerSound(PlayerSound sound) {
     _playerSound = sound;
     return _settings.writeValue(SettingsKeys.playerSound, sound.toJson());
+  }
+
+  @override
+  String? get keyboardLanguage => _keyboardLanguage;
+
+  @override
+  Future<Result<void>> setKeyboardLanguage(String code) {
+    _keyboardLanguage = code;
+    return _settings.writeValue(SettingsKeys.keyboardLanguage, code);
   }
 }

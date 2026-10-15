@@ -91,6 +91,45 @@ class _LeaveField extends Action<_FieldArrowIntent> {
   ) => invokeResult == true ? KeyEventResult.handled : KeyEventResult.ignored;
 }
 
+/// The keyboard's letters: English's QWERTY, or Arabic's phone layout.
+enum KeyboardLanguage {
+  english('en'),
+  arabic('ar');
+
+  new(this.code);
+
+  /// How a preference stores it.
+  final String code;
+
+  /// [code]'s language; English for anything else.
+  static KeyboardLanguage fromCode(String? code) => values.firstWhere(
+    (language) => language.code == code,
+    orElse: () => english,
+  );
+}
+
+/// The language [RemoteKeyboard] opens in, and where a change of it goes:
+/// the app keeps the last one chosen (ADR-027). Above the router, so the
+/// keyboard's dialog sees it; with none above, English, not kept.
+class RemoteKeyboardLanguage extends InheritedWidget {
+  const new({
+    required this.language,
+    required this.onChanged,
+    required super.child,
+    super.key,
+  });
+
+  final KeyboardLanguage language;
+  final ValueChanged<KeyboardLanguage> onChanged;
+
+  static RemoteKeyboardLanguage? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<RemoteKeyboardLanguage>();
+
+  @override
+  bool updateShouldNotify(RemoteKeyboardLanguage oldWidget) =>
+      oldWidget.language != language;
+}
+
 /// Bijou's own keyboard for the remote (docs/07: Onboarding and Search
 /// type on an on-screen keyboard), as a panel down the screen's left side:
 /// the screen stays in view beside it, undimmed, so what the words find
@@ -101,6 +140,13 @@ class _LeaveField extends Action<_FieldArrowIntent> {
 ///
 /// [keyboardType] chooses the extra row: an address's pieces for a URL,
 /// and the digits first for a number. ADR-026.
+///
+/// Its letters are English's or Arabic's (the key at the bottom row's
+/// start switches them; [RemoteKeyboardLanguage] keeps the choice). Arabic
+/// is laid out as phones lay it out, with a row of its own for the alef's
+/// hamza and madda and the yeh's hamza, which a phone puts under a long
+/// press a remote can't make; Arabic words show right to left, the caret
+/// at their left. ADR-027.
 Future<void> showRemoteKeyboard(
   BuildContext context, {
   required TextEditingController controller,
@@ -171,6 +217,15 @@ class RemoteKeyboard extends StatefulWidget {
   static const _letters = ['qwertyuiop', 'asdfghjkl@', 'zxcvbnm.-_'];
   static const _symbols = [r'!#$%^&*()?', '/:;\'",+=~`', r'[]{}<>\|·€'];
 
+  /// A phone's Arabic layout, then what it puts under a long press, the
+  /// lam-alef, and Arabic's comma and question mark.
+  static const _arabic = [
+    ['ض', 'ص', 'ث', 'ق', 'ف', 'غ', 'ع', 'ه', 'خ', 'ح', 'ج'],
+    ['ش', 'س', 'ي', 'ب', 'ل', 'ا', 'ت', 'ن', 'م', 'ك', 'ط'],
+    ['ذ', 'ء', 'ؤ', 'ر', 'ى', 'ة', 'و', 'ز', 'ظ', 'د'],
+    ['أ', 'إ', 'آ', 'ئ', 'لا', '،', '؟', '.', '-', '_'],
+  ];
+
   /// An address's pieces, and how wide each key is (of ten).
   static const _addressRow = [
     ('http://', 2),
@@ -189,6 +244,29 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   bool _upper = false;
   bool _symbols = false;
   bool _revealed = false;
+
+  /// Null until the scope above is read.
+  KeyboardLanguage? _language;
+
+  bool get _arabic => _language == KeyboardLanguage.arabic;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _language ??=
+        RemoteKeyboardLanguage.maybeOf(context)?.language ??
+        KeyboardLanguage.english;
+  }
+
+  void _switchLanguage() {
+    final next = _arabic ? KeyboardLanguage.english : KeyboardLanguage.arabic;
+    setState(() {
+      _language = next;
+      _symbols = false;
+      _upper = false;
+    });
+    RemoteKeyboardLanguage.maybeOf(context)?.onChanged(next);
+  }
 
   bool get _number => widget.keyboardType == TextInputType.number;
   bool get _url => widget.keyboardType == TextInputType.url;
@@ -220,8 +298,13 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
         ? '•' * text.characters.length
         : text;
     final letters = _symbols
-        ? RemoteKeyboard._symbols
-        : RemoteKeyboard._letters;
+        ? [for (final keys in RemoteKeyboard._symbols) keys.characters.toList()]
+        : _arabic
+        ? RemoteKeyboard._arabic
+        : [
+            for (final keys in RemoteKeyboard._letters)
+              keys.characters.toList(),
+          ];
     final gap = tokens.spacing.s8 - 2;
 
     Widget row(List<Widget> keys) => Padding(
@@ -230,7 +313,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     );
 
     _Key char(String c, {bool autofocus = false}) {
-      final typed = _upper && !_symbols ? c.toUpperCase() : c;
+      final typed = _upper && !_symbols && !_arabic ? c.toUpperCase() : c;
       return _Key(
         label: typed,
         autofocus: autofocus,
@@ -291,6 +374,11 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
             ),
             child: _Typed(
               text: shown,
+              // An empty box takes the keyboard's direction; words, their
+              // own (Arabic right to left).
+              direction:
+                  _directionOf(shown) ??
+                  (_arabic ? TextDirection.rtl : TextDirection.ltr),
               style: tokens.text.h3.copyWith(color: colors.textPrimary),
             ),
           ),
@@ -306,24 +394,35 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
           ]),
           for (final (r, keys) in letters.indexed)
             row([
-              for (final (i, c) in keys.characters.indexed)
+              for (final (i, c) in keys.indexed)
                 char(c, autofocus: !_number && r == 0 && i == 0),
             ]),
           row([
+            // Each language's key says it in its own words.
             _Key(
-              label: _upper ? 'abc' : 'ABC',
+              label: _arabic ? 'English' : 'عربي',
               flex: 2,
-              selected: _upper,
-              enabled: !_symbols,
-              onPressed: () => setState(() => _upper = !_upper),
+              onPressed: _switchLanguage,
             ),
+            if (!_arabic)
+              _Key(
+                label: _upper ? 'abc' : 'ABC',
+                flex: 2,
+                selected: _upper,
+                enabled: !_symbols,
+                onPressed: () => setState(() => _upper = !_upper),
+              ),
             _Key(
-              label: _symbols ? 'abc' : '#+=',
+              label: _symbols ? (_arabic ? 'أبت' : 'abc') : '#+=',
               flex: 2,
               selected: _symbols,
               onPressed: () => setState(() => _symbols = !_symbols),
             ),
-            _Key(label: 'Space', flex: 6, onPressed: () => _type(' ')),
+            _Key(
+              label: 'Space',
+              flex: _arabic ? 6 : 4,
+              onPressed: () => _type(' '),
+            ),
           ]),
           row([
             _Key(label: 'Delete', flex: 3, onPressed: _delete),
@@ -341,12 +440,30 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   }
 }
 
+/// Which way [text] reads: its first letter's script's way; null with no
+/// letter. Arabic and Hebrew (and their presentation forms) read right to
+/// left.
+TextDirection? _directionOf(String text) {
+  for (final rune in text.runes) {
+    final rtl =
+        (rune >= 0x0590 && rune <= 0x08FF) ||
+        (rune >= 0xFB1D && rune <= 0xFDFF) ||
+        (rune >= 0xFE70 && rune <= 0xFEFF);
+    if (rtl) return TextDirection.rtl;
+    final letter = String.fromCharCode(rune);
+    if (letter.toLowerCase() != letter.toUpperCase()) return TextDirection.ltr;
+  }
+  return null;
+}
+
 /// The words typed so far and the caret after them; when they are wider
-/// than the box, their end shows (where the typing is), cut at the left.
+/// than the box, their end shows (where the typing is), cut at its start:
+/// the left for English, the right for Arabic, whose end is at the left.
 class _Typed extends StatelessWidget {
-  const new({required this.text, required this.style});
+  const new({required this.text, required this.direction, required this.style});
 
   final String text;
+  final TextDirection direction;
   final TextStyle style;
 
   @override
@@ -355,11 +472,19 @@ class _Typed extends StatelessWidget {
     final lineHeight = scaler.scale(style.fontSize!) * (style.height ?? 1.2);
     // A new caret each time the text changes: it shows at once, then
     // blinks, as a text field's does.
+    final rtl = direction == TextDirection.rtl;
     final line = Row(
       mainAxisSize: MainAxisSize.min,
+      textDirection: direction,
       children: [
-        Text(text, maxLines: 1, softWrap: false, style: style),
-        _Caret(key: ValueKey(text), height: lineHeight),
+        Text(
+          text,
+          maxLines: 1,
+          softWrap: false,
+          textDirection: direction,
+          style: style,
+        ),
+        _Caret(key: ValueKey(text), height: lineHeight, before: rtl),
       ],
     );
     return SizedBox(
@@ -368,7 +493,7 @@ class _Typed extends StatelessWidget {
         builder: (context, constraints) {
           final painter = TextPainter(
             text: TextSpan(text: text, style: style),
-            textDirection: Directionality.of(context),
+            textDirection: direction,
             textScaler: scaler,
             maxLines: 1,
           )..layout();
@@ -379,7 +504,10 @@ class _Typed extends StatelessWidget {
           return ClipRect(
             child: OverflowBox(
               maxWidth: double.infinity,
-              alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+              // The end in view: the right of English, the left of Arabic.
+              alignment: wide == rtl
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
               child: line,
             ),
           );
@@ -392,9 +520,13 @@ class _Typed extends StatelessWidget {
 /// A text field's caret: on for half a second, off for half, steady when
 /// motion is reduced.
 class _Caret extends StatefulWidget {
-  const new({required this.height, super.key});
+  const new({required this.height, this.before = false, super.key});
 
   final double height;
+
+  /// Its gap on the right: it comes before the words on screen (at the
+  /// left of right-to-left ones).
+  final bool before;
 
   static const width = 2.0;
 
@@ -434,7 +566,9 @@ class _CaretState extends State<_Caret> with SingleTickerProviderStateMixin {
         child: Container(
           width: _Caret.width,
           height: widget.height,
-          margin: const EdgeInsets.only(left: _Caret.width),
+          margin: widget.before
+              ? const EdgeInsets.only(right: _Caret.width)
+              : const EdgeInsets.only(left: _Caret.width),
           color: tokens.colors.accentBase,
         ),
       ),

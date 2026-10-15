@@ -30,6 +30,13 @@ void main() {
       expect(highlightRanges('Straße', ['strasse']), [(0, 6)]);
     });
 
+    test("Arabic's spellings fold, as the query asks for them (ADR-027)", () {
+      expect(highlightRanges('أرطغرل', ['ارطغرل']), [(0, 6)]);
+      expect(highlightRanges('شديد الخطوره', ['الخطورة']), [(5, 12)]);
+      expect(highlightRanges('العميل ٧٧ (1969)', ['77']), [(7, 9)]);
+      expect(highlightRanges('قَناة', ['قناه']), [(0, 5)]);
+    });
+
     test('overlapping words merge; nothing found, nothing bold', () {
       expect(highlightRanges('Arena', ['ar', 'arena']), [(0, 5)]);
       expect(highlightRanges('Arena', ['zzz']), isEmpty);

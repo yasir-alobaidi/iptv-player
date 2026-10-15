@@ -7,6 +7,7 @@ import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components/quality_badge.dart';
+import 'package:iptv_player/design/components/remote_keyboard.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'shell_state.g.dart';
@@ -186,6 +187,24 @@ class RailExpanded extends _$RailExpanded {
     // The rail moves now; the write is not worth waiting for, and a
     // failed one only costs the choice on the next launch.
     unawaited(ref.read(uiPreferencesProvider).setRailExpanded(expanded: state));
+  }
+}
+
+/// The language Bijou's keyboard for the remote opens in: the last one
+/// chosen, across launches (ADR-027).
+@riverpod
+class RemoteKeyboardChoice extends _$RemoteKeyboardChoice {
+  @override
+  KeyboardLanguage build() => KeyboardLanguage.fromCode(
+    ref.read(uiPreferencesProvider).keyboardLanguage,
+  );
+
+  void choose(KeyboardLanguage language) {
+    if (language == state) return;
+    state = language;
+    unawaited(
+      ref.read(uiPreferencesProvider).setKeyboardLanguage(language.code),
+    );
   }
 }
 

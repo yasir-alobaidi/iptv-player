@@ -13,6 +13,9 @@ abstract final class SettingsKeys {
 
   /// The player's volume and mute, as the user left them (ADR-017).
   static const playerSound = 'player.sound';
+
+  /// The language Bijou's keyboard for the remote last had (ADR-027).
+  static const keyboardLanguage = 'tv.keyboard_language';
   static const playback = 'playback.settings';
   static const guide = 'guide.settings';
   static const cast = 'cast.settings';

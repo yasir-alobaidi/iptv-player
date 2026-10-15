@@ -40,4 +40,43 @@ void main() {
     expect(astral.runes, hasLength(searchWordLength));
     expect(astral.length, searchWordLength * 2);
   });
+
+  group('Arabic (ADR-027)', () {
+    test('foldArabic reads the ways a letter is written as one', () {
+      expect(foldArabic('أرطغرل'), 'ارطغرل');
+      expect(foldArabic('إلى الآن ٱ'), 'الي الان ا');
+      expect(foldArabic('الخطورة'), 'الخطوره');
+      expect(foldArabic('العميل ٧٧ ۱۲'), 'العميل 77 12');
+      expect(foldArabic('قَنَاةُ'), 'قناه');
+      expect(foldArabic('جـــميل'), 'جميل');
+      expect(foldArabic('Télé 1'), 'Télé 1');
+    });
+
+    test("searchSpellings: each alef in its forms, but the article's; the "
+        'closing letter both ways; both kinds of digits', () {
+      expect(searchSpellings('sky'), ['sky']);
+      expect(searchSpellings('Télé'), ['Télé']);
+      expect(searchSpellings('bein2'), ['bein2']);
+      expect(searchSpellings('77'), ['77', '٧٧']);
+      expect(searchSpellings('٧٧'), ['77', '٧٧']);
+      expect(searchSpellings('اخبار').toSet(), {
+        for (final first in ['ا', 'أ', 'إ', 'آ'])
+          for (final second in ['ا', 'أ', 'إ', 'آ']) '$firstخب$secondر',
+      });
+      expect(searchSpellings('الجزيرة'), ['الجزيره', 'الجزيرة']);
+      expect(searchSpellings('علي'), ['علي', 'على']);
+      expect(searchSpellings('الأسكندرية'), hasLength(8));
+      expect(searchSpellings('الأسكندرية'), contains('الأسكندرية'));
+    });
+
+    test('never more than 32 spellings a word', () {
+      expect(searchSpellings('ااااااااه٧').length, lessThanOrEqualTo(32));
+      expect(searchSpellings('ابابابابا').length, lessThanOrEqualTo(32));
+    });
+
+    test("searchTerm: one prefix term, or the spellings OR'ed", () {
+      expect(searchTerm('sky'), '"sky"*');
+      expect(searchTerm('مدرسه'), '("مدرسه"* OR "مدرسة"*)');
+    });
+  });
 }

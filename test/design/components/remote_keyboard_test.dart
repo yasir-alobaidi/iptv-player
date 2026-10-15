@@ -44,6 +44,7 @@ void main() {
       WidgetTester tester, {
       bool obscure = false,
       TextInputType? type,
+      Widget Function(Widget app)? around,
     }) async {
       controller = TextEditingController();
       addTearDown(controller.dispose);
@@ -66,6 +67,7 @@ void main() {
           ),
         ),
         tv: true,
+        around: around,
       );
       tester.view.physicalSize = const Size(960, 540);
       tester.view.devicePixelRatio = 1;
@@ -199,6 +201,107 @@ void main() {
       // Cut at the left, its end in the box.
       expect(tester.getRect(text).left, lessThan(keyboard.left));
       expect(tester.getRect(text).right, lessThan(keyboard.right));
+    });
+
+    testWidgets('عربي switches to Arabic as phones lay it out, with the '
+        "hamza's own row; English switches back (ADR-027)", (tester) async {
+      await open(tester);
+      expect(key('ض'), findsNothing);
+      await press(tester, 'عربي');
+      expect(key('q'), findsNothing);
+      expect(key('ABC'), findsNothing, reason: 'Arabic has no capitals');
+      for (final letter in ['ض', 'ج', 'ش', 'ط', 'ذ', 'د', 'أ', 'إ', 'آ', 'ئ']) {
+        expect(key(letter), findsOneWidget, reason: letter);
+      }
+      // The first letter has the focus, as in English.
+      await ok(tester);
+      expect(controller.text, 'ض');
+      await press(tester, 'Clear');
+      for (final letter in ['أ', 'ح', 'م', 'د']) {
+        await press(tester, letter);
+      }
+      await press(tester, 'Space');
+      await press(tester, 'لا');
+      expect(controller.text, 'أحمد لا');
+      await press(tester, 'Delete');
+      expect(controller.text, 'أحمد ل');
+      await press(tester, '#+=');
+      await press(tester, '!');
+      await press(tester, 'أبت');
+      expect(key('ض'), findsOneWidget);
+      expect(controller.text, 'أحمد ل!');
+
+      await press(tester, 'English');
+      expect(key('q'), findsOneWidget);
+      expect(key('ض'), findsNothing);
+    });
+
+    testWidgets('Arabic reads right to left: the caret at its left, and a long '
+        'text shows its end there', (tester) async {
+      await open(tester);
+      await press(tester, 'عربي');
+      await press(tester, 'ب');
+      final word = find.descendant(
+        of: find.byType(RemoteKeyboard),
+        matching: find.text('ب'),
+      );
+      final typed = word
+          .evaluate()
+          .map((e) => e.widget as Text)
+          .firstWhere((text) => text.textDirection != null);
+      expect(typed.textDirection, TextDirection.rtl);
+      final caret = find
+          .descendant(
+            of: find.byType(RemoteKeyboard),
+            matching: find.byType(Opacity),
+          )
+          .last;
+      final text = find.byWidget(typed);
+      expect(
+        tester.getRect(caret).right,
+        lessThanOrEqualTo(tester.getRect(text).left),
+      );
+
+      for (var i = 0; i < 39; i++) {
+        await tester.tap(key('ب'));
+        await tester.pump();
+      }
+      final long = find.descendant(
+        of: find.byType(RemoteKeyboard),
+        matching: find.text('ب' * 40),
+      );
+      final keyboard = tester.getRect(find.byType(RemoteKeyboard));
+      // Cut at the right, its end (at the left) in the box.
+      expect(tester.getRect(long).right, greaterThan(keyboard.right));
+      expect(tester.getRect(long).left, greaterThan(keyboard.left));
+    });
+
+    testWidgets('the language chosen goes to the scope above, and the next '
+        'keyboard opens in it', (tester) async {
+      var language = KeyboardLanguage.english;
+      final chosen = <KeyboardLanguage>[];
+      await open(
+        tester,
+        around: (app) => StatefulBuilder(
+          builder: (context, setState) => RemoteKeyboardLanguage(
+            language: language,
+            onChanged: (next) {
+              chosen.add(next);
+              setState(() => language = next);
+            },
+            child: app,
+          ),
+        ),
+      );
+      await press(tester, 'عربي');
+      expect(chosen, [KeyboardLanguage.arabic]);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(tester);
+
+      await tester.tap(find.text('Open'));
+      await settle(tester);
+      expect(key('ض'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
     });
 
     testWidgets('a password shows dots until Show', (tester) async {

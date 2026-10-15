@@ -9,7 +9,8 @@ import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Pumps [child] inside the app theme, sized like a desktop window.
-/// [textScale] is Settings → Appearance's text size (1.15, 1.3).
+/// [textScale] is Settings → Appearance's text size (1.15, 1.3); [around]
+/// wraps the app where `lib/app/app.dart` puts what dialogs see too.
 Future<void> pumpDesign(
   WidgetTester tester,
   Widget child, {
@@ -18,6 +19,7 @@ Future<void> pumpDesign(
   bool reduceMotion = false,
   double textScale = 1,
   bool tv = false,
+  Widget Function(Widget app)? around,
 }) async {
   // Focus highlights only render in "traditional" mode, which a real
   // desktop is always in.
@@ -31,14 +33,15 @@ Future<void> pumpDesign(
         density: density,
         reduceMotion: reduceMotion,
       ),
-      builder: textScale == 1 && !tv
+      builder: textScale == 1 && !tv && around == null
           ? null
           : (context, app) {
               final scaled = AppTextScale(scale: textScale, child: app!);
               // As the app on a TV has it (lib/app/app.dart).
-              return tv
+              final wrapped = tv
                   ? TvMode(on: true, child: TvSelectKey(child: scaled))
                   : scaled;
+              return around?.call(wrapped) ?? wrapped;
             },
       home: Scaffold(body: Center(child: child)),
     ),

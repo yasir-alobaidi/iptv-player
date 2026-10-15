@@ -148,7 +148,7 @@ final class DbSearchRepository implements SearchRepository {
   ) async {
     final long = [
       for (final w in query.words)
-        if (w.length > 1) '"$w"*',
+        if (w.length > 1) searchTerm(w),
     ];
     if (long.isEmpty) return const SearchGroup.empty();
     final short = [
@@ -161,7 +161,7 @@ final class DbSearchRepository implements SearchRepository {
     for (final source in sources) {
       final found = await _programmesOf(
         source,
-        match: long.join(' '),
+        match: long.join(' AND '),
         shortWords: short,
         now: query.now,
       );
@@ -609,8 +609,11 @@ final class _Query {
   /// Epoch milliseconds.
   final int now;
 
-  /// Every word as a prefix term, all required.
-  String get match => [for (final word in words) '"$word"*'].join(' ');
+  /// Every word as a prefix term, all required; an Arabic word in each of
+  /// its spellings (ADR-027). The AND is spelled out: FTS5 takes no
+  /// implicit one next to a group in parentheses.
+  String get match =>
+      [for (final word in words) searchTerm(word)].join(' AND ');
 
   List<Variable<Object>> get variables {
     final escaped = text

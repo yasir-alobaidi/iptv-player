@@ -65,4 +65,16 @@ void main() {
 
     expect(preferences.currentSourceId, isNull);
   });
+
+  test("the keyboard's language survives a reload; anything else stored "
+      'reads as none', () async {
+    final first = await DbUiPreferences.load(settings);
+    expect(first.keyboardLanguage, isNull);
+
+    await first.setKeyboardLanguage('ar');
+    expect((await DbUiPreferences.load(settings)).keyboardLanguage, 'ar');
+
+    await settings.writeJsonText(SettingsKeys.keyboardLanguage, '[1]');
+    expect((await DbUiPreferences.load(settings)).keyboardLanguage, isNull);
+  });
 }
