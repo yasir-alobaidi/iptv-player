@@ -1,4 +1,49 @@
-# Handoff — 2026-10-14, seventh session (the Bedroom TV: the TV's bar for a film moved from the player, the matrix on a real TV), on top of the sixth (the mark: a trillion) and the fifth (TV-0 begun without a TV)
+# Handoff — 2026-10-14, eighth session (your film on the Bedroom TV; a Google TV that closes the receiver as a cast wakes it), on top of the seventh (the TV's bar, the matrix on a real TV), the sixth (the mark: a trillion) and the fifth (TV-0 begun without a TV)
+
+**The eighth session, short:** you wrote "continue and use the bed room tv
+only", then that the Hisense Roku TV and the Bedroom TV are free, and gave
+two yeses for your provider (the bar check, and once more when idle).
+- **Your film's bar is right:** a scratch integration test (in the
+  session's scratchpad, not the repo) played UNABOMBER from your provider
+  on the laptop's mpv from 48:42, muted, and Cast moved it to the Bedroom
+  TV through the app's coordinator and relay. The TV's first report said
+  **1:40:06** long, the length mpv read (ADR-019 "The user's film"). Twice.
+- **But the TV closed the receiver** 0.5 s into the film; you said nobody
+  touched it. Row 24 on the test film did the same. **Cause, measured**
+  with a listener on the TV's Cast port (`cast_watch.py`, scratchpad): the
+  TV was in standby; a cast's LAUNCH woke it; **the receiver closed
+  7.2–7.4 s after the wake, four times of four**, whatever it was showing;
+  a launch in the next ~2 s was refused (`LAUNCH_ERROR SYSTEM_ERROR`); the
+  TV went back to standby ~30 s later. **Awake, it never closed.**
+- **Fixed (ADR-024, commit 36bda96):** the client reads `isStandBy` /
+  `isActiveInput`; a launch that woke the TV opens a 20 s window in which a
+  close on the device launches the receiver again (2 s later, then up to 5
+  tries a second apart) and loads the cast again where it was. Once, no
+  toast. The fake TV models the Bedroom TV; matrix row 25 (cast to a TV in
+  standby) passes on the fake TV and on the Bedroom TV awake.
+  **Not yet seen on the real TV:** the launch again with its 2 s wait.
+  Its first form (at once) ran on your film and the TV refused it; the one
+  wake after the fix (the TV dark only 8 s) didn't close the receiver at
+  all (4 wakes of 5 did, after 3 min to 4 h dark); the cast meant to check
+  it, after 3 minutes dark, didn't happen: this session's tool calls
+  stalled for about an hour (21:53–22:52, the laptop awake), past your
+  30-minute window, and it was too late to cast to a bedroom.
+- **The Bedroom TV is a Google TV** — the seventh session was wrong:
+  "mediashell" is the Cast receiver's name on Android TV too; its SSDP
+  server string is Android 14's (the Living Room's to the character) and
+  Android TV's remote service listens on 6466/6467. TV-0 can run on it.
+- **The Hisense Roku TV** (192.168.1.162, 58", 6 Series G204X, Roku OS
+  16.0.4): ECP in "Limited" mode (everything but device info and the
+  active app refused: no launch, no media-player query), no "Play on Roku",
+  no DLNA renderer; AirPlay advertises HLS URLs and mirroring, behind
+  HomeKit pairing. A probe needs the setting changed (your list).
+- **Also on the network:** a Samsung "Crystal UHD" (192.168.1.154), a DLNA
+  MediaRenderer with AirPlay — you never mentioned it; left alone.
+- **Checks:** analyze and format clean; **4,905 app tests** under `TZ=UTC`
+  (20 skipped); the casting, relay and download tests with FFmpeg 4.4
+  (751); the fake TV's suite (42). Not run: the integration walks (still
+  the fifth session's list).
+
 
 **The seventh session, short:** you wrote "do all the tasks related to
 the bedroom tv, since its free for around 45 mins only from now", and that
@@ -26,8 +71,8 @@ same as where it was, to the second.
   played HEVC 2160p25 copied (row 4) and refused interlaced H.264 (row 3,
   re-encoded by itself). Summaries: `build/real_cast_run/matrix.md` holds
   the last run only; the numbers are in ADR-019 and ADR-023.
-- **The Bedroom TV is a classic Chromecast** (firmware "mediashell"): it
-  can't install apps, so TV-0 needs the Living Room TV or another Google TV.
+- ~~**The Bedroom TV is a classic Chromecast**~~ — wrong, it is a Google
+  TV (the eighth session, above).
 - **Also fixed:** the matrix runner took the TV's address for this
   computer's (the client's bug of 2026-10-13, left in the runner); the CI
   failure on 788e0f1 (`cast_e2e_library_test` now compares with the
@@ -84,24 +129,25 @@ TV's bar and Phase 9.
 
 ## Before you start the next session (user)
 **Your list** — what this session left for you:
-1. **Push** the seventh session's commits (`git log origin/main..HEAD`).
-   CI on 54051d4: the Android job's first build passed, Windows passed, Linux failed
-   only on the `cast_e2e_library_test` assumption this session fixed.
-2. **Check the bar with your film:** cast the 1:40:00 film again while
-   it plays on the laptop, pause with the TV's remote: the bar should say
-   1:40:00 and the place. (I didn't play from your provider.)
-3. **Your question about AirPlay and TVs that aren't Google** — answered
-   below ("Casting to TVs that aren't Google"). Say whether you want DLNA
-   casting and when.
-4. **For TV-0, a Google TV:** the Bedroom TV is a classic Chromecast and
-   can't install apps. When the Living Room TV (or another Google TV) is
-   free: Developer options and USB debugging on it (Settings → System →
-   About → press "Android TV OS build" seven times; Settings → System →
-   Developer options → USB debugging). I ask before every TV session; the
-   Living Room TV stays off limits until you say so.
+1. **Push** the eighth session's commits (`git log origin/main..HEAD`).
+2. **Check the launch again on the Bedroom TV** (ADR-024): when it has
+   been dark a few minutes and nobody minds it coming on, say so and I run
+   row 25 (`CAST_HOST=192.168.1.231 CAST_ROWS=25`: 40 s of the test film;
+   the TV comes on, may blink ~7 s in, and plays on). Or cast anything
+   yourself with the TV off. Your film's bar is checked (1:40:06).
+3. **TV-0 on the Bedroom TV** (it is a Google TV): Developer options and
+   USB debugging on it (Settings → System → About → click "Android TV OS
+   build" seven times; Settings → System → Developer options → USB
+   debugging). When I connect, the TV asks "Allow USB debugging?": tick
+   "Always allow", OK. Then I install Bijou over the network and run
+   docs/07's engine comparison. I ask before every TV session; the Living
+   Room TV stays off limits until you say so.
+4. **Casting to TVs that aren't Google** — answered below; say whether you
+   want it and when. **For the Roku probe:** on the Hisense Roku TV,
+   Settings → System → Advanced system settings → Control by mobile apps →
+   Network access → **Default** (it is "Limited").
 5. Still from before: **Bijou** (keep, or say otherwise; the mark is the
-   trillion you chose, ADR-022);
-   **the one real reminder** at the laptop
+   trillion, ADR-022); **the one real reminder** at the laptop
    (`flutter test integration_test/manual/real_reminder.dart -d linux`);
    if you want it, **the night's soak**; the matrix's **rows 6 and 16**
    need you at the TV (6: Input Signal Plus off; 16: the remote in hand);
@@ -134,23 +180,23 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
-CLAUDE.md, docs/progress.md, ADR-019 ("On the Bedroom TV"), ADR-020 and ADR-021
-in docs/decisions.md first. Check CI on the last push.
-<The Living Room TV is free: you may use it for TV-0 after asking | Don't use any TV>
-<I want DLNA casting: plan it | Not now>
-Then: <TV-0's engine comparison on the TV | TV-1 on the emulator (plan first) | Phase 10 | what is left of Phase 9>
+CLAUDE.md, docs/progress.md, ADR-024, ADR-020 and ADR-021 in docs/decisions.md
+first. Check CI on the last push.
+<USB debugging is on on the Bedroom TV: do TV-0 there | Don't use any TV>
+<I want casting to other TVs: plan it | Not now>
+Then: <TV-0's engine comparison on the Bedroom TV | TV-1 on the emulator (plan first) | Phase 10 | what is left of Phase 9>
 ```
 
 ## Where things stand
 - **TV-0: begun (ADR-020).** Done: the toolchain, `android/`, start-up by
-  form factor, the CI job, the emulator run. Left: the app on a real TV,
-  and the engine comparison (media_kit vs a Media3 plugin) there.
+  form factor, the CI job, the emulator run. Left: the app on a real TV
+  (the Bedroom TV, once USB debugging is on), and the engine comparison
+  (media_kit vs a Media3 plugin) there.
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
 - **Phases 7 and 8: accepted without the TV sitting** (ADR-014/015).
 - **Schema is v10**; no new dependency in pubspec, no new settings key.
-- **The test suite is about 4,880 tests** (20 skipped); see "The session's
-  end" for this session's count.
+- **The test suite is about 4,905 tests** (20 skipped).
 
 ## Casting to TVs that aren't Google (the user's question, answered)
 The user asked: "since most of the smart tvs they have air play or
@@ -182,6 +228,19 @@ not google?" Answer given, nothing built:
   not of an app.
 - **Proposal:** DLNA casting as its own phase after Phase 10 (or beside
   TV-2), planned first, with an ADR. Waiting for the user's word.
+- **What the user's own TVs say (the eighth session, read-only):** the
+  **Hisense Roku TV** has no DLNA renderer; its ECP (`:8060`) is in
+  "Limited" mode (`ecp-setting-mode`), which answers `403 ECP command not
+  allowed in Limited mode` to everything but `/query/device-info` and
+  `/query/active-app`, so neither a launch with a URL nor
+  `/query/media-player` works until the user sets Network access to
+  Default; `has-play-on-roku` is false. Its AirPlay (`features`
+  0x7F8AD0,0x38BCF46) has HLS URLs and mirroring but not plain video URLs,
+  and wants HomeKit pairing and encryption: the "not now" above holds.
+  If many Rokus ship in Limited mode, casting to a Roku means asking the
+  viewer to change a setting first. The **Samsung** (192.168.1.154) is a
+  DLNA MediaRenderer (`:9197/dmr`, AVTransport) and does AirPlay; the user
+  never offered it.
 
 ## Done this session (2026-10-14, the fifth)
 - **The Android toolchain** (ADR-020, docs/setup.md §7): JDK 21, the SDK,
@@ -363,6 +422,31 @@ not google?" Answer given, nothing built:
   touch what changed, each under `xvfb-run -a … -d linux` (X11, above),
   one file per run. Then add to ADR-016, update docs/progress.md, rewrite
   this file, and commit.
+- **Lessons of the eighth session (a TV that closes the receiver):**
+  - **Is a TV a Google TV?** Not from `eureka_info`'s "mediashell" (the
+    Cast receiver is called that on Android TV too). Ask the SSDP
+    `SERVER` header (`Linux/…-android14…` is Android) and whether ports
+    6466/6467 (Android TV's remote service) take a TCP connection. Both
+    read-only, nothing on screen.
+  - **Listen to the TV beside the app:** a second Cast sender that only
+    CONNECTs and listens (`cast_watch.py`: TLS, hand-made protobuf frames,
+    no libraries) logs every RECEIVER_STATUS (`isStandBy`,
+    `isActiveInput`, the apps) and MEDIA_STATUS as the TV sends them. It
+    turned "the TV closed it" into "7.3 s after it woke, every time".
+  - **Read FFmpeg's input errors with the relay's proxy in mind:** FFmpeg
+    reads the provider through the relay's own proxy, so "Stream ends
+    prematurely … HTTP error 404" 1 ms apart is the proxy being torn
+    down, not the provider. Look at the order in the app's log first.
+  - **A control run settles a cause:** the same launch on the TV awake
+    (no close in 20 s) is what made the wake the cause.
+  - **A probe must behave like the app:** the first probe never connected
+    to the receiver and piled up launches, and its result (closed again)
+    meant nothing; the second connected as a sender and launched one at a
+    time.
+  - **A runner's "hold" must look:** row 24 passed while the TV had
+    closed the cast 3.8 s in; `hold` now fails when the session is off.
+  - **Ask once for a window, not per cast:** the user gave 30 minutes for
+    3–4 casts; per-cast pop-ups would have been five.
 - **Lessons of the seventh session (the TV's bar again):**
   - **A fact with several sources needs a test per source.** The length
     reaches the relay from the probe, the player or memory; ADR-019's
@@ -380,10 +464,8 @@ not google?" Answer given, nothing built:
   - **The matrix runner had the client's old address bug:** a tool that
     copies the app's logic has to get its fixes too; it now calls
     `pickLocalAddress`.
-  - **Is a TV a Google TV?** `curl http://<tv>:8008/setup/eureka_info`:
-    `cast_build_revision` "mediashell" is a classic Chromecast (no apps,
-    no adb); a Google TV advertises `rr=AndroidNativeApp` in its mDNS
-    TXT while an app runs.
+  - ~~**Is a TV a Google TV?** `cast_build_revision` "mediashell" is a
+    classic Chromecast~~ — wrong (the eighth session): see its lessons.
 - **Lessons of this session (the name, the TV's bar):**
   - **A receiver's behaviour can be seen without the TV:** the Default
     Media Receiver is Chrome's media stack, so headless Chrome playing
