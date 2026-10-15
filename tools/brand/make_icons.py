@@ -14,7 +14,8 @@ Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
 - windows/runner/resources/app_icon.ico (16 to 256 px);
 - android/app/src/main/res/mipmap-<density>/ic_launcher.png (48 to
   192 px; Android before 8) and drawable-xhdpi/banner.png (Google TV's
-  320 x 180 home screen banner: the jewel and the name on the accent);
+  320 x 180 home screen banner, what its app row shows: the round icon
+  and the name on the dark background);
 - mipmap-<density>/ic_launcher_round.png, the round icon before
   Android 8;
 - the adaptive icon Android 8 and up draws, round on Google TV (the
@@ -226,30 +227,36 @@ BACKGROUND = """<?xml version="1.0" encoding="utf-8"?>
 """ % (DEEP + ACCENT)
 
 
+# The banner's ground: the dark look's background (AppColors.bg) lifted
+# a little at the top, so the card stands off Google TV's dark home.
+BANNER_TOP = (0x1A, 0x20, 0x2C)
+BANNER_BOTTOM = (0x0A, 0x0C, 0x10)
+
+
 def banner(font_path):
-    """Google TV's home screen banner: the jewel and the name, white on
-    the accent, edge to edge (the launcher rounds its corners), the two
-    centred as one."""
+    """Google TV's home screen banner, the picture its app row shows (not
+    the launcher icon): the round icon and the name, white, centred as one
+    on the dark background, edge to edge (the launcher rounds the card's
+    corners). The user asked for the round icon there (2026-10-15)."""
     k = 4
     w, h = BANNER[0] * k, BANNER[1] * k
-    image = gradient(w, h).convert("RGBA")
-    jewel = draw(124 * k, tile=False)
-    # The part of the jewel's square it fills (CORNERS' bounds).
-    xs, ys = [c[0] for c in CORNERS], [c[1] for c in CORNERS]
-    jl, jt, jr, jb = (v * jewel.width / 1024 for v in (min(xs), min(ys), max(xs), max(ys)))
-    font = ImageFont.truetype(font_path, 54 * k)
-    font.set_variation_by_axes([700])
+    image = Image.new("RGBA", (w, h))
     d = ImageDraw.Draw(image)
+    for y in range(h):
+        d.line([(0, y), (w, y)], fill=mix(BANNER_TOP, BANNER_BOTTOM, y / (h - 1)))
+    badge = round_icon(112 * k)
+    font = ImageFont.truetype(font_path, 50 * k)
+    font.set_variation_by_axes([700])
     text_left, _, text_right, _ = d.textbbox((0, 0), "Bijou", font=font, anchor="ls")
     _, cap_top, _, _ = d.textbbox((0, 0), "B", font=font, anchor="ls")
-    gap = 18 * k
-    group = (jr - jl) + gap + (text_right - text_left)
+    gap = 20 * k
+    group = badge.width + gap + (text_right - text_left)
     x = (w - group) / 2
     middle = h / 2
-    image.alpha_composite(jewel, (round(x - jl), round(middle - (jt + jb) / 2)))
-    # The capitals' middle on the jewel's.
+    image.alpha_composite(badge, (round(x), round(middle - badge.height / 2)))
+    # The capitals' middle on the circle's.
     d.text(
-        (x + (jr - jl) + gap - text_left, middle - cap_top / 2),
+        (x + badge.width + gap - text_left, middle - cap_top / 2),
         "Bijou",
         font=font,
         fill=WHITE,
