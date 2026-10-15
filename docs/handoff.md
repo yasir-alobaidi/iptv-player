@@ -1,18 +1,73 @@
-# Handoff — 2026-10-15, end of the tenth session: the user's TV bug list fixed on the Bedroom TV (start with "Start here")
+# Handoff — 2026-10-15, end of the eleventh session: a resume plays from its place, Arabic on the keyboard and in search, the round banner, git fixed (start with "Start here")
 
 ## Start here (the next session)
-The tenth session fixed the user's TV bug list and checked each fix on the
-Bedroom TV by remote keys over adb (ADR-026), then the user's second round
-(16:00: the keyboard as a side panel with a blinking caret and a solid
-focused key, results beside it; a 1280-wide canvas on a TV; Movies stuck
-after the filter; ADR-026's addendum). **Everything is committed**
-(d279342, 2f52c2b, a9d503a, c85dbdf, c699b53, b70c4ce, the keyboard and
-canvas commit, and the docs commit after them), **nothing is pushed**,
-and `dist/bijou-0.1.0.apk` (every ABI) is built from the last code
-commit; the TV has the same code (an `android-arm` build, installed
-last).
+The eleventh session (ADR-027) answered the user's four points:
+1. **Git:** the user had pushed the tenth session's first three commits
+   while it ran; it then reworded b3e5725 and rebased the rest, so their
+   push was refused and `git pull` stopped in a conflicted merge. The merge
+   was aborted and the local commits rebased onto origin/main (the reworded
+   copies dropped as already applied): **a plain `git push` works.** The
+   session's commits sit on top (`git log origin/main..HEAD`), **not
+   pushed.** Never amend or rebase a commit that is on origin (memory).
+2. **The Bad Guys 2 frozen on the channel's picture for ~30 s after a
+   channel** — the TV's logcat (its last 3 minutes, 00:02–00:03 TV time)
+   held it: the film was "playing" at its first decoded frame, before mpv
+   reached the resume's place, so the 8 s stall check reconnected it twice
+   while the surface still showed the channel. **Fixed:** a resume's first
+   frame waits for mpv's `seeking` to end (the file's 30 s open time runs
+   meanwhile, "Preparing…" on black); a seek waiting over 0.5 s is
+   buffering (15 s, the spinner); Reconnecting shows only the item's own
+   picture (`hasPicture`); the reconnect log line says why. Reproduced
+   and checked on this laptop's real player with the fake panel's new
+   `seek_delay_ms` (`integration_test/player_engine_vod_test.dart`):
+   before, "first frame" after 0.28 s / 0.09 s with the resume's range
+   held 4 s; now 4.3 s (MP4) and 8.5 s (MKV).
+3. **Arabic:** the keyboard's bottom row starts with **عربي** / **English**;
+   Arabic is a phone's layout plus a row for أ إ آ ئ لا ، ؟, right to left
+   with the caret at the left, and the language is kept across launches
+   (settings key `tv.keyboard_language`). **Search** finds each Arabic
+   spelling from the others (ا أ إ آ, a closing ة/ه and ى/ي, ٧٧/77): the
+   user's catalogue has ~8,000 Arabic titles written both ways.
+4. **The icon:** Google TV's home row shows the app's **banner**, not its
+   launcher icon, so ADR-026's round icon never showed there. The banner is
+   now the round icon and "Bijou" on the dark background.
 
-### What is left on the TV (in this order)
+Also: Bijou's **log file on Android** is now under
+`/sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs` (`adb
+pull` it; logcat keeps only minutes on the Chromecast).
+
+**The new build is installed on the Bedroom TV** (an `android-arm`
+release built from the session's code, installed 17:40 EDT / 00:40 the
+TV's time; `build/app/outputs/flutter-apk/app-release.apk`). **None of it
+was tried on the TV:** the user said yes to the TV and to their provider
+(17:38, ten minutes), then asked for this handoff once the build was on;
+nothing was played from the provider, no key was sent to the TV.
+`dist/bijou-0.1.0.apk` is still the tenth session's.
+
+### First, on the Bedroom TV (ask first; the new build is on it)
+1. **The banner:** Google TV's home, the apps row (D-pad down on the
+   launcher): Bijou's card should be the round jewel and the name on dark.
+2. **The Arabic keyboard:** Search → OK → عربي. Arabic needs Android's
+   own Arabic font (the app's Manrope has none): check it draws, right to
+   left, the caret at the left; search an Arabic title (browsing only),
+   e.g. ارطغرل finds أرطغرل.
+3. **The user's case, replayed:** on the fake panel first
+   (`POST /admin/faults {"seek_delay_ms": 4000}`, a channel, then a film
+   resumed from its page): "Preparing…" on black, never the channel's
+   picture, then the film at its place with no "Reconnecting". Then, with
+   the user's yes for their provider: a channel for a minute, then The Bad
+   Guys 2 from Continue watching. Read the log file after.
+4. **The surface made again at a size change** (left as it is, ADR-027):
+   media_kit's `AndroidVideoController` (third_party/media_kit_video/lib/
+   src/video_controller/android_video_controller/real.dart) remakes the
+   surface when a stream's size differs from the last (`SetSurfaceSize` →
+   a new `wid` → `widListener` sets `vo`/`vid` and seeks). In the user's
+   case the film's second attempt stalled right after it. Now it counts as
+   buffering (15 s). Watch the log for it; a patch (keep the surface,
+   update only `rect`) would likely also fix the black first-channel
+   preview below, but needs the TV to prove it.
+
+### Still open from the tenth session (in this order)
 1. **The user's ears:** whether Live TV has sound now (4950 was silent).
    The fix (on a TV the player is always at full volume, unmuted:
    `PlayerSoundController`) is proven by tests, but an mpv mute never
@@ -76,10 +131,30 @@ last).
   after the last move showing what has the focus, and never chain OK
   after moves in one command** (this session's slip, below). A helper:
   send keys, then crop a screenshot (`adb exec-out screencap -p`).
+- **The log:** `adb pull /sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs`
+  (from the eleventh session's build on; rotated 5 × 5 MB, redacted), or
+  `adb logcat -d | grep ' flutter '` for the last few minutes only.
 - **Typing on Bijou's keyboard by adb** is a walk over the keys (the
   arrows move by key, ↑/↓ return along the path they came). A plugged-in
   keyboard types into a field directly; `adb shell input text` does too,
   into a focused field (not into the keyboard panel).
+
+### The eleventh session, short
+You pasted the tenth session's report and wrote: fix the git error and the
+commits; the icon isn't round on the Bedroom TV's home screen; add Arabic
+to the keyboard; and the frozen film after a channel (check the TV's logs).
+At the pop-up you said yes to the TV and to your provider (17:38), then
+asked for this handoff once the new build was on the TV.
+- **Git:** merge aborted, rebased onto origin/main; nothing rewritten that
+  is on origin. b3e5725's message on origin wrongly says the TV showed no
+  clientVolume mute for Bijou (it was the launcher's); corrected in this
+  session's player commit and ADR-027. **bdab868** (2026-09-15) still ends
+  with a Co-Authored-By line on origin: removing it means rewriting all
+  history and a force push, so it waits for your word.
+- **Checks:** analyze and format clean; the full suite under `TZ=UTC`
+  (counts in docs/progress.md); `player_engine_vod_test` under Xvfb (3 of
+  3); the fake provider's tests. **Not checked on the TV** (above).
+- **Left running:** nothing. Gradle stopped. The TV shows Google TV's home.
 
 ### The user's bug list, as fixed (ADR-026)
 1. **Back left the app** — fixed last session (9eea021), now on the TV:
@@ -329,19 +404,24 @@ TV's bar and Phase 9.
 
 ## Before you start the next session (user)
 **Your list:**
-1. **Push** this session's commits (`git log origin/main..HEAD`).
-2. **Listen to Live TV on the Bedroom TV** (4950, which was silent): the
-   fix can't be heard over adb.
-3. **Try it with the real remote:** OK on a field opens Bijou's keyboard;
-   in the player OK shows the controls (a film: pauses); holding OK on an
-   item opens its menu (adb can't hold a key).
-4. **Wireless debugging** goes off when the TV restarts: switch it on
+1. **Push** (`git push`; it works again): the session's commits on top of
+   what you pushed (`git log origin/main..HEAD`).
+2. **The old Co-Authored-By line in bdab868** (2026-09-15) is still on
+   GitHub. Say if you want it gone: that rewrites every commit and needs a
+   force push from you; otherwise it stays.
+3. **On the Bedroom TV (the new build is installed):** the round banner in
+   Google TV's apps row; Search → OK → **عربي**, type an Arabic title; and
+   your case once: a channel, then The Bad Guys 2 from Continue watching
+   (it should say "Preparing…" on black, then play from your place, no
+   channel picture, no "Reconnecting").
+4. **Listen to Live TV** (4950, silent before the tenth session's fix); try
+   the keyboard and the player with the real remote, and hold OK on an
+   item for its menu (adb can't hold a key).
+5. **Wireless debugging** goes off when the TV restarts: switch it on
    again before a session that uses the TV.
-5. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
+6. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
    yes; ADR-025. It would also make playback lighter: ADR-026's numbers.)
-6. **The Roku, later** (your call): Roku Media Player on it, or a Bijou
-   channel of ours.
-7. Still from before: Bijou and the trillion (ADR-018/022); the one real
+7. **The Roku, later** (your call). Still from before: the one real
    reminder (`flutter test integration_test/manual/real_reminder.dart -d
    linux`); the night's soak if you want it; the matrix's rows 6 and 16;
    Phase 9's close; the dock icon (`flutter build linux --release`, then
@@ -371,12 +451,12 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 and ADR-026 in
-docs/decisions.md. Check CI on the last push.
-Then carry on with the Google TV list in "Start here" (the first channel's
-black preview, Movies/Series landing on the grid, Back on Connect, Search's
-TV layout, overscan), testing on the Bedroom TV. Ask me before using the TV
-and before playing from my provider.
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025, ADR-026 and
+ADR-027 in docs/decisions.md. Check git (fetch) and CI on the last push.
+Then check the eleventh session's build on the Bedroom TV (the banner, the
+Arabic keyboard, a film resumed after a channel), then carry on with the
+Google TV list in "Start here". Ask me before using the TV and before
+playing from my provider.
 ```
 
 ## Where things stand
@@ -386,10 +466,13 @@ and before playing from my provider.
   the remote's keys, OK on release and held for the menu, first focus,
   playback off screen, "Still watching?" (ADR-025); Bijou's keyboard, the
   shell's edges, the player by remote, See all cards, a round icon
-  (ADR-026). What's left is in "Start here".
+  (ADR-026); a resume that plays from its place, Arabic on the keyboard
+  and in search, the round banner, the log file adb reads (ADR-027).
+  What's left is in "Start here".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
-- **Schema is v10**; no new dependency in pubspec, no new settings key.
+- **Schema is v10**; no new dependency in pubspec; one new settings key,
+  `tv.keyboard_language` (ADR-027).
 
 ## Casting to TVs that aren't Google (the user's question, answered)
 The user asked: "since most of the smart tvs they have air play or
