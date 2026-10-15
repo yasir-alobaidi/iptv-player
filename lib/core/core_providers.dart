@@ -49,6 +49,13 @@ FormFactor formFactor(Ref ref) => FormFactor.desktop;
 @Riverpod(keepAlive: true)
 bool castsToTvs(Ref ref) => ref.watch(formFactorProvider) == FormFactor.desktop;
 
+/// Whether this app downloads titles to play offline: not on a TV
+/// (ADR-025: no library or downloads there). Every Download control asks
+/// this; on a TV none is drawn.
+@Riverpod(keepAlive: true)
+bool downloadsHere(Ref ref) =>
+    ref.watch(formFactorProvider) == FormFactor.desktop;
+
 /// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
 /// pin it.
 @Riverpod(keepAlive: true)

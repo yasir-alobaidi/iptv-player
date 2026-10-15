@@ -183,4 +183,21 @@ void main() {
     );
     expect(importDone(summary()), 'Nothing to import');
   });
+
+  test('on a TV the device is "this TV"', () {
+    expect(
+      picturesLine(bytes: 0, maxBytes: 0, device: 'this TV'),
+      startsWith('Posters, logos and stills kept on this TV.'),
+    );
+    expect(
+      guideLine(
+        programmes: 0,
+        until: null,
+        importing: false,
+        device: 'this TV',
+      ),
+      'There is no guide on this TV.',
+    );
+    expect(clearPicturesBody(0, device: 'this TV'), contains('from this TV.'));
+  });
 }

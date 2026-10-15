@@ -324,6 +324,57 @@ final class CastsToTvsProvider extends $FunctionalProvider<bool, bool, bool>
 
 String _$castsToTvsHash() => r'd9a85de011b9f033d8033bdf719978550125a773';
 
+/// Whether this app downloads titles to play offline: not on a TV
+/// (ADR-025: no library or downloads there). Every Download control asks
+/// this; on a TV none is drawn.
+
+@ProviderFor(downloadsHere)
+final downloadsHereProvider = DownloadsHereProvider._();
+
+/// Whether this app downloads titles to play offline: not on a TV
+/// (ADR-025: no library or downloads there). Every Download control asks
+/// this; on a TV none is drawn.
+
+final class DownloadsHereProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether this app downloads titles to play offline: not on a TV
+  /// (ADR-025: no library or downloads there). Every Download control asks
+  /// this; on a TV none is drawn.
+  DownloadsHereProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'downloadsHereProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$downloadsHereHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return downloadsHere(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$downloadsHereHash() => r'33b76bb28fa2d6858b89448d94d67f1117ba4368';
+
 /// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
 /// pin it.
 

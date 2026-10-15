@@ -250,8 +250,9 @@ class _MoviePage extends ConsumerWidget {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyF): () =>
             unawaited(toggleFavorite()),
-        const SingleActivator(LogicalKeyboardKey.keyD): () =>
-            unawaited(startDownloads(context, [request])),
+        if (ref.watch(downloadsHereProvider))
+          const SingleActivator(LogicalKeyboardKey.keyD): () =>
+              unawaited(startDownloads(context, [request])),
       },
       child: Stack(
         fit: StackFit.expand,
@@ -356,18 +357,19 @@ class _MoviePage extends ConsumerWidget {
                               ),
                             // Sketch E: Download, its progress, or
                             // Downloaded; Enter on one under way or
-                            // done opens its menu.
-                            Builder(
-                              builder: (anchor) => AppButton(
-                                label: downloadFace.label,
-                                icon: downloadFace.icon,
-                                variant: AppButtonVariant.secondary,
-                                size: AppButtonSize.xl,
-                                onPressed: () => unawaited(
-                                  downloadPressed(anchor, download, request),
+                            // done opens its menu. Not on a TV.
+                            if (ref.watch(downloadsHereProvider))
+                              Builder(
+                                builder: (anchor) => AppButton(
+                                  label: downloadFace.label,
+                                  icon: downloadFace.icon,
+                                  variant: AppButtonVariant.secondary,
+                                  size: AppButtonSize.xl,
+                                  onPressed: () => unawaited(
+                                    downloadPressed(anchor, download, request),
+                                  ),
                                 ),
                               ),
-                            ),
                             AppIconButton(
                               icon: movie.isFavorite
                                   ? AppIcons.starFilled
@@ -783,14 +785,16 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
           controller: _tabs,
           onPick: (season) => setState(() => _season = season),
           onLeaveLeft: _primary.requestFocus,
-          trailing: _DownloadSeason(
-            onPressed: () => unawaited(
-              startDownloads(context, [
-                for (final episode in shown.episodes)
-                  episodeDownloadRequest(series, episode),
-              ]),
-            ),
-          ),
+          trailing: !ref.watch(downloadsHereProvider)
+              ? null
+              : _DownloadSeason(
+                  onPressed: () => unawaited(
+                    startDownloads(context, [
+                      for (final episode in shown.episodes)
+                        episodeDownloadRequest(series, episode),
+                    ]),
+                  ),
+                ),
         ),
         SizedBox(height: tokens.spacing.s16),
         Expanded(
@@ -1220,7 +1224,9 @@ class _EpisodeRow extends ConsumerWidget {
                 .setWatched(episode.ref, watched: !watched),
           ),
         ),
-        if (download.none)
+        if (!ref.watch(downloadsHereProvider))
+          ...[]
+        else if (download.none)
           AppMenuItem(
             label: 'Download',
             icon: AppIcons.download,
@@ -1241,8 +1247,9 @@ class _EpisodeRow extends ConsumerWidget {
       padding: EdgeInsets.only(bottom: tokens.spacing.s4),
       child: CallbackShortcuts(
         bindings: {
-          const SingleActivator(LogicalKeyboardKey.keyD): () =>
-              unawaited(startDownloads(context, [request])),
+          if (ref.watch(downloadsHereProvider))
+            const SingleActivator(LogicalKeyboardKey.keyD): () =>
+                unawaited(startDownloads(context, [request])),
         },
         child: FocusableSurface(
           focusNode: focus,
@@ -1332,16 +1339,21 @@ class _EpisodeRow extends ConsumerWidget {
                             SizedBox(width: tokens.spacing.s8 + 2),
                             // The mouse's: the keyboard has D and the
                             // row's menu.
-                            ExcludeFocus(
-                              child: Builder(
-                                builder: (anchor) => _EpisodeDownload(
-                                  download: download,
-                                  onPressed: () => unawaited(
-                                    downloadPressed(anchor, download, request),
+                            if (ref.watch(downloadsHereProvider))
+                              ExcludeFocus(
+                                child: Builder(
+                                  builder: (anchor) => _EpisodeDownload(
+                                    download: download,
+                                    onPressed: () => unawaited(
+                                      downloadPressed(
+                                        anchor,
+                                        download,
+                                        request,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         if (line.isNotEmpty) ...[

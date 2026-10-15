@@ -6,6 +6,7 @@ import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -124,7 +125,7 @@ class _DataSectionState extends ConsumerState<DataSection> {
   Future<void> _clearPictures(int bytes) async {
     if (!await _confirm(
       title: 'Clear the kept pictures?',
-      body: clearPicturesBody(bytes),
+      body: clearPicturesBody(bytes, device: _device),
       action: 'Clear',
     )) {
       return;
@@ -277,6 +278,9 @@ class _DataSectionState extends ConsumerState<DataSection> {
     }
   }
 
+  /// "this computer", "this TV".
+  String get _device => ref.read(formFactorProvider).thisDevice;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -330,13 +334,12 @@ class _DataSectionState extends ConsumerState<DataSection> {
               (final kept?, _) => picturesLine(
                 bytes: kept.bytes,
                 maxBytes: kept.maxBytes,
+                device: _device,
               ),
               (_, final failure?) =>
-                "Posters, logos and stills kept on this computer. Couldn't "
-                    'measure them. ${failureMessage(failure)}',
-              _ =>
-                'Posters, logos and stills kept on this computer. '
-                    'Measuring them…',
+                "${picturesKept(_device)} Couldn't measure them. "
+                    '${failureMessage(failure)}',
+              _ => '${picturesKept(_device)} Measuring them…',
             },
             control: AppButton(
               label: 'Clear',
@@ -357,6 +360,7 @@ class _DataSectionState extends ConsumerState<DataSection> {
                     programmes: guide.programmes,
                     until: guide.until,
                     importing: guide.importing,
+                    device: _device,
                   ),
             control: AppButton(
               label: 'Clear guide',
@@ -369,32 +373,35 @@ class _DataSectionState extends ConsumerState<DataSection> {
                   : null,
             ),
           ),
-          SettingRow(
-            title: 'Your settings and choices',
-            description: exportDescription,
-            control: Wrap(
-              spacing: tokens.spacing.s8,
-              runSpacing: tokens.spacing.s8,
-              children: [
-                AppButton(
-                  label: 'Export…',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  focusNode: _focus[_Busy.exporting],
-                  loading: busy == _Busy.exporting,
-                  onPressed: busy != null ? null : () => unawaited(_export()),
-                ),
-                AppButton(
-                  label: 'Import…',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  focusNode: _focus[_Busy.importing],
-                  loading: busy == _Busy.importing,
-                  onPressed: busy != null ? null : () => unawaited(_import()),
-                ),
-              ],
+          // A file to take to another device: a TV has no files to
+          // write or open (ADR-025).
+          if (ref.watch(formFactorProvider) == FormFactor.desktop)
+            SettingRow(
+              title: 'Your settings and choices',
+              description: exportDescription,
+              control: Wrap(
+                spacing: tokens.spacing.s8,
+                runSpacing: tokens.spacing.s8,
+                children: [
+                  AppButton(
+                    label: 'Export…',
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    focusNode: _focus[_Busy.exporting],
+                    loading: busy == _Busy.exporting,
+                    onPressed: busy != null ? null : () => unawaited(_export()),
+                  ),
+                  AppButton(
+                    label: 'Import…',
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    focusNode: _focus[_Busy.importing],
+                    loading: busy == _Busy.importing,
+                    onPressed: busy != null ? null : () => unawaited(_import()),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -22,24 +22,34 @@ String dataSize(int bytes) {
 String _plural(int count, String one, [String? many]) =>
     '${formatCount(count)} ${count == 1 ? one : many ?? '${one}s'}';
 
-/// Under Pictures: what is kept, of how much.
-String picturesLine({required int bytes, required int maxBytes}) {
-  const what = 'Posters, logos and stills kept on this computer.';
+/// Under Pictures: what is kept, of how much, on [device] ("this
+/// computer", "this TV").
+String picturesLine({
+  required int bytes,
+  required int maxBytes,
+  String device = 'this computer',
+}) {
+  final what = picturesKept(device);
   if (bytes <= 0) return '$what None are kept right now.';
   if (maxBytes <= 0) return '$what ${dataSize(bytes)}.';
   return '$what ${dataSize(bytes)} of ${dataSize(maxBytes)}.';
 }
+
+/// What Pictures is about, on [device].
+String picturesKept(String device) =>
+    'Posters, logos and stills kept on $device.';
 
 /// Under Guide: what there is, and what Clear leaves.
 String guideLine({
   required int programmes,
   required DateTime? until,
   required bool importing,
+  String device = 'this computer',
 }) {
   if (importing) {
     return 'A guide is being imported. It can be cleared once that is done.';
   }
-  if (programmes <= 0) return 'There is no guide on this computer.';
+  if (programmes <= 0) return 'There is no guide on $device.';
   final upTo = until == null ? '' : ' until ${formatShortDate(until)}';
   return '${_plural(programmes, 'programme')}$upTo. Your channel matches '
       'are kept, and the guide comes back at its next refresh.';
@@ -51,10 +61,9 @@ const exportDescription =
     'computer. Never passwords, usernames or addresses.';
 
 /// What Clear's dialog says before it clears.
-String clearPicturesBody(int bytes) =>
+String clearPicturesBody(int bytes, {String device = 'this computer'}) =>
     '${bytes > 0 ? '${dataSize(bytes)} of pictures' : 'Every kept picture'} '
-    'will be deleted from this computer. They are fetched again as you '
-    'browse.';
+    'will be deleted from $device. They are fetched again as you browse.';
 
 const clearGuideBody =
     'Every programme goes, for every source. Your channel matches stay, '

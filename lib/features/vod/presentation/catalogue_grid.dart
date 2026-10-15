@@ -83,7 +83,8 @@ class CatalogueGrid extends ConsumerWidget {
           : await movies.range(query, offset, limit),
       onFavorite: (item) => unawaited(_toggleFavorite(ref, item)),
       // A movie downloads as it is; a series by its episodes, on its page.
-      onDownload: kind == CatalogueKind.movie
+      onDownload:
+          kind == CatalogueKind.movie && ref.watch(downloadsHereProvider)
           ? (item) => _download(context, item)
           : null,
       card: (context, item, focus, width) => switch (item) {
@@ -167,7 +168,7 @@ class CatalogueGrid extends ConsumerWidget {
           shortcut: 'F',
           onPressed: () => unawaited(_toggleFavorite(ref, item)),
         ),
-        if (item is MovieItem)
+        if (item is MovieItem && ref.read(downloadsHereProvider))
           AppMenuItem(
             label: 'Download',
             icon: AppIcons.download,

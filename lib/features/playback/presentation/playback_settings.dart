@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
@@ -153,22 +155,26 @@ class _PlaybackSettingsSectionState
               ),
             ),
           ),
-          _Setting(
-            title: 'Hardware decoding',
-            description:
-                'Automatic uses your graphics card when it can. Off decodes '
-                'on the processor: slower, and a way round a faulty graphics '
-                'driver. Applies to the next thing you play.',
-            control: SegmentedControl<bool>(
-              options: const [
-                SegmentOption(value: true, label: 'Automatic'),
-                SegmentOption(value: false, label: 'Off'),
-              ],
-              value: settings.hardwareDecoding,
-              onChanged: (value) =>
-                  unawaited(_save(settings.copyWith(hardwareDecoding: value))),
+          // A TV's picture is always MediaCodec's, straight to the screen
+          // (ADR-025): there is no graphics card to choose.
+          if (ref.watch(formFactorProvider) == FormFactor.desktop)
+            _Setting(
+              title: 'Hardware decoding',
+              description:
+                  'Automatic uses your graphics card when it can. Off decodes '
+                  'on the processor: slower, and a way round a faulty graphics '
+                  'driver. Applies to the next thing you play.',
+              control: SegmentedControl<bool>(
+                options: const [
+                  SegmentOption(value: true, label: 'Automatic'),
+                  SegmentOption(value: false, label: 'Off'),
+                ],
+                value: settings.hardwareDecoding,
+                onChanged: (value) => unawaited(
+                  _save(settings.copyWith(hardwareDecoding: value)),
+                ),
+              ),
             ),
-          ),
           _Setting(
             title: 'Preferred audio',
             description:
