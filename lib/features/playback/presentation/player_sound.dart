@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -11,6 +13,10 @@ part 'player_sound.g.dart';
 /// full-screen player and the preview alike, kept across restarts. The
 /// engine is told the stored level when this is first read (`bootstrap()`
 /// reads it), then every change.
+///
+/// On a TV the remote's volume and mute keys work the TV itself, and the
+/// player has no volume control (ADR-025): it always plays at full volume,
+/// unmuted, whatever a desktop-era level or a stray M stored.
 @Riverpod(keepAlive: true)
 class PlayerSoundController extends _$PlayerSoundController {
   /// What a key or a notch of the wheel changes the volume by.
@@ -24,6 +30,7 @@ class PlayerSoundController extends _$PlayerSoundController {
 
   @override
   PlayerSound build() {
+    if (_onTv) return const PlayerSound();
     final stored = ref.read(uiPreferencesProvider).playerSound;
     // A new engine plays at full volume, unmuted.
     unawaited(_tell(const PlayerSound(), stored));
@@ -52,9 +59,11 @@ class PlayerSoundController extends _$PlayerSoundController {
     }
   }
 
+  bool get _onTv => ref.read(formFactorProvider) == FormFactor.tv;
+
   void _set(PlayerSound next) {
     final before = state;
-    if (next == before) return;
+    if (next == before || _onTv) return;
     state = next;
     unawaited(_tell(before, next));
     unawaited(_save());

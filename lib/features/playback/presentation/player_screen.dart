@@ -51,6 +51,11 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 /// turn the volume, Home starts over, and Esc saves, stops and goes back;
 /// the digits do nothing. Leaving the player any way at all stops the
 /// file.
+///
+/// On a TV (docs/07) the remote's OK shows the controls: a channel's with
+/// the focus on Channels, a file's after pausing or playing it; ↑/↓ in a
+/// file show them too, on Play. While a control has the focus the arrows
+/// and OK are the control's, and Back gives the picture the focus again.
 class PlayerScreen extends ConsumerStatefulWidget {
   const new({this.zapQuery, super.key});
 
@@ -76,6 +81,10 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   final _focus = FocusNode(debugLabel: 'player');
+
+  /// The control the remote lands on (a TV): a channel's Channels, a
+  /// file's Play.
+  final _entry = FocusNode(debugLabel: 'player controls');
   bool _osd = true;
   Timer? _osdTimer;
 
@@ -179,6 +188,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _focus
       ..removeListener(_onFocusMoved)
       ..dispose();
+    _entry.dispose();
     unawaited(_window?.setFullScreen(on: false));
     // The preview and the next thing played are at the recorded speed
     // and shape again.
@@ -246,18 +256,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return current == null ? null : ChannelQuery(sourceId: current.sourceId);
   }
 
+  /// The keyboard or the remote is on one of the OSD's controls.
+  bool get _onControl => _focus.hasFocus && !_focus.hasPrimaryFocus;
+
   void _showOsd() {
     _osdTimer?.cancel();
     if (!_osd) setState(() => _osd = true);
     // The keyboard on a control: the OSD stays long enough to read it.
-    final onControl = _focus.hasFocus && !_focus.hasPrimaryFocus;
+    final onControl = _onControl;
     _osdTimer = Timer(
       onControl ? PlayerScreen.osdFocusTimeout : PlayerScreen.osdTimeout,
       () {
         if (!mounted || _panel || _pinned) return;
         setState(() => _osd = false);
         // A control nobody can see must not be the one Enter presses.
-        if (_focus.hasFocus && !_focus.hasPrimaryFocus) _focus.requestFocus();
+        if (_onControl) _focus.requestFocus();
       },
     );
   }
@@ -442,11 +455,54 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       setState(() => _info = false);
     } else if (_isVod && _vod.countdown != null) {
       _vod.cancelNext();
+    } else if (_onTv && _onControl) {
+      _toPicture();
     } else {
       _exit();
     }
     return true;
   }
+
+  /// A TV's Back from a control: the picture has the focus again, and the
+  /// OSD goes (unless a paused file keeps it).
+  void _toPicture() {
+    _osdTimer?.cancel();
+    _focus.requestFocus();
+    if (!_panel && !_pinned) setState(() => _osd = false);
+  }
+
+  /// The OSD, with the remote on its [_entry] control.
+  void _showControls() {
+    _showOsd();
+    // A hidden OSD is still built (only see-through): its controls are
+    // there to focus.
+    if (_entry.context != null) _entry.requestFocus();
+  }
+
+  /// A TV remote's OK with the picture focused (through [TvSelectKey]'s
+  /// [ActivateIntent]): a typed number goes; a file pauses or plays on;
+  /// a channel shows its controls.
+  void _onSelect() {
+    if (_digits.isNotEmpty) {
+      _commitNumber();
+    } else if (_isVod) {
+      _showOsd();
+      _vod.togglePause();
+    } else {
+      _showControls();
+    }
+  }
+
+  /// On a TV, while a control has the focus, these are the control's:
+  /// they move between the controls and press them.
+  static final Set<LogicalKeyboardKey> _controlKeys = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+  };
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) {
@@ -466,7 +522,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _sound.nudge(step);
       return KeyEventResult.handled;
     }
-    if (_isVod) return _onVodKey(event);
+    final onTv = _onTv;
+    if (onTv && _onControl && _controlKeys.contains(event.logicalKey)) {
+      return KeyEventResult.ignored;
+    }
+    if (_isVod) return _onVodKey(event, onTv: onTv);
     final key = _remoteLiveKey(event.logicalKey);
     // Digits, and a typed number's Enter and Backspace.
     final digit = _digitOf(key);
@@ -522,6 +582,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         unawaited(_zap(1));
       case LogicalKeyboardKey.arrowLeft:
         _openPanel();
+      case LogicalKeyboardKey.arrowRight when onTv:
+        _showControls();
       case LogicalKeyboardKey.backspace:
         unawaited(_lastChannel());
       case LogicalKeyboardKey.keyM:
@@ -564,7 +626,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _ => key,
       };
 
-  KeyEventResult _onVodKey(KeyEvent event) {
+  KeyEventResult _onVodKey(KeyEvent event, {required bool onTv}) {
     final key = _remoteVodKey(event.logicalKey);
     final repeat = event is KeyRepeatEvent;
     final shift = HardwareKeyboard.instance.isShiftPressed;
@@ -575,6 +637,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _vod.nudge(-(shift ? bigStep : step));
       case LogicalKeyboardKey.arrowRight:
         _vod.nudge(shift ? bigStep : step);
+      // A TV has no volume of its own: ↑/↓ reach the controls.
+      case LogicalKeyboardKey.arrowUp || LogicalKeyboardKey.arrowDown when onTv:
+        if (!repeat) _showControls();
       case LogicalKeyboardKey.arrowUp:
         _sound.nudge(1);
       case LogicalKeyboardKey.arrowDown:
@@ -840,6 +905,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       tooltip: 'Channels',
       shortcut: '←',
       selected: _panel,
+      focusNode: _entry,
       onPressed: _openPanel,
     ),
     OsdButton(
@@ -890,142 +956,161 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       onBackButtonPressed: _onBack,
       child: Material(
         color: tokens.colors.video,
-        child: Focus(
-          focusNode: _focus,
-          autofocus: true,
-          onKeyEvent: _onKey,
-          child: MouseRegion(
-            cursor: showOsd ? MouseCursor.defer : SystemMouseCursors.none,
-            onHover: (_) => _showOsd(),
-            child: Listener(
-              // The wheel over the picture turns the volume.
-              onPointerSignal: (signal) {
-                if (signal is! PointerScrollEvent || _panel) return;
-                _showOsd();
-                _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
-              },
-              child: ColoredBox(
-                color: tokens.colors.video,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // The picture's clicks are heard under the OSD and
-                    // under the failure card: a control answers at once,
-                    // with no wait for a second click.
-                    PlayerSurface(
-                      badges: false,
-                      onPictureTap: vod ? _vod.togglePause : _showOsd,
-                      onPictureDoubleTap: () =>
-                          unawaited(_toggleWindowFullScreen()),
-                      onNext: !vod
-                          ? () => unawaited(_zap(1))
-                          : _hasNext
-                          ? _vod.playNext
-                          : null,
-                      nextLabel: vod ? 'Next episode' : 'Next channel',
-                      beforeShowInFolder: () =>
-                          _window?.setFullScreen(on: false) ?? Future.value(),
-                      onFileRemoved: () {
-                        if (mounted) _exit();
-                      },
-                    ),
-                    OsdScale(
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (vod)
-                            osd(
-                              ListenableBuilder(
-                                listenable: _vod,
-                                builder: (context, _) =>
-                                    _vodOsd(item, tracks, sound),
-                              ),
-                            )
-                          else if (channel != null)
-                            osd(
-                              Column(
-                                children: [
-                                  OsdTop(channel: channel, onBack: _exit),
-                                  const Spacer(),
-                                  OsdBottom(
-                                    channel: channel,
-                                    leading: _channelControls(sound),
-                                    trailing: [
-                                      OsdButton(
-                                        icon: channel.isFavorite
-                                            ? AppIcons.starFilled
-                                            : AppIcons.star,
-                                        tooltip: channel.isFavorite
-                                            ? 'Remove from favorites'
-                                            : 'Add to favorites',
-                                        selected: channel.isFavorite,
-                                        onPressed: () =>
-                                            unawaited(_toggleFavorite(channel)),
-                                      ),
-                                      ..._controls(tracks, vod: false),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (_banner case final banner? when !_panel)
-                            Positioned(
-                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: ChannelBanner(channel: banner),
-                              ),
-                            ),
-                          if (_digits.isNotEmpty)
-                            Positioned(
-                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                              right: tokens.spacing.s32,
-                              child: NumberEntry(
-                                digits: _digits,
-                                match: _numberMatch,
-                              ),
-                            ),
-                          if (_info)
-                            Positioned(
-                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                              left: tokens.spacing.s32,
-                              child: const StreamInfoOverlay(),
-                            ),
-                          if (_panel)
-                            Positioned(
-                              top: 0,
-                              bottom: 0,
-                              left: 0,
-                              child: CallbackShortcuts(
-                                bindings: {
-                                  const SingleActivator(
-                                    LogicalKeyboardKey.arrowRight,
-                                  ): _closePanel,
-                                  const SingleActivator(
-                                    LogicalKeyboardKey.escape,
-                                  ): _closePanel,
-                                },
-                                child: ChannelPanel(
-                                  query:
-                                      _query ??
-                                      ChannelQuery(
-                                        sourceId: channel?.sourceId ?? '',
-                                      ),
-                                  current: channel,
-                                  onPlay: (c) {
-                                    _closePanel();
-                                    _showBanner(c);
-                                    _play(c);
-                                  },
-                                  onClose: _closePanel,
+        child: Actions(
+          actions: {
+            if (_onTv)
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  _onSelect();
+                  return null;
+                },
+              ),
+          },
+          child: Focus(
+            focusNode: _focus,
+            autofocus: true,
+            // On a TV the arrows move between the controls only: the
+            // picture, as big as the screen, would be the next stop
+            // every way. Back gives it the focus again.
+            skipTraversal: _onTv,
+            onKeyEvent: _onKey,
+            child: MouseRegion(
+              cursor: showOsd ? MouseCursor.defer : SystemMouseCursors.none,
+              onHover: (_) => _showOsd(),
+              child: Listener(
+                // The wheel over the picture turns the volume.
+                onPointerSignal: (signal) {
+                  if (signal is! PointerScrollEvent || _panel) return;
+                  _showOsd();
+                  _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
+                },
+                child: ColoredBox(
+                  color: tokens.colors.video,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // The picture's clicks are heard under the OSD and
+                      // under the failure card: a control answers at once,
+                      // with no wait for a second click.
+                      PlayerSurface(
+                        badges: false,
+                        onPictureTap: vod ? _vod.togglePause : _showOsd,
+                        onPictureDoubleTap: () =>
+                            unawaited(_toggleWindowFullScreen()),
+                        onNext: !vod
+                            ? () => unawaited(_zap(1))
+                            : _hasNext
+                            ? _vod.playNext
+                            : null,
+                        nextLabel: vod ? 'Next episode' : 'Next channel',
+                        beforeShowInFolder: () =>
+                            _window?.setFullScreen(on: false) ?? Future.value(),
+                        onFileRemoved: () {
+                          if (mounted) _exit();
+                        },
+                      ),
+                      OsdScale(
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (vod)
+                              osd(
+                                ListenableBuilder(
+                                  listenable: _vod,
+                                  builder: (context, _) =>
+                                      _vodOsd(item, tracks, sound),
+                                ),
+                              )
+                            else if (channel != null)
+                              osd(
+                                Column(
+                                  children: [
+                                    OsdTop(channel: channel, onBack: _exit),
+                                    const Spacer(),
+                                    OsdBottom(
+                                      channel: channel,
+                                      leading: _channelControls(sound),
+                                      trailing: [
+                                        OsdButton(
+                                          icon: channel.isFavorite
+                                              ? AppIcons.starFilled
+                                              : AppIcons.star,
+                                          tooltip: channel.isFavorite
+                                              ? 'Remove from favorites'
+                                              : 'Add to favorites',
+                                          selected: channel.isFavorite,
+                                          onPressed: () => unawaited(
+                                            _toggleFavorite(channel),
+                                          ),
+                                        ),
+                                        ..._controls(tracks, vod: false),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                        ],
+                            if (_banner case final banner? when !_panel)
+                              Positioned(
+                                top:
+                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: ChannelBanner(channel: banner),
+                                ),
+                              ),
+                            if (_digits.isNotEmpty)
+                              Positioned(
+                                top:
+                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                                right: tokens.spacing.s32,
+                                child: NumberEntry(
+                                  digits: _digits,
+                                  match: _numberMatch,
+                                ),
+                              ),
+                            if (_info)
+                              Positioned(
+                                top:
+                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                                left: tokens.spacing.s32,
+                                child: const StreamInfoOverlay(),
+                              ),
+                            if (_panel)
+                              Positioned(
+                                top: 0,
+                                bottom: 0,
+                                left: 0,
+                                child: CallbackShortcuts(
+                                  bindings: {
+                                    const SingleActivator(
+                                      LogicalKeyboardKey.arrowRight,
+                                    ): _closePanel,
+                                    const SingleActivator(
+                                      LogicalKeyboardKey.escape,
+                                    ): _closePanel,
+                                  },
+                                  child: ChannelPanel(
+                                    query:
+                                        _query ??
+                                        ChannelQuery(
+                                          sourceId: channel?.sourceId ?? '',
+                                        ),
+                                    current: channel,
+                                    onPlay: (c) {
+                                      _closePanel();
+                                      _showBanner(c);
+                                      _play(c);
+                                    },
+                                    onClose: _closePanel,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1077,6 +1162,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               onDrag: _vod.dragTo,
               onStartOver: _vod.startOver,
               onNext: next == null ? null : _vod.playNext,
+              playFocusNode: _entry,
               leading: [if (!_onTv) _volume(sound)],
               trailing: _controls(tracks, vod: true),
             ),

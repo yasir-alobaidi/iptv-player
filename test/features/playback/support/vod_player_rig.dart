@@ -120,6 +120,7 @@ final class VodPlayerRig {
     String location, {
     Future<void> Function()? before,
     Size? size,
+    List<Override> extra = const [],
   }) async {
     addTearDown(() => tester.runAsync(vod.db.close));
     await tester.runAsync(vod.seed);
@@ -128,12 +129,16 @@ final class VodPlayerRig {
       ..seriesAnswer = const Ok(vodPlayerSeries);
     if (before != null) await tester.runAsync(before);
     app = size == null
-        ? await pumpApp(tester, initialLocation: location, overrides: overrides)
+        ? await pumpApp(
+            tester,
+            initialLocation: location,
+            overrides: [...overrides, ...extra],
+          )
         : await pumpApp(
             tester,
             size: size,
             initialLocation: location,
-            overrides: overrides,
+            overrides: [...overrides, ...extra],
           );
     await settle(tester);
   }

@@ -148,6 +148,7 @@ class VodOsdBottom extends StatelessWidget {
     required this.trailing,
     this.onNext,
     this.preparing = false,
+    this.playFocusNode,
     super.key,
   });
 
@@ -172,6 +173,9 @@ class VodOsdBottom extends StatelessWidget {
   final VoidCallback? onNext;
   final List<Widget> leading;
   final List<Widget> trailing;
+
+  /// Play's focus, for the remote to land on (a TV).
+  final FocusNode? playFocusNode;
 
   static const step = Duration(seconds: 10);
 
@@ -257,6 +261,7 @@ class VodOsdBottom extends StatelessWidget {
                   tooltip: timeline.paused ? 'Play' : 'Pause',
                   shortcut: 'Space',
                   primary: true,
+                  focusNode: playFocusNode,
                   onPressed: onTogglePause,
                 ),
                 OsdButton(

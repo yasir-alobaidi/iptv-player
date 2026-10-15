@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
@@ -11,13 +13,17 @@ void main() {
   late InMemoryUiPreferences preferences;
   late ProviderContainer container;
 
-  ProviderContainer open({PlayerSound stored = const PlayerSound()}) {
+  ProviderContainer open({
+    PlayerSound stored = const PlayerSound(),
+    FormFactor formFactor = FormFactor.desktop,
+  }) {
     engine = FakePlayerEngine();
     preferences = InMemoryUiPreferences()..playerSound = stored;
     container = ProviderContainer(
       overrides: [
         playerEngineProvider.overrideWithValue(engine),
         uiPreferencesProvider.overrideWithValue(preferences),
+        formFactorProvider.overrideWithValue(formFactor),
       ],
     );
     addTearDown(container.dispose);
@@ -46,6 +52,25 @@ void main() {
       expect(engine.calls, ['volume:35.0', 'muted:true']);
     },
   );
+
+  test('on a TV: full volume and unmuted, whatever was stored, and '
+      'nothing changes it (the remote works the TV)', () async {
+    open(
+      stored: const PlayerSound(volume: 35, muted: true),
+      formFactor: FormFactor.tv,
+    );
+
+    expect(sound(), const PlayerSound());
+    controller()
+      ..toggleMute()
+      ..nudge(-1)
+      ..setVolume(10);
+    await pumpEventQueue();
+
+    expect(sound(), const PlayerSound());
+    expect(engine.calls, isEmpty);
+    expect(preferences.playerSound, const PlayerSound(volume: 35, muted: true));
+  });
 
   test('a level is set, told to the engine and kept', () async {
     open();

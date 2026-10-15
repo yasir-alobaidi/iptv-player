@@ -12,6 +12,10 @@ part of 'player_sound.dart';
 /// full-screen player and the preview alike, kept across restarts. The
 /// engine is told the stored level when this is first read (`bootstrap()`
 /// reads it), then every change.
+///
+/// On a TV the remote's volume and mute keys work the TV itself, and the
+/// player has no volume control (ADR-025): it always plays at full volume,
+/// unmuted, whatever a desktop-era level or a stray M stored.
 
 @ProviderFor(PlayerSoundController)
 final playerSoundControllerProvider = PlayerSoundControllerProvider._();
@@ -20,12 +24,20 @@ final playerSoundControllerProvider = PlayerSoundControllerProvider._();
 /// full-screen player and the preview alike, kept across restarts. The
 /// engine is told the stored level when this is first read (`bootstrap()`
 /// reads it), then every change.
+///
+/// On a TV the remote's volume and mute keys work the TV itself, and the
+/// player has no volume control (ADR-025): it always plays at full volume,
+/// unmuted, whatever a desktop-era level or a stray M stored.
 final class PlayerSoundControllerProvider
     extends $NotifierProvider<PlayerSoundController, PlayerSound> {
   /// How loud the player is (ADR-017): one engine, so one volume for the
   /// full-screen player and the preview alike, kept across restarts. The
   /// engine is told the stored level when this is first read (`bootstrap()`
   /// reads it), then every change.
+  ///
+  /// On a TV the remote's volume and mute keys work the TV itself, and the
+  /// player has no volume control (ADR-025): it always plays at full volume,
+  /// unmuted, whatever a desktop-era level or a stray M stored.
   PlayerSoundControllerProvider._()
     : super(
         from: null,
@@ -54,12 +66,16 @@ final class PlayerSoundControllerProvider
 }
 
 String _$playerSoundControllerHash() =>
-    r'c37fc92354dee0cc1c069b1a827f47b851656ca6';
+    r'644de69ddbb180ce42fcf7caa771b05ed5d5e10c';
 
 /// How loud the player is (ADR-017): one engine, so one volume for the
 /// full-screen player and the preview alike, kept across restarts. The
 /// engine is told the stored level when this is first read (`bootstrap()`
 /// reads it), then every change.
+///
+/// On a TV the remote's volume and mute keys work the TV itself, and the
+/// player has no volume control (ADR-025): it always plays at full volume,
+/// unmuted, whatever a desktop-era level or a stray M stored.
 
 abstract class _$PlayerSoundController extends $Notifier<PlayerSound> {
   PlayerSound build();

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
+import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
@@ -17,14 +20,20 @@ void main() {
   late AppUnderTest app;
 
   /// Live TV with Arena Sports 1 (201) opened full screen with Enter.
-  Future<void> open(WidgetTester tester) async {
+  Future<void> open(
+    WidgetTester tester, {
+    FormFactor formFactor = FormFactor.desktop,
+  }) async {
     live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
     await tester.runAsync(live.seed);
     app = await pumpApp(
       tester,
       initialLocation: AppDestination.liveTv.path,
-      overrides: live.overrides,
+      overrides: [
+        ...live.overrides,
+        formFactorProvider.overrideWithValue(formFactor),
+      ],
     );
     await _settle(tester);
     await tester.tap(find.text('Arena Sports 1').first);
@@ -57,6 +66,113 @@ void main() {
     await _settle(tester);
     expect(app.location, AppDestination.liveTv.path);
     await finish(tester);
+  });
+
+  group('on a TV (docs/07)', () {
+    String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+
+    testWidgets('OK shows the controls on Channels; the arrows move between '
+        'them, not through the channels, and OK presses one', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.pump(const Duration(seconds: 4));
+      expect(focused(), 'player');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(focused(), 'player controls');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await _settle(tester);
+      expect(focused(), isNot('player controls'));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await _settle(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await _settle(tester);
+      expect(focused(), 'player controls');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(live.rig.engine.opened, hasLength(1), reason: 'no zap');
+      expect(find.byType(ChannelPanel), findsNothing);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(find.byType(ChannelPanel), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('→ walks every control to the last, never to the picture '
+        '(the user: "I cant do anything with the remote")', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      final walk = <String?>[];
+      for (var i = 0; i < 12; i++) {
+        walk.add(
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<OsdButton>()
+              ?.tooltip,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(walk.toSet().toList(), [
+        'Channels',
+        'Previous channel',
+        'Next channel',
+        'Last channel',
+        'Add to favorites',
+        'Audio',
+        'Subtitles',
+        'Picture size: Fit',
+        'Stream info',
+      ]);
+      expect(walk.last, 'Stream info');
+      await finish(tester);
+    });
+
+    testWidgets('Back from a control gives the picture the focus and hides '
+        'the OSD; the next Back leaves', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(focused(), 'player controls');
+
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      expect(focused(), 'player');
+      expect(app.location, playerRoutePath);
+      final osd = tester.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.byType(OsdTop),
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+      expect(osd.opacity, 0);
+
+      // With the picture focused, ↓ zaps again.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump(const Duration(milliseconds: 400));
+      await _settle(tester);
+      expect(live.rig.engine.opened, hasLength(2));
+
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      expect(app.location, AppDestination.liveTv.path);
+      await finish(tester);
+    });
+
+    testWidgets('a typed number goes with OK', (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await _settle(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(live.rig.engine.opened.last.url, contains('203'));
+      expect(focused(), 'player');
+      await finish(tester);
+    });
   });
 
   testWidgets('Enter plays full screen; Esc goes back to Live TV', (

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
@@ -208,6 +210,71 @@ void main() {
       await _key(tester, LogicalKeyboardKey.digit4);
       await tester.pump(const Duration(seconds: 2));
       expect(t.rig.engine.opened, hasLength(1));
+      expect(t.app.location, playerRoutePath);
+    });
+
+    _vodTest('on a TV a movie has no Download (ADR-025: no downloads '
+        'there); the desktop has it', (tester, t) async {
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      expect(find.text('Download'), findsNothing);
+      expect(findByLabel('Play'), findsWidgets);
+    });
+
+    _vodTest('on a TV: OK pauses and plays on; ←/→ seek; ↑/↓ reach the '
+        "controls on Play, whose arrows don't seek; Back gives the picture "
+        'the focus again', (tester, t) async {
+      String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      await _key(tester, LogicalKeyboardKey.enter);
+      await t.firstFrame(tester);
+      t.rig.engine.progress(const Duration(minutes: 5));
+      await settle(tester);
+      List<String> seeks() => [
+        for (final c in t.rig.engine.calls)
+          if (c.startsWith('seek:')) c,
+      ];
+      expect(focused(), 'player');
+      // No volume on a TV: the remote's works the TV.
+      expect(
+        tester
+            .widgetList<AppSlider>(find.byType(AppSlider))
+            .map((slider) => slider.semanticLabel),
+        ['Position'],
+      );
+
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.calls, contains('paused:true'));
+      expect(findByLabel('Play'), findsOneWidget);
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.calls.last, 'paused:false');
+
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks(), ['seek:310000']);
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(focused(), 'player controls');
+      expect(t.rig.engine.calls, isNot(contains(startsWith('volume'))));
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(focused(), isNot('player controls'));
+      expect(seeks(), hasLength(1), reason: 'the arrows move the focus');
+      // OK on Back 10 seconds.
+      await _key(tester, LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks(), hasLength(2));
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(focused(), 'player');
       expect(t.app.location, playerRoutePath);
     });
 
