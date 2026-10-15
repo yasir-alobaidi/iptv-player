@@ -1,4 +1,140 @@
-# Handoff — 2026-10-15, ninth session (TV-0 on the Bedroom TV; Bijou on a TV is the TV's), on top of the eighth (a Google TV that closes the receiver as a cast wakes it), the seventh (the TV's bar), the sixth (the mark) and the fifth (TV-0 begun without a TV)
+# Handoff — 2026-10-15, end of the ninth session: TV-0 done, the TV's Bijou begun, and the user's TV bug list open (start with "Start here")
+
+## Start here (the next session)
+The ninth session ended mid-sweep, at the user's request ("get me a full
+hand off to continue on a new chat"). **Everything is committed** (7a315ef,
+9eea021, 584e5ec and the handoff commit after them), nothing is pushed, and
+`dist/bijou-0.1.0.apk` is built from the last code commit. **The Bedroom TV
+still runs an older build** (from ~02:40, before the Back fix): install the
+new one first.
+
+**The user's last words:** "do an overall sweep to the app, and make
+everything in it support the google tv version with a tv full experience,
+and also fix all the bugs above and also if there are any way to enhance
+the performance and better utilization for the resources then do it … u
+have the bedroom tv available for u and do it asap." So: **TV-1 and TV-2's
+remote handling, now, on the real TV**, the desktop unchanged
+([[tv-version-is-tv-only]] in memory; ADR-025).
+
+### Reaching the Bedroom TV
+- At 04:18 the Chromecast was asleep (`standBy=True`) and **its adb service
+  was gone** (no `_adb-tls-connect._tcp` on mDNS, 5555 closed): Android turns
+  Wireless debugging off when the device restarts (likely after tonight's
+  Play Store updates). **The user switches it on again** (Settings → System →
+  Developer options → Wireless debugging → On); the pairing is kept. Then
+  `timeout 8 avahi-browse -rtp _adb-tls-connect._tcp | grep IPv4` for the
+  port and `~/Android/Sdk/platform-tools/adb connect 192.168.1.231:<port>`.
+- **The user uses the TV with the remote while you work** (at 03:5x it
+  showed Google Play's "Manage apps & games"; two of my keys landed there).
+  Take a screenshot before sending keys, and stop when it isn't Bijou.
+- **The provider:** the user said yes at 04:18 for about 60 minutes (to
+  ~05:20). A new session asks again with a pop-up before any play
+  ([[ask-before-provider-streams]]).
+- Install: `adb -s 192.168.1.231:<port> install -r dist/bijou-0.1.0.apk`
+  (Bijou keeps its data: same debug key). The app's log: `adb logcat | grep
+  ' flutter '`.
+
+### The user's TV bug list (from using it with the remote), with the cause and the plan
+1. **Back left the whole app** ("it will take me back but also it will
+   leave from the whole app"). **Fixed in 9eea021, not yet on the TV.**
+   Cause: the player took Back's key-down (one step back) and left its
+   key-up to Android, which did a second, system back, and a second back
+   at a section's root closes the app. Also, any section's root closed the
+   app on one Back. Now: the player takes Back through
+   `BackButtonListener` (`_onBack`: panel, stream info, the next-episode
+   card, then leave); the remote keys it maps have their key-up taken too;
+   on a TV the shell's `_backOnTv` sends Back at a section's root to Home,
+   and only Back on Home leaves. Tests: `tv_shell_test` (fails without the
+   fix), `player_screen_test` "the system's back". **Check on the TV.**
+2. **Live TV has no sound** (channel 4950, which plays with sound on the
+   laptop). **Likely cause, mine:** I pressed M (mute) in the TV's player at
+   01:12 during the measurements; `PlayerSoundController` keeps mute across
+   launches (ADR-017), and ADR-025 removed the volume and mute controls on
+   a TV, so it can't be undone there. **Fix (not written yet):** on a TV,
+   `PlayerSoundController.build` returns full volume, unmuted, ignoring the
+   stored level, and `_set` does nothing (the remote's volume works the TV).
+   Also: in a film the player's ↑/↓ call `_sound.nudge` (volume) — not on a
+   TV. Then play 4950 and read its audio in stream info (if it is E-AC-3 or
+   AC-3 5.1 and silent unmuted, look at `ao=opensles` with 6 channels;
+   `BIJOU_MPV_LOG=ao,ad,cplayer`).
+3. **Text fields: the Google TV keyboard opens and nothing can be typed or
+   moved; only Back leaves** (the search bar; Movies' filter, which Right
+   from the rail lands on and opens the keyboard: "unaccessible"). **Plan:**
+   a `TvMode` inherited flag (beside `KeyHints`), and in `AppTextField`,
+   `SearchField` and the search overlay's own `TextField` on a TV: the field
+   is `readOnly` until OK (so focus doesn't open the keyboard), the arrows
+   map to `DirectionalFocusIntent(direction, ignoreTextFields: false)` in a
+   `Shortcuts` around the field (the app-level text shortcuts otherwise move
+   the caret, and the default intent ignores text fields), OK (ActivateIntent
+   via `TvSelectKey`) turns editing on (EditableText opens the input
+   connection when `readOnly` turns false while focused), the keyboard's
+   Done/Back turns it off. **Then see on the TV whether Gboard can be driven
+   at all** in a Flutter view (typing via `adb shell input text` worked at
+   onboarding; the user's D-pad didn't). If it can't, an in-app D-pad
+   keyboard (docs/07's TV Search) is the way. Also: on a TV the Movies and
+   Series pages should land on the grid, not the filter.
+4. **Favorites: Right walks the tabs, Left jumps to the rail.** Look at the
+   tabs (`CountTab` in `favorites_screen.dart` ~138) and what takes Left
+   (the screen's own key handler ~463 handles ←/→ on group headers; the
+   shell sends Left at the content's edge to the rail). Fix so Left walks
+   the tabs back.
+5. **The rail's expand toggle does nothing on the TV:** the rail expands
+   only when the window is at least `WindowSizes.railCollapseWidth` (1280)
+   wide; a 1080p TV is 960. **Decided: no toggle on a TV**
+   (`NavRail`'s `_ToggleItem`); maybe later the rail shows its labels while
+   it has the focus (Google TV's own pattern), as an overlay.
+6. **Live TV's player: the controls can't be reached with the remote**
+   ("I cant do anything with the remote other than moving between
+   channels"). Cause: the player's `_onKey` sits above the OSD's buttons and
+   takes the arrows (zap, panel) even when a button has the focus, and
+   nothing focuses a button. **Plan (docs/07: OK/Info shows the OSD, Back
+   closes it, then leaves):** on a TV, OK with the picture focused shows the
+   OSD and focuses its first control; while a control has the focus the
+   arrows and OK pass to it (the player's `_onKey` returns ignored when
+   `_focus.hasFocus && !_focus.hasPrimaryFocus`) and the OSD stays (pinned);
+   Back puts the focus back on the picture and hides the OSD; ↑/↓ zap and
+   ← (the panel) only with the picture focused.
+7. **A film: no pause or resume, nothing works** ("I cant have full
+   control with a movie"). Cause: OK reaches nothing (no ActivateIntent on
+   the picture), ↑/↓ turn the volume. **Plan:** on a TV, OK toggles pause
+   (and shows the OSD), ←/→ seek 10 s (held: faster), ↓ shows the OSD
+   focused on Play, the media keys as now, Back as in 6.
+8. **The sweep the user asked for**, beyond these: every screen by remote
+   (Home's rows and "See all", which the user can't reach — see below; the
+   Guide; Movies/Series grids and pages; Search; Settings; dialogs; the
+   source switcher), overscan margins (48 × 27 dp), TV sizes, the remaining
+   desktop words ("this computer" in Settings → Data, the Guide's import
+   error, the reminders' error), Back on Connect losing a typed form, the
+   Settings that mean nothing on a TV (Hardware decoding, maybe the buffer
+   presets).
+9. **Home's "See all" can't be reached with the remote** (the user). The
+   section header's link sits right of the title; nothing moves the focus
+   there from the cards. **Plan:** on a TV a "See all" card at the end of
+   each row (reached with → at the row's end), the TV pattern; keep the
+   header link for the desktop.
+10. **The TV icon:** the user asked for "a tv compatible design, like more
+    circular, same logo". The Android launcher icons are legacy square PNGs
+    (`android/app/src/main/res/mipmap-*`, written by
+    `tools/brand/make_icons.py`; no `mipmap-anydpi-v26`). **Plan:** an
+    adaptive icon (`ic_launcher.xml` with a background layer — the accent
+    tile — and a foreground layer — the trillion inside the 66 dp safe
+    zone of 108 dp), and `android:roundIcon`; the 320 × 180 banner stays.
+    Draw it in `make_icons.py` so the script stays the one source (ADR-022).
+11. **Performance** (the user: "better utilization for the resources"):
+    candidates measured nowhere yet: decode posters at the TV's size
+    (density 2 at 960 logical px: check `ArtworkImage` widths), the guide's
+    retention on a TV (docs/07: −2 h to +3 days), the sync's memory on 2 GB,
+    `dumpsys gfxinfo`/frame times while scrolling Home and the grids on the
+    TV. Measure first.
+
+### Also from tonight, to know
+- **The mis-tap:** at 02:42 a tap played beIN SP 1 (4K) from the provider
+  for ~13 s, after the agreed hour, before a force-stop. Home's "Recently
+  watched channels" then listed beIN SP 4 and SP 5 too, which I can't
+  account for (the TV's log was cleared before I looked); whatever played,
+  played in those 13 s (every later input is known).
+- **Taps are for setup only, never on a screen with playable items**; use
+  keys, and a fresh screenshot before each tap.
 
 **The ninth session, short:** you turned on Wireless debugging on the
 Bedroom TV and network control on the Roku TV, wrote "continue the work",
@@ -201,27 +337,24 @@ ADR-018/019 and ADR-016 "The exit" are still the state of the name, the
 TV's bar and Phase 9.
 
 ## Before you start the next session (user)
-**Your list** — what this session left for you:
+**Your list:**
 1. **Push** this session's commits (`git log origin/main..HEAD`).
-2. **Try Bijou on the TV with the remote:** hold OK on a channel (its menu,
-   with Add to favorites); Back; Channel Up/Down; Info; Home while a channel
-   plays, then back to Bijou (it stops and plays again).
-3. **The relaunch (ADR-024):** switch the Roku TV off with its own remote,
-   wait a few minutes, cast anything to the Bedroom TV: it should come on
-   and play, maybe after a blink. Or tell me and I run row 25.
-4. **A soundbar or AV receiver, or HDR films?** If yes, a Media3 player for
-   the TV is worth building (passthrough, HDR, native 4K); if not, media_kit
-   stays (ADR-025).
-5. **The Roku, when you want it:** Roku Media Player on it (or a Bijou
-   channel of ours) is the way to play an address there.
-6. **To copy the APK yourself:** `dist/bijou-0.1.0.apk` (send it with an app
-   like Send Files to TV, and let it install unknown apps). Or I install
-   over Wi-Fi: the laptop is paired with the TV.
-7. Still from before: **Bijou** and the trillion (ADR-018/022); **the one
-   real reminder** (`flutter test integration_test/manual/real_reminder.dart
-   -d linux`); the night's soak if you want it; the matrix's **rows 6 and
-   16** (you at the TV); **Phase 9's close**; **the dock icon**
-   (`flutter build linux --release`, then `tools/install_desktop_entry.sh`).
+2. **Turn Wireless debugging back on** on the Bedroom TV (Settings → System
+   → Developer options → Wireless debugging → On); no new pairing needed.
+   Android turns it off when the TV restarts.
+3. **Say yes to the provider again** when the next session asks (it asks
+   before any play).
+4. Your bug list is in "Start here" above, with the cause and the plan for
+   each; the Back fix is done and goes on the TV with the next install.
+5. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
+   yes; ADR-025.)
+6. **The Roku, later** (your call): Roku Media Player on it, or a Bijou
+   channel of ours.
+7. Still from before: Bijou and the trillion (ADR-018/022); the one real
+   reminder (`flutter test integration_test/manual/real_reminder.dart -d
+   linux`); the night's soak if you want it; the matrix's rows 6 and 16;
+   Phase 9's close; the dock icon (`flutter build linux --release`, then
+   `tools/install_desktop_entry.sh`).
 
 **What the fifth session did on your machine (outside the repository):**
 installed Temurin JDK 21 in `~/develop/jdk-21.0.12.1+1` (linked as
@@ -246,11 +379,16 @@ and the kernel your editor. Gradle is now capped at 3 GB, and the rule
 Open Claude Code in this folder and paste:
 
 ```
-Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md,
-CLAUDE.md, docs/progress.md and ADR-025 in docs/decisions.md first. Check CI on
-the last push.
-<The Bedroom TV is free for N minutes | Don't use any TV>
-Then: <TV-1's rest (plan first) | Media3 for the TV | Phase 10 | what is left of Phase 9>
+Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 in
+docs/decisions.md. Check CI on the last push.
+Wireless debugging is on again on the Bedroom TV; it is free for you.
+Do the Google TV sweep from "Start here": install the latest build on the
+Bedroom TV, then fix my bug list (sound, text fields and the keyboard, the
+player's controls by remote, a film's pause, Favorites' tabs, the rail's
+toggle, Home's See all, the round TV icon) and the rest of the TV
+experience, with performance, testing each on the TV. Ask me before playing
+from my provider.
 ```
 
 ## Where things stand
@@ -361,24 +499,15 @@ not google?" Answer given, nothing built:
   are items 2 and 3 of "What's next".
 
 ## What's next
-1. **TV-1's rest** (plan first; docs/07's TV screens), seen on the TV:
-   - "this computer" still in Settings → Data, the Guide's import error and
-     the reminders' error on a TV (`FormFactor.thisDevice` is there for it).
-   - The OSD on a TV: how the remote reaches its buttons (no Tab; ↑/↓ zap
-     in a channel, ←/→ seek in a film); docs/07 says OK/Info shows it,
-     Back closes it, then leaves.
-   - Text fields trap the D-pad (Tab leaves them; a remote has no Tab).
-   - Overscan-safe margins (48 × 27 dp) and the 10-foot sizes; the rail at
-     960 × 540 now fits without the Library.
-   - The Settings that mean nothing on a TV: Hardware decoding (the direct
-     output takes MediaCodec whatever it says; Off waits for a restart),
-     the buffer presets maybe.
-   - Back on Connect with a typed form leaves it (the form is lost).
+1. **"Start here" above**, in its order: install the latest build on the
+   Bedroom TV; the sound (2); the player by remote (6, 7); text fields (3);
+   Favorites' tabs (4); the rail's toggle (5); Home's See all (9); the round
+   icon (10); the sweep (8); performance, measured (11). Each checked on
+   the TV, each with a test, the desktop unchanged (`tv_shell_test` pins
+   both sides).
 2. **Media3 for the TV,** only if the user wants passthrough, HDR or native
-   4K (ADR-025; `spike/tv_engine_spike/` as ADR-020 planned).
-3. **24p films at 24 Hz** (the window's `preferredDisplayModeId`, through a
-   small method channel in `MainActivity`), if the user wants it: this TV
-   takes 23.976/24 but no 50 Hz.
+   4K (ADR-025).
+3. **24p films at 24 Hz** (`preferredDisplayModeId`), if wanted.
 4. **The relaunch on the real TV** (ADR-024), with the TV switched off by
    its own remote.
 5. Phase 10 (packaging), or what is left of Phase 9.

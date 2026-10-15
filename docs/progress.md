@@ -220,15 +220,15 @@ _Update at the end of every session._
 - **The Google TV version:** TV-0 done (ADR-025); TV-1 begun (the TV-only gates, the remote's keys, first focus). TV-1's rest: docs/handoff.md "What's next".
 
 ## Next
-**Your list** (things only you can do; docs/handoff.md has the details):
+**Your list** (docs/handoff.md "Start here" has the details):
 1. **Push** this session's commits (`git log origin/main..HEAD`).
-2. **Try Bijou on the TV with the remote** (it is installed, with your provider): hold OK on a channel for its menu (adb can't hold a key, so that one is unchecked), Back, Channel Up/Down, Info; press Home while a channel plays and come back: it should stop and play again.
-3. **The relaunch on the real TV** (ADR-024): switch the Roku TV off **with its own remote**, wait a few minutes, then cast anything to the Bedroom TV: the TV should come on and play, maybe after a blink. Or tell me and I run row 25.
-4. **Do you have a soundbar or AV receiver on the TV, or HDR films you want in HDR?** If yes, a Media3 player for the TV (passthrough, HDR, native 4K) is worth building; if not, media_kit is enough (ADR-025).
-5. **The Roku, later** (your call tonight): casting to it needs Roku Media Player installed on it, or a small Bijou channel of our own; ECP is open now.
-6. Still from before: **Bijou** and the trillion (ADR-018/022); **the one real reminder** (`flutter test integration_test/manual/real_reminder.dart -d linux`); the night's soak if you want it; the matrix's rows 6 and 16 (you at the TV); **Phase 9's close**; the dock icon (`flutter build linux --release`, then `tools/install_desktop_entry.sh`).
+2. **Turn Wireless debugging back on** on the Bedroom TV (Android turns it off when the TV restarts; the pairing is kept).
+3. **Your TV bug list is open** (below, "Known issues"): the next session fixes it on the TV, starting by installing the latest build (the Back fix is in it).
+4. **A soundbar or AV receiver, or HDR films?** Media3 for the TV only if yes (ADR-025).
+5. **The Roku, later.**
+6. Still from before: Bijou and the trillion; the one real reminder; the night's soak if you want it; the matrix's rows 6 and 16; Phase 9's close; the dock icon.
 
-**Then:** TV-1's rest (docs/handoff.md), or Phase 10 (packaging).
+**Then:** the Google TV sweep (docs/handoff.md "Start here"), then Phase 10 (packaging).
 
 ## ADR-008, ADR-009, ADR-010, ADR-011
 **Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19).** **Phase 3: ADR-010 (Accepted 2026-09-19; the 1-hour soak run the same day — see "The soak run").** **Phase 4: ADR-011 (Accepted 2026-09-27 at the phase exit).** **Phase 5: ADR-012 (Accepted 2026-09-29 at the phase exit).** **Phase 6: ADR-013 (Accepted 2026-09-29 at the phase exit).** **Phase 7: ADR-014 and Phase 8: ADR-015 (both Accepted 2026-10-13 on your word, without the TV sitting; the matrix on the real TV stays an open check).** **Phase 9: ADR-016 (started 2026-10-13; steps 1–6 and the audit's first parts are in it).** Each is written straight into docs/decisions.md as its steps land, so there is one source of truth.
@@ -241,6 +241,7 @@ _Update at the end of every session._
 - ~~App name and icon~~ — Bijou and its jewel, 2026-10-14 (ADR-018); the jewel is a trillion since the sixth session (ADR-022)
 
 ## Known issues
+- **On the Bedroom TV, found by you with the remote (2026-10-15), open** (causes and plans in docs/handoff.md "Start here"): Live TV has no sound (likely Bijou's own mute, kept from my test, with no control on a TV to undo it); the Google TV keyboard can't be used in the search bar or the filters, and Right from the rail on Movies lands in the filter; the player's controls can't be reached by remote, and a film can't be paused; in Favorites, Left from a tab goes to the rail; the rail's expand toggle does nothing (a TV is too narrow for it); Home's "See all" can't be reached; the icon isn't round (no adaptive icon). **Fixed, not yet on the TV:** Back leaving the whole app.
 - **The Google TV emulator draws no picture** from mpv (`eglCreateContext: EGL_BAD_ATTRIBUTE`): sound, the decoder and the controls run. A real TV is untested (TV-0).
 - **The app on a TV is still the desktop's shell** (TV-1's work, ADR-020's list): the rail overflows at 960 × 540, the D-pad can't leave a text field, Pick categories opens with nothing focused, the player's ←/→ seek so the remote can't reach its controls, the remote's Home leaves the app, desktop words and the cast button show.
 - **A seek with the TV's own remote in a film cast through the relay goes back to where the stream began** (the stream has no index to seek in; as before). Seek from the app
