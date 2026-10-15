@@ -1,140 +1,131 @@
-# Handoff — 2026-10-15, end of the ninth session: TV-0 done, the TV's Bijou begun, and the user's TV bug list open (start with "Start here")
+# Handoff — 2026-10-15, end of the tenth session: the user's TV bug list fixed on the Bedroom TV (start with "Start here")
 
 ## Start here (the next session)
-The ninth session ended mid-sweep, at the user's request ("get me a full
-hand off to continue on a new chat"). **Everything is committed** (7a315ef,
-9eea021, 584e5ec and the handoff commit after them), nothing is pushed, and
-`dist/bijou-0.1.0.apk` is built from the last code commit. **The Bedroom TV
-still runs an older build** (from ~02:40, before the Back fix): install the
-new one first.
+The tenth session fixed the user's TV bug list and checked each fix on the
+Bedroom TV by remote keys over adb (ADR-026), then the user's second round
+(16:00: the keyboard as a side panel with a blinking caret and a solid
+focused key, results beside it; a 1280-wide canvas on a TV; Movies stuck
+after the filter; ADR-026's addendum). **Everything is committed**
+(d279342, 2f52c2b, a9d503a, c85dbdf, c699b53, b70c4ce, the keyboard and
+canvas commit, and the docs commit after them), **nothing is pushed**,
+and `dist/bijou-0.1.0.apk` (every ABI) is built from the last code
+commit; the TV has the same code (an `android-arm` build, installed
+last).
 
-**The user's last words:** "do an overall sweep to the app, and make
-everything in it support the google tv version with a tv full experience,
-and also fix all the bugs above and also if there are any way to enhance
-the performance and better utilization for the resources then do it … u
-have the bedroom tv available for u and do it asap." So: **TV-1 and TV-2's
-remote handling, now, on the real TV**, the desktop unchanged
-([[tv-version-is-tv-only]] in memory; ADR-025).
+### What is left on the TV (in this order)
+1. **The user's ears:** whether Live TV has sound now (4950 was silent).
+   The fix (on a TV the player is always at full volume, unmuted:
+   `PlayerSoundController`) is proven by tests, but an mpv mute never
+   shows in Android's audio log, so adb can't tell. **Careful:** the
+   `muted … clientVolume` lines in `dumpsys audio` are uid 10038, the
+   Google TV launcher's own muted trailers; Bijou's players are OpenSL ES
+   under uid 10008. If still silent with the mute ruled out, look at the
+   stream's audio (stream info; `BIJOU_MPV_LOG=ao,ad,cplayer`): E-AC-3 or
+   AC-3 5.1 through `ao=opensles`.
+2. **A black preview for the first channel** right after Live TV opens
+   (sometimes): the log says `First frame in … ms (no, null)` — mpv
+   started before the preview's surface existed (`AndroidVideoController`
+   sets `vo`/`vid` when `wid` arrives and seeks to re-open, which a live
+   stream may not honour). Full screen shows the picture. Look at
+   `third_party/media_kit_video/.../android_video_controller/real.dart`
+   `widListener` and when `PlaybackCoordinator.playLive` runs versus the
+   preview's `Video` widget creating its surface.
+3. **Movies and Series land on their filter**, not the grid, when entered
+   from the rail (no keyboard pops up any more; Down twice reaches the
+   posters). Land on the grid on a TV.
+4. **Back on Connect drops a typed form** (the route pops). Ask before
+   discarding, or keep the draft.
+5. **Overscan margins** (48 × 27 dp; the 1280 canvas has none yet),
+   TV-3/TV-4's own layouts on the canvas (larger focus scale on posters,
+   the Guide's rows), holding OK on a real remote (adb can't hold a key).
+6. **The canvas (`TvCanvas`, ADR-026's addendum)** scales the whole app
+   from 1280 wide to the TV's 960: check anything measured in screen
+   pixels on a TV (the player's surface size, images' decode widths:
+   `ArtworkImage` asks for the logical width × the scaled DPR).
+7. **Performance** (measured, ADR-026): at rest 91 MB, ~0.5 % CPU; a
+   1080p channel full screen 121 MB and ~0.8–1.4 cores of 4, mostly the
+   video as a Flutter texture (raster ~45 %, Android's main thread ~25 %).
+   Only a `SurfaceView` (Media3, or a platform view) would lower it: the
+   engine question ADR-025 left open, worth it with the user's answer on
+   a soundbar/HDR.
 
 ### Reaching the Bedroom TV
-- At 04:18 the Chromecast was asleep (`standBy=True`) and **its adb service
-  was gone** (no `_adb-tls-connect._tcp` on mDNS, 5555 closed): Android turns
-  Wireless debugging off when the device restarts (likely after tonight's
-  Play Store updates). **The user switches it on again** (Settings → System →
-  Developer options → Wireless debugging → On); the pairing is kept. Then
-  `timeout 8 avahi-browse -rtp _adb-tls-connect._tcp | grep IPv4` for the
-  port and `~/Android/Sdk/platform-tools/adb connect 192.168.1.231:<port>`.
-- **The user uses the TV with the remote while you work** (at 03:5x it
-  showed Google Play's "Manage apps & games"; two of my keys landed there).
-  Take a screenshot before sending keys, and stop when it isn't Bijou.
-- **The provider:** the user said yes at 04:18 for about 60 minutes (to
-  ~05:20). A new session asks again with a pop-up before any play
-  ([[ask-before-provider-streams]]).
-- Install: `adb -s 192.168.1.231:<port> install -r dist/bijou-0.1.0.apk`
-  (Bijou keeps its data: same debug key). The app's log: `adb logcat | grep
-  ' flutter '`.
+- **Wireless debugging goes off when the TV restarts**; the user switches
+  it on again (Settings → System → Developer options → Wireless debugging);
+  the pairing is kept. Then `timeout 8 avahi-browse -rtp
+  _adb-tls-connect._tcp | grep IPv4` for the port and
+  `~/Android/Sdk/platform-tools/adb connect 192.168.1.231:<port>`
+  (38317 this session).
+- **Ask before the TV and before the provider** (pop-ups, memory). The
+  provider gave 401 (its one connection taken) at 04:50 this session.
+- **Install:** `flutter build apk --release --target-platform android-arm`
+  (80 s, the TV is 32-bit) and `adb -s 192.168.1.231:<port> install -r
+  build/app/outputs/flutter-apk/app-release.apk`. **Never run another
+  flutter command during a build** (`flutter test`, even `flutter
+  analyze`): it rewrites Android's plugin list with the test plugin and
+  the build fails (`dev.flutter.plugins.integration_test does not
+  exist`).
+- **The fake panel on the LAN:** `dart run
+  tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
+  Bijou has it as a source ("192.168.1.254", test/test) and is **browsing
+  it** now. **Home always shows the provider's Continue watching (The Bad
+  Guys 2) and Recently watched rows, whatever source is browsed, and the
+  first focus at launch is that film's card.**
+- **Keys:** `adb shell input keyevent KEYCODE_DPAD_…` (and `_CENTER`,
+  `_BACK`, `_HOME`, digits). **Never send OK without a screenshot taken
+  after the last move showing what has the focus, and never chain OK
+  after moves in one command** (this session's slip, below). A helper:
+  send keys, then crop a screenshot (`adb exec-out screencap -p`).
+- **Typing on Bijou's keyboard by adb** is a walk over the keys (the
+  arrows move by key, ↑/↓ return along the path they came). A plugged-in
+  keyboard types into a field directly; `adb shell input text` does too,
+  into a focused field (not into the keyboard panel).
 
-### The user's TV bug list (from using it with the remote), with the cause and the plan
-1. **Back left the whole app** ("it will take me back but also it will
-   leave from the whole app"). **Fixed in 9eea021, not yet on the TV.**
-   Cause: the player took Back's key-down (one step back) and left its
-   key-up to Android, which did a second, system back, and a second back
-   at a section's root closes the app. Also, any section's root closed the
-   app on one Back. Now: the player takes Back through
-   `BackButtonListener` (`_onBack`: panel, stream info, the next-episode
-   card, then leave); the remote keys it maps have their key-up taken too;
-   on a TV the shell's `_backOnTv` sends Back at a section's root to Home,
-   and only Back on Home leaves. Tests: `tv_shell_test` (fails without the
-   fix), `player_screen_test` "the system's back". **Check on the TV.**
-2. **Live TV has no sound** (channel 4950, which plays with sound on the
-   laptop). **Likely cause, mine:** I pressed M (mute) in the TV's player at
-   01:12 during the measurements; `PlayerSoundController` keeps mute across
-   launches (ADR-017), and ADR-025 removed the volume and mute controls on
-   a TV, so it can't be undone there. **Fix (not written yet):** on a TV,
-   `PlayerSoundController.build` returns full volume, unmuted, ignoring the
-   stored level, and `_set` does nothing (the remote's volume works the TV).
-   Also: in a film the player's ↑/↓ call `_sound.nudge` (volume) — not on a
-   TV. Then play 4950 and read its audio in stream info (if it is E-AC-3 or
-   AC-3 5.1 and silent unmuted, look at `ao=opensles` with 6 channels;
-   `BIJOU_MPV_LOG=ao,ad,cplayer`).
-3. **Text fields: the Google TV keyboard opens and nothing can be typed or
-   moved; only Back leaves** (the search bar; Movies' filter, which Right
-   from the rail lands on and opens the keyboard: "unaccessible"). **Plan:**
-   a `TvMode` inherited flag (beside `KeyHints`), and in `AppTextField`,
-   `SearchField` and the search overlay's own `TextField` on a TV: the field
-   is `readOnly` until OK (so focus doesn't open the keyboard), the arrows
-   map to `DirectionalFocusIntent(direction, ignoreTextFields: false)` in a
-   `Shortcuts` around the field (the app-level text shortcuts otherwise move
-   the caret, and the default intent ignores text fields), OK (ActivateIntent
-   via `TvSelectKey`) turns editing on (EditableText opens the input
-   connection when `readOnly` turns false while focused), the keyboard's
-   Done/Back turns it off. **Then see on the TV whether Gboard can be driven
-   at all** in a Flutter view (typing via `adb shell input text` worked at
-   onboarding; the user's D-pad didn't). If it can't, an in-app D-pad
-   keyboard (docs/07's TV Search) is the way. Also: on a TV the Movies and
-   Series pages should land on the grid, not the filter.
-4. **Favorites: Right walks the tabs, Left jumps to the rail.** Look at the
-   tabs (`CountTab` in `favorites_screen.dart` ~138) and what takes Left
-   (the screen's own key handler ~463 handles ←/→ on group headers; the
-   shell sends Left at the content's edge to the rail). Fix so Left walks
-   the tabs back.
-5. **The rail's expand toggle does nothing on the TV:** the rail expands
-   only when the window is at least `WindowSizes.railCollapseWidth` (1280)
-   wide; a 1080p TV is 960. **Decided: no toggle on a TV**
-   (`NavRail`'s `_ToggleItem`); maybe later the rail shows its labels while
-   it has the focus (Google TV's own pattern), as an overlay.
-6. **Live TV's player: the controls can't be reached with the remote**
-   ("I cant do anything with the remote other than moving between
-   channels"). Cause: the player's `_onKey` sits above the OSD's buttons and
-   takes the arrows (zap, panel) even when a button has the focus, and
-   nothing focuses a button. **Plan (docs/07: OK/Info shows the OSD, Back
-   closes it, then leaves):** on a TV, OK with the picture focused shows the
-   OSD and focuses its first control; while a control has the focus the
-   arrows and OK pass to it (the player's `_onKey` returns ignored when
-   `_focus.hasFocus && !_focus.hasPrimaryFocus`) and the OSD stays (pinned);
-   Back puts the focus back on the picture and hides the OSD; ↑/↓ zap and
-   ← (the panel) only with the picture focused.
-7. **A film: no pause or resume, nothing works** ("I cant have full
-   control with a movie"). Cause: OK reaches nothing (no ActivateIntent on
-   the picture), ↑/↓ turn the volume. **Plan:** on a TV, OK toggles pause
-   (and shows the OSD), ←/→ seek 10 s (held: faster), ↓ shows the OSD
-   focused on Play, the media keys as now, Back as in 6.
-8. **The sweep the user asked for**, beyond these: every screen by remote
-   (Home's rows and "See all", which the user can't reach — see below; the
-   Guide; Movies/Series grids and pages; Search; Settings; dialogs; the
-   source switcher), overscan margins (48 × 27 dp), TV sizes, the remaining
-   desktop words ("this computer" in Settings → Data, the Guide's import
-   error, the reminders' error), Back on Connect losing a typed form, the
-   Settings that mean nothing on a TV (Hardware decoding, maybe the buffer
-   presets).
-9. **Home's "See all" can't be reached with the remote** (the user). The
-   section header's link sits right of the title; nothing moves the focus
-   there from the cards. **Plan:** on a TV a "See all" card at the end of
-   each row (reached with → at the row's end), the TV pattern; keep the
-   header link for the desktop.
-10. **The TV icon:** the user asked for "a tv compatible design, like more
-    circular, same logo". The Android launcher icons are legacy square PNGs
-    (`android/app/src/main/res/mipmap-*`, written by
-    `tools/brand/make_icons.py`; no `mipmap-anydpi-v26`). **Plan:** an
-    adaptive icon (`ic_launcher.xml` with a background layer — the accent
-    tile — and a foreground layer — the trillion inside the 66 dp safe
-    zone of 108 dp), and `android:roundIcon`; the 320 × 180 banner stays.
-    Draw it in `make_icons.py` so the script stays the one source (ADR-022).
-11. **Performance** (the user: "better utilization for the resources"):
-    candidates measured nowhere yet: decode posters at the TV's size
-    (density 2 at 960 logical px: check `ArtworkImage` widths), the guide's
-    retention on a TV (docs/07: −2 h to +3 days), the sync's memory on 2 GB,
-    `dumpsys gfxinfo`/frame times while scrolling Home and the grids on the
-    TV. Measure first.
+### The user's bug list, as fixed (ADR-026)
+1. **Back left the app** — fixed last session (9eea021), now on the TV:
+   Back from the player to Live TV, Back at Live TV to Home.
+2. **No sound** — the player's own mute can't happen on a TV any more;
+   unheard (above).
+3. **Text fields and the keyboard** — Bijou's own keyboard (OK on a
+   field); the whole sign-in to the fake panel was typed with it on the
+   TV; Search opens with it and shows results as the words come.
+4. **Favorites' tabs** — Left moves within the screen first; only at its
+   edge to the rail.
+5. **The rail's toggle** — gone on a TV.
+6. **Live TV's player** — OK shows the controls on Channels; the arrows
+   walk them (never to the picture, which was the stop past the last
+   one); OK presses; Back returns to the picture.
+7. **A film** — OK pauses and plays on, ←/→ seek, ↓ to the controls on
+   Play.
+8. **The sweep:** the top bar by Up (Search, the source switcher: neither
+   was reachable), Down back; the focus never lost (Settings came back
+   from the sign-in with nothing focused); no Download on a TV (a film's
+   page had it), no Export/Import, no Hardware decoding, "this TV".
+9. **Home's See all** — a See all card at each row's end.
+10. **The icon** — adaptive, round on Google TV, the same jewel.
+11. **Performance** — measured (above); nothing changed.
 
-### Also from tonight, to know
-- **The mis-tap:** at 02:42 a tap played beIN SP 1 (4K) from the provider
-  for ~13 s, after the agreed hour, before a force-stop. Home's "Recently
-  watched channels" then listed beIN SP 4 and SP 5 too, which I can't
-  account for (the TV's log was cleared before I looked); whatever played,
-  played in those 13 s (every later input is known).
-- **Taps are for setup only, never on a screen with playable items**; use
-  keys, and a fresh screenshot before each tap.
+**The tenth session, short:** you pasted the ninth session's hand-off
+and wrote "continue"; at the pop-up you switched Wireless debugging on
+and said yes to the TV and to the provider ("it's idle now", about an
+hour from 04:24).
+- **Your provider:** 4950 (beIN SP 2 ULTRA) and channel 1 both got 401
+  at 04:50 (the one connection in use elsewhere); Bijou was force-stopped
+  at once and the rest ran on the fake panel.
+- **One slip, owned:** at 05:46, after closing Search, a chain of keys
+  meant for Live TV (Left, Down, OK, Right, Right, OK) landed on Home's
+  Continue watching card, and **The Bad Guys 2 opened from your provider**
+  for about a minute (paused after a few seconds) before I force-stopped
+  Bijou at 05:47:52, after your provider hour. The rule above (no OK
+  without a fresh screenshot) is in memory now.
+- **A claim corrected:** I first read `muted … clientVolume` in Android's
+  audio log as Bijou's mute; it was the launcher's trailers. The player
+  commit's message was reworded before anything was pushed.
+- **Checks:** analyze and format clean; the full suite twice under
+  `TZ=UTC` (last 4,958 passed, 20 skipped), then the new tests; on the TV
+  as above. **Left running:** nothing (the fake panel stopped with the
+  first half of the session; the TV's Bijou now browses your provider,
+  the fake source removed). The TV shows Bijou's Home.
 
 **The ninth session, short:** you turned on Wireless debugging on the
 Bedroom TV and network control on the Roku TV, wrote "continue the work",
@@ -339,15 +330,15 @@ TV's bar and Phase 9.
 ## Before you start the next session (user)
 **Your list:**
 1. **Push** this session's commits (`git log origin/main..HEAD`).
-2. **Turn Wireless debugging back on** on the Bedroom TV (Settings → System
-   → Developer options → Wireless debugging → On); no new pairing needed.
-   Android turns it off when the TV restarts.
-3. **Say yes to the provider again** when the next session asks (it asks
-   before any play).
-4. Your bug list is in "Start here" above, with the cause and the plan for
-   each; the Back fix is done and goes on the TV with the next install.
+2. **Listen to Live TV on the Bedroom TV** (4950, which was silent): the
+   fix can't be heard over adb.
+3. **Try it with the real remote:** OK on a field opens Bijou's keyboard;
+   in the player OK shows the controls (a film: pauses); holding OK on an
+   item opens its menu (adb can't hold a key).
+4. **Wireless debugging** goes off when the TV restarts: switch it on
+   again before a session that uses the TV.
 5. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
-   yes; ADR-025.)
+   yes; ADR-025. It would also make playback lighter: ADR-026's numbers.)
 6. **The Roku, later** (your call): Roku Media Player on it, or a Bijou
    channel of ours.
 7. Still from before: Bijou and the trillion (ADR-018/022); the one real
@@ -380,23 +371,22 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 in
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 and ADR-026 in
 docs/decisions.md. Check CI on the last push.
-Wireless debugging is on again on the Bedroom TV; it is free for you.
-Do the Google TV sweep from "Start here": install the latest build on the
-Bedroom TV, then fix my bug list (sound, text fields and the keyboard, the
-player's controls by remote, a film's pause, Favorites' tabs, the rail's
-toggle, Home's See all, the round TV icon) and the rest of the TV
-experience, with performance, testing each on the TV. Ask me before playing
-from my provider.
+Then carry on with the Google TV list in "Start here" (the first channel's
+black preview, Movies/Series landing on the grid, Back on Connect, Search's
+TV layout, overscan), testing on the Bedroom TV. Ask me before using the TV
+and before playing from my provider.
 ```
 
 ## Where things stand
 - **TV-0: done (ADR-025).** media_kit with mpv's direct output on Android;
   the release APK runs on the Bedroom TV (a Chromecast with Google TV 4K).
-- **TV-1: begun.** The TV-only gates, the remote's keys, OK on release and
-  held for the menu, first focus, playback off screen, "Still watching?".
-  The rest is in "What's next".
+- **TV-1: begun; the user's bug list fixed (ADR-026).** The TV-only gates,
+  the remote's keys, OK on release and held for the menu, first focus,
+  playback off screen, "Still watching?" (ADR-025); Bijou's keyboard, the
+  shell's edges, the player by remote, See all cards, a round icon
+  (ADR-026). What's left is in "Start here".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
 - **Schema is v10**; no new dependency in pubspec, no new settings key.
