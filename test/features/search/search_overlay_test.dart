@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
@@ -15,6 +17,7 @@ import 'package:iptv_player/features/search/data/search_providers.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/search/presentation/search_state.dart';
+import 'package:iptv_player/features/search/presentation/search_text.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
@@ -44,7 +47,11 @@ void main() {
     }
   }
 
-  Future<void> open(WidgetTester tester, {bool seed = true}) async {
+  Future<void> open(
+    WidgetTester tester, {
+    bool seed = true,
+    FormFactor formFactor = FormFactor.desktop,
+  }) async {
     live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
     if (seed) await tester.runAsync(live.seed);
@@ -53,6 +60,7 @@ void main() {
       overrides: [
         ...live.overrides,
         searchRepositoryProvider.overrideWithValue(search),
+        formFactorProvider.overrideWithValue(formFactor),
       ],
     );
     await settle(tester);
@@ -341,6 +349,45 @@ void main() {
   });
 
   group('keyboard', () {
+    testWidgets("on a TV: the remote's keyboard opens with Search and "
+        'types live; Done leaves the results to ↓ and OK; ↑ at the top '
+        'brings the keyboard back', (tester) async {
+      search.answers['arena'] = full('arena');
+      await open(tester, formFactor: FormFactor.tv);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+      expect(
+        find.text(searchCoverage(library: false)),
+        findsOneWidget,
+        reason: 'no library on a TV',
+      );
+
+      for (final letter in ['a', 'r', 'e', 'n', 'a']) {
+        await tester.tap(
+          find.descendant(
+            of: find.byType(RemoteKeyboard),
+            matching: findByLabel(letter),
+          ),
+        );
+        await tester.pump();
+      }
+      await tester.pump(searchDelay);
+      await settle(tester);
+      expect(cursorRow(tester), 'Arena Sports 1');
+
+      await tester.tap(findByLabel('Done'));
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search field');
+
+      await key(tester, LogicalKeyboardKey.arrowDown);
+      expect(cursorRow(tester), 'Arena Sports 2');
+      await key(tester, LogicalKeyboardKey.arrowUp);
+      expect(cursorRow(tester), 'Arena Sports 1');
+      await key(tester, LogicalKeyboardKey.arrowUp);
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+    });
+
     testWidgets('↓ moves through every group, Tab jumps to the next one, '
         'Shift+Tab back', (tester) async {
       await open(tester);

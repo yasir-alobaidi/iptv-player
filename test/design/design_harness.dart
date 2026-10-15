@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/focus/tv_mode.dart';
+import 'package:iptv_player/design/focus/tv_select_key.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -15,6 +17,7 @@ Future<void> pumpDesign(
   AppDensity density = AppDensity.comfortable,
   bool reduceMotion = false,
   double textScale = 1,
+  bool tv = false,
 }) async {
   // Focus highlights only render in "traditional" mode, which a real
   // desktop is always in.
@@ -28,9 +31,15 @@ Future<void> pumpDesign(
         density: density,
         reduceMotion: reduceMotion,
       ),
-      builder: textScale == 1
+      builder: textScale == 1 && !tv
           ? null
-          : (context, app) => AppTextScale(scale: textScale, child: app!),
+          : (context, app) {
+              final scaled = AppTextScale(scale: textScale, child: app!);
+              // As the app on a TV has it (lib/app/app.dart).
+              return tv
+                  ? TvMode(on: true, child: TvSelectKey(child: scaled))
+                  : scaled;
+            },
       home: Scaffold(body: Center(child: child)),
     ),
   );

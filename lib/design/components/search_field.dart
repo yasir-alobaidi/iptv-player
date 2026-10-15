@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/kbd.dart';
+import 'package:iptv_player/design/components/remote_keyboard.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/focus/tv_mode.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -9,7 +11,8 @@ import 'package:iptv_player/design/tokens.dart';
 /// the left, `Ctrl K` keycap on the right).
 ///
 /// With [onTap] set it behaves as a button that opens the search overlay
-/// (the shell's use, Phase 1 step 4); otherwise it is a live text field.
+/// (the shell's use, Phase 1 step 4); otherwise it is a live text field,
+/// which on a TV the remote types in with [showRemoteKeyboard].
 class SearchField extends StatefulWidget {
   const new({
     this.controller,
@@ -58,16 +61,29 @@ class _SearchFieldState extends State<SearchField> {
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
     if (_ownsFocusNode) _focusNode.dispose();
+    _ownController.dispose();
     super.dispose();
   }
 
   void _onFocusChange() => setState(() => _focused = _focusNode.hasFocus);
+
+  late final TextEditingController _ownController = TextEditingController();
+  TextEditingController get _controller => widget.controller ?? _ownController;
+
+  void _openKeyboard() => showRemoteKeyboard(
+    context,
+    controller: _controller,
+    label: widget.hint,
+    onChanged: widget.onChanged,
+    onSubmitted: widget.onSubmitted,
+  );
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final asButton = widget.onTap != null;
+    final onTv = TvMode.of(context);
     // In button mode FocusableSurface draws the ring, so the box keeps
     // its resting border instead of showing focus twice.
     final showsOwnFocus = _focused && !asButton;
@@ -83,24 +99,32 @@ class _SearchFieldState extends State<SearchField> {
                 .withWeight(500)
                 .copyWith(color: colors.textTertiary),
           )
-        : TextField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            autofocus: widget.autofocus,
-            onChanged: widget.onChanged,
-            onSubmitted: widget.onSubmitted,
-            style: tokens.text.label
-                .withWeight(500)
-                .copyWith(color: colors.textPrimary),
-            cursorColor: colors.accentBase,
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              hintText: widget.hint,
-              hintStyle: tokens.text.label
+        : RemoteTextEntry(
+            onOpen: _openKeyboard,
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              autofocus: widget.autofocus,
+              // A TV types with the remote's keyboard, never
+              // Android's (a keyboard plugged in still types).
+              keyboardType: onTv ? TextInputType.none : null,
+              showCursor: onTv ? false : null,
+              enableInteractiveSelection: !onTv,
+              onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
+              style: tokens.text.label
                   .withWeight(500)
-                  .copyWith(color: colors.textTertiary),
-              contentPadding: EdgeInsets.zero,
+                  .copyWith(color: colors.textPrimary),
+              cursorColor: colors.accentBase,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: widget.hint,
+                hintStyle: tokens.text.label
+                    .withWeight(500)
+                    .copyWith(color: colors.textTertiary),
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
           );
 

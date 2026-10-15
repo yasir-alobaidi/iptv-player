@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_tooltip.dart';
+import 'package:iptv_player/design/components/remote_keyboard.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/focus/tv_mode.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 /// Single-line text input (canvas: 48 px tall, radius 10, surface1 on a
 /// 1 px border). Supports a clear button, a password reveal and an inline
-/// error message.
+/// error message. On a TV the remote types with [showRemoteKeyboard]
+/// (OK on the field).
 class AppTextField extends StatefulWidget {
   const new({
     this.controller,
@@ -81,12 +84,23 @@ class _AppTextFieldState extends State<AppTextField> {
   void _onFocusChange() => setState(() => _focused = _focusNode.hasFocus);
   void _onTextChange() => setState(() {});
 
+  void _openKeyboard() => showRemoteKeyboard(
+    context,
+    controller: _controller,
+    label: widget.label ?? widget.hint,
+    obscure: widget.obscure && !_revealed,
+    keyboardType: widget.keyboardType,
+    onChanged: widget.onChanged,
+    onSubmitted: widget.onSubmitted,
+  );
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final hasError = widget.errorText != null;
     final obscured = widget.obscure && !_revealed;
+    final onTv = TvMode.of(context);
 
     final borderColor = hasError
         ? colors.danger
@@ -100,7 +114,11 @@ class _AppTextFieldState extends State<AppTextField> {
       enabled: widget.enabled,
       autofocus: widget.autofocus,
       obscureText: obscured,
-      keyboardType: widget.keyboardType,
+      // A TV types with the remote's keyboard, never Android's (a
+      // keyboard plugged in still types).
+      showCursor: onTv ? false : null,
+      enableInteractiveSelection: !onTv,
+      keyboardType: onTv ? TextInputType.none : widget.keyboardType,
       onChanged: widget.onChanged,
       onSubmitted: widget.onSubmitted,
       style: tokens.text.body.copyWith(color: colors.textPrimary),
@@ -135,12 +153,13 @@ class _AppTextFieldState extends State<AppTextField> {
               color: colors.surface1,
               borderRadius: tokens.radii.controlAll,
               border: Border.all(color: borderColor),
-              boxShadow: _focused && !hasError
+              // Focused in its error state too: the glow in the error's
+              // color (hard rule 5; a remote has no caret to show it).
+              boxShadow: _focused
                   ? [
                       BoxShadow(
-                        color: colors.accentBase.withValues(
-                          alpha: tokens.focus.glowOpacity,
-                        ),
+                        color: (hasError ? colors.danger : colors.accentBase)
+                            .withValues(alpha: tokens.focus.glowOpacity),
                         spreadRadius: tokens.focus.glowWidth,
                       ),
                     ]
@@ -156,7 +175,9 @@ class _AppTextFieldState extends State<AppTextField> {
                   ),
                   SizedBox(width: tokens.spacing.s8 + 2),
                 ],
-                Expanded(child: field),
+                Expanded(
+                  child: RemoteTextEntry(onOpen: _openKeyboard, child: field),
+                ),
                 if (widget.showClear && _controller.text.isNotEmpty)
                   _FieldAction(
                     icon: AppIcons.close,

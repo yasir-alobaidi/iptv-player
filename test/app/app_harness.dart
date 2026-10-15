@@ -13,6 +13,7 @@ import 'package:iptv_player/core/library/library_repository.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/error_reporter.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
@@ -93,8 +94,19 @@ Future<AppUnderTest> pumpApp(
           : MaterialApp.router(
               theme: buildAppTheme(),
               routerConfig: router,
-              builder: (context, child) => AppGlobalShortcuts(
-                child: AppToasts(child: child ?? const SizedBox.shrink()),
+              // As the app has it (lib/app/app.dart): a TV's remote OK
+              // and the design system's TV mode.
+              builder: (context, child) => Consumer(
+                builder: (context, ref, _) {
+                  final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+                  final app = AppGlobalShortcuts(
+                    child: AppToasts(child: child ?? const SizedBox.shrink()),
+                  );
+                  return TvMode(
+                    on: onTv,
+                    child: onTv ? TvSelectKey(child: app) : app,
+                  );
+                },
               ),
             ),
     ),

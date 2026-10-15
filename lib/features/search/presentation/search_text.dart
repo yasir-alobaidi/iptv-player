@@ -173,10 +173,11 @@ String hiddenMatchesLine(int count) => count == 1
     ? '1 hidden channel matches.'
     : '${formatCount(count)} hidden channels match.';
 
-/// The body with no text and no recent search (sketch C).
-const searchCoverage =
+/// The body with no text and no recent search (sketch C); on a TV,
+/// with no library, nothing of [library]'s videos.
+String searchCoverage({required bool library}) =>
     'Channels, what’s on now and next, movies and series, from every '
-    'source — and the videos on this computer.';
+    'source${library ? ' — and the videos on this computer' : ''}.';
 
 /// The footer's recent searches: "Recent: tennis open · cup final".
 String recentLine(List<String> recent) =>

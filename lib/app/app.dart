@@ -51,9 +51,12 @@ class IptvPlayerApp extends ConsumerWidget {
               child: AppToasts(child: child ?? const SizedBox.shrink()),
             ),
           );
-          return KeyHints(
-            shown: !onTv,
-            child: onTv ? StillWatching(child: TvSelectKey(child: app)) : app,
+          return TvMode(
+            on: onTv,
+            child: KeyHints(
+              shown: !onTv,
+              child: onTv ? StillWatching(child: TvSelectKey(child: app)) : app,
+            ),
           );
         },
       ),

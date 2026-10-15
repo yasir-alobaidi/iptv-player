@@ -10,6 +10,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_images.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
@@ -73,6 +74,39 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// How many rows a page is, from the body's height.
   var _pageRows = 8;
 
+  /// A TV types with the remote's keyboard (docs/07): it opens with the
+  /// overlay, and again from the field.
+  bool get _onTv => ref.read(formFactorProvider) == FormFactor.tv;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_onTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openKeyboard();
+      });
+    }
+  }
+
+  void _openKeyboard() => unawaited(
+    showRemoteKeyboard(
+      context,
+      controller: _query,
+      label: searchHint,
+      onChanged: _session.setText,
+    ),
+  );
+
+  /// OK on the field (a TV): what the results' cursor is on, once there
+  /// are words; else the keyboard.
+  void _onFieldActivated() {
+    if (_query.text.trim().isNotEmpty && _at(_selectable) != null) {
+      _submit();
+    } else {
+      _openKeyboard();
+    }
+  }
+
   @override
   void dispose() {
     _query.dispose();
@@ -101,6 +135,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     switch (key) {
       case LogicalKeyboardKey.arrowDown:
         return _moveBy(1, selectable);
+      // At the top on a TV, ↑ goes back to the words.
+      case LogicalKeyboardKey.arrowUp when _onTv && _cursor == 0:
+        _openKeyboard();
+        return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
         return _moveBy(-1, selectable);
       case LogicalKeyboardKey.pageDown:
@@ -244,6 +282,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// Ctrl+D on a movie: downloads it, or says it already is (the toast
   /// shows over search).
   KeyEventResult _download(List<_Entry> selectable) {
+    if (!ref.read(downloadsHereProvider)) return KeyEventResult.ignored;
     final entry = _at(selectable);
     if (entry case _HitEntry(hit: MovieHit(:final movie))) {
       unawaited(startDownloads(context, [movieDownloadRequest(movie)]));
@@ -367,11 +406,14 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     // here; a series downloads by its episodes, on its page.
     final toDownload = switch (hit) {
       MovieHit(:final movie)
-          when !(ref
-                  .read(downloadedKeysProvider(VodType.movie, movie.sourceId))
-                  .value
-                  ?.contains(movie.remoteKey) ??
-              false) =>
+          when ref.read(downloadsHereProvider) &&
+              !(ref
+                      .read(
+                        downloadedKeysProvider(VodType.movie, movie.sourceId),
+                      )
+                      .value
+                      ?.contains(movie.remoteKey) ??
+                  false) =>
         movie,
       _ => null,
     };
@@ -502,6 +544,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                                       : results.count,
                                   onChanged: _session.setText,
                                   onSubmitted: _submit,
+                                  onActivated: _onFieldActivated,
                                 ),
                               ),
                               if (syncing) const _StillArriving(),
@@ -568,7 +611,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
             vertical: tokens.spacing.s24,
           ),
           child: Text(
-            searchCoverage,
+            searchCoverage(library: ref.watch(downloadsHereProvider)),
             textAlign: TextAlign.center,
             style: tokens.text.caption.copyWith(
               color: tokens.colors.textTertiary,
@@ -776,6 +819,7 @@ class _QueryBar extends StatelessWidget {
     required this.count,
     required this.onChanged,
     required this.onSubmitted,
+    required this.onActivated,
   });
 
   final TextEditingController controller;
@@ -783,6 +827,9 @@ class _QueryBar extends StatelessWidget {
   final int? count;
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmitted;
+
+  /// OK on the field, on a TV.
+  final VoidCallback onActivated;
 
   @override
   Widget build(BuildContext context) {
@@ -808,27 +855,36 @@ class _QueryBar extends StatelessWidget {
           ),
           SizedBox(width: tokens.spacing.s12),
           Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              autofocus: true,
-              cursorColor: colors.accentBase,
-              style: tokens.text.searchQuery.copyWith(
-                color: colors.textPrimary,
-              ),
-              textInputAction: TextInputAction.search,
-              onChanged: onChanged,
-              onSubmitted: (_) {
-                onSubmitted();
-                // Enter keeps the keyboard in the field.
-                focusNode.requestFocus();
-              },
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: searchHint,
-                hintStyle: tokens.text.searchQuery.copyWith(
-                  color: colors.textTertiary,
+            child: RemoteTextEntry(
+              onOpen: onActivated,
+              // ↑/↓ move the results' cursor, the field keeping the focus.
+              arrowsLeave: false,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: true,
+                // A TV types with the remote's keyboard, never
+                // Android's (a keyboard plugged in still types).
+                keyboardType: TvMode.of(context) ? TextInputType.none : null,
+                showCursor: TvMode.of(context) ? false : null,
+                cursorColor: colors.accentBase,
+                style: tokens.text.searchQuery.copyWith(
+                  color: colors.textPrimary,
+                ),
+                textInputAction: TextInputAction.search,
+                onChanged: onChanged,
+                onSubmitted: (_) {
+                  onSubmitted();
+                  // Enter keeps the keyboard in the field.
+                  focusNode.requestFocus();
+                },
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: searchHint,
+                  hintStyle: tokens.text.searchQuery.copyWith(
+                    color: colors.textTertiary,
+                  ),
                 ),
               ),
             ),
