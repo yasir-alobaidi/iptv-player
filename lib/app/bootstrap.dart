@@ -78,9 +78,9 @@ Future<void> bootstrap() async {
   registerToolLicenses();
 
   final secrets = SecretRegistry();
-  // On Android the log file is inside the app's private folder, which
-  // adb can't read from a release build; logcat is where a TV's log is
-  // read (the lines are redacted before any output sees them).
+  // On Android logcat has the log too, and the file is where adb reads it
+  // (`AppPaths.logs`, ADR-027); the lines are redacted before any output
+  // sees them.
   final outputs = <LogOutput>[
     if (kDebugMode || Platform.isAndroid) ConsoleOutput(),
   ];
