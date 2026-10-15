@@ -14,7 +14,8 @@
 /// Faults (`/admin/faults` or the query): `http_status`, `slow_start_ms`,
 /// `ignore_range` (every answer is the whole file), `drop_after_bytes` (the
 /// connection closes once a body passes that byte of the file, so a request
-/// starting past it gets through) and `throttle_kbps`; for downloads
+/// starting past it gets through), `throttle_kbps` and `seek_delay_ms` (a
+/// range starting past the first byte waits that long); for downloads
 /// (Phase 8) `change_etag` (new validators on every answer, so `If-Range`
 /// never matches), `wrong_content_length` (a Content-Length 4 KiB past the
 /// body), `size_mb` (the file padded to that many MiB with
@@ -148,6 +149,10 @@ class VodRelay {
             etag: etag,
             modified: modified,
           );
+    if (faults.seekDelayMs case final ms?
+        when ms > 0 && range != null && range.start > 0) {
+      await Future<void>.delayed(Duration(milliseconds: ms));
+    }
     if (range == _unsatisfiable) {
       return Response(
         HttpStatus.requestedRangeNotSatisfiable,

@@ -282,13 +282,16 @@ final class Rig {
       channels: channels,
       progress: watchProgress ?? progress,
       decoders: decoders,
-      log: AppLog(output: MemoryOutput(), secrets: SecretRegistry()),
+      log: AppLog(output: logged, secrets: SecretRegistry()),
     );
     coordinator.states.listen(states.add);
     coordinator.timelines.listen(timelines.add);
   }
 
   final FakePlayerEngine engine;
+
+  /// The coordinator's log, its last lines.
+  final logged = MemoryOutput(bufferSize: 100);
   final resolver = FakeResolver();
   final prober = FakeProber();
   final history = FakeHistory();
@@ -299,4 +302,9 @@ final class Rig {
   final List<VodTimeline> timelines = [];
 
   PlaybackState get state => coordinator.state;
+
+  /// What the log holds, a line each.
+  List<String> get logLines => [
+    for (final event in logged.buffer) ...event.lines,
+  ];
 }

@@ -759,7 +759,11 @@ final class PlaybackCoordinator {
         ? timings.connectionLimitAttempts
         : timings.maxAttempts;
     if (!problem.retryable || _attempts >= limit) {
-      _log.warning(_tag, 'Playback failed: $problem after $_attempts tries');
+      _log.warning(
+        _tag,
+        'Playback failed: $problem after $_attempts tries'
+        '${problem.detail == null ? '' : ': ${problem.detail}'}',
+      );
       if (_leaving() case final leaving?) unawaited(_save(leaving));
       _set(PlaybackFailed(item, problem, attempts: _attempts));
       _openSource = null;
@@ -767,13 +771,18 @@ final class PlaybackCoordinator {
       return;
     }
     _attempts++;
-    _log.info(_tag, 'Reconnecting (attempt $_attempts of $limit): $problem');
+    _log.info(
+      _tag,
+      'Reconnecting (attempt $_attempts of $limit): $problem'
+      '${problem.detail == null ? '' : ': ${problem.detail}'}',
+    );
     _set(
       PlaybackReconnecting(
         item,
         attempt: _attempts,
         maxAttempts: limit,
         problem: problem,
+        hasPicture: _started,
       ),
     );
     _backoffTimer = Timer(timings.backoff[_attempts - 1], () async {

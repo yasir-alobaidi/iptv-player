@@ -53,6 +53,7 @@ final class PlaybackReconnecting extends PlaybackState {
     required this.attempt,
     required this.maxAttempts,
     required this.problem,
+    this.hasPicture = false,
   });
 
   @override
@@ -64,6 +65,12 @@ final class PlaybackReconnecting extends PlaybackState {
 
   /// Why the stream was lost.
   final PlaybackProblem problem;
+
+  /// Whether [item] has shown its own picture, which then stays up while
+  /// it reconnects. Until it has, the surface may still hold the last
+  /// stream's (a channel's, under a film resumed after it: ADR-027), so
+  /// none is shown.
+  final bool hasPicture;
 }
 
 /// Gave up, or can't play at all: the failure card (Retry / Next channel

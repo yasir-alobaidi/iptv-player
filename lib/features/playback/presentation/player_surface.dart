@@ -66,8 +66,13 @@ class PlayerSurface extends ConsumerWidget {
     final state =
         ref.watch(playbackStateProvider).value ?? const PlaybackIdle();
     final size = ref.watch(videoSizeProvider).value;
-    final showPicture =
-        state is PlaybackPlaying || state is PlaybackReconnecting;
+    // A stream reconnecting shows its own last picture, never the one
+    // before it (ADR-027).
+    final showPicture = switch (state) {
+      PlaybackPlaying() => true,
+      PlaybackReconnecting(:final hasPicture) => hasPicture,
+      _ => false,
+    };
     final file =
         state is PlaybackFailed &&
             state.problem.kind == PlaybackProblemKind.fileUnreadable

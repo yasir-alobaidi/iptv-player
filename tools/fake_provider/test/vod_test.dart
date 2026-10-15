@@ -367,6 +367,24 @@ void main() {
       expect(await body(response), hasLength(48 * 1024));
       expect(clock.elapsed, greaterThan(const Duration(milliseconds: 1300)));
     });
+
+    test('seek_delay_ms holds back a range past the first byte only', () async {
+      final clock = Stopwatch()..start();
+      final first = await send(
+        '$movieMp4?seek_delay_ms=600',
+        headers: {'range': 'bytes=0-1023'},
+      );
+      expect(await body(first), expected.sublist(0, 1024));
+      expect(clock.elapsed, lessThan(const Duration(milliseconds: 500)));
+      clock.reset();
+      final seek = await send(
+        '$movieMp4?seek_delay_ms=600',
+        headers: {'range': 'bytes=2048-'},
+      );
+      expect(seek.statusCode, HttpStatus.partialContent);
+      expect(await body(seek), expected.sublist(2048));
+      expect(clock.elapsed, greaterThan(const Duration(milliseconds: 550)));
+    });
   });
 
   group(

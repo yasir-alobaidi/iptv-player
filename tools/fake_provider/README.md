@@ -144,8 +144,9 @@ Set with `POST /admin/faults` (the whole set) or per request in the query
 - VOD files: `http_status`, `slow_start_ms`, `max_connections`,
   `ignore_range` (the whole file for any range), `drop_after_bytes` (the
   connection closes once a body passes that byte of the file, so a request
-  starting past it gets through) and `throttle_kbps` (kilobits per second)
-  (`lib/vod.dart`).
+  starting past it gets through), `throttle_kbps` (kilobits per second)
+  and `seek_delay_ms` (a range starting past the first byte, a seek's or a
+  resume's, is answered that much later) (`lib/vod.dart`).
 - Downloads (Phase 8, `lib/vod.dart`): `change_etag` (every answer has a
   new ETag and Last-Modified, so a resume's `If-Range` never matches and
   gets the whole file), `wrong_content_length` (Content-Length 4 KiB past

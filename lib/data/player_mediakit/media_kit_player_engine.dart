@@ -222,6 +222,18 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   DateTime _lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
   bool _disposed = false;
 
+  /// Buffering, as the watchdog and the picture's spinner hear it: mpv
+  /// waiting for its cache, or a seek still waiting after [_slowSeek].
+  bool _cacheWait = false;
+  bool _seekWait = false;
+  bool _buffering = false;
+  Timer? _slowSeekTimer;
+
+  /// A seek into what is buffered lands within a few frames; one still
+  /// waiting after this is waiting on the network (a panel can take
+  /// seconds to answer a range, ADR-027), so it is buffering, not a stall.
+  static const _slowSeek = Duration(milliseconds: 500);
+
   @override
   Stream<PlayerEvent> get events => _events.stream;
 
@@ -262,9 +274,31 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       'paused-for-cache',
       waitForInitialization: false,
       (value) async {
-        if (_open) _emit(PlayerBuffering(buffering: value == 'yes'));
+        _cacheWait = value == 'yes';
+        _updateBuffering();
       },
     );
+    // mpv's `seeking` is yes until playback has restarted where a seek
+    // (or a resume's start) asked; before the first frame the open's own
+    // wait covers it.
+    await _native.observeProperty('seeking', waitForInitialization: false, (
+      value,
+    ) async {
+      _slowSeekTimer?.cancel();
+      _slowSeekTimer = null;
+      if (value != 'yes') {
+        _seekWait = false;
+        _updateBuffering();
+        return;
+      }
+      if (!_open || !_started) return;
+      final generation = _generation;
+      _slowSeekTimer = Timer(_slowSeek, () {
+        if (generation != _generation || !_open) return;
+        _seekWait = true;
+        _updateBuffering();
+      });
+    });
     await _native.observeProperty(
       'demuxer-cache-duration',
       waitForInitialization: false,
@@ -293,6 +327,22 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     if (!_disposed) _events.add(event);
   }
 
+  void _updateBuffering() {
+    final buffering = _cacheWait || _seekWait;
+    if (buffering == _buffering) return;
+    _buffering = buffering;
+    if (_open) _emit(PlayerBuffering(buffering: buffering));
+  }
+
+  /// A new open, or none: nothing is waited for.
+  void _resetBuffering() {
+    _slowSeekTimer?.cancel();
+    _slowSeekTimer = null;
+    _cacheWait = false;
+    _seekWait = false;
+    _buffering = false;
+  }
+
   String _clean(String text) => redact(text, secrets: _secrets.values);
 
   @override
@@ -304,6 +354,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _lastError = null;
     _position = Duration.zero;
     _buffered = Duration.zero;
+    _resetBuffering();
     _sinceOpen
       ..reset()
       ..start();
@@ -328,19 +379,29 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       await _set('deinterlace', 'no');
     }
     final start = request.start;
-    await _player.open(
-      Media(
-        request.url,
-        start: start != null && start > Duration.zero ? start : null,
-      ),
-    );
+    final resume = start != null && start > Duration.zero;
+    await _player.open(Media(request.url, start: resume ? start : null));
     if (generation != _generation) return;
-    _pollFirstFrame(generation, autoDeinterlace: request.deinterlace == null);
+    _pollFirstFrame(
+      generation,
+      autoDeinterlace: request.deinterlace == null,
+      resume: resume,
+    );
   }
 
   /// The spike's proven test (ADR-003): the new file is playing and its
   /// video size is known, or it has no video at all.
-  void _pollFirstFrame(int generation, {required bool autoDeinterlace}) {
+  ///
+  /// A [resume] also waits for mpv to have got to its place (`seeking`
+  /// no): the first frame mpv decodes comes before it, and the panel may
+  /// take seconds to answer the range there (ADR-027). Until then the
+  /// open's own time runs, not the stall's, and nothing is shown as the
+  /// picture: the surface may still hold the last stream's.
+  void _pollFirstFrame(
+    int generation, {
+    required bool autoDeinterlace,
+    required bool resume,
+  }) {
     _firstFramePoll = Timer.periodic(const Duration(milliseconds: 40), (
       timer,
     ) async {
@@ -353,6 +414,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       final width = await _get('video-params/w');
       final noVideo = (await _get('vid')) == 'no';
       if (width.isEmpty && !noVideo) return;
+      if (resume && (await _get('seeking')) != 'no') return;
       if (generation != _generation || timer != _firstFramePoll) return;
       timer.cancel();
       _firstFramePoll = null;
@@ -463,6 +525,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _firstFramePoll = null;
     _open = false;
     _started = false;
+    _resetBuffering();
     await _player.stop();
     // The connection is closed once mpv is idle again.
     for (var i = 0; i < 50; i++) {
@@ -584,6 +647,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   Future<void> dispose() async {
     _disposed = true;
     _firstFramePoll?.cancel();
+    _slowSeekTimer?.cancel();
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }

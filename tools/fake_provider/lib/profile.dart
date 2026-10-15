@@ -114,6 +114,7 @@ class FakeFaults {
     this.ignoreRange = false,
     this.dropAfterBytes,
     this.throttleKbps,
+    this.seekDelayMs,
     this.changeEtag = false,
     this.wrongContentLength = false,
     this.sizeMb,
@@ -152,6 +153,7 @@ class FakeFaults {
       ignoreRange: asBool('ignore_range'),
       dropAfterBytes: asInt('drop_after_bytes'),
       throttleKbps: asInt('throttle_kbps'),
+      seekDelayMs: asInt('seek_delay_ms'),
       changeEtag: asBool('change_etag'),
       wrongContentLength: asBool('wrong_content_length'),
       sizeMb: asInt('size_mb'),
@@ -177,6 +179,11 @@ class FakeFaults {
   final bool ignoreRange;
   final int? dropAfterBytes;
   final int? throttleKbps;
+
+  /// A range that starts past a file's first byte (a player's seek, or a
+  /// resume's) is answered this much later: a panel slow to let a seek in
+  /// on its one connection, as the user's was on the Bedroom TV (ADR-027).
+  final int? seekDelayMs;
 
   /// Every answer about a file has a new ETag and Last-Modified, as if the
   /// file changed between requests: a resume's `If-Range` never matches,
@@ -222,6 +229,7 @@ class FakeFaults {
     'ignore_range': ignoreRange,
     'drop_after_bytes': dropAfterBytes,
     'throttle_kbps': throttleKbps,
+    'seek_delay_ms': seekDelayMs,
     'change_etag': changeEtag,
     'wrong_content_length': wrongContentLength,
     'size_mb': sizeMb,

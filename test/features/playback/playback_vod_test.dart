@@ -119,6 +119,80 @@ void main() {
     });
   });
 
+  // The Bedroom TV (ADR-027): The Bad Guys 2, resumed from Continue
+  // watching after a channel, sat on the channel's last picture under
+  // "Reconnecting" for about 30 s.
+  group('a resume after a channel', () {
+    /// Channel 1 plays, then movie 1 opens from 3 minutes in.
+    Rig resumedAfterChannel(FakeAsync async) {
+      final rig = Rig();
+      rig.coordinator.playLive(channel(1));
+      async.flushMicrotasks();
+      rig.engine.firstFrame();
+      rig.coordinator.playVod(PlayableMovie(movie(1)), from: minute * 3);
+      async.flushMicrotasks();
+      return rig;
+    }
+
+    test('the file gets 30 s for its picture; then it reconnects showing '
+        "no picture, never the channel's", () {
+      fakeAsync((async) {
+        final rig = resumedAfterChannel(async);
+        async.elapse(const Duration(seconds: 29));
+        expect(rig.state, isA<PlaybackOpening>());
+
+        async.elapse(const Duration(seconds: 1));
+        final reconnecting = rig.state as PlaybackReconnecting;
+        expect(reconnecting.hasPicture, isFalse);
+        expect(reconnecting.problem.detail, contains('open timeout'));
+        expect(
+          rig.logLines.last,
+          contains(
+            'Reconnecting (attempt 1 of 6): PlaybackProblem(network, null): '
+            'No picture within the open timeout',
+          ),
+        );
+
+        async.elapse(const Duration(seconds: 1));
+        expect(rig.engine.opened.last.start, minute * 3);
+        rig.engine.firstFrame();
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
+    });
+
+    test('once its own picture showed, a reconnect keeps it up', () {
+      fakeAsync((async) {
+        final rig = resumedAfterChannel(async);
+        rig.engine
+          ..duration(length)
+          ..firstFrame();
+        advancing(async, rig, 3, from: 180);
+        async.elapse(const Duration(seconds: 8));
+
+        final reconnecting = rig.state as PlaybackReconnecting;
+        expect(reconnecting.hasPicture, isTrue);
+        expect(reconnecting.problem.detail, contains('stalled'));
+      });
+    });
+
+    test('a slow seek is buffering: 15 s, not the 8 s of a stall', () {
+      fakeAsync((async) {
+        final rig = resumedAfterChannel(async);
+        rig.engine
+          ..duration(length)
+          ..firstFrame();
+        advancing(async, rig, 3, from: 180);
+        rig.coordinator.seek(minute * 6);
+        rig.engine.buffering(on: true);
+        async.elapse(const Duration(seconds: 12));
+        expect(rig.state, isA<PlaybackPlaying>());
+        rig.engine.buffering(on: false);
+        advancing(async, rig, 3, from: 360);
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
+    });
+  });
+
   group('saving where it was left', () {
     test('every 10 s while playing', () {
       fakeAsync((async) {
