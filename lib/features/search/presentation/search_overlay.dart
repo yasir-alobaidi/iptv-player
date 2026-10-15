@@ -840,10 +840,12 @@ class _QueryBar extends StatelessWidget {
               style: tokens.text.small.copyWith(color: colors.textTertiary),
             ),
           ],
-          SizedBox(width: tokens.spacing.s12),
           // A hint, not a control: Esc closes the overlay and a click
           // on the scrim does the same.
-          const ExcludeSemantics(child: Kbd('Esc')),
+          if (KeyHints.shownIn(context)) ...[
+            SizedBox(width: tokens.spacing.s12),
+            const ExcludeSemantics(child: Kbd('Esc')),
+          ],
         ],
       ),
     );
@@ -1182,7 +1184,7 @@ class _EntryRowState extends State<_EntryRow> {
 
   /// The Enter keycap on the cursor's row (canvas).
   List<Widget> _enterKey(BuildContext context) => [
-    if (widget.selected) ...[
+    if (widget.selected && KeyHints.shownIn(context)) ...[
       SizedBox(width: context.tokens.spacing.s12),
       const ExcludeSemantics(child: Kbd('Enter')),
     ],
@@ -1439,40 +1441,43 @@ class _Footer extends StatelessWidget {
         ),
         child: Row(
           children: [
-            key(
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  arrow(AppIcons.arrowUp),
-                  SizedBox(width: tokens.spacing.s4),
-                  arrow(AppIcons.arrowDown),
-                ],
-              ),
-              'Move',
-            ),
-            SizedBox(width: tokens.spacing.s16 + 2),
-            key(const Kbd('Enter'), hasRecent ? 'Search again' : 'Open'),
-            if (hasRecent) ...[
-              SizedBox(width: tokens.spacing.s16 + 2),
-              key(const Kbd('Del'), 'Remove'),
-            ],
-            if (remind case final remind?) ...[
-              SizedBox(width: tokens.spacing.s16 + 2),
+            // The keys' legend; a TV's remote has none of them.
+            if (KeyHints.shownIn(context)) ...[
               key(
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Kbd('Ctrl'),
+                    arrow(AppIcons.arrowUp),
                     SizedBox(width: tokens.spacing.s4),
-                    const Kbd('R'),
+                    arrow(AppIcons.arrowDown),
                   ],
                 ),
-                remind,
+                'Move',
               ),
+              SizedBox(width: tokens.spacing.s16 + 2),
+              key(const Kbd('Enter'), hasRecent ? 'Search again' : 'Open'),
+              if (hasRecent) ...[
+                SizedBox(width: tokens.spacing.s16 + 2),
+                key(const Kbd('Del'), 'Remove'),
+              ],
+              if (remind case final remind?) ...[
+                SizedBox(width: tokens.spacing.s16 + 2),
+                key(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Kbd('Ctrl'),
+                      SizedBox(width: tokens.spacing.s4),
+                      const Kbd('R'),
+                    ],
+                  ),
+                  remind,
+                ),
+              ],
+              SizedBox(width: tokens.spacing.s16 + 2),
+              key(const Kbd('Esc'), 'Close'),
+              SizedBox(width: tokens.spacing.s16),
             ],
-            SizedBox(width: tokens.spacing.s16 + 2),
-            key(const Kbd('Esc'), 'Close'),
-            SizedBox(width: tokens.spacing.s16),
             Expanded(
               child: idle
                   ? const SizedBox.shrink()

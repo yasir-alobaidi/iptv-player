@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -196,6 +198,8 @@ class _PickCategoriesScreenState extends ConsumerState<PickCategoriesScreen> {
             label: 'Finish',
             trailingIcon: AppIcons.arrowRight,
             size: AppButtonSize.l,
+            // A remote starts somewhere: on what most do here (docs/07).
+            autofocus: ref.watch(formFactorProvider) == FormFactor.tv,
             onPressed: _finish,
           ),
         ],

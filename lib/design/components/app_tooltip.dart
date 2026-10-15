@@ -20,7 +20,7 @@ class AppTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hint = shortcut;
+    final hint = KeyHints.shownIn(context) ? shortcut : null;
     if (hint == null) {
       return Tooltip(message: message, child: child);
     }

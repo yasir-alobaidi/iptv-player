@@ -369,6 +369,53 @@ final class PlaybackCoordinator {
     _openSource = null;
   }
 
+  /// The app left the screen on a TV (docs/07: Home, another app, the
+  /// device asleep): what plays stops, so a one-connection source isn't
+  /// held while nobody watches, and [resumeAfterAway] plays it again.
+  /// Only what was opening or playing; a failure stays as it was.
+  Future<void> stopWhileAway() async {
+    final item = this.item;
+    final playing = switch (_state) {
+      PlaybackOpening() || PlaybackPlaying() || PlaybackReconnecting() => true,
+      _ => false,
+    };
+    if (_remote != null || item == null || !playing) return;
+    _away = (item, item.live ? null : _position, _paused);
+    await stop();
+  }
+
+  /// Back on the screen: what [stopWhileAway] stopped plays again, a file
+  /// where it was (and paused if it was), unless something else has
+  /// started since.
+  Future<void> resumeAfterAway() async {
+    final away = _away;
+    _away = null;
+    if (away == null || _state is! PlaybackIdle) return;
+    final (item, at, paused) = away;
+    if (item case PlayableChannel(:final channel)) {
+      await playLive(channel);
+      return;
+    }
+    await playVod(item, from: at);
+    if (!paused) return;
+    final token = _token;
+    final playing = _state is PlaybackOpening
+        ? await states
+              .where((state) => state is! PlaybackOpening)
+              .first
+              .timeout(const Duration(seconds: 30), onTimeout: PlaybackIdle.new)
+        : _state;
+    // Not from inside the state's own announcement.
+    await Future<void>.value();
+    if (token == _token && playing is PlaybackPlaying) {
+      await setPaused(paused: true);
+    }
+  }
+
+  /// What [stopWhileAway] stopped: the item, a file's place, and whether
+  /// it was paused.
+  (Playable, Duration?, bool)? _away;
+
   /// Moves the file playing to [position], within its length.
   Future<void> seek(Duration position) async {
     if (_remote case final remote?) return await remote.seek(position);

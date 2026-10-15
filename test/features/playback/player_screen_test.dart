@@ -41,6 +41,24 @@ void main() {
     await _settle(tester);
   }
 
+  testWidgets("the system's back (a TV remote's Back) closes stream info "
+      'first, then leaves: one step a press', (tester) async {
+    await open(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyI);
+    await _settle(tester);
+    expect(find.byType(StreamInfoOverlay), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await _settle(tester);
+    expect(find.byType(StreamInfoOverlay), findsNothing);
+    expect(app.location, playerRoutePath);
+
+    await tester.binding.handlePopRoute();
+    await _settle(tester);
+    expect(app.location, AppDestination.liveTv.path);
+    await finish(tester);
+  });
+
   testWidgets('Enter plays full screen; Esc goes back to Live TV', (
     tester,
   ) async {

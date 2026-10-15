@@ -1,3 +1,4 @@
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/app_icon.dart';
 
 /// The shell's navigation destinations, in nav-rail order (docs/05).
@@ -72,6 +73,13 @@ enum AppDestination {
   /// on the canvas.
   static List<AppDestination> get primary =>
       values.where((d) => d != AppDestination.settings).toList();
+
+  /// [primary] on [formFactor]: a TV has no library (docs/07: downloads
+  /// and local files are the desktop's; they reach a TV by casting).
+  static List<AppDestination> primaryOn(FormFactor formFactor) =>
+      formFactor == FormFactor.tv
+      ? primary.where((d) => d != AppDestination.library).toList()
+      : primary;
 
   /// Ctrl+1 … Ctrl+7 (docs/05). Ctrl+, opens Settings and is handled
   /// separately.

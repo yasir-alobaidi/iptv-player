@@ -61,6 +61,7 @@ import 'package:iptv_player/features/playback/data/db_playback_settings_store.da
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/presentation/player_sound.dart';
+import 'package:iptv_player/features/playback/presentation/tv_away.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_watch.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
@@ -77,7 +78,12 @@ Future<void> bootstrap() async {
   registerToolLicenses();
 
   final secrets = SecretRegistry();
-  final outputs = <LogOutput>[if (kDebugMode) ConsoleOutput()];
+  // On Android the log file is inside the app's private folder, which
+  // adb can't read from a release build; logcat is where a TV's log is
+  // read (the lines are redacted before any output sees them).
+  final outputs = <LogOutput>[
+    if (kDebugMode || Platform.isAndroid) ConsoleOutput(),
+  ];
   AppPaths? paths;
   Object? logDirError;
   try {
@@ -151,7 +157,10 @@ Future<void> bootstrap() async {
     secrets,
     hardwareDecoding: playback.hardwareDecoding,
   );
-  capDecodedImages(PaintingBinding.instance.imageCache);
+  capDecodedImages(
+    PaintingBinding.instance.imageCache,
+    bytes: onDesktop ? decodedArtworkBytes : decodedArtworkBytesOnTv,
+  );
   final artwork = paths == null ? null : ArtworkCache(directory: paths.artwork);
 
   final container = ProviderContainer(
@@ -194,7 +203,8 @@ Future<void> bootstrap() async {
         libraryThumbnailFolderProvider.overrideWithValue(paths.thumbnails),
       ],
       ...sourceShellOverrides,
-      ...castShellOverrides,
+      // A TV is the player: no Cast button, bar or view (docs/07).
+      if (onDesktop) ...castShellOverrides,
       ...downloadShellOverrides,
       if (Platform.isWindows)
         relayFirewallNoticeProvider.overrideWith(
@@ -226,6 +236,10 @@ Future<void> bootstrap() async {
     );
     // The cast's quiet fallbacks and unexpected ends, as toasts.
     container.read(castNoticeToastsProvider);
+  } else {
+    WidgetsBinding.instance.addObserver(
+      TvAwayObserver(container.read(playbackCoordinatorProvider)),
+    );
   }
   window?.beforeClose = () => _quit(container, log);
   container

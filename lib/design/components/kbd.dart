@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/tokens.dart';
 
+/// Whether the app draws key hints ([Kbd]): off on a TV, whose remote has
+/// none of those keys (docs/07). Above everything the router draws, so
+/// menus and tooltips see it too; with none above, hints are drawn.
+class KeyHints extends InheritedWidget {
+  const new({required this.shown, required super.child, super.key});
+
+  final bool shown;
+
+  static bool shownIn(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<KeyHints>()?.shown ?? true;
+
+  @override
+  bool updateShouldNotify(KeyHints oldWidget) => oldWidget.shown != shown;
+}
+
 /// A keycap, e.g. `Ctrl K` or `Esc` (canvas: mono 11 px in a bordered
 /// pill on surface2).
 class Kbd extends StatelessWidget {

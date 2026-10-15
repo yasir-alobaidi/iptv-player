@@ -9,7 +9,9 @@ import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
@@ -71,6 +73,27 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
   void initState() {
     super.initState();
     _branch = widget.navigationShell.currentIndex;
+    // A remote has no pointer to start from: on a TV the first screen
+    // opens with its first control focused, as every screen after it
+    // does (docs/07). A desktop starts with nothing focused.
+    if (ref.read(formFactorProvider) == FormFactor.tv) _focusFirstOnTv();
+  }
+
+  /// The first screen's controls come with its data (Home's rows), and
+  /// the route's own scope takes the focus once after the first frame:
+  /// checks every 100 ms for 2 s until a control has it, and stops at
+  /// anything focused, the user's own first press included.
+  void _focusFirstOnTv([int tries = 20]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || tries == 0) return;
+      final focused = FocusManager.instance.primaryFocus;
+      if (focused != null && focused is! FocusScopeNode) return;
+      _contentPane.focusFirst();
+      Timer(
+        const Duration(milliseconds: 100),
+        () => _focusFirstOnTv(tries - 1),
+      );
+    });
   }
 
   GoRouter get _router => GoRouter.of(context);
@@ -163,7 +186,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     }
     _hadOverlay = overlay != null;
 
-    return LayoutBuilder(
+    final shell = LayoutBuilder(
       builder: (context, constraints) {
         // Below 1280 px the rail collapses whatever the user chose
         // (docs/05); their choice comes back when the window grows.
@@ -189,6 +212,9 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                       // Left/Right between panes return to the item the user
                       // left from, or the pane's first (docs/05).
                       onLeaveRight: _contentPane.focusPane,
+                      destinations: AppDestination.primaryOn(
+                        ref.watch(formFactorProvider),
+                      ),
                     ),
                     Expanded(
                       child: Column(
@@ -210,6 +236,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                                   ? null
                                   : () => castButton.onPressed(context),
                               castConnected: castButton?.connected ?? false,
+                              showCast: ref.watch(castsToTvsProvider),
                               paneController: _topBarPane,
                             ),
                           if (notice != null && !widget.immersive)
@@ -282,6 +309,21 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
         );
       },
     );
+    // A TV's Back at a section's root goes Home; on Home it leaves the
+    // app. A desktop has no system back.
+    return ref.watch(formFactorProvider) == FormFactor.tv
+        ? BackButtonListener(onBackButtonPressed: _backOnTv, child: shell)
+        : shell;
+  }
+
+  /// Android leaves an app on Back from any section's root: a remote's
+  /// Back from Settings closed Bijou. A page above the section (a film's,
+  /// a dialog) is popped as before.
+  Future<bool> _backOnTv() async {
+    if (GoRouter.of(context).canPop()) return false;
+    if (_current == AppDestination.home) return false;
+    _go(AppDestination.home);
+    return true;
   }
 }
 

@@ -68,6 +68,9 @@ class AppGlobalShortcuts extends ConsumerStatefulWidget {
       AppDestination.guide,
       printableKey: true,
     ),
+    // A TV remote's Guide key (docs/07).
+    const SingleActivator(LogicalKeyboardKey.guide):
+        const GoToDestinationIntent(AppDestination.guide),
     const SingleActivator(LogicalKeyboardKey.keyK, control: true):
         const OpenSearchIntent(),
     const SingleActivator(LogicalKeyboardKey.slash): const OpenSearchIntent(

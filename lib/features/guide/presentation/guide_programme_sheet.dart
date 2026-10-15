@@ -169,12 +169,14 @@ class GuideProgrammeSheet extends ConsumerWidget {
                     ],
                   ),
                 ),
-                SizedBox(width: tokens.spacing.s8),
-                // Beside the last line of buttons, at its middle.
-                SizedBox(
-                  height: context.scaled(AppButtonSize.m.height),
-                  child: const Center(child: Kbd('Esc')),
-                ),
+                if (KeyHints.shownIn(context)) ...[
+                  SizedBox(width: tokens.spacing.s8),
+                  // Beside the last line of buttons, at its middle.
+                  SizedBox(
+                    height: context.scaled(AppButtonSize.m.height),
+                    child: const Center(child: Kbd('Esc')),
+                  ),
+                ],
               ],
             ),
           ],

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
@@ -17,6 +19,7 @@ class WelcomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final formFactor = ref.watch(formFactorProvider);
     final tokens = context.tokens;
     final colors = tokens.colors;
     final spacing = tokens.spacing;
@@ -70,7 +73,7 @@ class WelcomeScreen extends ConsumerWidget {
                     Text(
                       'Add a playlist, or sign in to a service you '
                       'subscribe to. Nothing is uploaded anywhere; your '
-                      'passwords stay on this computer.',
+                      'passwords stay on ${formFactor.thisDevice}.',
                       textAlign: TextAlign.center,
                       style: tokens.text.body.copyWith(
                         color: colors.textSecondary,
@@ -85,26 +88,29 @@ class WelcomeScreen extends ConsumerWidget {
                       onPressed: () =>
                           unawaited(context.push<void>(addSourceRoutePath)),
                     ),
-                    SizedBox(height: spacing.s24),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: spacing.s4,
-                      children: [
-                        Text(
-                          'Already have a playlist file?',
-                          style: tokens.text.caption.copyWith(
-                            color: colors.textTertiary,
+                    // A TV has no files to open (docs/07).
+                    if (formFactor == FormFactor.desktop) ...[
+                      SizedBox(height: spacing.s24),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: spacing.s4,
+                        children: [
+                          Text(
+                            'Already have a playlist file?',
+                            style: tokens.text.caption.copyWith(
+                              color: colors.textTertiary,
+                            ),
                           ),
-                        ),
-                        AppButton(
-                          label: 'Open a file instead',
-                          variant: AppButtonVariant.ghost,
-                          size: AppButtonSize.s,
-                          onPressed: () => unawaited(openFile()),
-                        ),
-                      ],
-                    ),
+                          AppButton(
+                            label: 'Open a file instead',
+                            variant: AppButtonVariant.ghost,
+                            size: AppButtonSize.s,
+                            onPressed: () => unawaited(openFile()),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

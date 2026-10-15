@@ -77,8 +77,9 @@ class _SourcesSettingsState extends ConsumerState<SourcesSettings> {
         onSecondary: () => Navigator.of(context).pop(false),
         child: Text(
           'Its channels, movies, series and your category choices are '
-          "removed from this computer. Your subscription isn't affected, "
-          'and you can add the source again later.',
+          'removed from ${ref.read(formFactorProvider).thisDevice}. Your '
+          "subscription isn't affected, and you can add the source again "
+          'later.',
           style: context.tokens.text.body.copyWith(
             color: context.tokens.colors.textSecondary,
           ),
@@ -199,8 +200,13 @@ class _SourcesSettingsState extends ConsumerState<SourcesSettings> {
       footer: (ordered?.length ?? 0) < 2
           ? null
           : Text(
-              'Drag a handle, or press Alt+↑ / Alt+↓, to reorder. The '
-              'switcher in the top bar picks which source you browse.',
+              KeyHints.shownIn(context)
+                  ? 'Drag a handle, or press Alt+↑ / Alt+↓, to reorder. The '
+                        'switcher in the top bar picks which source you '
+                        'browse.'
+                  : 'Move a source up or down from its menu (…). The '
+                        'switcher in the top bar picks which source you '
+                        'browse.',
               style: tokens.text.caption.copyWith(
                 color: tokens.colors.textTertiary,
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_settings_section.dart';
@@ -42,6 +43,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: _SettingsNav(
                   current: section,
                   onSelect: ref.read(settingsLocationProvider.notifier).show,
+                  sections: SettingsSection.on(ref.watch(formFactorProvider)),
                 ),
               ),
               SizedBox(width: tokens.spacing.s16),
@@ -104,10 +106,15 @@ class _Card extends StatelessWidget {
 /// (docs/05): the user is browsing the list; Right or Tab moves into the
 /// section.
 class _SettingsNav extends StatelessWidget {
-  const new({required this.current, required this.onSelect});
+  const new({
+    required this.current,
+    required this.onSelect,
+    required this.sections,
+  });
 
   final SettingsSection current;
   final ValueChanged<SettingsSection> onSelect;
+  final List<SettingsSection> sections;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +144,7 @@ class _SettingsNav extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final section in SettingsSection.values)
+              for (final section in sections)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: _NavItem(

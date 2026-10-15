@@ -115,7 +115,11 @@ const shortcutTable = <ShortcutGroup>[
       [
         ['G'],
       ],
-      binds: [SingleActivator(LogicalKeyboardKey.keyG)],
+      // And a TV remote's Guide key, which a keyboard hasn't.
+      binds: [
+        SingleActivator(LogicalKeyboardKey.keyG),
+        SingleActivator(LogicalKeyboardKey.guide),
+      ],
     ),
     ShortcutEntry(
       'Cast, or choose a TV',

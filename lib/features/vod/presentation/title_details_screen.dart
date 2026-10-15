@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -257,6 +259,7 @@ class _MoviePage extends ConsumerWidget {
           DetailsBackdrop(
             backdropUrl: ready?.backdropUrl,
             posterUrl: movie.posterUrl,
+            cheapBlur: ref.watch(formFactorProvider) == FormFactor.tv,
           ),
           Positioned(
             left: layout.moviePadding,
@@ -378,19 +381,20 @@ class _MoviePage extends ConsumerWidget {
                               size: layout.movieActionHeight,
                               onPressed: () => unawaited(toggleFavorite()),
                             ),
-                            AppIconButton(
-                              icon: AppIcons.cast,
-                              tooltip: 'Cast',
-                              bordered: true,
-                              size: layout.movieActionHeight,
-                              onPressed: () => unawaited(
-                                castFrom(
-                                  context,
-                                  item: PlayableMovie(movie),
-                                  from: resumable ? mark.position : null,
+                            if (ref.watch(castsToTvsProvider))
+                              AppIconButton(
+                                icon: AppIcons.cast,
+                                tooltip: 'Cast',
+                                bordered: true,
+                                size: layout.movieActionHeight,
+                                onPressed: () => unawaited(
+                                  castFrom(
+                                    context,
+                                    item: PlayableMovie(movie),
+                                    from: resumable ? mark.position : null,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         if (resumable) ...[
@@ -668,6 +672,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
               backdropUrl: details?.backdropUrl ?? series.backdropUrl,
               posterUrl: series.posterUrl,
               fadeRight: true,
+              cheapBlur: ref.watch(formFactorProvider) == FormFactor.tv,
             ),
           ),
           Row(
@@ -688,6 +693,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
                     onRetry: () => ref.invalidate(
                       seriesDetailsProvider(series.sourceId, series.remoteKey),
                     ),
+                    castable: ref.watch(castsToTvsProvider),
                   ),
                 ),
               ),
@@ -820,6 +826,7 @@ class _SeriesColumn extends StatelessWidget {
     required this.onPlay,
     required this.onFavorite,
     required this.onRetry,
+    required this.castable,
   });
 
   /// Play's node, or the favorite's while there is nothing to play.
@@ -831,6 +838,9 @@ class _SeriesColumn extends StatelessWidget {
   final void Function(EpisodeItem episode, {Duration? from}) onPlay;
   final VoidCallback onFavorite;
   final VoidCallback onRetry;
+
+  /// The Cast button is drawn ([castsToTvsProvider]).
+  final bool castable;
 
   @override
   Widget build(BuildContext context) {
@@ -923,7 +933,7 @@ class _SeriesColumn extends StatelessWidget {
                     size: layout.movieActionHeight,
                     onPressed: onFavorite,
                   ),
-                  if (nextUp != null) ...[
+                  if (nextUp != null && castable) ...[
                     SizedBox(width: tokens.spacing.s12),
                     AppIconButton(
                       icon: AppIcons.cast,
@@ -1476,17 +1486,26 @@ class _EpisodeDownload extends StatelessWidget {
 /// The artwork behind a page: the backdrop, or the poster blurred when
 /// there is none (docs/05), under the canvas's gradients. [fadeRight] fades
 /// it into the page on the right too (a series' left column).
+///
+/// [cheapBlur] (a TV, docs/07: no blur filters on its small GPU) decodes
+/// the poster a few pixels wide and lets the scaling soften it, instead
+/// of a full-screen blur.
 class DetailsBackdrop extends StatelessWidget {
   const new({
     required this.backdropUrl,
     required this.posterUrl,
     this.fadeRight = false,
+    this.cheapBlur = false,
     super.key,
   });
 
   final String? backdropUrl;
   final String? posterUrl;
   final bool fadeRight;
+  final bool cheapBlur;
+
+  /// [cheapBlur]'s poster width, in logical pixels.
+  static const _softWidth = 24.0;
 
   @override
   Widget build(BuildContext context) {
@@ -1495,7 +1514,11 @@ class DetailsBackdrop extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final backdrop = artworkFor(context, backdropUrl, width: size.width);
     final poster = backdrop == null
-        ? artworkFor(context, posterUrl, width: size.width / 4)
+        ? artworkFor(
+            context,
+            posterUrl,
+            width: cheapBlur ? _softWidth : size.width / 4,
+          )
         : null;
     final picture = backdrop ?? poster;
     return Stack(
@@ -1504,7 +1527,7 @@ class DetailsBackdrop extends StatelessWidget {
         ColoredBox(color: colors.surface1),
         if (picture != null)
           ImageFiltered(
-            enabled: backdrop == null,
+            enabled: backdrop == null && !cheapBlur,
             imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: ArtworkImage(
               image: picture,

@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
@@ -414,8 +416,44 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
   }
 
+  /// The remote's keys the player takes. Their key-up is taken too: one
+  /// left to Android is acted on again (a media key reaches another app's
+  /// session).
+  static final Set<LogicalKeyboardKey> _remoteKeys = {
+    LogicalKeyboardKey.channelUp,
+    LogicalKeyboardKey.channelDown,
+    LogicalKeyboardKey.info,
+    LogicalKeyboardKey.mediaPlayPause,
+    LogicalKeyboardKey.mediaPlay,
+    LogicalKeyboardKey.mediaPause,
+    LogicalKeyboardKey.mediaFastForward,
+    LogicalKeyboardKey.mediaRewind,
+    LogicalKeyboardKey.mediaStop,
+  };
+
+  /// The system's back (a TV remote's Back), as Esc: what is open closes
+  /// first, then the player is left. One press, one step: handled as a
+  /// key, its key-up went on to Android as a second back, which left the
+  /// app from a section's root (the user, on the Bedroom TV).
+  Future<bool> _onBack() async {
+    if (_panel) {
+      _closePanel();
+    } else if (_info) {
+      setState(() => _info = false);
+    } else if (_isVod && _vod.countdown != null) {
+      _vod.cancelNext();
+    } else {
+      _exit();
+    }
+    return true;
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyUpEvent) {
+      return _remoteKeys.contains(event.logicalKey)
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
     _showOsd();
     // Ctrl+2, Ctrl+K and the like are the app's, not a digit or a seek.
     final keyboard = HardwareKeyboard.instance;
@@ -429,7 +467,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       return KeyEventResult.handled;
     }
     if (_isVod) return _onVodKey(event);
-    final key = event.logicalKey;
+    final key = _remoteLiveKey(event.logicalKey);
     // Digits, and a typed number's Enter and Backspace.
     final digit = _digitOf(key);
     if (digit != null) {
@@ -503,8 +541,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return KeyEventResult.handled;
   }
 
+  /// A TV remote's keys as the keyboard's (docs/07): Channel Up and Down
+  /// page through the channels, Info is I. Back isn't here: it arrives as
+  /// the system's back ([_onBack]), once.
+  static LogicalKeyboardKey _remoteLiveKey(LogicalKeyboardKey key) =>
+      switch (key) {
+        LogicalKeyboardKey.channelUp => LogicalKeyboardKey.pageUp,
+        LogicalKeyboardKey.channelDown => LogicalKeyboardKey.pageDown,
+        LogicalKeyboardKey.info => LogicalKeyboardKey.keyI,
+        _ => key,
+      };
+
+  /// A film's remote keys (docs/07): Stop is Esc, Info is I, play/pause
+  /// is Space, fast forward and rewind step as → and ← do.
+  static LogicalKeyboardKey _remoteVodKey(LogicalKeyboardKey key) =>
+      switch (key) {
+        LogicalKeyboardKey.mediaStop => LogicalKeyboardKey.escape,
+        LogicalKeyboardKey.info => LogicalKeyboardKey.keyI,
+        LogicalKeyboardKey.mediaPlayPause => LogicalKeyboardKey.space,
+        LogicalKeyboardKey.mediaFastForward => LogicalKeyboardKey.arrowRight,
+        LogicalKeyboardKey.mediaRewind => LogicalKeyboardKey.arrowLeft,
+        _ => key,
+      };
+
   KeyEventResult _onVodKey(KeyEvent event) {
-    final key = event.logicalKey;
+    final key = _remoteVodKey(event.logicalKey);
     final repeat = event is KeyRepeatEvent;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     const step = Duration(seconds: 10);
@@ -530,6 +591,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         }
       case LogicalKeyboardKey.space:
         _vod.togglePause();
+      case LogicalKeyboardKey.mediaPlay when _vod.timeline.paused:
+        _vod.togglePause();
+      case LogicalKeyboardKey.mediaPause when !_vod.timeline.paused:
+        _vod.togglePause();
+      case LogicalKeyboardKey.mediaPlay || LogicalKeyboardKey.mediaPause:
+        break;
       case LogicalKeyboardKey.home:
         _vod.startOver();
       case LogicalKeyboardKey.keyM:
@@ -671,6 +738,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     ],
   );
 
+  /// On a TV the remote's volume and mute keys work the TV itself, and
+  /// there is no window (docs/07): neither control is drawn there.
+  bool get _onTv => ref.read(formFactorProvider) == FormFactor.tv;
+
   /// The volume: Mute and the level, after what is used most.
   Widget _volume(PlayerSound sound) => Padding(
     padding: EdgeInsets.only(left: context.tokens.spacing.s12),
@@ -743,18 +814,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         selected: _info,
         onPressed: () => setState(() => _info = !_info),
       ),
-      OsdButton(
-        icon: AppIcons.cast,
-        tooltip: 'Cast',
-        shortcut: 'C',
-        onPressed: () => unawaited(castFrom(context)),
-      ),
-      OsdButton(
-        icon: _fullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
-        tooltip: _fullScreen ? 'Exit full screen' : 'Full screen',
-        shortcut: 'F',
-        onPressed: () => unawaited(_toggleWindowFullScreen()),
-      ),
+      if (ref.watch(castsToTvsProvider))
+        OsdButton(
+          icon: AppIcons.cast,
+          tooltip: 'Cast',
+          shortcut: 'C',
+          onPressed: () => unawaited(castFrom(context)),
+        ),
+      // A TV has no window: the picture is always the whole screen.
+      if (!_onTv)
+        OsdButton(
+          icon: _fullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
+          tooltip: _fullScreen ? 'Exit full screen' : 'Full screen',
+          shortcut: 'F',
+          onPressed: () => unawaited(_toggleWindowFullScreen()),
+        ),
     ];
   }
 
@@ -786,7 +860,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       shortcut: 'Backspace',
       onPressed: () => unawaited(_lastChannel()),
     ),
-    _volume(sound),
+    if (!_onTv) _volume(sound),
   ];
 
   @override
@@ -812,144 +886,147 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
     // A page of its own, outside the shell: it needs its own Material for
     // text and ink to look right.
-    return Material(
-      color: tokens.colors.video,
-      child: Focus(
-        focusNode: _focus,
-        autofocus: true,
-        onKeyEvent: _onKey,
-        child: MouseRegion(
-          cursor: showOsd ? MouseCursor.defer : SystemMouseCursors.none,
-          onHover: (_) => _showOsd(),
-          child: Listener(
-            // The wheel over the picture turns the volume.
-            onPointerSignal: (signal) {
-              if (signal is! PointerScrollEvent || _panel) return;
-              _showOsd();
-              _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
-            },
-            child: ColoredBox(
-              color: tokens.colors.video,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // The picture's clicks are heard under the OSD and
-                  // under the failure card: a control answers at once,
-                  // with no wait for a second click.
-                  PlayerSurface(
-                    badges: false,
-                    onPictureTap: vod ? _vod.togglePause : _showOsd,
-                    onPictureDoubleTap: () =>
-                        unawaited(_toggleWindowFullScreen()),
-                    onNext: !vod
-                        ? () => unawaited(_zap(1))
-                        : _hasNext
-                        ? _vod.playNext
-                        : null,
-                    nextLabel: vod ? 'Next episode' : 'Next channel',
-                    beforeShowInFolder: () =>
-                        _window?.setFullScreen(on: false) ?? Future.value(),
-                    onFileRemoved: () {
-                      if (mounted) _exit();
-                    },
-                  ),
-                  OsdScale(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (vod)
-                          osd(
-                            ListenableBuilder(
-                              listenable: _vod,
-                              builder: (context, _) =>
-                                  _vodOsd(item, tracks, sound),
-                            ),
-                          )
-                        else if (channel != null)
-                          osd(
-                            Column(
-                              children: [
-                                OsdTop(channel: channel, onBack: _exit),
-                                const Spacer(),
-                                OsdBottom(
-                                  channel: channel,
-                                  leading: _channelControls(sound),
-                                  trailing: [
-                                    OsdButton(
-                                      icon: channel.isFavorite
-                                          ? AppIcons.starFilled
-                                          : AppIcons.star,
-                                      tooltip: channel.isFavorite
-                                          ? 'Remove from favorites'
-                                          : 'Add to favorites',
-                                      selected: channel.isFavorite,
-                                      onPressed: () =>
-                                          unawaited(_toggleFavorite(channel)),
-                                    ),
-                                    ..._controls(tracks, vod: false),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (_banner case final banner? when !_panel)
-                          Positioned(
-                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: ChannelBanner(channel: banner),
-                            ),
-                          ),
-                        if (_digits.isNotEmpty)
-                          Positioned(
-                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                            right: tokens.spacing.s32,
-                            child: NumberEntry(
-                              digits: _digits,
-                              match: _numberMatch,
-                            ),
-                          ),
-                        if (_info)
-                          Positioned(
-                            top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                            left: tokens.spacing.s32,
-                            child: const StreamInfoOverlay(),
-                          ),
-                        if (_panel)
-                          Positioned(
-                            top: 0,
-                            bottom: 0,
-                            left: 0,
-                            child: CallbackShortcuts(
-                              bindings: {
-                                const SingleActivator(
-                                  LogicalKeyboardKey.arrowRight,
-                                ): _closePanel,
-                                const SingleActivator(
-                                  LogicalKeyboardKey.escape,
-                                ): _closePanel,
-                              },
-                              child: ChannelPanel(
-                                query:
-                                    _query ??
-                                    ChannelQuery(
-                                      sourceId: channel?.sourceId ?? '',
-                                    ),
-                                current: channel,
-                                onPlay: (c) {
-                                  _closePanel();
-                                  _showBanner(c);
-                                  _play(c);
-                                },
-                                onClose: _closePanel,
+    return BackButtonListener(
+      onBackButtonPressed: _onBack,
+      child: Material(
+        color: tokens.colors.video,
+        child: Focus(
+          focusNode: _focus,
+          autofocus: true,
+          onKeyEvent: _onKey,
+          child: MouseRegion(
+            cursor: showOsd ? MouseCursor.defer : SystemMouseCursors.none,
+            onHover: (_) => _showOsd(),
+            child: Listener(
+              // The wheel over the picture turns the volume.
+              onPointerSignal: (signal) {
+                if (signal is! PointerScrollEvent || _panel) return;
+                _showOsd();
+                _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
+              },
+              child: ColoredBox(
+                color: tokens.colors.video,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // The picture's clicks are heard under the OSD and
+                    // under the failure card: a control answers at once,
+                    // with no wait for a second click.
+                    PlayerSurface(
+                      badges: false,
+                      onPictureTap: vod ? _vod.togglePause : _showOsd,
+                      onPictureDoubleTap: () =>
+                          unawaited(_toggleWindowFullScreen()),
+                      onNext: !vod
+                          ? () => unawaited(_zap(1))
+                          : _hasNext
+                          ? _vod.playNext
+                          : null,
+                      nextLabel: vod ? 'Next episode' : 'Next channel',
+                      beforeShowInFolder: () =>
+                          _window?.setFullScreen(on: false) ?? Future.value(),
+                      onFileRemoved: () {
+                        if (mounted) _exit();
+                      },
+                    ),
+                    OsdScale(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (vod)
+                            osd(
+                              ListenableBuilder(
+                                listenable: _vod,
+                                builder: (context, _) =>
+                                    _vodOsd(item, tracks, sound),
+                              ),
+                            )
+                          else if (channel != null)
+                            osd(
+                              Column(
+                                children: [
+                                  OsdTop(channel: channel, onBack: _exit),
+                                  const Spacer(),
+                                  OsdBottom(
+                                    channel: channel,
+                                    leading: _channelControls(sound),
+                                    trailing: [
+                                      OsdButton(
+                                        icon: channel.isFavorite
+                                            ? AppIcons.starFilled
+                                            : AppIcons.star,
+                                        tooltip: channel.isFavorite
+                                            ? 'Remove from favorites'
+                                            : 'Add to favorites',
+                                        selected: channel.isFavorite,
+                                        onPressed: () =>
+                                            unawaited(_toggleFavorite(channel)),
+                                      ),
+                                      ..._controls(tracks, vod: false),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                      ],
+                          if (_banner case final banner? when !_panel)
+                            Positioned(
+                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: ChannelBanner(channel: banner),
+                              ),
+                            ),
+                          if (_digits.isNotEmpty)
+                            Positioned(
+                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                              right: tokens.spacing.s32,
+                              child: NumberEntry(
+                                digits: _digits,
+                                match: _numberMatch,
+                              ),
+                            ),
+                          if (_info)
+                            Positioned(
+                              top: tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                              left: tokens.spacing.s32,
+                              child: const StreamInfoOverlay(),
+                            ),
+                          if (_panel)
+                            Positioned(
+                              top: 0,
+                              bottom: 0,
+                              left: 0,
+                              child: CallbackShortcuts(
+                                bindings: {
+                                  const SingleActivator(
+                                    LogicalKeyboardKey.arrowRight,
+                                  ): _closePanel,
+                                  const SingleActivator(
+                                    LogicalKeyboardKey.escape,
+                                  ): _closePanel,
+                                },
+                                child: ChannelPanel(
+                                  query:
+                                      _query ??
+                                      ChannelQuery(
+                                        sourceId: channel?.sourceId ?? '',
+                                      ),
+                                  current: channel,
+                                  onPlay: (c) {
+                                    _closePanel();
+                                    _showBanner(c);
+                                    _play(c);
+                                  },
+                                  onClose: _closePanel,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1000,7 +1077,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               onDrag: _vod.dragTo,
               onStartOver: _vod.startOver,
               onNext: next == null ? null : _vod.playNext,
-              leading: [_volume(sound)],
+              leading: [if (!_onTv) _volume(sound)],
               trailing: _controls(tracks, vod: true),
             ),
           ],

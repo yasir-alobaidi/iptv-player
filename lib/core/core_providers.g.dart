@@ -224,12 +224,23 @@ final class CredentialStoreProvider
 
 String _$credentialStoreHash() => r'c1953b4cac3a02c91d396a60c794746b72d8e11d';
 
+/// `bootstrap()` sets it from the platform ([detectFormFactor]). Unset,
+/// it is the desktop: a widget test's platform is Android, which would
+/// otherwise make every test a TV's; a test of the TV asks for it.
+
 @ProviderFor(formFactor)
 final formFactorProvider = FormFactorProvider._();
+
+/// `bootstrap()` sets it from the platform ([detectFormFactor]). Unset,
+/// it is the desktop: a widget test's platform is Android, which would
+/// otherwise make every test a TV's; a test of the TV asks for it.
 
 final class FormFactorProvider
     extends $FunctionalProvider<FormFactor, FormFactor, FormFactor>
     with $Provider<FormFactor> {
+  /// `bootstrap()` sets it from the platform ([detectFormFactor]). Unset,
+  /// it is the desktop: a widget test's platform is Android, which would
+  /// otherwise make every test a TV's; a test of the TV asks for it.
   FormFactorProvider._()
     : super(
         from: null,
@@ -263,7 +274,55 @@ final class FormFactorProvider
   }
 }
 
-String _$formFactorHash() => r'5d9b1ac5d1b8c35a7984207d800825857f3c0bd5';
+String _$formFactorHash() => r'1420dba59218b6ea2a66d3be4df9783427c9a516';
+
+/// Whether this app sends to TVs: not on a TV, which is the player itself
+/// (docs/07). Every Cast control asks this; on a TV none is drawn.
+
+@ProviderFor(castsToTvs)
+final castsToTvsProvider = CastsToTvsProvider._();
+
+/// Whether this app sends to TVs: not on a TV, which is the player itself
+/// (docs/07). Every Cast control asks this; on a TV none is drawn.
+
+final class CastsToTvsProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether this app sends to TVs: not on a TV, which is the player itself
+  /// (docs/07). Every Cast control asks this; on a TV none is drawn.
+  CastsToTvsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castsToTvsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castsToTvsHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return castsToTvs(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$castsToTvsHash() => r'd9a85de011b9f033d8033bdf719978550125a773';
 
 /// The wall clock, for "synced 12 min ago" and expiry countdowns. Tests
 /// pin it.

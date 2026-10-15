@@ -79,10 +79,14 @@ ImageProvider decodedAt(
 /// docs/06's cap on decoded pictures in memory.
 const int decodedArtworkBytes = 150 * 1024 * 1024;
 
-/// Caps Flutter's decoded-image cache at [decodedArtworkBytes]. Posters are
-/// decoded small, so the count allows far more of them than the default.
-void capDecodedImages(ImageCache cache) {
+/// A TV's cap (docs/07: smaller image caches on a 2 GB device): the
+/// Chromecast with Google TV had about 840 MB free with Bijou running.
+const int decodedArtworkBytesOnTv = 64 * 1024 * 1024;
+
+/// Caps Flutter's decoded-image cache at [bytes]. Posters are decoded
+/// small, so the count allows far more of them than the default.
+void capDecodedImages(ImageCache cache, {int bytes = decodedArtworkBytes}) {
   cache
-    ..maximumSizeBytes = decodedArtworkBytes
+    ..maximumSizeBytes = bytes
     ..maximumSize = 3000;
 }

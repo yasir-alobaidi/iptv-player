@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/favorites/presentation/favorite_hint.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
@@ -160,7 +161,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
         title: kind == CatalogueKind.series
             ? 'No favorite series yet'
             : 'No favorite movies yet',
-        message: 'Press F on a poster to add it here.',
+        message: favoriteHint(context, on: 'a poster'),
       ),
       AllTitles() => EmptyState(
         compact: true,

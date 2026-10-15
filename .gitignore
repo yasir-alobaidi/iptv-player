@@ -60,3 +60,6 @@ logs/
 spike/vendor/*/
 # CI's JSON test results, read by tools/ci/failed_tests.dart
 test-results.json
+
+# Built APKs to copy to a TV (docs/setup.md §7)
+/dist/

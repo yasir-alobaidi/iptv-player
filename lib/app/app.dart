@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shortcuts.dart';
+import 'package:iptv_player/app/still_watching.dart';
 import 'package:iptv_player/core/app_identity.dart';
+import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
-import 'package:iptv_player/design/text_scale.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 
@@ -40,12 +43,19 @@ class IptvPlayerApp extends ConsumerWidget {
         // Material's 200 ms is motion nobody asked for.
         themeAnimationDuration: Duration.zero,
         routerConfig: ref.watch(routerProvider),
-        builder: (context, child) => AppTextScale(
-          scale: look.textScale,
-          child: AppGlobalShortcuts(
-            child: AppToasts(child: child ?? const SizedBox.shrink()),
-          ),
-        ),
+        builder: (context, child) {
+          final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+          final app = AppTextScale(
+            scale: look.textScale,
+            child: AppGlobalShortcuts(
+              child: AppToasts(child: child ?? const SizedBox.shrink()),
+            ),
+          );
+          return KeyHints(
+            shown: !onTv,
+            child: onTv ? StillWatching(child: TvSelectKey(child: app)) : app,
+          );
+        },
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -499,9 +501,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     return OnboardingFrame(
       step: 1,
       title: 'Connect your provider',
-      subtitle:
-          'Your password is kept in your system keychain, never in the '
-          "app's files.",
+      subtitle: ref.watch(formFactorProvider) == FormFactor.tv
+          ? "Your password is kept encrypted on this TV, never in the app's "
+                'files.'
+          : 'Your password is kept in your system keychain, never in the '
+                "app's files.",
       body: narrow
           ? form
           : Row(
@@ -667,7 +671,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             if (!_isEdit) ...[
               Row(
                 children: [
-                  for (final (index, type) in SourceType.values.indexed) ...[
+                  for (final (index, type) in _types.indexed) ...[
                     if (index > 0) SizedBox(width: spacing.s8 + 2),
                     Expanded(
                       child: ChoiceCard(
@@ -867,6 +871,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       'Enter a web address, like http://media.example.com:8080.',
     (_, _) => 'Enter a web address that starts with http:// or https://.',
   };
+
+  /// A TV has no playlist files to open (docs/07).
+  List<SourceType> get _types => ref.read(formFactorProvider) == FormFactor.tv
+      ? [SourceType.xtream, SourceType.m3uUrl]
+      : SourceType.values;
 
   static String _typeTitle(SourceType type) => switch (type) {
     SourceType.xtream => 'Server login',

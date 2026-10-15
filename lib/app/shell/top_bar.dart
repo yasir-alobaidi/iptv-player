@@ -20,6 +20,7 @@ class ShellTopBar extends StatelessWidget {
     this.onOpenDownloads,
     this.onCast,
     this.castConnected = false,
+    this.showCast = true,
     this.paneController,
     super.key,
   });
@@ -46,6 +47,9 @@ class ShellTopBar extends StatelessWidget {
 
   /// A cast is on: the connected icon, as the canvas draws it.
   final bool castConnected;
+
+  /// False on a TV, which is the player itself (docs/07): no Cast button.
+  final bool showCast;
   final FocusPaneController? paneController;
 
   @override
@@ -92,15 +96,17 @@ class ShellTopBar extends StatelessWidget {
                 onPressed: onOpenDownloads,
               ),
             ],
-            SizedBox(width: tokens.spacing.s16),
-            AppIconButton(
-              icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
-              tooltip: castConnected ? 'Casting' : 'Cast',
-              shortcut: 'C',
-              bordered: true,
-              selected: castConnected,
-              onPressed: onCast,
-            ),
+            if (showCast) ...[
+              SizedBox(width: tokens.spacing.s16),
+              AppIconButton(
+                icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
+                tooltip: castConnected ? 'Casting' : 'Cast',
+                shortcut: 'C',
+                bordered: true,
+                selected: castConnected,
+                onPressed: onCast,
+              ),
+            ],
           ],
         ),
       ),

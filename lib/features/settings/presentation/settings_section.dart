@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'settings_section.g.dart';
@@ -20,6 +21,15 @@ enum SettingsSection {
   new(this.label);
 
   final String label;
+
+  /// The sections on [formFactor]: a TV has no casting (it is the
+  /// player), no downloads or library, and no keyboard (docs/07).
+  static List<SettingsSection> on(FormFactor formFactor) =>
+      formFactor == FormFactor.tv
+      ? values
+            .where((s) => s != casting && s != downloads && s != shortcuts)
+            .toList()
+      : values;
 }
 
 /// Where Settings is: the section it shows, and the source each per-source

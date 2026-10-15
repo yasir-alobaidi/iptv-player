@@ -13,6 +13,7 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/favorites/presentation/favorite_hint.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/guide_timeline.dart';
@@ -927,8 +928,10 @@ class _GuideGridState extends ConsumerState<GuideGrid>
           _ => 'No channels in this category.',
         },
         message: switch (widget.query.filter) {
-          FavoriteChannels() =>
-            'Press F on a channel in Live TV to add it here.',
+          FavoriteChannels() => favoriteHint(
+            context,
+            on: 'a channel in Live TV',
+          ),
           _ => 'Choose another category above.',
         },
       );

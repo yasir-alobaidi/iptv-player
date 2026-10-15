@@ -147,7 +147,7 @@ class _RemindersDialogState extends ConsumerState<RemindersDialog> {
             SizedBox(height: tokens.spacing.s16),
             Row(
               children: [
-                if (hasRows)
+                if (hasRows && KeyHints.shownIn(context))
                   Expanded(
                     child: ExcludeSemantics(
                       child: Wrap(

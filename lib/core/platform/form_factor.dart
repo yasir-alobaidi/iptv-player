@@ -1,6 +1,15 @@
 import 'package:flutter/foundation.dart';
 
-enum FormFactor { desktop, tv }
+enum FormFactor {
+  desktop,
+  tv;
+
+  /// The device in the app's words: "this computer", "this TV".
+  String get thisDevice => switch (this) {
+    desktop => 'this computer',
+    tv => 'this TV',
+  };
+}
 
 /// Chooses the shell. Android means Google TV in this project (phones are a
 /// non-goal); every other platform gets the desktop shell.

@@ -142,7 +142,7 @@ class _MenuRow extends StatelessWidget {
               ),
               if (item.checked)
                 AppIcon(AppIcons.check, size: 14, color: colors.accentBase),
-              if (item.shortcut != null) ...[
+              if (item.shortcut != null && KeyHints.shownIn(context)) ...[
                 SizedBox(width: tokens.spacing.s8),
                 Kbd(item.shortcut!),
               ],

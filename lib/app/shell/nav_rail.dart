@@ -18,6 +18,7 @@ class NavRail extends StatelessWidget {
     required this.onToggleExpanded,
     this.paneController,
     this.onLeaveRight,
+    this.destinations,
     super.key,
   });
 
@@ -36,6 +37,10 @@ class NavRail extends StatelessWidget {
 
   /// Right arrow at the rail's edge hands focus to the content.
   final VoidCallback? onLeaveRight;
+
+  /// The destinations above the spacer; [AppDestination.primary] when
+  /// null.
+  final List<AppDestination>? destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +75,8 @@ class NavRail extends StatelessWidget {
               children: [
                 _AppMark(expanded: expanded),
                 SizedBox(height: tokens.spacing.s16),
-                for (final destination in AppDestination.primary) ...[
+                for (final destination
+                    in destinations ?? AppDestination.primary) ...[
                   _RailItem(
                     destination: destination,
                     selected: destination == current,

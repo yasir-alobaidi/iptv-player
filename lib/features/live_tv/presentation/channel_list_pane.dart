@@ -10,6 +10,7 @@ import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
+import 'package:iptv_player/features/favorites/presentation/favorite_hint.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_menu.dart';
@@ -516,11 +517,13 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
       );
     }
     return switch (query.filter) {
-      FavoriteChannels() => const EmptyState(
+      FavoriteChannels() => EmptyState(
         compact: true,
         icon: AppIcons.star,
         title: 'No favorites yet',
-        message: 'Press F on a channel, or use its menu, to add it here.',
+        message: KeyHints.shownIn(context)
+            ? 'Press F on a channel, or use its menu, to add it here.'
+            : favoriteHint(context, on: 'a channel'),
       ),
       FavoriteGroupChannels() => const EmptyState(
         compact: true,

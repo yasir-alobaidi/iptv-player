@@ -16,6 +16,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/favorites/data/favorites_providers.dart';
 import 'package:iptv_player/features/favorites/domain/favorite_layout.dart';
 import 'package:iptv_player/features/favorites/domain/favorites.dart';
+import 'package:iptv_player/features/favorites/presentation/favorite_hint.dart';
 import 'package:iptv_player/features/favorites/presentation/group_name_dialog.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -199,7 +200,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         compact: true,
         icon: AppIcons.star,
         title: movies ? 'No favorite movies yet' : 'No favorite series yet',
-        message: 'Press F on a poster to add it here.',
+        message: favoriteHint(context, on: 'a poster'),
         actionLabel: movies ? 'Open Movies' : 'Open Series',
         onAction: () => context.go(
           movies ? AppDestination.movies.path : AppDestination.series.path,
@@ -514,7 +515,7 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
         compact: true,
         icon: AppIcons.star,
         title: 'No favorite channels yet',
-        message: 'Press F on a channel in Live TV to add it here.',
+        message: favoriteHint(context, on: 'a channel in Live TV'),
         actionLabel: 'Open Live TV',
         onAction: () => context.go(AppDestination.liveTv.path),
       );
@@ -548,14 +549,19 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
             child: Row(
               children: [
                 SizedBox(width: tokens.spacing.s8 + 2),
-                Text('Press', style: _hint(tokens)),
-                SizedBox(width: tokens.spacing.s8),
-                const Kbd('F'),
-                SizedBox(width: tokens.spacing.s8),
+                if (KeyHints.shownIn(context)) ...[
+                  Text('Press', style: _hint(tokens)),
+                  SizedBox(width: tokens.spacing.s8),
+                  const Kbd('F'),
+                  SizedBox(width: tokens.spacing.s8),
+                ],
                 Expanded(
                   child: Text(
-                    'on any channel, movie, or series to add it here or '
-                    'remove it.',
+                    KeyHints.shownIn(context)
+                        ? 'on any channel, movie, or series to add it here '
+                              'or remove it.'
+                        : 'Hold OK on any channel, movie, or series to add '
+                              'it here or remove it.',
                     style: _hint(tokens),
                   ),
                 ),

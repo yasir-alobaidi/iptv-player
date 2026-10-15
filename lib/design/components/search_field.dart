@@ -135,7 +135,7 @@ class _SearchFieldState extends State<SearchField> {
           AppIcon(AppIcons.search, size: 18, color: colors.textTertiary),
           SizedBox(width: tokens.spacing.s8 + 2),
           Expanded(child: body),
-          if (widget.shortcut != null) ...[
+          if (widget.shortcut != null && KeyHints.shownIn(context)) ...[
             SizedBox(width: tokens.spacing.s8),
             Kbd(widget.shortcut!),
           ],

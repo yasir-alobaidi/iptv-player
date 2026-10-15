@@ -44,12 +44,13 @@ Future<void> showChannelMenu(
     items: [
       if (onWatch != null)
         AppMenuItem(label: 'Watch', icon: AppIcons.play, onPressed: onWatch),
-      AppMenuItem(
-        label: 'Cast…',
-        icon: AppIcons.cast,
-        onPressed: () =>
-            unawaited(castFrom(anchor, item: PlayableChannel(channel))),
-      ),
+      if (ref.read(castsToTvsProvider))
+        AppMenuItem(
+          label: 'Cast…',
+          icon: AppIcons.cast,
+          onPressed: () =>
+              unawaited(castFrom(anchor, item: PlayableChannel(channel))),
+        ),
       AppMenuItem(
         label: channel.isFavorite
             ? 'Remove from favorites'
