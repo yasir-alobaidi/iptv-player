@@ -104,7 +104,9 @@ Future<AppUnderTest> pumpApp(
                   );
                   return TvMode(
                     on: onTv,
-                    child: onTv ? TvSelectKey(child: app) : app,
+                    child: onTv
+                        ? TvCanvas(child: TvSelectKey(child: app))
+                        : app,
                   );
                 },
               ),

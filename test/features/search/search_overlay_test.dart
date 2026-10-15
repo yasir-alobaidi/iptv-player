@@ -355,6 +355,11 @@ void main() {
       search.answers['arena'] = full('arena');
       await open(tester, formFactor: FormFactor.tv);
       expect(find.byType(RemoteKeyboard), findsOneWidget);
+      // The results beside the keyboard, not under it.
+      expect(
+        tester.getRect(find.byType(EditableText)).left,
+        greaterThan(tester.getRect(find.byType(RemoteKeyboard)).right),
+      );
       expect(
         find.text(searchCoverage(library: false)),
         findsOneWidget,

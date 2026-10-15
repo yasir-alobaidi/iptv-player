@@ -79,6 +79,7 @@ class FocusableSurface extends StatefulWidget {
     this.semanticButton = true,
     this.mouseCursor,
     this.canRequestFocus = true,
+    this.ring = true,
     super.key,
   });
 
@@ -135,6 +136,11 @@ class FocusableSurface extends StatefulWidget {
   final bool semanticButton;
   final MouseCursor? mouseCursor;
   final bool canRequestFocus;
+
+  /// The focus ring outside the control. Off only where the control draws
+  /// its focus itself and sits too close to its neighbours for a ring
+  /// (the TV's keyboard keys, ADR-026: a neighbour painted over it).
+  final bool ring;
 
   /// A disabled element is never focusable (hard rule 5's counterpart: it
   /// must not be a dead stop in the tab order).
@@ -195,7 +201,7 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
         : 1.0;
 
     Widget surface = FocusRing(
-      visible: states.focused,
+      visible: states.focused && widget.ring,
       borderRadius: radius,
       ringColor: ringColor,
       glowColor: glowColor,

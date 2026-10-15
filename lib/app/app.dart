@@ -46,7 +46,8 @@ class IptvPlayerApp extends ConsumerWidget {
         builder: (context, child) {
           final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
           final app = AppTextScale(
-            scale: look.textScale,
+            // A TV's text is larger, to read from across a room (ADR-026).
+            scale: look.textScale * (onTv ? TvCanvas.textScale : 1),
             child: AppGlobalShortcuts(
               child: AppToasts(child: child ?? const SizedBox.shrink()),
             ),
@@ -55,7 +56,11 @@ class IptvPlayerApp extends ConsumerWidget {
             on: onTv,
             child: KeyHints(
               shown: !onTv,
-              child: onTv ? StillWatching(child: TvSelectKey(child: app)) : app,
+              child: onTv
+                  ? TvCanvas(
+                      child: StillWatching(child: TvSelectKey(child: app)),
+                    )
+                  : app,
             ),
           );
         },

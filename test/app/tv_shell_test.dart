@@ -77,6 +77,21 @@ void main() {
     expect(find.textContaining('this computer'), findsNothing);
   });
 
+  testWidgets("a TV's screen is laid out 1280 wide (a 1080p TV is 960 "
+      'across to Android), scaled to fill it; the desktop as it is', (
+    tester,
+  ) async {
+    await open(tester, formFactor: FormFactor.tv);
+    expect(
+      MediaQuery.sizeOf(tester.element(find.byType(NavRail))).width,
+      TvCanvas.width,
+    );
+    expect(tester.getRect(find.byType(NavRail)).bottom, 540);
+
+    await open(tester, formFactor: FormFactor.desktop);
+    expect(MediaQuery.sizeOf(tester.element(find.byType(NavRail))).width, 1440);
+  });
+
   testWidgets('on the desktop, all of it is there', (tester) async {
     await open(tester, formFactor: FormFactor.desktop);
 

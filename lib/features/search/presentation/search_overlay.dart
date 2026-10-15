@@ -88,14 +88,21 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     }
   }
 
-  void _openKeyboard() => unawaited(
-    showRemoteKeyboard(
+  /// The remote's keyboard is open: the results make room for it, beside
+  /// it, so they show as the words are typed (the user: "I can't see the
+  /// suggestions").
+  bool _typing = false;
+
+  void _openKeyboard() => unawaited(() async {
+    setState(() => _typing = true);
+    await showRemoteKeyboard(
       context,
       controller: _query,
       label: searchHint,
       onChanged: _session.setText,
-    ),
-  );
+    );
+    if (mounted) setState(() => _typing = false);
+  }());
 
   /// OK on the field (a TV): what the results' cursor is on, once there
   /// are words; else the keyboard.
@@ -506,61 +513,67 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                     ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: EdgeInsets.only(top: search.panelTop),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: search.panelWidth,
-                        maxHeight: maxHeight,
-                      ),
-                      child: Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: tokens.spacing.s24,
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: _typing ? RemoteKeyboard.width : 0,
+                  ),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: search.panelTop),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: search.panelWidth,
+                          maxHeight: maxHeight,
                         ),
-                        decoration: BoxDecoration(
-                          color: colors.surface2,
-                          borderRadius: tokens.radii.lgAll,
-                          border: Border.all(color: colors.border),
-                          boxShadow: tokens.elevation.overlay,
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: FocusPane(
-                          debugLabel: 'search-overlay',
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Focus(
-                                canRequestFocus: false,
-                                skipTraversal: true,
-                                onKeyEvent: _onKey,
-                                child: _QueryBar(
-                                  controller: _query,
-                                  focusNode: _field,
-                                  count: results == null || results.isEmpty
-                                      ? null
-                                      : results.count,
-                                  onChanged: _session.setText,
-                                  onSubmitted: _submit,
-                                  onActivated: _onFieldActivated,
+                        child: Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: tokens.spacing.s24,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.surface2,
+                            borderRadius: tokens.radii.lgAll,
+                            border: Border.all(color: colors.border),
+                            boxShadow: tokens.elevation.overlay,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: FocusPane(
+                            debugLabel: 'search-overlay',
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Focus(
+                                  canRequestFocus: false,
+                                  skipTraversal: true,
+                                  onKeyEvent: _onKey,
+                                  child: _QueryBar(
+                                    controller: _query,
+                                    focusNode: _field,
+                                    count: results == null || results.isEmpty
+                                        ? null
+                                        : results.count,
+                                    onChanged: _session.setText,
+                                    onSubmitted: _submit,
+                                    onActivated: _onFieldActivated,
+                                  ),
                                 ),
-                              ),
-                              if (syncing) const _StillArriving(),
-                              Flexible(
-                                child: _hug(
-                                  _body(context, view, results, source),
+                                if (syncing) const _StillArriving(),
+                                Flexible(
+                                  child: _hug(
+                                    _body(context, view, results, source),
+                                  ),
                                 ),
-                              ),
-                              // After the body, which lists the entries.
-                              _Footer(
-                                idle: view.idle || source == null,
-                                recent: view.recent,
-                                hasRecent: view.idle && view.recent.isNotEmpty,
-                                remind: _remindHint(reminders),
-                              ),
-                            ],
+                                // After the body, which lists the entries.
+                                _Footer(
+                                  idle: view.idle || source == null,
+                                  recent: view.recent,
+                                  hasRecent:
+                                      view.idle && view.recent.isNotEmpty,
+                                  remind: _remindHint(reminders),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

@@ -7,6 +7,14 @@ import '../design_harness.dart';
 
 /// docs/07 and ADR-026: on a TV the remote types with Bijou's keyboard;
 /// Android's never opens.
+/// Frames enough for a route's fade; not pumpAndSettle, which a blinking
+/// caret never lets settle.
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 4; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   Finder key(String label) => find.byWidgetPredicate(
     (widget) => widget is FocusableSurface && widget.semanticLabel == label,
@@ -24,7 +32,7 @@ void main() {
 
   Future<void> ok(WidgetTester tester) async {
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pumpAndSettle();
+    await settle(tester);
   }
 
   group('RemoteKeyboard', () {
@@ -63,7 +71,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+      await settle(tester);
     }
 
     testWidgets('the remote types: the arrows move over the keys and OK '
@@ -74,7 +82,7 @@ void main() {
       expect(controller.text, 'q');
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pumpAndSettle();
+      await settle(tester);
       await ok(tester);
       expect(controller.text, 'qs');
       expect(changes, ['q', 'qs']);
@@ -108,7 +116,7 @@ void main() {
       await press(tester, ':');
       expect(controller.text, 'http://1:');
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       await open(tester, type: TextInputType.number);
       expect(key('http://'), findsNothing);
@@ -122,27 +130,84 @@ void main() {
       await open(tester);
       await press(tester, 'a');
       await press(tester, 'Done');
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(RemoteKeyboard), findsNothing);
       expect(submitted, ['a']);
 
       await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       await press(tester, 'b');
       await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(RemoteKeyboard), findsNothing);
       expect(controller.text, 'ab');
       expect(submitted, ['a']);
+    });
+
+    testWidgets('the focused key fills white with dark letters, and draws no '
+        'ring a neighbour could paint over (the user, on the TV)', (
+      tester,
+    ) async {
+      await open(tester);
+      Color? ink(String label) => tester
+          .widget<Text>(
+            find.descendant(of: key(label), matching: find.text(label)),
+          )
+          .style!
+          .color;
+      // q has the focus: dark on white; w rests: light on dark.
+      expect(ink('q'), isNot(ink('w')));
+      expect(
+        tester
+            .widgetList<FocusRing>(
+              find.descendant(
+                of: find.byType(RemoteKeyboard),
+                matching: find.byType(FocusRing),
+              ),
+            )
+            .where((ring) => ring.visible),
+        isEmpty,
+      );
+    });
+
+    testWidgets('the caret blinks; a long text shows its end, where the '
+        'typing is', (tester) async {
+      await open(tester);
+      Opacity caret() => tester.widget<Opacity>(
+        find
+            .descendant(
+              of: find.byType(RemoteKeyboard),
+              matching: find.byType(Opacity),
+            )
+            .last,
+      );
+      expect(caret().opacity, 1);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(caret().opacity, 0);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(caret().opacity, 1);
+
+      for (var i = 0; i < 30; i++) {
+        await tester.tap(key('w'));
+        await tester.pump();
+      }
+      final text = find.descendant(
+        of: find.byType(RemoteKeyboard),
+        matching: find.text('w' * 30),
+      );
+      final keyboard = tester.getRect(find.byType(RemoteKeyboard));
+      // Cut at the left, its end in the box.
+      expect(tester.getRect(text).left, lessThan(keyboard.left));
+      expect(tester.getRect(text).right, lessThan(keyboard.right));
     });
 
     testWidgets('a password shows dots until Show', (tester) async {
       await open(tester, obscure: true);
       await press(tester, 'p');
       await press(tester, 'w');
-      expect(find.text('••|'), findsOneWidget);
+      expect(find.text('••'), findsOneWidget);
       await press(tester, 'Show');
-      expect(find.text('pw|'), findsOneWidget);
+      expect(find.text('pw'), findsOneWidget);
     });
   });
 
@@ -173,15 +238,15 @@ void main() {
         ),
         tv: true,
       );
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(first.hasPrimaryFocus, isTrue);
       expect(inputType(tester), 'TextInputType.none');
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(second.hasPrimaryFocus, isTrue);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(first.hasPrimaryFocus, isTrue);
 
       await ok(tester);
@@ -189,7 +254,7 @@ void main() {
       expect(find.text('Username'), findsWidgets);
       await ok(tester);
       await press(tester, 'Done');
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.text('q'), findsOneWidget);
       expect(submitted, ['q']);
       expect(first.hasPrimaryFocus, isTrue);
@@ -201,10 +266,10 @@ void main() {
         tester,
         const SizedBox(width: 320, child: AppTextField(autofocus: true)),
       );
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(inputType(tester), 'TextInputType.text');
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(RemoteKeyboard), findsNothing);
     });
   });
