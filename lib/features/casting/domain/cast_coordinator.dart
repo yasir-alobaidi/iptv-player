@@ -54,6 +54,10 @@ final class CastTimings {
     this.saveEvery = const Duration(seconds: 10),
     this.earlyEnd = const Duration(seconds: 10),
     this.quit = const Duration(seconds: 3),
+    this.wokeClose = const Duration(seconds: 20),
+    this.relaunchAfter = const Duration(seconds: 2),
+    this.relaunchTries = 5,
+    this.relaunchEvery = const Duration(seconds: 1),
   });
 
   /// The TV must ask for the relay's stream within this of the LOAD;
@@ -102,6 +106,18 @@ final class CastTimings {
 
   /// What quitting gives the TV and the relay.
   final Duration quit;
+
+  /// A receiver launched on a TV it woke that the TV closes within this
+  /// is launched again, once: a Google TV woken by a cast closes it about
+  /// 7 s after it woke (the Bedroom TV, ADR-024).
+  final Duration wokeClose;
+
+  /// That TV refuses a launch for about 2 s after the close
+  /// (`LAUNCH_ERROR SYSTEM_ERROR`): the launch again waits this, then
+  /// tries [relaunchTries] more times, [relaunchEvery] apart.
+  final Duration relaunchAfter;
+  final int relaunchTries;
+  final Duration relaunchEvery;
 }
 
 /// Casts to one device at a time (docs/04's CastCoordinator, Phase 7
@@ -206,6 +222,9 @@ final class CastCoordinator implements RemotePlayback {
   StreamSubscription<CastSessionState>? _tvStates;
   var _joinFailed = false;
   var _awake = false;
+
+  /// Open for [CastTimings.wokeClose] after a launch that woke the TV.
+  Timer? _wokeWindow;
 
   /// What plays now.
   _Cast? _cast;
@@ -432,18 +451,37 @@ final class CastCoordinator implements RemotePlayback {
     if (session == _session) _known = found.valueOrNull;
   }
 
-  void _join(CastDevice device, int session) {
+  /// Joins [device]'s receiver; [again] when the TV closed the one this
+  /// session launched as it woke.
+  void _join(CastDevice device, int session, {bool again = false}) {
     final local = _local = Completer<String?>();
     final joined = Completer<CastReceiverSession?>();
     _joined = joined.future;
     unawaited(() async {
-      final clock = Stopwatch()..start();
-      final result = await _receivers.join(
+      Future<CastJoinResult> join() => _receivers.join(
         CastAddress(device.host, device.port),
         onConnected: (address) {
           if (!local.isCompleted) local.complete(address);
         },
       );
+      if (again) await Future<void>.delayed(timings.relaunchAfter);
+      final clock = Stopwatch()..start();
+      var result = session == _session
+          ? await join()
+          : const CastJoinFailed(CastJoinFailure.unreachable, 'stopped');
+      // A TV that closed the receiver as it woke refuses a launch for a
+      // moment (ADR-024).
+      for (var tries = again ? timings.relaunchTries : 0; tries > 0; tries--) {
+        if (result is! CastJoinFailed ||
+            result.reason != CastJoinFailure.launchRefused ||
+            session != _session) {
+          break;
+        }
+        _log.info(_tag, '${device.name} refused the launch: trying again');
+        await Future<void>.delayed(timings.relaunchEvery);
+        if (session != _session) break;
+        result = await join();
+      }
       if (session != _session) {
         // Stopped while it joined.
         if (result case CastJoined(:final session)) await session.stop();
@@ -453,7 +491,11 @@ final class CastCoordinator implements RemotePlayback {
       }
       switch (result) {
         case CastJoinFailed(:final reason, :final detail):
-          _log.warning(_tag, 'Could not join ${device.name}: ${reason.name}');
+          _log.warning(
+            _tag,
+            'Could not join ${device.name}: ${reason.name}'
+            '${detail == null ? '' : ' ($detail)'}',
+          );
           if (!local.isCompleted) local.complete(null);
           joined.complete(null);
           await _joinFailedWith(
@@ -465,12 +507,15 @@ final class CastCoordinator implements RemotePlayback {
               detail: detail,
             ),
           );
-        case CastJoined(:final session, :final launched):
+        case CastJoined(:final session, :final launched, :final woke):
           _log.info(
             _tag,
             '${launched ? 'Launched' : 'Joined'} the receiver on '
-            '${device.name} in ${clock.elapsedMilliseconds} ms',
+            '${device.name} in ${clock.elapsedMilliseconds} ms'
+            '${woke ? ', waking it' : ''}',
           );
+          _wokeWindow?.cancel();
+          _wokeWindow = woke && !again ? Timer(timings.wokeClose, () {}) : null;
           if (!local.isCompleted) local.complete(session.localAddress);
           _tv = session;
           _tvStates = session.states.listen(_onTv);
@@ -504,6 +549,8 @@ final class CastCoordinator implements RemotePlayback {
   /// The session is over: nothing is cast, the computer may sleep, and
   /// the screens play here again.
   Future<void> _forgetSession() async {
+    _wokeWindow?.cancel();
+    _wokeWindow = null;
     await _tvStates?.cancel();
     _tvStates = null;
     _tv = null;
@@ -570,6 +617,9 @@ final class CastCoordinator implements RemotePlayback {
     if (device == null || end == CastEnd.stopped || end == CastEnd.left) {
       return;
     }
+    if (end == CastEnd.closedOnDevice && (_wokeWindow?.isActive ?? false)) {
+      return await _launchAgain(device);
+    }
     _log.info(_tag, '${device.name} ended the cast: ${end?.name}');
     ++_session;
     final cast = _cast;
@@ -579,6 +629,40 @@ final class CastCoordinator implements RemotePlayback {
     _notice(
       CastSessionClosed(device.name, end ?? CastEnd.lost, otherApp: otherApp),
     );
+  }
+
+  /// [device] closed the receiver this session woke it for, seconds in,
+  /// as a Google TV does while its screen comes on (the Bedroom TV,
+  /// ADR-024). Nobody asked for that: the receiver is launched again,
+  /// once, and what was cast loads again where it was, without a word.
+  Future<void> _launchAgain(CastDevice device) async {
+    _wokeWindow?.cancel();
+    _wokeWindow = null;
+    _log.info(
+      _tag,
+      '${device.name} closed the receiver as it woke: launching it again',
+    );
+    await _tvStates?.cancel();
+    _tvStates = null;
+    _tv = null;
+    final cast = _cast;
+    if (cast != null && !cast.item.live && cast.played) {
+      final at = _position(cast);
+      cast
+        ..from = at
+        ..anchor = at
+        ..running = false;
+      _publishTimeline(cast);
+    }
+    _set(
+      _state.copyWith(
+        phase: CastPhase.connecting,
+        paused: false,
+        buffering: false,
+      ),
+    );
+    _join(device, _session, again: true);
+    if (cast != null) await _reload(cast);
   }
 
   // A play.

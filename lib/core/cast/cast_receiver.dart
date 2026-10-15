@@ -28,12 +28,17 @@ sealed class CastJoinResult {
 }
 
 final class CastJoined extends CastJoinResult {
-  const new(this.session, {required this.launched});
+  const new(this.session, {required this.launched, this.woke = false});
 
   final CastReceiverSession session;
 
   /// False when the receiver was already running and was joined as it was.
   final bool launched;
+
+  /// The device was asleep (in standby, or showing another input) and the
+  /// launch woke it. A Google TV woken so closes the receiver a few
+  /// seconds after it starts playing (the Bedroom TV, ADR-024).
+  final bool woke;
 }
 
 final class CastJoinFailed extends CastJoinResult {
@@ -43,6 +48,10 @@ final class CastJoinFailed extends CastJoinResult {
 
   /// Technical text for the log and Details, never shown in front.
   final String? detail;
+
+  @override
+  String toString() =>
+      'CastJoinFailed(${reason.name}${detail == null ? '' : ', $detail'})';
 }
 
 enum CastJoinFailure {

@@ -128,6 +128,27 @@ void main() {
       expect(status.apps.single.appId, 'A');
       expect(status.volume, const CastVolume());
     });
+
+    test('whether the screen is on: awake on its input', () {
+      final status = CastReceiverStatus.tryRead(_idle)!;
+      expect(status.standBy, isFalse);
+      expect(status.activeInput, isTrue);
+      expect(status.asleep, isFalse);
+    });
+
+    test('asleep: in standby, or on another input, as the Bedroom TV said '
+        'before a cast woke it', () {
+      CastReceiverStatus read(Object? standBy, Object? activeInput) =>
+          CastReceiverStatus.tryRead({
+            'status': {'isStandBy': standBy, 'isActiveInput': activeInput},
+          })!;
+      expect(read(true, false).asleep, isTrue);
+      expect(read(false, false).asleep, isTrue, reason: 'another input');
+      expect(read(true, null).asleep, isTrue);
+      expect(read('true', 'false').standBy, isTrue, reason: 'as strings');
+      expect(read(null, null).asleep, isFalse, reason: 'says nothing');
+      expect(read('maybe', 7).standBy, isNull);
+    });
   });
 
   group('MEDIA_STATUS', () {

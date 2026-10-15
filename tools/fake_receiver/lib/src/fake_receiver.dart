@@ -149,8 +149,10 @@ final class FakeApp {
 ///
 /// Faults: [silent], [heartbeat], [dropConnections], [refuseConnections],
 /// [refuseLoads], [refuseLaunch], [startOtherApp], the remote's
-/// [remotePause], [remotePlay] and [remoteBack], and raw bytes or JSON
-/// sent to every sender ([sendRaw], [sendJson]).
+/// [remotePause], [remotePlay] and [remoteBack], a TV in [standBy] that
+/// a launch wakes and that may close the receiver as it does
+/// ([closeAfterWake]), and raw bytes or JSON sent to every sender
+/// ([sendRaw], [sendJson]).
 final class FakeReceiver {
   new _(
     this._server,
@@ -227,6 +229,8 @@ final class FakeReceiver {
   Timer? _launching;
   Timer? _loading;
   Timer? _finishing;
+  Timer? _wakeClose;
+  var _woke = false;
 
   /// Answers nothing at all, and sends no PINGs.
   bool silent = false;
@@ -239,6 +243,21 @@ final class FakeReceiver {
 
   /// Answers LAUNCH with LAUNCH_ERROR.
   bool refuseLaunch = false;
+
+  /// The TV it is plugged into is off (`isStandBy`, and not
+  /// `isActiveInput`): a LAUNCH turns it on, as HDMI-CEC does.
+  bool standBy = false;
+
+  /// A receiver launched on the TV in [standBy] closes this long after
+  /// its media first plays, with nothing else running: the Bedroom TV, a
+  /// Google TV, does so 3–4 s in while its screen comes on (ADR-024).
+  /// Null: it doesn't.
+  Duration? closeAfterWake;
+
+  /// For this long after that close, a LAUNCH is allowed and then fails
+  /// (`LAUNCH_ERROR SYSTEM_ERROR`): the Bedroom TV, for about 2 s.
+  Duration refuseAfterWakeClose = Duration.zero;
+  Duration _refusingUntil = Duration.zero;
 
   bool Function(Map<String, Object?> media)? _refuse;
 
@@ -352,6 +371,7 @@ final class FakeReceiver {
     _launching?.cancel();
     _loading?.cancel();
     _finishing?.cancel();
+    _wakeClose?.cancel();
     _media?.watch?.cancel();
     dropConnections();
     await _server.close();
@@ -495,6 +515,13 @@ final class FakeReceiver {
             },
           ),
         );
+        if (_clock.elapsed < _refusingUntil) {
+          _reply(sender, m, nsReceiver, {
+            'type': 'LAUNCH_ERROR',
+            'reason': 'SYSTEM_ERROR',
+          });
+          return;
+        }
         if (_app?.appId == defaultMediaReceiver) {
           _reply(sender, m, nsReceiver, _receiverStatus());
           return;
@@ -502,6 +529,8 @@ final class FakeReceiver {
         _launching?.cancel();
         _launching = Timer(launchDelay, () {
           _closeApp(announce: false);
+          _woke = standBy;
+          standBy = false;
           _app = _newDefaultMediaReceiver();
           _reply(sender, m, nsReceiver, _receiverStatus());
           _broadcastReceiverStatus();
@@ -708,6 +737,15 @@ final class FakeReceiver {
       ..since = _now
       ..state = state;
     _finishing?.cancel();
+    if (state == 'PLAYING' && _woke) {
+      _woke = false;
+      if (closeAfterWake case final after?) {
+        _wakeClose = Timer(after, () {
+          _closeApp();
+          _refusingUntil = _clock.elapsed + refuseAfterWakeClose;
+        });
+      }
+    }
     final duration = _durationOf(media);
     if (state == 'PLAYING' && duration != null) {
       final left = duration - media.position;
@@ -766,6 +804,7 @@ final class FakeReceiver {
   }
 
   void _closeApp({bool announce = true}) {
+    _wakeClose?.cancel();
     final app = _app;
     if (app == null) return;
     _loading?.cancel();
@@ -858,8 +897,8 @@ final class FakeReceiver {
             'universalAppId': app.appId,
           },
         ],
-      'isActiveInput': true,
-      'isStandBy': false,
+      'isActiveInput': !standBy,
+      'isStandBy': standBy,
       'userEq': <String, Object?>{},
       'volume': {
         'controlType': device.fixedVolume ? 'fixed' : 'attenuation',

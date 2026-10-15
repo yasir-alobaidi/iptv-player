@@ -585,6 +585,8 @@ const fastTimings = CastTimings(
   subtitles: Duration(milliseconds: 200),
   saveEvery: Duration(seconds: 1),
   quit: Duration(seconds: 1),
+  relaunchAfter: Duration(milliseconds: 50),
+  relaunchEvery: Duration(milliseconds: 50),
 );
 
 /// The subtitles of files on this computer, without FFmpeg: every file

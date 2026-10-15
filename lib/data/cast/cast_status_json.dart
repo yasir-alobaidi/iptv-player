@@ -30,9 +30,15 @@ final class CastRunningApp {
   final bool idleScreen;
 }
 
-/// RECEIVER_STATUS: the apps running, and the device's volume.
+/// RECEIVER_STATUS: the apps running, the device's volume, and whether
+/// its screen is on.
 final class CastReceiverStatus {
-  const new({required this.apps, required this.volume});
+  const new({
+    required this.apps,
+    required this.volume,
+    this.standBy,
+    this.activeInput,
+  });
 
   /// Reads a RECEIVER_STATUS payload; null when its `status` isn't an
   /// object, which says nothing about what runs. A status without
@@ -60,11 +66,25 @@ final class CastReceiverStatus {
     return CastReceiverStatus(
       apps: apps,
       volume: readCastVolume(status['volume']),
+      standBy: readBool(status['isStandBy']),
+      activeInput: readBool(status['isActiveInput']),
     );
   }
 
   final List<CastRunningApp> apps;
   final CastVolume volume;
+
+  /// `isStandBy`: the TV it is plugged into is off (HDMI-CEC); null when
+  /// the device doesn't say.
+  final bool? standBy;
+
+  /// `isActiveInput`: the TV shows this device's input; null when the
+  /// device doesn't say.
+  final bool? activeInput;
+
+  /// The device's screen is off or on another input, as far as it says:
+  /// launching a receiver wakes it.
+  bool get asleep => standBy == true || activeInput == false;
 
   /// The running app with [appId], if any.
   CastRunningApp? app(String appId) =>

@@ -18,7 +18,10 @@
 // the relay, with the MP4 made beside it, with subtitles, a downloaded
 // title, and a resume. About 10 more minutes; CAST_ROWS=17,18,19,20,21,22,23
 // runs them alone. Row 24 is Cast while the laptop plays a film, the way
-// the TV's bar once showed the wrong length (ADR-019).
+// the TV's bar once showed the wrong length (ADR-019). Row 25 casts to the
+// TV in standby, which a Google TV answers by closing the receiver as its
+// screen comes on (ADR-024): run it alone, a minute after the TV went
+// dark, to see it.
 //
 // CAST_HOST=fake runs every row against the fake receiver in-process
 // (rows 6 and 16 included, with shorter holds): the runner's own check,
@@ -555,6 +558,46 @@ List<_Row> _rows({required bool fake}) {
         await m.hold(r);
       },
     ),
+    _Row(
+      25,
+      'A film cast to the TV in standby (MKV, AC-3, from 3:00): the '
+          'receiver it closes as it wakes is launched again',
+      'the TV coming on, the film at 3:00, perhaps a blink, then playing on',
+      (m, r) async {
+        // The fake TV does what the Bedroom TV did: on, the receiver
+        // closed seconds in, and a launch refused for a moment after.
+        m.fakeTv
+          ?..standBy = true
+          ..closeAfterWake = const Duration(seconds: 1)
+          ..refuseAfterWakeClose = const Duration(milliseconds: 2500);
+        final from = m.lines.length;
+        try {
+          await m.castFile(
+            r,
+            PlayableMovie(_movie(100001, 'mkv')),
+            from: const Duration(minutes: 3),
+          );
+          await m.hold(r);
+        } finally {
+          m.fakeTv
+            ?..closeAfterWake = null
+            ..refuseAfterWakeClose = Duration.zero;
+        }
+        final logged = m.lines.skip(from);
+        final woke = logged.any((l) => l.contains(', waking it'));
+        final again = logged
+            .where((l) => l.contains('closed the receiver as it woke'))
+            .length;
+        r.note(
+          woke
+              ? 'the cast woke the TV; launched again $again time(s)'
+              : 'the TV was on already: nothing to see',
+        );
+        if (m.fakeTv != null && again != 1) {
+          throw StateError('launched again $again times, not once');
+        }
+      },
+    ),
   ];
 }
 
@@ -1073,6 +1116,11 @@ final class _Matrix {
     while (DateTime.now().isBefore(end)) {
       if (state.phase == CastPhase.failed) {
         throw StateError('the cast failed: ${state.problem}');
+      }
+      if (state.phase == CastPhase.off) {
+        throw StateError(
+          'the TV ended the cast: ${r.notices.lastOrNull ?? 'no word'}',
+        );
       }
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }

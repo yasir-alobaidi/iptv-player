@@ -127,14 +127,15 @@ final class CastV2Receivers implements CastReceivers {
       }
       app = started;
     }
+    final woke = launched && status.asleep;
     log?.info(
       _tag,
       '${launched ? 'launched' : 'joined the running'} receiver on $address '
-      'after ${clock.elapsedMilliseconds} ms',
+      'after ${clock.elapsedMilliseconds} ms${woke ? ', waking it' : ''}',
     );
     final session = _CastV2Session(this, address, channel, app, status.volume);
     await session.refreshMedia();
-    return CastJoined(session, launched: launched);
+    return CastJoined(session, launched: launched, woke: woke);
   }
 
   /// LAUNCH, then the app as the device lists it. The answer usually

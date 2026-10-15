@@ -234,6 +234,56 @@ void main() {
     await status;
   });
 
+  test('in standby, woken by a LAUNCH, it closes the receiver after its '
+      'media plays and refuses a launch for a moment, as the Bedroom TV '
+      'does', () async {
+    receiver
+      ..standBy = true
+      ..closeAfterWake = 100.ms
+      ..refuseAfterWakeClose = 300.ms;
+    client.connectTo(receiverId);
+    final asleep = await client.next(
+      'RECEIVER_STATUS',
+      () => client.send(receiverId, nsReceiver, {
+        'type': 'GET_STATUS',
+        'requestId': 1,
+      }),
+    );
+    expect(_status(asleep), containsPair('isStandBy', true));
+    expect(_status(asleep), containsPair('isActiveInput', false));
+    final transport = await launch();
+    expect(receiver.standBy, isFalse);
+    final closed = client.next('RECEIVER_STATUS', null, (m) => lists(m, null));
+    client.send(transport, nsMedia, {
+      'type': 'LOAD',
+      'requestId': 5,
+      'media': {
+        'contentId': 'http://127.0.0.1/a.mp4',
+        'contentType': 'video/mp4',
+        'streamType': 'BUFFERED',
+      },
+      'autoplay': true,
+    });
+    expect(_status(await closed), containsPair('isStandBy', false));
+    final allowed = client.next('LAUNCH_STATUS');
+    final error = await client.next(
+      'LAUNCH_ERROR',
+      () => client.send(receiverId, nsReceiver, {
+        'type': 'LAUNCH',
+        'appId': defaultMediaReceiver,
+        'requestId': 7,
+      }),
+    );
+    expect((await allowed).payload!['status'], 'USER_ALLOWED');
+    expect(error.payload!['reason'], 'SYSTEM_ERROR');
+    expect(receiver.app, isNull);
+    await Future<void>.delayed(400.ms);
+    await launch();
+    expect(receiver.app?.appId, defaultMediaReceiver);
+    await Future<void>.delayed(300.ms);
+    expect(receiver.app, isNotNull, reason: 'awake now: no close');
+  });
+
   test('another app takes the device', () async {
     await launch();
     await client.next(

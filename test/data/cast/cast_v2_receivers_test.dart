@@ -119,7 +119,25 @@ void main() {
       final result = await receivers.join(address()) as CastJoined;
       session = result.session;
       expect(result.launched, isFalse);
+      expect(result.woke, isFalse);
       expect(fake.requests('LAUNCH'), isEmpty);
+    });
+
+    test('a launch on a TV in standby wakes it, and says so', () async {
+      await startFake();
+      fake.standBy = true;
+      final result = await receivers.join(address()) as CastJoined;
+      session = result.session;
+      expect(result.launched, isTrue);
+      expect(result.woke, isTrue);
+      expect(fake.standBy, isFalse, reason: 'HDMI-CEC turned it on');
+    });
+
+    test('a TV already on is not woken', () async {
+      await startFake();
+      final result = await receivers.join(address()) as CastJoined;
+      session = result.session;
+      expect(result.woke, isFalse);
     });
 
     test("waits out a slow launch, like the TV's 3–6 s", () async {
@@ -316,6 +334,18 @@ void main() {
       fake.remoteBack();
       final ended = await _until(joined, (s) => s.link == CastLink.ended);
       expect(ended.end, CastEnd.closedOnDevice);
+    });
+
+    test('a TV woken by the launch that closes the receiver seconds after '
+        'it plays, as the Bedroom TV did: closed on the device', () async {
+      await startFake();
+      fake
+        ..standBy = true
+        ..closeAfterWake = const Duration(milliseconds: 300);
+      final joined = await playing();
+      final ended = await _until(joined, (s) => s.link == CastLink.ended);
+      expect(ended.end, CastEnd.closedOnDevice);
+      expect(fake.app, isNull);
     });
 
     test('another app taking the TV ends the session with its name', () async {

@@ -11,6 +11,7 @@ import 'package:iptv_player/core/cast/stream_facts.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/features/casting/domain/cast_coordinator.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
@@ -953,6 +954,192 @@ void main() {
           const Duration(minutes: 30, seconds: 3),
         ),
       );
+    });
+
+    group('a TV the cast woke (ADR-024)', () {
+      /// The first launch wakes the TV; a later one finds it awake.
+      void wakes() => rig.receivers.answer = () {
+        rig.receivers.answer = null;
+        return CastJoined(rig.receivers.tv, launched: true, woke: true);
+      };
+
+      /// The TV closes the receiver it plays on, nothing else running;
+      /// the next launch gets a new receiver.
+      void closeOnTv() {
+        final closing = rig.tv;
+        rig.receivers.tv = FakeTv();
+        closing.emit(
+          closing.state.copyWith(
+            link: CastLink.ended,
+            end: CastEnd.closedOnDevice,
+          ),
+        );
+      }
+
+      test('closes the receiver seconds into the film: launched again, '
+          'once, and the film loaded again where it was, without a '
+          'word', () async {
+        wakes();
+        await castMovie(from: const Duration(minutes: 10));
+        rig.tv.playing(position: const Duration(minutes: 10, seconds: 3));
+        await rig.phase(CastPhase.playing);
+        closeOnTv();
+        await rig.loaded();
+        expect(rig.receivers.joins, hasLength(2));
+        expect(rig.relay.sessions, hasLength(1), reason: 'the same relay');
+        final renewed = rig.relay.last.renews.single;
+        expect(
+          renewed.startAt,
+          _between(
+            const Duration(minutes: 10, seconds: 3),
+            const Duration(minutes: 10, seconds: 4),
+          ),
+        );
+        expect(rig.tv.loads.single.start, renewed.startAt);
+        expect(rig.tv.loads.single.url, rig.relay.last.url);
+        rig.tv.playing(position: const Duration(minutes: 10, seconds: 4));
+        await rig.phase(CastPhase.playing);
+        expect(rig.notices, isEmpty);
+        expect(rig.playback.coordinator.casting, isTrue);
+        expect(
+          rig.logLines.join('\n'),
+          contains('Living Room TV closed the receiver as it woke'),
+        );
+      });
+
+      test('refuses the launch again for a moment, as the Bedroom TV '
+          'did: tried again until it takes it', () async {
+        wakes();
+        await castMovie(from: const Duration(minutes: 10));
+        rig.tv.playing(position: const Duration(minutes: 10, seconds: 3));
+        await rig.phase(CastPhase.playing);
+        var refusals = 2;
+        rig.receivers.answer = () => refusals-- > 0
+            ? const CastJoinFailed(
+                CastJoinFailure.launchRefused,
+                'LAUNCH_ERROR SYSTEM_ERROR',
+              )
+            : CastJoined(rig.receivers.tv, launched: true);
+        closeOnTv();
+        await rig.loaded();
+        expect(rig.receivers.joins, hasLength(4));
+        rig.tv.playing(position: const Duration(minutes: 10, seconds: 4));
+        await rig.phase(CastPhase.playing);
+        expect(rig.notices, isEmpty);
+        expect(
+          rig.logLines.where((l) => l.contains('refused the launch')),
+          hasLength(2),
+        );
+      });
+
+      test('refuses every launch again: the cast fails, with Try '
+          'again', () async {
+        wakes();
+        await castMovie();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        rig.receivers.answer = () => const CastJoinFailed(
+          CastJoinFailure.launchRefused,
+          'LAUNCH_ERROR SYSTEM_ERROR',
+        );
+        closeOnTv();
+        await rig.phase(CastPhase.failed);
+        expect(rig.receivers.joins, hasLength(1 + 1 + 5));
+        expect(rig.state.problem?.kind, CastProblemKind.receiverRefused);
+        expect(rig.relay.last.stopped, isTrue);
+        expect(
+          rig.logLines.join('\n'),
+          contains('launchRefused (LAUNCH_ERROR SYSTEM_ERROR)'),
+        );
+      });
+
+      test('closes it again after the second launch: the session ends, '
+          'as any close does', () async {
+        wakes();
+        await castMovie();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        closeOnTv();
+        await rig.loaded();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        rig.receivers.answer = () =>
+            CastJoined(rig.receivers.tv, launched: true, woke: true);
+        closeOnTv();
+        await rig.phase(CastPhase.off);
+        expect(rig.receivers.joins, hasLength(2));
+        final notice = rig.notices.single as CastSessionClosed;
+        expect(notice.end, CastEnd.closedOnDevice);
+        expect(rig.relay.last.stopped, isTrue);
+      });
+
+      test('closes it before the film plays: launched again, the film '
+          'from where it was asked for', () async {
+        wakes();
+        await castMovie(from: const Duration(minutes: 10));
+        closeOnTv();
+        await rig.loaded();
+        expect(rig.receivers.joins, hasLength(2));
+        expect(rig.tv.loads.single.start, const Duration(minutes: 10));
+      });
+
+      test('a TV that was awake: the same close ends the session', () async {
+        await castMovie();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        closeOnTv();
+        await rig.phase(CastPhase.off);
+        expect(rig.receivers.joins, hasLength(1));
+        expect(
+          (rig.notices.single as CastSessionClosed).end,
+          CastEnd.closedOnDevice,
+        );
+      });
+
+      test("a close after the first seconds is the viewer's: the session "
+          'ends', () async {
+        await rig.dispose();
+        rig = CastRig(
+          timings: const CastTimings(
+            reach: Duration(milliseconds: 400),
+            liveEnd: Duration(milliseconds: 400),
+            learnWithin: Duration(seconds: 2),
+            directWithin: Duration(seconds: 2),
+            picture: Duration(milliseconds: 200),
+            subtitles: Duration(milliseconds: 200),
+            saveEvery: Duration(seconds: 1),
+            quit: Duration(seconds: 1),
+            wokeClose: Duration(milliseconds: 300),
+            relaunchAfter: Duration(milliseconds: 50),
+            relaunchEvery: Duration(milliseconds: 50),
+          ),
+        );
+        wakes();
+        await castMovie();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        closeOnTv();
+        await rig.phase(CastPhase.off);
+        expect(rig.receivers.joins, hasLength(1));
+        expect(rig.notices.single, isA<CastSessionClosed>());
+      });
+
+      test('a channel: launched again, and the channel loaded again', () async {
+        wakes();
+        await rig.coordinator.connect(tvDevice);
+        await rig.phase(CastPhase.idle);
+        unawaited(rig.playback.coordinator.playLive(channel(1)));
+        await rig.loaded();
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        closeOnTv();
+        await rig.loaded();
+        expect(rig.tv.loads.single.live, isTrue);
+        rig.tv.playing();
+        await rig.phase(CastPhase.playing);
+        expect(rig.notices, isEmpty);
+      });
     });
 
     test("a length the stream doesn't say is not written into it: the "
