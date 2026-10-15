@@ -122,5 +122,18 @@ void main() {
         'no',
       );
     });
+
+    test("Android's direct output always asks for MediaCodec itself, the "
+        'only decoder it shows; Off waits for the next launch', () {
+      for (final hardware in [true, false]) {
+        expect(
+          mpvOptionsFor(
+            PlayRequest(url: 'u', hardwareDecoding: hardware),
+            direct: true,
+          )['hwdec'],
+          'mediacodec',
+        );
+      }
+    });
   });
 }

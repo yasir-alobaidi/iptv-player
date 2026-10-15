@@ -57,13 +57,32 @@ const _vodBackBytes = '64MiB';
 const hwdecAutomatic = 'auto-safe';
 const hwdecOff = 'no';
 
+/// On Android, MediaCodec decoding straight into the picture's surface
+/// (`vo=mediacodec_embed`), the only decoder that output takes. mpv's own
+/// `gpu` output copies every decoded frame back (`mediacodec-copy`) and
+/// dropped about 65% of a 720p50 channel's frames on a Chromecast with
+/// Google TV; this output dropped none (ADR-025).
+const hwdecDirect = 'mediacodec';
+const _directOutput = 'mediacodec_embed';
+
+/// Diagnostics for a TV, where mpv's log is otherwise out of reach: a
+/// build with `--dart-define=BIJOU_MPV_LOG=ao,ad,cplayer` writes mpv's
+/// verbose lines from those modules to the app's log, and so to logcat
+/// (docs/setup.md §7).
+const _mpvLog = String.fromEnvironment('BIJOU_MPV_LOG');
+
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
 /// the preset, then what varies per stream. Exposed for tests.
 ///
 /// [picture] false is a player with no video output: there Automatic
 /// leaves `hwdec` alone (nothing for a graphics card to draw to), and Off
-/// still says no.
-Map<String, String> mpvOptionsFor(PlayRequest request, {bool picture = true}) {
+/// still says no. [direct] is Android's direct output, which shows only
+/// what MediaCodec decodes: Off there waits for the next launch.
+Map<String, String> mpvOptionsFor(
+  PlayRequest request, {
+  bool picture = true,
+  bool direct = false,
+}) {
   // mpv's list option parts paths at ':' (';' on Windows), so a path
   // holding one is left out.
   final subtitleFiles = request.subtitleFiles.where(
@@ -73,7 +92,9 @@ Map<String, String> mpvOptionsFor(PlayRequest request, {bool picture = true}) {
     ..._presetOptions[request.preset]!,
     // Read when the file's decoder starts, so a change in Settings applies
     // to the next thing played.
-    if (!request.hardwareDecoding)
+    if (direct)
+      'hwdec': hwdecDirect
+    else if (!request.hardwareDecoding)
       'hwdec': hwdecOff
     else if (picture)
       'hwdec': hwdecAutomatic,
@@ -98,7 +119,13 @@ final _listSeparator = Platform.isWindows ? ';' : ':';
 /// (ADR-003). One instance for the app's lifetime; every channel is an
 /// `open` on it.
 final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
-  new _(this._player, this._controller, this._log, this._secrets);
+  new _(
+    this._player,
+    this._controller,
+    this._log,
+    this._secrets, {
+    required this._direct,
+  });
 
   /// [video] false runs mpv with no video output (`vo=null`): decoding,
   /// network and audio as usual, nothing drawn. For headless runs with
@@ -117,7 +144,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     final player = Player(
       configuration: PlayerConfiguration(
         title: appName,
-        logLevel: MPVLogLevel.warn,
+        logLevel: _mpvLog.isEmpty ? MPVLogLevel.warn : MPVLogLevel.v,
         vo: video ? null : 'null',
       ),
     );
@@ -125,15 +152,27 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     // controller: that waits for the first texture, which needs frames
     // drawn, and mpv doesn't need the controller for options.
     await (player.platform! as NativePlayer).waitForPlayerInitialization;
+    final direct = video && hardwareDecoding && Platform.isAndroid;
     final controller = video
         ? VideoController(
             player,
             configuration: VideoControllerConfiguration(
-              hwdec: hardwareDecoding ? hwdecAutomatic : hwdecOff,
+              vo: direct ? _directOutput : null,
+              hwdec: direct
+                  ? hwdecDirect
+                  : hardwareDecoding
+                  ? hwdecAutomatic
+                  : hwdecOff,
             ),
           )
         : null;
-    final engine = MediaKitPlayerEngine._(player, controller, log, secrets);
+    final engine = MediaKitPlayerEngine._(
+      player,
+      controller,
+      log,
+      secrets,
+      direct: direct,
+    );
     await engine._start();
     return engine;
   }
@@ -142,6 +181,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   final VideoController? _controller;
   final AppLog _log;
   final SecretRegistry _secrets;
+  final bool _direct;
 
   final _events = StreamController<PlayerEvent>.broadcast();
   final _subscriptions = <StreamSubscription<Object?>>[];
@@ -175,6 +215,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   bool _open = false;
   bool _started = false;
   Timer? _firstFramePoll;
+  final _sinceOpen = Stopwatch();
   String? _lastError;
   Duration _position = Duration.zero;
   Duration _buffered = Duration.zero;
@@ -192,6 +233,16 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     // on; with no picture wanted, decode anyway, so the watchdog and the
     // stream info see the same stream a window would.
     if (_controller == null) await _set('vid', 'auto');
+    if (_mpvLog.isNotEmpty) {
+      final modules = _mpvLog.split(',');
+      _subscriptions.add(
+        _player.stream.log.listen((line) {
+          if (modules.any(line.prefix.startsWith)) {
+            _log.info('mpv', '${line.prefix}: ${_clean(line.text.trim())}');
+          }
+        }),
+      );
+    }
     _subscriptions
       ..add(_player.stream.position.listen(_onPosition))
       ..add(_player.stream.completed.listen(_onCompleted))
@@ -253,8 +304,15 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _lastError = null;
     _position = Duration.zero;
     _buffered = Duration.zero;
+    _sinceOpen
+      ..reset()
+      ..start();
     _emit(PlayerOpening(generation));
-    final options = mpvOptionsFor(request, picture: _controller != null);
+    final options = mpvOptionsFor(
+      request,
+      picture: _controller != null,
+      direct: _direct,
+    );
     for (final MapEntry(:key, :value) in options.entries) {
       await _set(key, value);
     }
@@ -299,7 +357,13 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       timer.cancel();
       _firstFramePoll = null;
       _started = true;
+      final took = _sinceOpen.elapsedMilliseconds;
       _emit(PlayerFirstFrame(generation));
+      _log.info(
+        _tag,
+        'First frame in $took ms '
+        '(${await _get('hwdec-current')}, ${await _get('current-vo')})',
+      );
       if (autoDeinterlace) await _autoDeinterlace(generation);
     });
   }
@@ -467,9 +531,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     int? integer(String text) => int.tryParse(text);
     double? decimal(String text) => double.tryParse(text);
     final hwdec = await read('hwdec-current');
-    final fps =
-        decimal(await read('estimated-vf-fps')) ??
-        decimal(await read('container-fps'));
+    final estimated = decimal(await read('estimated-vf-fps'));
+    final container = decimal(await read('container-fps'));
+    // The direct output's estimate follows the display (60 for a 50 fps
+    // channel on a Chromecast); the stream's own rate is the truth there.
+    final fps = _direct ? container ?? estimated : estimated ?? container;
     final cache = decimal(await read('demuxer-cache-duration'));
     final interlaced = await read('video-frame-info/interlaced');
     return StreamInfo(
