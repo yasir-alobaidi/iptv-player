@@ -150,6 +150,7 @@ class VodOsdBottom extends StatelessWidget {
     this.preparing = false,
     this.playFocusNode,
     this.seekFocusNode,
+    this.rowFocusNode,
     super.key,
   });
 
@@ -182,6 +183,10 @@ class VodOsdBottom extends StatelessWidget {
   /// the player hears and seeks with. Null on the desktop, where ←/→
   /// seek from anywhere and the bar is the mouse's.
   final FocusNode? seekFocusNode;
+
+  /// A TV's: the row of controls as one node, so the player knows the
+  /// remote is on one of them (↑ from any of them is the seek bar).
+  final FocusNode? rowFocusNode;
 
   static const step = Duration(seconds: 10);
 
@@ -271,49 +276,61 @@ class VodOsdBottom extends StatelessWidget {
               ],
             ),
             SizedBox(height: tokens.spacing.s8),
-            OsdControlRow(
-              leading: [
-                OsdButton(
-                  icon: timeline.paused ? AppIcons.play : AppIcons.pause,
-                  tooltip: timeline.paused ? 'Play' : 'Pause',
-                  shortcut: 'Space',
-                  primary: true,
-                  focusNode: playFocusNode,
-                  onPressed: onTogglePause,
-                ),
-                OsdButton(
-                  icon: AppIcons.replay10,
-                  tooltip: 'Back 10 seconds',
-                  shortcut: '←',
-                  onPressed: () => onNudge(-step),
-                ),
-                OsdButton(
-                  icon: AppIcons.forward10,
-                  tooltip: 'Forward 10 seconds',
-                  shortcut: '→',
-                  onPressed: () => onNudge(step),
-                ),
-                OsdButton(
-                  icon: AppIcons.startOver,
-                  tooltip: 'Start over',
-                  shortcut: 'Home',
-                  onPressed: onStartOver,
-                ),
-                if (onNext != null)
+            _row(
+              OsdControlRow(
+                leading: [
                   OsdButton(
-                    icon: AppIcons.skipNext,
-                    tooltip: 'Next episode',
-                    onPressed: onNext,
+                    icon: timeline.paused ? AppIcons.play : AppIcons.pause,
+                    tooltip: timeline.paused ? 'Play' : 'Pause',
+                    shortcut: 'Space',
+                    primary: true,
+                    focusNode: playFocusNode,
+                    onPressed: onTogglePause,
                   ),
-                ...leading,
-              ],
-              trailing: trailing,
+                  OsdButton(
+                    icon: AppIcons.replay10,
+                    tooltip: 'Back 10 seconds',
+                    shortcut: '←',
+                    onPressed: () => onNudge(-step),
+                  ),
+                  OsdButton(
+                    icon: AppIcons.forward10,
+                    tooltip: 'Forward 10 seconds',
+                    shortcut: '→',
+                    onPressed: () => onNudge(step),
+                  ),
+                  OsdButton(
+                    icon: AppIcons.startOver,
+                    tooltip: 'Start over',
+                    shortcut: 'Home',
+                    onPressed: onStartOver,
+                  ),
+                  if (onNext != null)
+                    OsdButton(
+                      icon: AppIcons.skipNext,
+                      tooltip: 'Next episode',
+                      onPressed: onNext,
+                    ),
+                  ...leading,
+                ],
+                trailing: trailing,
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _row(Widget row) => switch (rowFocusNode) {
+    null => row,
+    final node => Focus(
+      focusNode: node,
+      canRequestFocus: false,
+      skipTraversal: true,
+      child: row,
+    ),
+  };
 }
 
 /// The next-episode card (decision 4; the approved sketch), bottom right

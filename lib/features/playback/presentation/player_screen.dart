@@ -89,6 +89,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   /// A file's seek bar on a TV: a stop above Play that ←/→ move.
   final _seekBar = FocusNode(debugLabel: 'seek bar');
 
+  /// The row of controls under it, as one node: ↑ from any of them is
+  /// the bar, whatever lies straight above (past an hour the time beside
+  /// the bar pushes it right of Play, and ↑ reached the top's Back).
+  final _controlRow = FocusNode(
+    debugLabel: 'player row',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+
+  /// The control ↑ left for the bar: ↓ goes back to it.
+  FocusNode? _belowBar;
+
   /// How long ←/→ has been held, in the key's repeats: a hold seeks in
   /// growing steps on a TV ([VodPlayerController.scrubStep]).
   int _scrubRepeats = 0;
@@ -197,6 +209,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ..dispose();
     _entry.dispose();
     _seekBar.dispose();
+    _controlRow.dispose();
     unawaited(_window?.setFullScreen(on: false));
     // The preview and the next thing played are at the recorded speed
     // and shape again.
@@ -532,12 +545,27 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       return KeyEventResult.handled;
     }
     final onTv = _onTv;
-    // The seek bar's ←/→ are its own: they seek, as on the picture.
-    if (onTv && _isVod && _seekBar.hasPrimaryFocus) {
+    if (onTv && _isVod) {
       final key = _remoteVodKey(event.logicalKey);
-      if (key == LogicalKeyboardKey.arrowLeft ||
-          key == LogicalKeyboardKey.arrowRight) {
-        _scrub(event, forward: key == LogicalKeyboardKey.arrowRight);
+      if (_seekBar.hasPrimaryFocus) {
+        // The seek bar's ←/→ are its own: they seek, as on the picture.
+        if (key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.arrowRight) {
+          _scrub(event, forward: key == LogicalKeyboardKey.arrowRight);
+          return KeyEventResult.handled;
+        }
+        // ↓ back to the control ↑ came from; Play if it has gone.
+        if (key == LogicalKeyboardKey.arrowDown) {
+          final below = _belowBar;
+          (below != null && _controlRow.descendants.contains(below)
+                  ? below
+                  : _entry)
+              .requestFocus();
+          return KeyEventResult.handled;
+        }
+      } else if (key == LogicalKeyboardKey.arrowUp && _controlRow.hasFocus) {
+        _belowBar = FocusManager.instance.primaryFocus;
+        _seekBar.requestFocus();
         return KeyEventResult.handled;
       }
     }
@@ -1194,6 +1222,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               onNext: next == null ? null : _vod.playNext,
               playFocusNode: _entry,
               seekFocusNode: _onTv ? _seekBar : null,
+              rowFocusNode: _onTv ? _controlRow : null,
               leading: [if (!_onTv) _volume(sound)],
               trailing: _controls(tracks, vod: true),
             ),

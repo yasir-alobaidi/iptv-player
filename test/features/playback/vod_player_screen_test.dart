@@ -361,6 +361,56 @@ void main() {
       expect(seeks().last, 'seek:1670000');
     });
 
+    _vodTest("on a TV ↑ from any of the row's controls is the seek bar, "
+        'however wide the time beside it; ↓ goes back to that control', (
+      tester,
+      t,
+    ) async {
+      String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+      String? control() => FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<FocusableSurface>()
+          ?.semanticLabel;
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      await _key(tester, LogicalKeyboardKey.enter);
+      // Past an hour, "1:05:00" pushes the bar's start past Play's right
+      // edge: Back, at the top, was the only control straight above
+      // (the user, on the Bedroom TV).
+      await t.firstFrame(tester, length: const Duration(hours: 2));
+      t.rig.engine.progress(const Duration(hours: 1, minutes: 5));
+      await settle(tester);
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(focused(), 'player controls');
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(focused(), 'seek bar');
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(focused(), 'player controls');
+
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(control(), 'Forward 10 seconds');
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(focused(), 'seek bar');
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(control(), 'Forward 10 seconds');
+
+      // The row's far end too.
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      for (var i = 0; i < 12; i++) {
+        await _key(tester, LogicalKeyboardKey.arrowRight);
+      }
+      expect(control(), 'Stream info');
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(focused(), 'seek bar');
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(control(), 'Stream info');
+    });
+
     _vodTest('a movie that ends goes back to its page, watched', (
       tester,
       t,
