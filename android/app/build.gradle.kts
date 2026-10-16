@@ -4,6 +4,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Google TV's home keeps an app's icon from its first install until the
+// version code changes (ADR-028), and pubspec's build number never did:
+// the code is the commit count, so every update is a new version. A
+// larger --build-number still wins; with no history (CI's shallow
+// checkout) it is pubspec's.
+val commitCount: Int =
+    runCatching {
+        providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+            .standardOutput.asText.get().trim().toInt()
+    }.getOrDefault(0)
+
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
     // `io.github.yasiralobaidi.iptvplayer` keeps its first name only
@@ -23,7 +34,7 @@ android {
         applicationId = "io.github.yasiralobaidi.bijou"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        versionCode = maxOf(flutter.versionCode, commitCount)
         versionName = flutter.versionName
     }
 

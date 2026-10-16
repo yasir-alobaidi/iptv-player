@@ -13,13 +13,14 @@ Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
   scalable/apps/<app id>.svg (the desktop entry's icon, Phase 10);
 - windows/runner/resources/app_icon.ico (16 to 256 px);
 - android/app/src/main/res/mipmap-<density>/ic_launcher.png (48 to
-  192 px; Android before 8) and drawable-xhdpi/banner.png (Google TV's
-  320 x 180 home screen banner, what its app row shows: the round icon
-  and the name on the dark background);
+  192 px; Android before 8) and drawable-xhdpi/banner.png (the 320 x
+  180 banner a leanback launcher's app cards show: the round icon and
+  the name on the dark background);
 - mipmap-<density>/ic_launcher_round.png, the round icon before
   Android 8;
-- the adaptive icon Android 8 and up draws, round on Google TV (the
-  user: "more circular, same logo"): mipmap-anydpi-v26/ic_launcher.xml
+- the adaptive icon Android 8 and up draws, and what Google TV's "Your
+  apps" row shows, in a circle (the user: "more circular, same logo";
+  ADR-028): mipmap-anydpi-v26/ic_launcher.xml
   and ic_launcher_round.xml, the accent's gradient as its background
   (drawable/ic_launcher_background.xml) and the jewel alone as its
   foreground (mipmap-<density>/ic_launcher_foreground.png, 108 dp);
@@ -234,10 +235,11 @@ BANNER_BOTTOM = (0x0A, 0x0C, 0x10)
 
 
 def banner(font_path):
-    """Google TV's home screen banner, the picture its app row shows (not
-    the launcher icon): the round icon and the name, white, centred as one
-    on the dark background, edge to edge (the launcher rounds the card's
-    corners). The user asked for the round icon there (2026-10-15)."""
+    """The 320 x 180 banner a leanback launcher's app cards show (Google
+    TV's "Your apps" row shows the adaptive icon in a circle instead,
+    ADR-028): the round icon and the name, white, centred as one on the
+    dark background, edge to edge (the launcher rounds the card's
+    corners)."""
     k = 4
     w, h = BANNER[0] * k, BANNER[1] * k
     image = Image.new("RGBA", (w, h))
