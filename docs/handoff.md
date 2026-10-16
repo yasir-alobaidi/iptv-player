@@ -1,25 +1,67 @@
-# Handoff — 2026-10-16, the thirteenth session: the TV focus sweep finished and merged (ADR-029 and its addendum); Search by remote (start with "Start here")
+# Handoff — 2026-10-16, the fourteenth session: a film's seek bar by remote on a TV, Continue watching's bar back (ADR-030); performance recommendations waiting for the user (start with "Start here")
 
 ## Start here (the next session)
-**The focus sweep is done and merged into `main`** (branch `tv-focus-sweep`,
-fast-forward; nothing pushed: `main` is ahead of origin, the user pushes).
-ADR-029 and its 2026-10-16 addendum in docs/decisions.md hold every
-decision; docs/05's focus section holds the rules. The user watched the
-walk on the Bedroom TV and sent fixes as they saw them; every one is in.
+**The user asked to seek by remote** ("I cannot seek forward or backword
+only by the 10 secodns buttons … by putting the focus on it and then seek
+it forward or backword"). Done (ADR-030): on a TV a film's seek bar is a
+stop above Play; it grows and shows its time with the remote on it; ←/→
+move it at once and seek when the key rests; a held arrow (bar or
+picture) steps 10 s, then 30 s after ~1 s, then a minute after ~3 s
+(`VodPlayerController.scrubStep`, Android's 20 repeats a second); OK after
+a step goes there now and plays (`seekNow`). The white Play/Pause shows
+an accent ring on a TV now (`onLight`): the white ring vanished on it.
 
-**Build 217 (from d1dd92c) is on the Bedroom TV, and everything the user
-pointed out was checked there** (ADR-029's addendum, "On build 217"). Not
-yet seen on the TV, by the user's remote rather than adb:
-1. **Search's OK on a result** (a channel plays, a film opens: needs the
-   provider's yes) and holding OK on a result for its menu.
-2. **The system Back** in Search with a real remote (adb's BACK worked:
-   results → keys → closed keyboard → closed Search).
-3. Two small things seen on build 217, not fixed: at launch the focus was
-   on the rail's Home, where earlier builds put it on Home's first card
-   (safer: OK there plays nothing; check whether it's timing with the
-   provider's larger Home); Up from Movies' sort control went to the
-   source switcher, the top bar's remembered item, not the search field
-   right above it.
+**Also fixed (an agent, checked before the commit):** the two things seen
+on build 217. Up into the top bar lands on the item above the control
+(`FocusPaneController.focusAbove`), and at launch, until the first press,
+the screen's first control takes the focus as soon as it has one
+(`DesktopShell._focusFirstOnTv`).
+
+**Then, by the user's messages (ADR-030):** Up from any of a film's
+controls is the bar (past an hour the time beside the bar pushed it right
+of Play, and Up reached the top's Back), and a card's watch progress shows
+again on a TV (the ring drawn inside the edge covered it; it floats 8 px
+inside the picture now, its track 30 % white over a soft shadow).
+
+**Build 226 (c361d7f) is on the Bedroom TV**; all of the above was checked
+there by adb on the fake panel's film, except Up past an hour (the test
+film is 10 minutes; the widget test pins it). **Not yet seen, the user's
+remote only:** a held arrow on the bar, OK right after a step by a real
+press; Search's OK and held OK on a result and the remote's Back.
+
+**Waiting for the user's choice: performance, picture, history, HDR.** The
+user asked for recommendations before any change. Measured on the TV
+(progress.md, Measurements) and researched (read-only agent; claims
+spot-checked). Offered, in this order:
+1. **TV memory and storage, low risk:** a film's mpv buffer on the TV
+   64 + 64 MiB → about 32 + 16 MiB (`media_kit_player_engine.dart`
+   presets); the picture disk cache 500 → 150 MB on the TV
+   (`ArtworkCache.maxBytes`, `bootstrap.dart`); the guide on the TV 2 h
+   back and 3 days ahead (docs/07 promised it; `epg_importer.dart`); the
+   daily guide import held while something plays (`guide_providers.dart`
+   only waits while a stream opens).
+2. **History and database:** automatic pruning (channels after 90 days;
+   finished films/episodes after 120 days, keeping a series' newest; in
+   progress after 12 months; `sync_runs`/`epg_imports` to 30 a source),
+   Settings → Data "Clear watch history" (channels / Continue watching /
+   all) and the database's size with Compact (VACUUM when idle, never
+   during an import or playback). Never: favorites, groups, sources,
+   settings, hidden/renamed items, guide mappings, reminders.
+3. **The film's controls not rebuilt while hidden** (4 a second now).
+4. **A spike: the full-screen video on its own SurfaceView** behind a
+   transparent Flutter layer (mpv-android's way): the per-frame Flutter
+   redraw goes (raster ~15 % + main ~10 % of a core), the TV's hardware
+   scaler draws the picture, and it is the only way to real HDR10/HLG with
+   mpv. High effort (native code in the vendored media_kit_video), medium
+   to high risk.
+5. **"Match frame rate" for films** (23.976/24 fps → the TV's 24 Hz
+   modes), optional: 1–3 s of black at each switch; no 50 Hz on this TV.
+6. **Media3 for the TV only** for Dolby Vision and soundbar passthrough:
+   only with the user's soundbar/HDR answer (ADR-025).
+Also told the user: the Chromecast outputs **1080p59.94**, not 4K
+(Google TV Settings → Display & Sound → resolution; the Roku TV's HDMI 3
+"HDMI mode" Auto/2.0); HDR content today is drawn as SDR, most likely
+washed out (unverified by eye: the fake panel has no HDR sample).
 
 **Then the Google TV list (in this order):**
 1. **The user's case, replayed** (with their yes for the provider): a channel
@@ -41,21 +83,46 @@ yet seen on the TV, by the user's remote rather than adb:
    (the player's surface size, images' decode widths).
 6. **Performance** (ADR-026's numbers); Media3 only with the user's answer
    on a soundbar/HDR (ADR-025).
-7. Not reproduced this session, watch for them: a key dropped right after
-   switching source; Left from Settings' section list going to the top bar.
+7. Not reproduced, watch for them: a key dropped right after switching
+   source; Left from Settings' section list going to the top bar.
 
-**The TV right now:** Bijou (build 217) on Movies, browsing **xvip.pro**
-(the user switched to it while testing). The test source "192.168.1.254"
-is still in the TV's Bijou, but **the fake panel is stopped** (it errors
-until `dart run tools/fake_provider/bin/server.dart --port 8899 --host
-0.0.0.0` runs again). Nothing was played from the provider this session.
+**The TV right now:** Bijou (build 226) on Home, browsing **xvip.pro**, the
+focus on the source switcher. Continue watching holds The Silent Vector
+(the fake panel's film) and Stranglehold (the provider's: never OK on
+it); the user watches the TV between the session's checks. The fake panel is **stopped** again; the TV's test source
+"192.168.1.254" errors until it runs (`--host 0.0.0.0`). Nothing was
+played from the provider this session.
 
-**CI:** e6ca8cd and e5c7ed1 (the user's pushes; e5c7ed1, the round icon,
-was pushed during this session) both failed on the same two tests, fixed
-on `main` in dfb06ad (Windows: `app_paths_test` joined paths with `/`;
-Linux: the slow-seek resumes of `player_engine_vod_test` sought past CI's
-120 s sample). `main` is 11 commits ahead of origin. Check CI on the
-user's next push.
+**CI:** nothing pushed since e5c7ed1 (failed on two tests, fixed on `main`
+in dfb06ad). `main` is 19 commits ahead of origin. Check CI on the user's
+next push.
+
+### The fourteenth session, short
+The user pasted the thirteenth session's report, wrote "continue the work",
+asked for the seek bar by remote, and gave the Bedroom TV ("free to use").
+- **The seek bar** (ff39e36), **Play's ring** (16adec1), seen on the TV
+  first: Pause showed no focus after Down from the bar.
+- **An agent** (in its own worktree, owned files, no commits) fixed Up into
+  the top bar and the launch's focus (af71a79); its diff and tests were
+  read, re-run on `main` with the player's changes, then committed. The
+  worktree is removed.
+- **On the TV:** the OSD hides 6 s after the last key and gives the focus
+  back to the picture, quicker than a screenshot can be read: keys and
+  screenshots for the player go in one script (the scratchpad's
+  `seq.sh`), and an OK that must land on the bar was sent only when a
+  fresh screenshot measured the bar grown (its track 18 px, 12 at rest).
+  OK was only ever sent in the player on the fake panel's film, or after a
+  screenshot showing the focus elsewhere.
+- **Then the user's messages:** Up from Pause reached the top's Back
+  (3215b9e); Continue watching's bar was gone (9a32e13, c361d7f; "make
+  sure inside the card and the bar and the highlight borders will fit in
+  a perfect design": even 5 px clear of the ring, checked at full size on
+  the TV); and performance/picture/history/HDR: measured, researched by a
+  read-only agent, recommendations given (above), nothing changed yet.
+- **Checks:** analyze and format clean; the full suite under `TZ=UTC` at
+  af71a79: 5,004 passed, 20 skipped; after it (3215b9e, 9a32e13, c361d7f)
+  the files each change touched: playback 230, design and the card
+  goldens 404 and 367, all passed.
 
 ### The thirteenth session, short
 The user pasted the twelfth session's report and wrote "continue the work",
@@ -118,15 +185,15 @@ Right to the results), "use multi agents", "don't do the full suite", and
   analyze`): it rewrites Android's plugin list with the test plugin and
   the build fails (`dev.flutter.plugins.integration_test does not
   exist`). The version code is the commit count (ADR-028): build from a
-  newer commit than the installed one (217 now): an older one is refused
+  newer commit than the installed one (222 now): an older one is refused
   as a downgrade, and on the same one an icon change doesn't show.
 - **The fake panel on the LAN:** `dart run
   tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
   Bijou has it as a source ("192.168.1.254", test/test); it is stopped now
   and the TV browses xvip.pro. **Home always shows the provider's Continue
-  watching (The Bad Guys 2) and Recently watched rows, whatever source is
-  browsed; the first focus at launch was that film's card until build 217
-  (the rail's Home there, once).** Never OK on it.
+  watching (now Stranglehold first) and Recently watched rows, whatever
+  source is browsed, and the first focus at launch is that first card
+  (build 222; build 217 left it on the rail's Home).** Never OK on it.
 - **The Roku TV may be on another input** (this session: Netflix): then
   Google TV asks "Are you still watching?" and sleeps, and the dialog
   takes the keys. Read the Roku's `query/active-app` (read-only) and ask
@@ -424,14 +491,17 @@ TV's bar and Phase 9.
 ## Before you start the next session (user)
 **Your list:**
 1. **Push** `main`: `git push origin main` (the CI fixes, the focus sweep
-   merged, Search by remote; `git log origin/main..main`). The branch
+   merged, Search by remote, the seek bar by remote; `git log
+   origin/main..main`). The branch
    `tv-focus-sweep` is merged and can be deleted (`git branch -d
    tv-focus-sweep`); it was never pushed.
 2. **The old Co-Authored-By line in bdab868** (2026-09-15) is still on
    GitHub. Say if you want it gone (it rewrites every commit and needs a
    force push from you); otherwise it stays.
-3. **On the Bedroom TV (build 217):** Search with the real remote (OK on a
-   result, holding OK, Back); your case once: a channel, then The Bad Guys
+3. **On the Bedroom TV (build 226):** in a film, Down then Up to the seek
+   bar: press and **hold** Left/Right (the steps grow the longer you
+   hold), and OK right after a step (it plays from there). Search with the
+   real remote (OK on a result, holding OK, Back); your case once: a channel, then The Bad Guys
    2 from Continue watching ("Preparing…" on black, then your place, no
    channel picture, no "Reconnecting").
 4. **Listen to Live TV** (4950, silent before the tenth session's fix).
@@ -449,7 +519,7 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-029
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-030
 (with ADR-029's 2026-10-16 addendum) in docs/decisions.md. Check git
 (fetch) and CI on the last push. Then carry on with the Google TV list
 in "Start here". Ask me before using the TV and before playing from my
@@ -460,7 +530,8 @@ provider.
 - **TV-0: done (ADR-025).** media_kit with mpv's direct output on Android;
   the release APK runs on the Bedroom TV (a Chromecast with Google TV 4K).
 - **TV-1: begun; the user's bug list fixed (ADR-026), the focus sweep and
-  Search by remote done (ADR-029 and its addendum).** What's left is in
+  Search by remote done (ADR-029 and its addendum), the seek bar by remote
+  (ADR-030).** What's left is in
   "Start here".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
