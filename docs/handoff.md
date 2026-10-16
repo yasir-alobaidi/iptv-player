@@ -1,87 +1,152 @@
-# Handoff — 2026-10-15, the twelfth session, cut short: the TV focus sweep is half done on branch `tv-focus-sweep` (start with "Start here")
+# Handoff — 2026-10-16, the thirteenth session: the TV focus sweep finished and merged (ADR-029 and its addendum); Search by remote (start with "Start here")
 
 ## Start here (the next session)
-**The focus sweep (ADR-029), unfinished — the user asked for this
-handoff mid-way.** All of it is on **branch `tv-focus-sweep`** (one WIP
-commit on top of main's two). `main` is clean, ahead of origin by 2
-(the round icon, ADR-028): the user can push `main`. **Don't merge the
-branch until the steps below are done.**
+**The focus sweep is done and merged into `main`** (branch `tv-focus-sweep`,
+fast-forward; nothing pushed: `main` is ahead of origin, the user pushes).
+ADR-029 and its 2026-10-16 addendum in docs/decisions.md hold every
+decision; docs/05's focus section holds the rules. The user watched the
+walk on the Bedroom TV and sent fixes as they saw them; every one is in.
 
-The user's request: "do a sweep and check for the design and the sizes
-of the buttons and the highlight blue lines when I use the keyboard or
-when I highlight a movie or a series or even the tabs … it's not fit
-and it doesn't look good … even on the live TV show selections", then
-"the guide will be the least used one so make it the last one … is
-there a better icons to use". ADR-029 (docs/decisions.md) has what the
-Bedroom TV showed and every decision; docs/05's focus section has the
-rules. **Built (on the branch, analyze clean, not yet on the TV):**
-- `AppFocusRing` / `RingPlacement` (focus_ring.dart): the ring from the
-  tokens; outside (with a gap) or inside a row.
-- `AppFocusTokens` has fields now and `AppFocusTokens.tv` (white 3 px,
-  2 px gap, no glow, tiles 1.06, 24 px reveal margin);
-  `buildAppTheme(tv: true)` gives it to a TV (app.dart; the test
-  harness's `pumpDesign(tv: true)` too).
-- `FocusableSurface`: `ringPlacement`; `_reveal()` scrolls the focused
-  control into view with its ring + growth + margin (`showOnScreen`).
-- Cards ring the picture only (`PosterCard`, `LandscapeCard`);
-  `CountTab` rebuilt (ring round the label, underline below) and used
-  for a series' seasons; rows in lists use `RingPlacement.inside` (17
-  places); Home's rows and `TitleGrid` leave `tileReach` room;
-  `AppIconButton`'s box grows with the text (☆ beside Play, ⋯ beside
-  Edit); text fields and the Guide's cells use the ring (white on a TV).
-- No "Drag to reorder" or drag handles on a TV (Favorites, Sources,
-  Categories).
-- The rail: Home, Live TV, Movies, Series, Favorites, (Library), Guide;
-  Ctrl+1…7 follow; tests' and integration tests' Ctrl+digits and the
-  shortcut table remapped. New icons `guide.svg` and `series.svg`
-  (`tools/extract_icons.dart` `_handDrawn`).
-- `test/golden/tv_focus_golden_test.dart` + `images/tv_focus.png`: every
-  kind of control focused as a TV draws it (looked at: right).
+**Build 217 (from d1dd92c) is on the Bedroom TV, and everything the user
+pointed out was checked there** (ADR-029's addendum, "On build 217"). Not
+yet seen on the TV, by the user's remote rather than adb:
+1. **Search's OK on a result** (a channel plays, a film opens: needs the
+   provider's yes) and holding OK on a result for its menu.
+2. **The system Back** in Search with a real remote (adb's BACK worked:
+   results → keys → closed keyboard → closed Search).
+3. Two small things seen on build 217, not fixed: at launch the focus was
+   on the rail's Home, where earlier builds put it on Home's first card
+   (safer: OK there plays nothing; check whether it's timing with the
+   provider's larger Home); Up from Movies' sort control went to the
+   source switcher, the top bar's remembered item, not the search field
+   right above it.
 
-**Left, in this order:**
-1. **A hang:** `flutter test test/golden/reminders_golden_test.dart
-   --plain-name "reminders the list"` never finishes (also its two
-   1024×640 audits failed in the full run). Likely the new `_reveal()`
-   (a `showOnScreen` animation after each focus highlight) keeps
-   `pumpAndSettle` from settling in that dialog's list, or loops with
-   it. Find it (`--timeout=45s` didn't print in 200 s: run it alone with
-   prints in `_reveal`), fix, and check no other test hangs.
-2. **The non-golden failures** of the last full run were fixed after it
-   (text_scale's icon button 52 × 52 at 130 %; shell_keyboard's,
-   guide_screen's and library_screen's Ctrl+digits); run the suite again
-   (`TZ=UTC flutter test`).
-3. **Re-record the goldens and look at every one** (`flutter test
-   test/golden --update-goldens`, then check the diffs): ~65 changed for
-   the rail's order and icons, the cards' rings, Home's and the grids'
-   room. Look especially at Home (row spacing: the inset grew from 8 to
-   `tileReach`), Movies, Favorites' tabs, Live TV's rows.
-4. `UPDATE_SHORTCUT_DOCS=1 flutter test test/app/shortcut_table_test.dart`
-   (the destinations line changed order).
-5. **Build and install on the Bedroom TV** (ask first) and walk it as the
-   sweep did: Home's rows (the rings not cut at the screen's bottom),
-   Movies' grid, a film's page (☆ as tall as Play), Favorites' tabs,
-   Settings → Sources (⋯ as tall as Edit), the switcher's menu, Live TV's
-   categories and channels (rings inside, not clipped), the player's
-   controls, Search's keyboard (not seen this session). The rail's new
-   order and icons.
-6. Merge into main, commit messages per step, then progress/handoff.
+**Then the Google TV list (in this order):**
+1. **The user's case, replayed** (with their yes for the provider): a channel
+   for a minute, then The Bad Guys 2 from Continue watching: "Preparing…" on
+   black, then the film at its place, no channel picture, no
+   "Reconnecting" (ADR-027). Read the log file after.
+2. **The user's ears:** whether Live TV has sound (4950 was silent before
+   the tenth session's fix; adb can't hear it). If silent with the mute
+   ruled out, look at the stream's audio (E-AC-3/AC-3 5.1 through
+   `ao=opensles`; `BIJOU_MPV_LOG=ao,ad,cplayer`).
+3. **A black preview for the first channel** right after Live TV opens
+   (sometimes): mpv starts before the preview's surface exists
+   (`AndroidVideoController` in third_party/media_kit_video,
+   `widListener`; and the surface is remade at a size change, ADR-027).
+4. **Overscan margins** (48 × 27 dp; the 1280 canvas has none yet), TV-3/
+   TV-4's own layouts (the Guide's rows by remote), holding OK on a real
+   remote (adb can't hold a key).
+5. **The canvas's scale** (1280 → 960): anything measured in screen pixels
+   (the player's surface size, images' decode widths).
+6. **Performance** (ADR-026's numbers); Media3 only with the user's answer
+   on a soundbar/HDR (ADR-025).
+7. Not reproduced this session, watch for them: a key dropped right after
+   switching source; Left from Settings' section list going to the top bar.
 
-**Also seen on the TV, not fixed:** Up from Movies' filter field stayed
-there (three presses) though ADR-026 fixed it — check on the new build;
-Left from Settings' section list once went to the top bar; a key right
-after switching source was dropped.
+**The TV right now:** Bijou (build 217) on Movies, browsing **xvip.pro**
+(the user switched to it while testing). The test source "192.168.1.254"
+is still in the TV's Bijou, but **the fake panel is stopped** (it errors
+until `dart run tools/fake_provider/bin/server.dart --port 8899 --host
+0.0.0.0` runs again). Nothing was played from the provider this session.
 
-**The TV right now:** Bijou is open on Home, **browsing the fake panel**
-(source "192.168.1.254" was added back this session, test/test) — the
-fake panel was left running on this laptop (`dart run
-tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`); if it
-stops, that source errors. The user can switch back to xvip.pro with the
-top bar's switcher. Nothing was played from the user's provider. Never
-press OK on Home's Continue watching while testing: those are the
-provider's films.
+**CI:** e6ca8cd and e5c7ed1 (the user's pushes; e5c7ed1, the round icon,
+was pushed during this session) both failed on the same two tests, fixed
+on `main` in dfb06ad (Windows: `app_paths_test` joined paths with `/`;
+Linux: the slow-seek resumes of `player_engine_vod_test` sought past CI's
+120 s sample). `main` is 11 commits ahead of origin. Check CI on the
+user's next push.
 
-**The twelfth session (ADR-028), short:** the user: the icon on the
-Bedroom TV still isn't round. A screenshot (with their yes) showed why:
+### The thirteenth session, short
+The user pasted the twelfth session's report and wrote "continue the work",
+then "u have the bedroom tv free to work on" (the Roku TV was on Netflix: at
+the pop-up the user switched it to HDMI 3 themselves), then, watching:
+the white ring on Movies' filters "didn't look fit … gaps … check them
+all", moving between movies "like jumping", Play's ring on a details page
+not fitting, and Search (blue border, can't pick a recent search, can't go
+Right to the results), "use multi agents", "don't do the full suite", and
+"do a hand off and commit … and that's it for now".
+- **CI's two failures** fixed on `main` first (dfb06ad); the branch rebased
+  on it (it was local only).
+- **The hang:** not `_reveal`. A failed test leaves its tree mounted, and a
+  fixture's `db.close` in an earlier tear-down then waited for ever on the
+  screens' queries. `pumpApp` unmounts the app in a tear-down that runs
+  first; a failing golden now fails in a second.
+- **The goldens:** 62 re-recorded and each looked at; what they showed is
+  fixed (a grid kept its columns at 1920, tab rows' neighbours line up,
+  Series/Guide icons redrawn, a poster's stand-in lettering never breaks a
+  word).
+- **Found on the TV and fixed** (ADR-029's addendum): Movies/Series land on
+  the posters; Left into the rail lands on the screen's item; a row's
+  heading comes with its card; menus open on the chosen item; the ring
+  hugs, then is drawn inside the control on a TV (the user saw the gap and
+  the seam); one ring on a field; Search's row uses the focus ring; moves
+  glide once (no jump then glide); Back on Connect keeps a typed form.
+- **Checked on the Bedroom TV:** build 213 with the fake panel as the
+  source (only its test channel played, full screen), then build 217 with
+  xvip.pro browsed (nothing played): ADR-029's addendum, "Seen on the
+  Bedroom TV" and "On build 217".
+- **One slip, owned:** two OKs were sent in a row in the live player
+  without a look between them (both on the fake panel's channel, so
+  nothing of the provider's could play); the rule (a screenshot before
+  every OK) held everywhere else.
+- **Checks:** analyze and format clean; the full suite twice under
+  `TZ=UTC` mid-session (last full: 4,984 passed, 20 skipped). After the
+  user asked for no full suite, only the files each change touched: 999
+  passed (design, app, home, vod, search, playback, live TV, the TV
+  golden), 589 (the audits, the settings and library goldens), and last
+  511 (search, design components, app, vod, the search and TV goldens).
+  Not run at the end: the full suite (the user's word), the integration
+  walks, `build_runner` (no annotated code changed).
+- **An agent** (the user: "use multi agents") built Search by remote from a
+  brief (owned files, no commits, targeted tests, each test shown failing
+  first); its diff and tests were checked before the commit.
+
+### Reaching the Bedroom TV
+- **Wireless debugging goes off when the TV restarts**; the user switches
+  it on again (Settings → System → Developer options → Wireless debugging);
+  the pairing is kept. Then `timeout 8 avahi-browse -rtp
+  _adb-tls-connect._tcp | grep IPv4` for the port and
+  `~/Android/Sdk/platform-tools/adb connect 192.168.1.231:<port>`
+  (38317 this session and the last).
+- **Ask before the TV and before the provider** (pop-ups, memory). The
+  provider gave 401 (its one connection taken) at 04:50 in the tenth session.
+- **Install:** `flutter build apk --release --target-platform android-arm`
+  (80 s, the TV is 32-bit) and `adb -s 192.168.1.231:<port> install -r
+  build/app/outputs/flutter-apk/app-release.apk`. **Never run another
+  flutter command during a build** (`flutter test`, even `flutter
+  analyze`): it rewrites Android's plugin list with the test plugin and
+  the build fails (`dev.flutter.plugins.integration_test does not
+  exist`). The version code is the commit count (ADR-028): build from a
+  newer commit than the installed one (217 now): an older one is refused
+  as a downgrade, and on the same one an icon change doesn't show.
+- **The fake panel on the LAN:** `dart run
+  tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
+  Bijou has it as a source ("192.168.1.254", test/test); it is stopped now
+  and the TV browses xvip.pro. **Home always shows the provider's Continue
+  watching (The Bad Guys 2) and Recently watched rows, whatever source is
+  browsed; the first focus at launch was that film's card until build 217
+  (the rail's Home there, once).** Never OK on it.
+- **The Roku TV may be on another input** (this session: Netflix): then
+  Google TV asks "Are you still watching?" and sleeps, and the dialog
+  takes the keys. Read the Roku's `query/active-app` (read-only) and ask
+  the user to switch it to HDMI 3; never switch it yourself while
+  something is on it.
+- **Keys:** `adb shell input keyevent KEYCODE_DPAD_…` (and `_CENTER`,
+  `_BACK`, `_HOME`, digits). **Never send OK without a screenshot taken
+  after the last move showing what has the focus, and never chain OK
+  after moves in one command** (the tenth session's slip). A helper:
+  send keys, then crop a screenshot (`adb exec-out screencap -p`).
+- **The log:** `adb pull /sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs`
+  (from the eleventh session's build on; rotated 5 × 5 MB, redacted), or
+  `adb logcat -d | grep ' flutter '` for the last few minutes only.
+- **Typing on Bijou's keyboard by adb** is a walk over the keys (the
+  arrows move by key, ↑/↓ return along the path they came). A plugged-in
+  keyboard types into a field directly; `adb shell input text` does too,
+  into a focused field (not into the keyboard panel).
+
+### The twelfth session, short
+The user: the icon on the Bedroom TV still wasn't round. A screenshot (with their yes) showed why:
 Google TV's home has no banner row any more, **"Your apps" is a row of
 circles** (each app's adaptive icon), and Bijou's held the square tile
 from its first install. The APK already had the round icon, but every
@@ -92,147 +157,6 @@ changes. **The Android version code is now the commit count**
 played; the only keys sent were Down, Right and Left on Google TV's home.
 An older APK (`dist/`'s, CI's: code 1) no longer installs over it without
 an uninstall. Everything below is still the eleventh session's.
-
-The eleventh session (ADR-027) answered the user's four points:
-1. **Git:** the user had pushed the tenth session's first three commits
-   while it ran; it then reworded b3e5725 and rebased the rest, so their
-   push was refused and `git pull` stopped in a conflicted merge. The merge
-   was aborted and the local commits rebased onto origin/main (the reworded
-   copies dropped as already applied): **a plain `git push` works.** The
-   session's commits sit on top (`git log origin/main..HEAD`), **not
-   pushed.** Never amend or rebase a commit that is on origin (memory).
-2. **The Bad Guys 2 frozen on the channel's picture for ~30 s after a
-   channel** — the TV's logcat (its last 3 minutes, 00:02–00:03 TV time)
-   held it: the film was "playing" at its first decoded frame, before mpv
-   reached the resume's place, so the 8 s stall check reconnected it twice
-   while the surface still showed the channel. **Fixed:** a resume's first
-   frame waits for mpv's `seeking` to end (the file's 30 s open time runs
-   meanwhile, "Preparing…" on black); a seek waiting over 0.5 s is
-   buffering (15 s, the spinner); Reconnecting shows only the item's own
-   picture (`hasPicture`); the reconnect log line says why. Reproduced
-   and checked on this laptop's real player with the fake panel's new
-   `seek_delay_ms` (`integration_test/player_engine_vod_test.dart`):
-   before, "first frame" after 0.28 s / 0.09 s with the resume's range
-   held 4 s; now 4.3 s (MP4) and 8.5 s (MKV).
-3. **Arabic:** the keyboard's bottom row starts with **عربي** / **English**;
-   Arabic is a phone's layout plus a row for أ إ آ ئ لا ، ؟, right to left
-   with the caret at the left, and the language is kept across launches
-   (settings key `tv.keyboard_language`). **Search** finds each Arabic
-   spelling from the others (ا أ إ آ, a closing ة/ه and ى/ي, ٧٧/77): the
-   user's catalogue has ~8,000 Arabic titles written both ways.
-4. **The icon:** it took the banner for what Google TV's home row shows;
-   it isn't (ADR-028 above): the row shows the adaptive icon in a circle.
-   The banner (the round icon and "Bijou" on dark) stays for launchers
-   that show banners.
-
-Also: Bijou's **log file on Android** is now under
-`/sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs` (`adb
-pull` it; logcat keeps only minutes on the Chromecast).
-
-**The new build is installed on the Bedroom TV** (an `android-arm`
-release built from the session's code, installed 17:40 EDT / 00:40 the
-TV's time; `build/app/outputs/flutter-apk/app-release.apk`). **None of it
-was tried on the TV:** the user said yes to the TV and to their provider
-(17:38, ten minutes), then asked for this handoff once the build was on;
-nothing was played from the provider, no key was sent to the TV.
-`dist/bijou-0.1.0.apk` is still the tenth session's.
-
-### First, on the Bedroom TV (ask first; the new build is on it)
-1. ~~The banner~~: done in the twelfth session; the round icon shows in
-   "Your apps" (ADR-028).
-2. **The Arabic keyboard:** Search → OK → عربي. Arabic needs Android's
-   own Arabic font (the app's Manrope has none): check it draws, right to
-   left, the caret at the left; search an Arabic title (browsing only),
-   e.g. ارطغرل finds أرطغرل.
-3. **The user's case, replayed:** on the fake panel first
-   (`POST /admin/faults {"seek_delay_ms": 4000}`, a channel, then a film
-   resumed from its page): "Preparing…" on black, never the channel's
-   picture, then the film at its place with no "Reconnecting". Then, with
-   the user's yes for their provider: a channel for a minute, then The Bad
-   Guys 2 from Continue watching. Read the log file after.
-4. **The surface made again at a size change** (left as it is, ADR-027):
-   media_kit's `AndroidVideoController` (third_party/media_kit_video/lib/
-   src/video_controller/android_video_controller/real.dart) remakes the
-   surface when a stream's size differs from the last (`SetSurfaceSize` →
-   a new `wid` → `widListener` sets `vo`/`vid` and seeks). In the user's
-   case the film's second attempt stalled right after it. Now it counts as
-   buffering (15 s). Watch the log for it; a patch (keep the surface,
-   update only `rect`) would likely also fix the black first-channel
-   preview below, but needs the TV to prove it.
-
-### Still open from the tenth session (in this order)
-1. **The user's ears:** whether Live TV has sound now (4950 was silent).
-   The fix (on a TV the player is always at full volume, unmuted:
-   `PlayerSoundController`) is proven by tests, but an mpv mute never
-   shows in Android's audio log, so adb can't tell. **Careful:** the
-   `muted … clientVolume` lines in `dumpsys audio` are uid 10038, the
-   Google TV launcher's own muted trailers; Bijou's players are OpenSL ES
-   under uid 10008. If still silent with the mute ruled out, look at the
-   stream's audio (stream info; `BIJOU_MPV_LOG=ao,ad,cplayer`): E-AC-3 or
-   AC-3 5.1 through `ao=opensles`.
-2. **A black preview for the first channel** right after Live TV opens
-   (sometimes): the log says `First frame in … ms (no, null)` — mpv
-   started before the preview's surface existed (`AndroidVideoController`
-   sets `vo`/`vid` when `wid` arrives and seeks to re-open, which a live
-   stream may not honour). Full screen shows the picture. Look at
-   `third_party/media_kit_video/.../android_video_controller/real.dart`
-   `widListener` and when `PlaybackCoordinator.playLive` runs versus the
-   preview's `Video` widget creating its surface.
-3. **Movies and Series land on their filter**, not the grid, when entered
-   from the rail (no keyboard pops up any more; Down twice reaches the
-   posters). Land on the grid on a TV.
-4. **Back on Connect drops a typed form** (the route pops). Ask before
-   discarding, or keep the draft.
-5. **Overscan margins** (48 × 27 dp; the 1280 canvas has none yet),
-   TV-3/TV-4's own layouts on the canvas (larger focus scale on posters,
-   the Guide's rows), holding OK on a real remote (adb can't hold a key).
-6. **The canvas (`TvCanvas`, ADR-026's addendum)** scales the whole app
-   from 1280 wide to the TV's 960: check anything measured in screen
-   pixels on a TV (the player's surface size, images' decode widths:
-   `ArtworkImage` asks for the logical width × the scaled DPR).
-7. **Performance** (measured, ADR-026): at rest 91 MB, ~0.5 % CPU; a
-   1080p channel full screen 121 MB and ~0.8–1.4 cores of 4, mostly the
-   video as a Flutter texture (raster ~45 %, Android's main thread ~25 %).
-   Only a `SurfaceView` (Media3, or a platform view) would lower it: the
-   engine question ADR-025 left open, worth it with the user's answer on
-   a soundbar/HDR.
-
-### Reaching the Bedroom TV
-- **Wireless debugging goes off when the TV restarts**; the user switches
-  it on again (Settings → System → Developer options → Wireless debugging);
-  the pairing is kept. Then `timeout 8 avahi-browse -rtp
-  _adb-tls-connect._tcp | grep IPv4` for the port and
-  `~/Android/Sdk/platform-tools/adb connect 192.168.1.231:<port>`
-  (38317 this session).
-- **Ask before the TV and before the provider** (pop-ups, memory). The
-  provider gave 401 (its one connection taken) at 04:50 this session.
-- **Install:** `flutter build apk --release --target-platform android-arm`
-  (80 s, the TV is 32-bit) and `adb -s 192.168.1.231:<port> install -r
-  build/app/outputs/flutter-apk/app-release.apk`. **Never run another
-  flutter command during a build** (`flutter test`, even `flutter
-  analyze`): it rewrites Android's plugin list with the test plugin and
-  the build fails (`dev.flutter.plugins.integration_test does not
-  exist`). The version code is the commit count (ADR-028): build from a
-  newer commit than the installed one (205 now): an older one is refused
-  as a downgrade, and on the same one an icon change doesn't show.
-- **The fake panel on the LAN:** `dart run
-  tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
-  Bijou has it as a source ("192.168.1.254", test/test) and is **browsing
-  it** now. **Home always shows the provider's Continue watching (The Bad
-  Guys 2) and Recently watched rows, whatever source is browsed, and the
-  first focus at launch is that film's card.**
-- **Keys:** `adb shell input keyevent KEYCODE_DPAD_…` (and `_CENTER`,
-  `_BACK`, `_HOME`, digits). **Never send OK without a screenshot taken
-  after the last move showing what has the focus, and never chain OK
-  after moves in one command** (this session's slip, below). A helper:
-  send keys, then crop a screenshot (`adb exec-out screencap -p`).
-- **The log:** `adb pull /sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs`
-  (from the eleventh session's build on; rotated 5 × 5 MB, redacted), or
-  `adb logcat -d | grep ' flutter '` for the last few minutes only.
-- **Typing on Bijou's keyboard by adb** is a walk over the keys (the
-  arrows move by key, ↑/↓ return along the path they came). A plugged-in
-  keyboard types into a field directly; `adb shell input text` does too,
-  into a focused field (not into the keyboard panel).
 
 ### The eleventh session, short
 You pasted the tenth session's report and wrote: fix the git error and the
@@ -499,47 +423,26 @@ TV's bar and Phase 9.
 
 ## Before you start the next session (user)
 **Your list:**
-1. **Push** (`git push`; it works again): the session's commits on top of
-   what you pushed (`git log origin/main..HEAD`).
+1. **Push** `main`: `git push origin main` (the CI fixes, the focus sweep
+   merged, Search by remote; `git log origin/main..main`). The branch
+   `tv-focus-sweep` is merged and can be deleted (`git branch -d
+   tv-focus-sweep`); it was never pushed.
 2. **The old Co-Authored-By line in bdab868** (2026-09-15) is still on
-   GitHub. Say if you want it gone: that rewrites every commit and needs a
-   force push from you; otherwise it stays.
-3. **On the Bedroom TV (the new build is installed; its round icon is
-   seen in "Your apps"):** Search → OK → **عربي**, type an Arabic title; and
-   your case once: a channel, then The Bad Guys 2 from Continue watching
-   (it should say "Preparing…" on black, then play from your place, no
+   GitHub. Say if you want it gone (it rewrites every commit and needs a
+   force push from you); otherwise it stays.
+3. **On the Bedroom TV (build 217):** Search with the real remote (OK on a
+   result, holding OK, Back); your case once: a channel, then The Bad Guys
+   2 from Continue watching ("Preparing…" on black, then your place, no
    channel picture, no "Reconnecting").
-4. **Listen to Live TV** (4950, silent before the tenth session's fix); try
-   the keyboard and the player with the real remote, and hold OK on an
-   item for its menu (adb can't hold a key).
+4. **Listen to Live TV** (4950, silent before the tenth session's fix).
 5. **Wireless debugging** goes off when the TV restarts: switch it on
    again before a session that uses the TV.
 6. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
-   yes; ADR-025. It would also make playback lighter: ADR-026's numbers.)
+   yes; ADR-025.)
 7. **The Roku, later** (your call). Still from before: the one real
-   reminder (`flutter test integration_test/manual/real_reminder.dart -d
-   linux`); the night's soak if you want it; the matrix's rows 6 and 16;
-   Phase 9's close; the dock icon (`flutter build linux --release`, then
+   reminder; the night's soak; the matrix's rows 6 and 16; Phase 9's close;
+   the dock icon (`flutter build linux --release`, then
    `tools/install_desktop_entry.sh`).
-
-**What the fifth session did on your machine (outside the repository):**
-installed Temurin JDK 21 in `~/develop/jdk-21.0.12.1+1` (linked as
-`~/develop/jdk`) and the Android SDK in `~/Android/Sdk` (about 5 GB with
-the emulator image), accepted the SDK's licences, pointed Flutter at both
-(`flutter config`), and created the emulator `bijou_google_tv`
-(`~/.android/avd/`). **And it ran your laptop out of memory once** (04:02):
-a Gradle build beside the emulator; systemd-oomd killed your GNOME session
-and the kernel your editor. Gradle is now capped at 3 GB, and the rule
-(build, stop Gradle, then the emulator) is in docs/setup.md and in memory.
-
-**What this session decided for you** (say if you want any otherwise):
-- **The TV app's id is `io.github.yasiralobaidi.bijou`** — no "iptv" in
-  it; an id is forever once installed, and nothing is saved under an old
-  one on Android (ADR-020).
-- **JDK 21** rather than 17 (what Android Studio bundles; AGP 9 needs 17+).
-- **Start over is a button, always there,** after Back/Forward 10 s in a
-  film's or an episode's player and in the casting view, not beside Play
-  (a stray press there would lose your place) (ADR-021).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -547,29 +450,22 @@ Open Claude Code in this folder and paste:
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
 ("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-029
-in docs/decisions.md. Check git (fetch) and CI on the last push. Finish
-the focus sweep on branch tv-focus-sweep ("Start here": the hanging
-test, the goldens, the TV check), then merge it; then carry on with the
-Google TV list in "Start here". Ask me before using the TV and before
-playing from my provider.
+(with ADR-029's 2026-10-16 addendum) in docs/decisions.md. Check git
+(fetch) and CI on the last push. Then carry on with the Google TV list
+in "Start here". Ask me before using the TV and before playing from my
+provider.
 ```
 
 ## Where things stand
 - **TV-0: done (ADR-025).** media_kit with mpv's direct output on Android;
   the release APK runs on the Bedroom TV (a Chromecast with Google TV 4K).
-- **TV-1: begun; the user's bug list fixed (ADR-026).** The TV-only gates,
-  the remote's keys, OK on release and held for the menu, first focus,
-  playback off screen, "Still watching?" (ADR-025); Bijou's keyboard, the
-  shell's edges, the player by remote, See all cards, a round icon
-  (ADR-026); a resume that plays from its place, Arabic on the keyboard
-  and in search, the round banner, the log file adb reads (ADR-027); the
-  round icon in Google TV's "Your apps", the version code the commit
-  count (ADR-028).
-  What's left is in "Start here".
+- **TV-1: begun; the user's bug list fixed (ADR-026), the focus sweep and
+  Search by remote done (ADR-029 and its addendum).** What's left is in
+  "Start here".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.
-- **Schema is v10**; no new dependency in pubspec; one new settings key,
-  `tv.keyboard_language` (ADR-027).
+- **Schema is v10**; no new dependency in pubspec; one settings key since
+  ADR-026, `tv.keyboard_language` (ADR-027).
 
 ## Casting to TVs that aren't Google (the user's question, answered)
 The user asked: "since most of the smart tvs they have air play or
