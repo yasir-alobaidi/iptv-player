@@ -278,6 +278,89 @@ void main() {
       expect(t.app.location, playerRoutePath);
     });
 
+    _vodTest('on a TV the seek bar is a stop above Play: ←/→ there seek, a '
+        'hold in growing steps; OK after seeking goes there and plays; Down '
+        'goes back to Play', (tester, t) async {
+      String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+      AppSlider bar() => tester.widget<AppSlider>(
+        find.byWidgetPredicate(
+          (w) => w is AppSlider && w.semanticLabel == 'Position',
+        ),
+      );
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      await _key(tester, LogicalKeyboardKey.enter);
+      await t.firstFrame(tester);
+      t.rig.engine.progress(const Duration(minutes: 30));
+      await settle(tester);
+      List<String> seeks() => [
+        for (final c in t.rig.engine.calls)
+          if (c.startsWith('seek:')) c,
+      ];
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(focused(), 'player controls');
+      expect(bar().focused, isFalse);
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(focused(), 'seek bar');
+      // It grows, and says where it is.
+      expect(bar().focused, isTrue);
+      expect(find.text('30:00'), findsNWidgets(2));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(find.text('30:10'), findsNWidgets(2));
+      expect(seeks(), isEmpty);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks(), ['seek:1810000']);
+      expect(focused(), 'seek bar', reason: "the bar's arrows are its own");
+
+      // Held: 20 repeats at 10 s, then 30 s steps; one seek, let go.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+      for (var i = 0; i < 25; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      // 1810 − 10 − 19 × 10 − 6 × 30 = 1430 s.
+      expect(find.text('23:50'), findsNWidgets(2));
+      expect(seeks(), hasLength(1));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(seeks().last, 'seek:1430000');
+
+      // OK with nothing waiting pauses; after a step it goes there now
+      // and plays on.
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.calls.last, 'paused:true');
+      expect(focused(), 'seek bar');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(seeks().last, 'seek:1440000');
+      expect(t.rig.engine.calls.last, 'paused:false');
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(focused(), 'player controls');
+      expect(bar().focused, isFalse);
+
+      // A press on the picture is still 10 s; a hold there grows too.
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(focused(), 'player');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      for (var i = 0; i < 20; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowRight);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      // 1440 + 10 + 19 × 10 + 30 = 1670 s.
+      expect(seeks().last, 'seek:1670000');
+    });
+
     _vodTest('a movie that ends goes back to its page, watched', (
       tester,
       t,

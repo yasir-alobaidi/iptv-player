@@ -85,6 +85,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   /// The control the remote lands on (a TV): a channel's Channels, a
   /// file's Play.
   final _entry = FocusNode(debugLabel: 'player controls');
+
+  /// A file's seek bar on a TV: a stop above Play that ←/→ move.
+  final _seekBar = FocusNode(debugLabel: 'seek bar');
+
+  /// How long ←/→ has been held, in the key's repeats: a hold seeks in
+  /// growing steps on a TV ([VodPlayerController.scrubStep]).
+  int _scrubRepeats = 0;
   bool _osd = true;
   Timer? _osdTimer;
 
@@ -189,6 +196,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ..removeListener(_onFocusMoved)
       ..dispose();
     _entry.dispose();
+    _seekBar.dispose();
     unawaited(_window?.setFullScreen(on: false));
     // The preview and the next thing played are at the recorded speed
     // and shape again.
@@ -479,15 +487,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (_entry.context != null) _entry.requestFocus();
   }
 
-  /// A TV remote's OK with the picture focused (through [TvSelectKey]'s
-  /// [ActivateIntent]): a typed number goes; a file pauses or plays on;
-  /// a channel shows its controls.
+  /// A TV remote's OK with the picture or the seek bar focused (through
+  /// [TvSelectKey]'s [ActivateIntent]): a typed number goes; a file the
+  /// arrows are still seeking goes there now and plays, otherwise it
+  /// pauses or plays on; a channel shows its controls.
   void _onSelect() {
     if (_digits.isNotEmpty) {
       _commitNumber();
     } else if (_isVod) {
       _showOsd();
-      _vod.togglePause();
+      if (!_vod.seekNow()) _vod.togglePause();
     } else {
       _showControls();
     }
@@ -523,6 +532,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       return KeyEventResult.handled;
     }
     final onTv = _onTv;
+    // The seek bar's ←/→ are its own: they seek, as on the picture.
+    if (onTv && _isVod && _seekBar.hasPrimaryFocus) {
+      final key = _remoteVodKey(event.logicalKey);
+      if (key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight) {
+        _scrub(event, forward: key == LogicalKeyboardKey.arrowRight);
+        return KeyEventResult.handled;
+      }
+    }
     if (onTv && _onControl && _controlKeys.contains(event.logicalKey)) {
       return KeyEventResult.ignored;
     }
@@ -626,6 +644,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _ => key,
       };
 
+  /// A TV remote's ←/→ in a file, on the picture or the seek bar: a press
+  /// moves the bar 10 s, a hold in growing steps; the seek runs once the
+  /// key is let go.
+  void _scrub(KeyEvent event, {required bool forward}) {
+    _scrubRepeats = event is KeyRepeatEvent ? _scrubRepeats + 1 : 0;
+    final step = VodPlayerController.scrubStep(_scrubRepeats);
+    _vod.nudge(forward ? step : -step);
+  }
+
   KeyEventResult _onVodKey(KeyEvent event, {required bool onTv}) {
     final key = _remoteVodKey(event.logicalKey);
     final repeat = event is KeyRepeatEvent;
@@ -633,6 +660,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     const step = Duration(seconds: 10);
     const bigStep = Duration(seconds: 60);
     switch (key) {
+      case LogicalKeyboardKey.arrowLeft || LogicalKeyboardKey.arrowRight
+          when onTv:
+        _scrub(event, forward: key == LogicalKeyboardKey.arrowRight);
       case LogicalKeyboardKey.arrowLeft:
         _vod.nudge(-(shift ? bigStep : step));
       case LogicalKeyboardKey.arrowRight:
@@ -1163,6 +1193,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               onStartOver: _vod.startOver,
               onNext: next == null ? null : _vod.playNext,
               playFocusNode: _entry,
+              seekFocusNode: _onTv ? _seekBar : null,
               leading: [if (!_onTv) _volume(sound)],
               trailing: _controls(tracks, vod: true),
             ),

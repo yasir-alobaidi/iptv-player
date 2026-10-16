@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -18,6 +20,7 @@ class AppSlider extends StatefulWidget {
     this.enabled = true,
     this.compact = false,
     this.overVideo = false,
+    this.focused = false,
     this.activeColor,
     this.focusNode,
     super.key,
@@ -46,6 +49,11 @@ class AppSlider extends StatefulWidget {
   /// and bubble, and a track that shows over any picture.
   final bool overVideo;
 
+  /// A TV remote is on the bar (the focus is a wrapper's: the slider's
+  /// own keys would move it by a tenth): an [overVideo] bar grows, and
+  /// the bubble shows.
+  final bool focused;
+
   /// The filled part; the accent when null.
   final Color? activeColor;
   final FocusNode? focusNode;
@@ -69,7 +77,55 @@ class _AppSliderState extends State<AppSlider> {
     final over = widget.overVideo;
     final showBubble =
         widget.bubbleLabel != null &&
-        (_dragging || _hovered || widget.showBubble);
+        (_dragging || _hovered || widget.showBubble || widget.focused);
+
+    Widget slider(double grown) => SliderTheme(
+      data: SliderThemeData(
+        trackHeight: over
+            ? lerpDouble(
+                player.seekTrackHeight,
+                player.seekTrackHeightFocused,
+                grown,
+              )
+            : 4,
+        activeTrackColor: widget.activeColor ?? colors.accentBase,
+        inactiveTrackColor: over
+            ? colors.textPrimary.withValues(alpha: player.tileOpacity * 2)
+            : colors.border,
+        secondaryActiveTrackColor: over
+            ? colors.textPrimary.withValues(alpha: player.tileOpacity * 4)
+            : colors.borderStrong,
+        thumbColor: colors.textPrimary,
+        overlayColor: colors.accentBase.withValues(
+          alpha: tokens.focus.glowOpacity,
+        ),
+        thumbShape: RoundSliderThumbShape(
+          enabledThumbRadius: over
+              ? lerpDouble(
+                  player.seekThumbRadius,
+                  player.seekThumbRadiusFocused,
+                  grown,
+                )!
+              : 7,
+        ),
+        overlayShape: RoundSliderOverlayShape(
+          overlayRadius: over ? player.seekHaloRadius : 14,
+        ),
+        trackShape: const RoundedRectSliderTrackShape(),
+      ),
+      child: Slider(
+        value: widget.value.clamp(0, 1),
+        secondaryTrackValue: widget.bufferedValue?.clamp(0, 1),
+        focusNode: widget.focusNode,
+        label: widget.semanticLabel,
+        onChanged: widget.enabled ? widget.onChanged : null,
+        onChangeStart: (_) => setState(() => _dragging = true),
+        onChangeEnd: (value) {
+          setState(() => _dragging = false);
+          widget.onChangeEnd?.call(value);
+        },
+      ),
+    );
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -90,40 +146,12 @@ class _AppSliderState extends State<AppSlider> {
                     )
                   : null,
             ),
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: over ? player.seekTrackHeight : 4,
-              activeTrackColor: widget.activeColor ?? colors.accentBase,
-              inactiveTrackColor: over
-                  ? colors.textPrimary.withValues(alpha: player.tileOpacity * 2)
-                  : colors.border,
-              secondaryActiveTrackColor: over
-                  ? colors.textPrimary.withValues(alpha: player.tileOpacity * 4)
-                  : colors.borderStrong,
-              thumbColor: colors.textPrimary,
-              overlayColor: colors.accentBase.withValues(
-                alpha: tokens.focus.glowOpacity,
-              ),
-              thumbShape: RoundSliderThumbShape(
-                enabledThumbRadius: over ? player.seekThumbRadius : 7,
-              ),
-              overlayShape: RoundSliderOverlayShape(
-                overlayRadius: over ? player.seekHaloRadius : 14,
-              ),
-              trackShape: const RoundedRectSliderTrackShape(),
-            ),
-            child: Slider(
-              value: widget.value.clamp(0, 1),
-              secondaryTrackValue: widget.bufferedValue?.clamp(0, 1),
-              focusNode: widget.focusNode,
-              label: widget.semanticLabel,
-              onChanged: widget.enabled ? widget.onChanged : null,
-              onChangeStart: (_) => setState(() => _dragging = true),
-              onChangeEnd: (value) {
-                setState(() => _dragging = false);
-                widget.onChangeEnd?.call(value);
-              },
-            ),
+          // The bar grows as a focus ring comes in.
+          TweenAnimationBuilder<double>(
+            tween: Tween(end: widget.focused ? 1.0 : 0.0),
+            duration: tokens.motion.fast,
+            curve: tokens.motion.fastCurve,
+            builder: (context, grown, _) => slider(grown),
           ),
         ],
       ),

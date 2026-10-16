@@ -161,6 +161,43 @@ void main() {
       });
     });
 
+    test("a TV remote's held ←/→ steps 10 s, then 30 s, then a minute", () {
+      expect(VodPlayerController.scrubStep(0), const Duration(seconds: 10));
+      expect(VodPlayerController.scrubStep(19), const Duration(seconds: 10));
+      expect(VodPlayerController.scrubStep(20), const Duration(seconds: 30));
+      expect(VodPlayerController.scrubStep(59), const Duration(seconds: 30));
+      expect(VodPlayerController.scrubStep(60), const Duration(minutes: 1));
+      expect(VodPlayerController.scrubStep(600), const Duration(minutes: 1));
+    });
+
+    test('OK while the keys move the bar seeks now and plays on', () {
+      fakeAsync((async) {
+        start(async, PlayableMovie(movie(1)));
+        play(async, from: 0, seconds: 30);
+        expect(vod.seekNow(), isFalse, reason: 'no seek waiting');
+
+        vod.togglePause();
+        async.flushMicrotasks();
+        vod.nudge(const Duration(seconds: 10));
+        expect(vod.seekNow(), isTrue);
+        async.flushMicrotasks();
+        expect(seeks(), ['seek:40000']);
+        expect(vod.pendingSeek, isNull);
+        expect(vod.timeline.paused, isFalse);
+        expect(rig.engine.calls.last, 'paused:false');
+
+        // Playing, it plays on: no pause.
+        vod.nudge(const Duration(seconds: 10));
+        expect(vod.seekNow(), isTrue);
+        async.elapse(const Duration(seconds: 1));
+        expect(seeks(), ['seek:40000', 'seek:50000']);
+        expect(rig.engine.calls.where((c) => c.startsWith('paused:')), [
+          'paused:true',
+          'paused:false',
+        ]);
+      });
+    });
+
     test('Space pauses and plays', () {
       fakeAsync((async) {
         start(async, PlayableMovie(movie(1)));

@@ -163,6 +163,27 @@ final class VodPlayerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A TV remote's ←/→, [repeats] into a hold: a press is 10 s; held, the
+  /// steps grow to 30 s after about a second and to a minute after about
+  /// three (Android repeats a held key 20 times a second), so the middle
+  /// of a two-hour film is a few seconds' hold away.
+  static Duration scrubStep(int repeats) => switch (repeats) {
+    < 20 => const Duration(seconds: 10),
+    < 60 => const Duration(seconds: 30),
+    _ => const Duration(minutes: 1),
+  };
+
+  /// A TV remote's OK while its keys still move the bar: the seek runs
+  /// now, and a paused file plays on from there. False when no seek is
+  /// waiting.
+  bool seekNow() {
+    if (_pending == null) return false;
+    final paused = _coordinator.timeline.paused;
+    _commitSeek();
+    if (paused) unawaited(_coordinator.setPaused(paused: false));
+    return true;
+  }
+
   /// The seek bar dragged: the bar follows; [commit] runs the seek.
   void dragTo(Duration position, {bool commit = false}) {
     if (!_playing) return;

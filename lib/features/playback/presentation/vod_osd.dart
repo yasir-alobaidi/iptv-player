@@ -149,6 +149,7 @@ class VodOsdBottom extends StatelessWidget {
     this.onNext,
     this.preparing = false,
     this.playFocusNode,
+    this.seekFocusNode,
     super.key,
   });
 
@@ -177,6 +178,11 @@ class VodOsdBottom extends StatelessWidget {
   /// Play's focus, for the remote to land on (a TV).
   final FocusNode? playFocusNode;
 
+  /// A TV's: the seek bar is a stop of its own, above Play, whose ←/→
+  /// the player hears and seeks with. Null on the desktop, where ←/→
+  /// seek from anywhere and the bar is the mouse's.
+  final FocusNode? seekFocusNode;
+
   static const step = Duration(seconds: 10);
 
   @override
@@ -194,6 +200,20 @@ class VodOsdBottom extends StatelessWidget {
     Widget beside(Widget text) => Padding(
       padding: EdgeInsets.only(top: AppSlider.bubbleRoom(context)),
       child: text,
+    );
+    Widget bar({required bool focused}) => AppSlider(
+      value: fraction(timeline.position),
+      bufferedValue: timeline.buffered > Duration.zero
+          ? fraction(timeline.position + timeline.buffered)
+          : null,
+      enabled: ms > 0,
+      overVideo: true,
+      showBubble: seeking,
+      focused: focused,
+      bubbleLabel: (v) => formatPosition(at(v)),
+      semanticLabel: 'Position',
+      onChanged: (v) => onDrag(at(v)),
+      onChangeEnd: (v) => onDrag(at(v), commit: true),
     );
     return OsdShade(
       top: false,
@@ -226,23 +246,20 @@ class VodOsdBottom extends StatelessWidget {
                 beside(Text(formatPosition(timeline.position), style: time)),
                 SizedBox(width: tokens.spacing.s12),
                 Expanded(
-                  // ←/→ seek from anywhere in the player: the bar is for
-                  // the mouse, not a Tab stop of its own.
-                  child: ExcludeFocus(
-                    child: AppSlider(
-                      value: fraction(timeline.position),
-                      bufferedValue: timeline.buffered > Duration.zero
-                          ? fraction(timeline.position + timeline.buffered)
-                          : null,
-                      enabled: ms > 0,
-                      overVideo: true,
-                      showBubble: seeking,
-                      bubbleLabel: (v) => formatPosition(at(v)),
-                      semanticLabel: 'Position',
-                      onChanged: (v) => onDrag(at(v)),
-                      onChangeEnd: (v) => onDrag(at(v), commit: true),
+                  child: switch (seekFocusNode) {
+                    // ←/→ seek from anywhere in the player: the bar is for
+                    // the mouse, not a Tab stop of its own.
+                    null => ExcludeFocus(child: bar(focused: false)),
+                    // A TV's stop: the slider's own keys stay out of it.
+                    final node => Focus(
+                      focusNode: node,
+                      child: ListenableBuilder(
+                        listenable: node,
+                        builder: (context, _) =>
+                            ExcludeFocus(child: bar(focused: node.hasFocus)),
+                      ),
                     ),
-                  ),
+                  },
                 ),
                 SizedBox(width: tokens.spacing.s12),
                 beside(

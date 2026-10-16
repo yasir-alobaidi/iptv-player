@@ -144,35 +144,60 @@ class _Sheet extends StatelessWidget {
               ],
             ),
             SizedBox(height: spacing.s32),
-            SizedBox(
-              width: 420,
-              height: 140,
-              child: ListView(
-                children: [
-                  _focused(
-                    ChannelRow(
-                      name: 'Ironwood Arena',
-                      number: 1,
-                      nowTitle: 'Archive Late',
-                      progress: 0.3,
-                      onPressed: () {},
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _list(),
+                SizedBox(width: spacing.s48),
+                // A film's seek bar with the remote on it, and at rest.
+                SizedBox(
+                  width: 520,
+                  child: Column(
+                    children: [
+                      for (final focused in [true, false])
+                        AppSlider(
+                          value: 0.4,
+                          bufferedValue: 0.5,
+                          overVideo: true,
+                          focused: focused,
+                          bubbleLabel: (_) => '48:10',
+                          onChanged: (_) {},
+                        ),
+                    ],
                   ),
-                  ChannelRow(
-                    name: 'Zephyr Kids',
-                    number: 2,
-                    nowTitle: 'Fathom Tonight',
-                    progress: 0.5,
-                    onPressed: () {},
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _list() => SizedBox(
+    width: 420,
+    height: 140,
+    child: ListView(
+      children: [
+        _focused(
+          ChannelRow(
+            name: 'Ironwood Arena',
+            number: 1,
+            nowTitle: 'Archive Late',
+            progress: 0.3,
+            onPressed: () {},
+          ),
+        ),
+        ChannelRow(
+          name: 'Zephyr Kids',
+          number: 2,
+          nowTitle: 'Fathom Tonight',
+          progress: 0.5,
+          onPressed: () {},
+        ),
+      ],
+    ),
+  );
 }
 
 void main() {

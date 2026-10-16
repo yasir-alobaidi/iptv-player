@@ -734,6 +734,12 @@ class AppPlayerTokens {
   double get seekThumbRadius => 9;
   double get seekHaloRadius => 18;
 
+  /// The seek bar with a TV remote on it: a thicker track and a larger
+  /// thumb say it has the focus from across a room, where a ring round a
+  /// 6 px bar would not read.
+  double get seekTrackHeightFocused => 10;
+  double get seekThumbRadiusFocused => 14;
+
   /// The spinner while a stream opens, and the failure card's widest:
   /// in full screen, and in the preview pane.
   double get spinnerSize => 48;
