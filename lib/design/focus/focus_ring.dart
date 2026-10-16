@@ -14,21 +14,27 @@ enum RingPlacement {
 
 /// The design system's focus ring around [child], drawn as the tokens say:
 /// the accent (the text colour on an accent surface, [onAccent]) on the
-/// desktop, white on a TV ([AppFocusTokens.light]).
+/// desktop, white on a TV ([AppFocusTokens.light]) except on a white
+/// surface ([onLight]), where it is the accent.
 class AppFocusRing extends StatelessWidget {
   const new({
     required this.visible,
     required this.borderRadius,
     required this.child,
     this.onAccent = false,
+    this.onLight = false,
     this.placement = RingPlacement.outside,
     this.animated = true,
     super.key,
-  });
+  }) : assert(!(onAccent && onLight), 'one surface colour');
 
   final bool visible;
   final BorderRadius borderRadius;
   final bool onAccent;
+
+  /// A surface filled with the text colour (the player's Play): a TV's
+  /// white ring would vanish on it, so the ring is the accent there too.
+  final bool onLight;
   final RingPlacement placement;
 
   /// False where the ring moves with the focus rather than fading in
@@ -41,7 +47,7 @@ class AppFocusRing extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final focus = tokens.focus;
-    final light = focus.light || onAccent;
+    final light = (focus.light || onAccent) && !onLight;
     return FocusRing(
       visible: visible,
       borderRadius: borderRadius,

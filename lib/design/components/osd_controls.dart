@@ -100,6 +100,8 @@ class OsdButton extends StatelessWidget {
         enabled: onPressed != null,
         focusNode: focusNode,
         borderRadius: radius,
+        // Play is white: its ring is the accent on a TV too.
+        onLight: primary,
         semanticLabel: label ?? tooltip,
         builder: (context, states) => Opacity(
           opacity: states.disabled ? 0.4 : 1,

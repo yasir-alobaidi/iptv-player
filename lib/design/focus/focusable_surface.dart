@@ -113,7 +113,8 @@ enum FocusGrowth { none, tile }
 ///
 /// On an accent-filled surface pass `onAccent: true`; the ring inverts to
 /// the primary text color, because an accent ring on an accent button is
-/// invisible.
+/// invisible. On a surface filled with the text color pass `onLight: true`
+/// for the same reason: a TV's white ring is the accent there.
 class FocusableSurface extends StatefulWidget {
   const new({
     required this.builder,
@@ -126,6 +127,7 @@ class FocusableSurface extends StatefulWidget {
     this.background,
     this.hoverBackground,
     this.onAccent = false,
+    this.onLight = false,
     this.growth = FocusGrowth.none,
     this.semanticLabel,
     this.semanticButton = true,
@@ -149,6 +151,7 @@ class FocusableSurface extends StatefulWidget {
     Color? background,
     Color? hoverBackground,
     bool onAccent = false,
+    bool onLight = false,
     FocusGrowth growth = FocusGrowth.none,
     String? semanticLabel,
     bool semanticButton = true,
@@ -168,6 +171,7 @@ class FocusableSurface extends StatefulWidget {
     background: background,
     hoverBackground: hoverBackground,
     onAccent: onAccent,
+    onLight: onLight,
     growth: growth,
     semanticLabel: semanticLabel,
     semanticButton: semanticButton,
@@ -186,6 +190,7 @@ class FocusableSurface extends StatefulWidget {
   final Color? background;
   final Color? hoverBackground;
   final bool onAccent;
+  final bool onLight;
   final FocusGrowth growth;
   final String? semanticLabel;
   final bool semanticButton;
@@ -306,6 +311,7 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
       visible: states.focused && widget.ring,
       borderRadius: radius,
       onAccent: widget.onAccent,
+      onLight: widget.onLight,
       placement: widget.ringPlacement,
       child: AnimatedContainer(
         duration: motion.fast,

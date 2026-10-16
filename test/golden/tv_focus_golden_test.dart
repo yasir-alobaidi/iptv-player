@@ -151,7 +151,7 @@ class _Sheet extends StatelessWidget {
                 SizedBox(width: spacing.s48),
                 // A film's seek bar with the remote on it, and at rest.
                 SizedBox(
-                  width: 520,
+                  width: 440,
                   child: Column(
                     children: [
                       for (final focused in [true, false])
@@ -165,6 +165,35 @@ class _Sheet extends StatelessWidget {
                         ),
                     ],
                   ),
+                ),
+                SizedBox(width: spacing.s24),
+                // The player's Play, white, and a tile beside it.
+                Row(
+                  children: [
+                    _focused(
+                      OsdButton(
+                        icon: AppIcons.pause,
+                        tooltip: 'Pause',
+                        primary: true,
+                        onPressed: () {},
+                      ),
+                    ),
+                    SizedBox(width: spacing.s12),
+                    OsdButton(
+                      icon: AppIcons.pause,
+                      tooltip: 'Pause',
+                      primary: true,
+                      onPressed: () {},
+                    ),
+                    SizedBox(width: spacing.s12),
+                    _focused(
+                      OsdButton(
+                        icon: AppIcons.replay10,
+                        tooltip: 'Back 10 seconds',
+                        onPressed: () {},
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

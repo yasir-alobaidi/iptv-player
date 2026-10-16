@@ -111,6 +111,29 @@ void main() {
       );
     });
 
+    testWidgets("on a TV the ring is white, but the accent on a white surface "
+        '(the player\'s Play)', (tester) async {
+      Future<Color> ring({required bool onLight}) async {
+        await pumpDesign(
+          tester,
+          FocusableSurface.child(
+            key: ValueKey(onLight),
+            onPressed: () {},
+            onLight: onLight,
+            autofocus: true,
+            child: const SizedBox(width: 56, height: 56),
+          ),
+          tv: true,
+        );
+        await tester.pumpAndSettle();
+        return focusRingPainter(tester)!.ringColor;
+      }
+
+      final colors = AppTokens.defaults().colors;
+      expect(await ring(onLight: false), colors.textPrimary);
+      expect(await ring(onLight: true), colors.accentBase);
+    });
+
     testWidgets('a disabled surface is not focusable', (tester) async {
       var taps = 0;
       await pumpDesign(
