@@ -108,7 +108,7 @@ void main() {
 
     expect(row('Search').keysText, 'Ctrl K or /');
     expect(
-      row('Home, Live TV, Guide, Movies, Series, Favorites, Library').keysText,
+      row('Home, Live TV, Movies, Series, Favorites, Library, Guide').keysText,
       'Ctrl 1 … Ctrl 7',
     );
     expect(row('Go to a channel by its number').keysText, '0–9 then Enter');

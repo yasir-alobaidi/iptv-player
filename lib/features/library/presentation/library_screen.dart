@@ -218,31 +218,44 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           SizedBox(width: spacing.s16),
                         ],
                         const Spacer(),
-                        if (tab != LibraryTab.downloads)
-                          AppButton(
-                            label: 'Add folder',
-                            icon: AppIcons.plus,
-                            variant: AppButtonVariant.secondary,
-                            size: AppButtonSize.s,
-                            onPressed: () => unawaited(addLibraryFolder(ref)),
-                          )
-                        else if (downloading.isNotEmpty)
-                          AppButton(
-                            label: allPaused ? 'Resume all' : 'Pause all',
-                            icon: allPaused ? AppIcons.play : AppIcons.pause,
-                            variant: AppButtonVariant.secondary,
-                            size: AppButtonSize.s,
-                            onPressed: () {
-                              final downloads = ref.read(
-                                downloadServiceProvider,
-                              );
-                              unawaited(
-                                allPaused
-                                    ? downloads.resumeAll()
-                                    : downloads.pauseAll(),
-                              );
-                            },
+                        Padding(
+                          padding: EdgeInsets.only(
+                            bottom: CountTab.underlineRoom(context),
                           ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (tab != LibraryTab.downloads)
+                                AppButton(
+                                  label: 'Add folder',
+                                  icon: AppIcons.plus,
+                                  variant: AppButtonVariant.secondary,
+                                  size: AppButtonSize.s,
+                                  onPressed: () =>
+                                      unawaited(addLibraryFolder(ref)),
+                                )
+                              else if (downloading.isNotEmpty)
+                                AppButton(
+                                  label: allPaused ? 'Resume all' : 'Pause all',
+                                  icon: allPaused
+                                      ? AppIcons.play
+                                      : AppIcons.pause,
+                                  variant: AppButtonVariant.secondary,
+                                  size: AppButtonSize.s,
+                                  onPressed: () {
+                                    final downloads = ref.read(
+                                      downloadServiceProvider,
+                                    );
+                                    unawaited(
+                                      allPaused
+                                          ? downloads.resumeAll()
+                                          : downloads.pauseAll(),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

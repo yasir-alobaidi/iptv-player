@@ -321,19 +321,35 @@ class _ArtworkFallback extends StatelessWidget {
                     : Alignment.bottomCenter,
                 // Part of the picture, like a poster's own lettering: it
                 // keeps its size at a larger text size (the title under
-                // the card is the one that grows), or a long word would
-                // break in two.
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 2,
-                  textAlign: landscape ? TextAlign.left : TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  textScaler: TextScaler.noScaling,
-                  style: tokens.text.titleSmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    letterSpacing: 1,
-                    height: 1.1,
-                  ),
+                // the card is the one that grows), and is drawn smaller
+                // when its widest word wouldn't fit, which would break in
+                // two (a TV's larger type: "NORTHBOUN" over "D").
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final text = title.toUpperCase();
+                    final style = tokens.text.titleSmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      letterSpacing: 1,
+                      height: 1.1,
+                    );
+                    final widest = _widestWord(
+                      text,
+                      style,
+                      Directionality.of(context),
+                    );
+                    final room = constraints.maxWidth;
+                    return Text(
+                      text,
+                      maxLines: 2,
+                      textAlign: landscape ? TextAlign.left : TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      textScaler: widest > room && room > 0
+                          // A pixel spare: an exact fit still breaks.
+                          ? TextScaler.linear(room / (widest + 1))
+                          : TextScaler.noScaling,
+                      style: style,
+                    );
+                  },
                 ),
               ),
             ),
@@ -350,6 +366,27 @@ class _ArtworkFallback extends StatelessWidget {
     Color(0xFF6B3F5A),
     Color(0xFF2F7A5A),
   ];
+
+  /// How wide [text]'s widest word is set in [style], unscaled.
+  static double _widestWord(
+    String text,
+    TextStyle style,
+    TextDirection direction,
+  ) {
+    var widest = 0.0;
+    for (final word in text.split(' ')) {
+      if (word.isEmpty) continue;
+      final painter = TextPainter(
+        text: TextSpan(text: word, style: style),
+        textDirection: direction,
+        textScaler: TextScaler.noScaling,
+        maxLines: 1,
+      )..layout();
+      if (painter.width > widest) widest = painter.width;
+      painter.dispose();
+    }
+    return widest;
+  }
 }
 
 /// A 16:9 card for episodes and Continue Watching; focus rings its

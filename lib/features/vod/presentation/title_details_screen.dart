@@ -1075,14 +1075,24 @@ class _DetailsSeasonTabsState extends State<DetailsSeasonTabs> {
             ),
           ),
           SizedBox(width: tokens.spacing.s12),
-          Text(
-            episodes == 1 ? '1 episode' : '$episodes episodes',
-            style: tokens.text.labelSmall.copyWith(color: colors.textTertiary),
+          Padding(
+            padding: EdgeInsets.only(bottom: CountTab.underlineRoom(context)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  episodes == 1 ? '1 episode' : '$episodes episodes',
+                  style: tokens.text.labelSmall.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+                if (widget.trailing case final trailing?) ...[
+                  SizedBox(width: tokens.spacing.s16),
+                  trailing,
+                ],
+              ],
+            ),
           ),
-          if (widget.trailing case final trailing?) ...[
-            SizedBox(width: tokens.spacing.s16),
-            trailing,
-          ],
         ],
       ),
     );

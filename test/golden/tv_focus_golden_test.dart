@@ -6,9 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components.dart';
-import 'package:iptv_player/design/focus/tv_canvas.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 import '../design/design_harness.dart';

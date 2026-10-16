@@ -144,25 +144,34 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       SizedBox(width: spacing.s16),
                     ],
                     const Spacer(),
-                    if (_tab == _Tab.channels) ...[
-                      // A remote drags nothing (docs/07).
-                      if (!TvMode.of(context)) ...[
-                        Text(
-                          'Drag to reorder',
-                          style: tokens.text.caption
-                              .withWeight(600)
-                              .copyWith(color: colors.textTertiary),
+                    if (_tab == _Tab.channels)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: CountTab.underlineRoom(context),
                         ),
-                        SizedBox(width: spacing.s16),
-                      ],
-                      AppButton(
-                        label: 'New group',
-                        icon: AppIcons.plus,
-                        variant: AppButtonVariant.secondary,
-                        size: AppButtonSize.s,
-                        onPressed: () => unawaited(_newGroup(id)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // A remote drags nothing (docs/07).
+                            if (!TvMode.of(context)) ...[
+                              Text(
+                                'Drag to reorder',
+                                style: tokens.text.caption
+                                    .withWeight(600)
+                                    .copyWith(color: colors.textTertiary),
+                              ),
+                              SizedBox(width: spacing.s16),
+                            ],
+                            AppButton(
+                              label: 'New group',
+                              icon: AppIcons.plus,
+                              variant: AppButtonVariant.secondary,
+                              size: AppButtonSize.s,
+                              onPressed: () => unawaited(_newGroup(id)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
                   ],
                 ),
               ),

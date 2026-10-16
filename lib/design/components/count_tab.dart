@@ -27,6 +27,14 @@ class CountTab extends StatelessWidget {
   final VoidCallback onPressed;
   final FocusNode? focusNode;
 
+  /// What a tab keeps below its label for the underline. Beside a row of
+  /// tabs, the same room below a control centres it on their labels, not
+  /// on the tabs' boxes (4 px lower).
+  static double underlineRoom(BuildContext context) =>
+      context.tokens.spacing.s4 + 2 + _underline;
+
+  static const _underline = 2.0;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -102,10 +110,10 @@ class CountTab extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: tokens.spacing.s4 + 2),
+            SizedBox(height: underlineRoom(context) - _underline),
             // Under the words, not the ring's box.
             Container(
-              height: 2,
+              height: _underline,
               margin: EdgeInsets.symmetric(horizontal: inset),
               color: selected ? colors.accentBase : Colors.transparent,
             ),

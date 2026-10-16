@@ -388,9 +388,9 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final shape = widget.shape;
-            (int, double, double) cardsFor(double inset) {
+            (int, double, double) cardsFor(double inset, {int? columns}) {
               final width = constraints.maxWidth - inset * 2;
-              final columns = math.max(
+              columns ??= math.max(
                 1,
                 ((width + TitleGrid.columnGap) /
                         (shape.minCardWidth + TitleGrid.columnGap))
@@ -406,7 +406,9 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
             }
 
             // Room for a focused card's growth and ring at the edges, so
-            // the grid's edge never cuts its ring (ADR-029).
+            // the grid's edge never cuts its ring (ADR-029). The room
+            // narrows the cards, never takes a column: as many a row as
+            // the window had before.
             var inset = tokens.spacing.s8;
             var (columns, cardWidth, extent) = cardsFor(inset);
             final reach = tokens.focus
@@ -414,7 +416,7 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
                 .ceilToDouble();
             if (reach > inset) {
               inset = reach;
-              (columns, cardWidth, extent) = cardsFor(inset);
+              (columns, cardWidth, extent) = cardsFor(inset, columns: columns);
             }
             _columns = columns;
             _stride = extent + TitleGrid.rowGap;
