@@ -111,8 +111,8 @@ void main() {
       );
     });
 
-    testWidgets("on a TV the ring is white, but the accent on a white surface "
-        '(the player\'s Play)', (tester) async {
+    testWidgets('on a TV the ring is white, but the accent on a white '
+        "surface (the player's Play)", (tester) async {
       Future<Color> ring({required bool onLight}) async {
         await pumpDesign(
           tester,
