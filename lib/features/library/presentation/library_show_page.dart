@@ -389,6 +389,7 @@ class _EpisodeRow extends ConsumerWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spacing.s4),
       child: FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         focusNode: focus,
         borderRadius: tokens.radii.mdAll,
         semanticLabel: number.isEmpty ? title : '$number, $title',

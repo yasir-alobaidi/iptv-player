@@ -696,26 +696,34 @@ class _CategoryRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ReorderableDragStartListener(
-              index: index,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
-                  child: AppIcon(
-                    AppIcons.dragHandle,
-                    size: 16,
-                    color: colors.textTertiary,
-                    semanticLabel: 'Drag to reorder',
+            // A remote drags nothing (docs/07): Move up and down are in
+            // the row's menu.
+            if (TvMode.of(context))
+              SizedBox(width: tokens.spacing.s16)
+            else
+              ReorderableDragStartListener(
+                index: index,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.grab,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: tokens.spacing.s8,
+                    ),
+                    child: AppIcon(
+                      AppIcons.dragHandle,
+                      size: 16,
+                      color: colors.textTertiary,
+                      semanticLabel: 'Drag to reorder',
+                    ),
                   ),
                 ),
               ),
-            ),
             Expanded(
               child: Semantics(
                 toggled: on,
                 child: Builder(
                   builder: (anchor) => FocusableSurface(
+                    ringPlacement: RingPlacement.inside,
                     onPressed: onToggle,
                     onMenu: () => unawaited(
                       showAppMenu(

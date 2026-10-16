@@ -128,42 +128,48 @@ class _SearchFieldState extends State<SearchField> {
             ),
           );
 
-    final box = AnimatedContainer(
-      duration: tokens.motion.fast,
-      curve: tokens.motion.fastCurve,
-      width: widget.width,
-      height: context.scaled(40),
-      padding: EdgeInsets.only(
-        left: tokens.spacing.s12,
-        right: tokens.spacing.s8,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface1,
-        borderRadius: tokens.radii.controlAll,
-        border: Border.all(
-          color: showsOwnFocus ? colors.accentBase : colors.border,
+    final box = AppFocusRing(
+      // A TV's focus is the white ring (ADR-029); the desktop's, the
+      // field's own border and glow.
+      visible: showsOwnFocus && tokens.focus.light,
+      borderRadius: tokens.radii.controlAll,
+      child: AnimatedContainer(
+        duration: tokens.motion.fast,
+        curve: tokens.motion.fastCurve,
+        width: widget.width,
+        height: context.scaled(40),
+        padding: EdgeInsets.only(
+          left: tokens.spacing.s12,
+          right: tokens.spacing.s8,
         ),
-        boxShadow: showsOwnFocus
-            ? [
-                BoxShadow(
-                  color: colors.accentBase.withValues(
-                    alpha: tokens.focus.glowOpacity,
+        decoration: BoxDecoration(
+          color: colors.surface1,
+          borderRadius: tokens.radii.controlAll,
+          border: Border.all(
+            color: showsOwnFocus ? colors.accentBase : colors.border,
+          ),
+          boxShadow: showsOwnFocus
+              ? [
+                  BoxShadow(
+                    color: colors.accentBase.withValues(
+                      alpha: tokens.focus.glowOpacity,
+                    ),
+                    spreadRadius: tokens.focus.glowWidth,
                   ),
-                  spreadRadius: tokens.focus.glowWidth,
-                ),
-              ]
-            : null,
-      ),
-      child: Row(
-        children: [
-          AppIcon(AppIcons.search, size: 18, color: colors.textTertiary),
-          SizedBox(width: tokens.spacing.s8 + 2),
-          Expanded(child: body),
-          if (widget.shortcut != null && KeyHints.shownIn(context)) ...[
-            SizedBox(width: tokens.spacing.s8),
-            Kbd(widget.shortcut!),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            AppIcon(AppIcons.search, size: 18, color: colors.textTertiary),
+            SizedBox(width: tokens.spacing.s8 + 2),
+            Expanded(child: body),
+            if (widget.shortcut != null && KeyHints.shownIn(context)) ...[
+              SizedBox(width: tokens.spacing.s8),
+              Kbd(widget.shortcut!),
+            ],
           ],
-        ],
+        ),
       ),
     );
 

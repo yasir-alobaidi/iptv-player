@@ -144,62 +144,68 @@ class _AppTextFieldState extends State<AppTextField> {
         ],
         Opacity(
           opacity: widget.enabled ? 1 : 0.4,
-          child: AnimatedContainer(
-            duration: tokens.motion.fast,
-            curve: tokens.motion.fastCurve,
-            height: context.scaled(48),
-            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
-            decoration: BoxDecoration(
-              color: colors.surface1,
-              borderRadius: tokens.radii.controlAll,
-              border: Border.all(color: borderColor),
-              // Focused in its error state too: the glow in the error's
-              // color (hard rule 5; a remote has no caret to show it).
-              boxShadow: _focused
-                  ? [
-                      BoxShadow(
-                        color: (hasError ? colors.danger : colors.accentBase)
-                            .withValues(alpha: tokens.focus.glowOpacity),
-                        spreadRadius: tokens.focus.glowWidth,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                if (widget.leading != null) ...[
-                  AppIcon(
-                    widget.leading!,
-                    size: 18,
-                    color: colors.textTertiary,
+          // A TV's focus is the white ring (ADR-029); the desktop's, the
+          // field's own border and glow.
+          child: AppFocusRing(
+            visible: _focused && tokens.focus.light,
+            borderRadius: tokens.radii.controlAll,
+            child: AnimatedContainer(
+              duration: tokens.motion.fast,
+              curve: tokens.motion.fastCurve,
+              height: context.scaled(48),
+              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12 + 2),
+              decoration: BoxDecoration(
+                color: colors.surface1,
+                borderRadius: tokens.radii.controlAll,
+                border: Border.all(color: borderColor),
+                // Focused in its error state too: the glow in the error's
+                // color (hard rule 5; a remote has no caret to show it).
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                          color: (hasError ? colors.danger : colors.accentBase)
+                              .withValues(alpha: tokens.focus.glowOpacity),
+                          spreadRadius: tokens.focus.glowWidth,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  if (widget.leading != null) ...[
+                    AppIcon(
+                      widget.leading!,
+                      size: 18,
+                      color: colors.textTertiary,
+                    ),
+                    SizedBox(width: tokens.spacing.s8 + 2),
+                  ],
+                  Expanded(
+                    child: RemoteTextEntry(onOpen: _openKeyboard, child: field),
                   ),
-                  SizedBox(width: tokens.spacing.s8 + 2),
+                  if (widget.showClear && _controller.text.isNotEmpty)
+                    _FieldAction(
+                      icon: AppIcons.close,
+                      tooltip: 'Clear',
+                      // Not a Tab stop: Tab goes field to field, and the
+                      // keyboard clears with select-all and Delete.
+                      focusable: false,
+                      onPressed: () {
+                        _controller.clear();
+                        widget.onChanged?.call('');
+                      },
+                    ),
+                  if (widget.obscure)
+                    _FieldAction(
+                      // The canvas has one eye icon, so the revealed
+                      // state is shown with the accent color.
+                      icon: AppIcons.eye,
+                      active: _revealed,
+                      tooltip: _revealed ? 'Hide' : 'Show',
+                      onPressed: () => setState(() => _revealed = !_revealed),
+                    ),
                 ],
-                Expanded(
-                  child: RemoteTextEntry(onOpen: _openKeyboard, child: field),
-                ),
-                if (widget.showClear && _controller.text.isNotEmpty)
-                  _FieldAction(
-                    icon: AppIcons.close,
-                    tooltip: 'Clear',
-                    // Not a Tab stop: Tab goes field to field, and the
-                    // keyboard clears with select-all and Delete.
-                    focusable: false,
-                    onPressed: () {
-                      _controller.clear();
-                      widget.onChanged?.call('');
-                    },
-                  ),
-                if (widget.obscure)
-                  _FieldAction(
-                    // The canvas has one eye icon, so the revealed
-                    // state is shown with the accent color.
-                    icon: AppIcons.eye,
-                    active: _revealed,
-                    tooltip: _revealed ? 'Hide' : 'Show',
-                    onPressed: () => setState(() => _revealed = !_revealed),
-                  ),
-              ],
+              ),
             ),
           ),
         ),

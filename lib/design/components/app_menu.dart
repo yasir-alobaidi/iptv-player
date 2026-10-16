@@ -112,6 +112,7 @@ class _MenuRow extends StatelessWidget {
     final foreground = item.destructive ? colors.danger : colors.textPrimary;
 
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onPressed: item.onPressed,
       enabled: item.onPressed != null,
       autofocus: autofocus,

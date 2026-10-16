@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/app_tooltip.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
+import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
-/// A square icon-only button (canvas: 40 × 40, radius 10). [tooltip] is
+/// A square icon-only button (canvas: 40 × 40, radius 10; larger with
+/// the text, like a button). [tooltip] is
 /// required because an icon alone never explains itself; pass [shortcut]
 /// to show the key hint inside the tooltip.
 class AppIconButton extends StatelessWidget {
@@ -64,9 +66,11 @@ class AppIconButton extends StatelessWidget {
         semanticLabel: tooltip,
         builder: (context, states) => Opacity(
           opacity: states.disabled ? 0.4 : 1,
+          // As tall as the text buttons beside it at any text size (a
+          // TV's is 1.2×; ADR-029): the box grows, the icon doesn't.
           child: Container(
-            width: size,
-            height: size,
+            width: context.scaled(size),
+            height: context.scaled(size),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: tokens.radii.controlAll,

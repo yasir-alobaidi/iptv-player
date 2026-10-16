@@ -1059,45 +1059,14 @@ class _DetailsSeasonTabsState extends State<DetailsSeasonTabs> {
                   child: Row(
                     children: [
                       for (final season in widget.seasons)
-                        FocusableSurface(
-                          focusNode: _node(season),
-                          onPressed: () => widget.onPick(season),
-                          borderRadius: tokens.radii.smAll,
-                          semanticLabel: 'Season $season',
-                          builder: (context, states) {
-                            final active = season == widget.shown;
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: tokens.spacing.s4,
-                                vertical: tokens.spacing.s12,
-                              ),
-                              margin: EdgeInsets.only(
-                                right: tokens.spacing.s16,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: active
-                                        ? colors.accentBase
-                                        : colors.accentBase.withValues(
-                                            alpha: 0,
-                                          ),
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Season $season',
-                                style: tokens.text.label
-                                    .withWeight(700)
-                                    .copyWith(
-                                      color: active || states.highlighted
-                                          ? colors.textPrimary
-                                          : colors.textSecondary,
-                                    ),
-                              ),
-                            );
-                          },
+                        Padding(
+                          padding: EdgeInsets.only(right: tokens.spacing.s8),
+                          child: CountTab(
+                            focusNode: _node(season),
+                            label: 'Season $season',
+                            selected: season == widget.shown,
+                            onPressed: () => widget.onPick(season),
+                          ),
                         ),
                     ],
                   ),
@@ -1252,6 +1221,7 @@ class _EpisodeRow extends ConsumerWidget {
                 unawaited(startDownloads(context, [request])),
         },
         child: FocusableSurface(
+          ringPlacement: RingPlacement.inside,
           focusNode: focus,
           borderRadius: tokens.radii.mdAll,
           semanticLabel: 'Episode ${episode.episode}, ${episode.title}',

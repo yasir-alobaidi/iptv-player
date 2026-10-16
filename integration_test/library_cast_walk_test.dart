@@ -5,7 +5,7 @@
 // (tools/fake_receiver), which fetches and checks what it is sent as a TV
 // does. The provider is never asked for anything.
 //
-// Ctrl+7: the Library → Movies → the film → Enter: its page → C: the
+// Ctrl+6: the Library → Movies → the film → Enter: its page → C: the
 // picker → Add device by IP address → the fake TV → Enter on it: the film
 // plays on the TV through the relay, its subtitle file read by the TV as
 // WebVTT and showing → S: off → S: on again → → three times: the relay
@@ -163,9 +163,9 @@ void main() {
         return run.existsSync() ? run.listSync(recursive: true) : const [];
       }
 
-      // ── Ctrl+7: the Library; Movies; the film; Enter: its page.
+      // ── Ctrl+6: the Library; Movies; the film; Enter: its page.
       await k.waitFor(find.text('Start watching'), seconds: 30);
-      await k.chord(LogicalKeyboardKey.digit7);
+      await k.chord(LogicalKeyboardKey.digit6);
       final moviesTab = byLabel('Movies, 1');
       await k.waitFor(moviesTab);
       await k.tabTo(moviesTab);

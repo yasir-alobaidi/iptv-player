@@ -119,6 +119,7 @@ class _FolderRow extends ConsumerWidget {
     final line = folderLine(folder, totals, now);
 
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onMenu: () => unawaited(_menu(context, ref)),
       borderRadius: tokens.radii.controlAll,
       semanticLabel: '${folder.label}, $line',

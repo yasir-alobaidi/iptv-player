@@ -190,7 +190,7 @@ class _GuideViewState extends ConsumerState<_GuideView> {
         !value.isImporting;
     final spacing = tokens.spacing;
     // Built bottom-up so the grid comes first in the tree: a jump to the
-    // Guide (Ctrl+3, G) focuses the first control, which should be the
+    // Guide (Ctrl+7, G) focuses the first control, which should be the
     // grid. Tab still goes by position: the toolbar, then the grid.
     return Column(
       verticalDirection: VerticalDirection.up,

@@ -287,6 +287,7 @@ class _ReminderRow extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.delete): onRemove},
       child: FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         focusNode: focusNode,
         autofocus: autofocus,
         onPressed: onOpen,

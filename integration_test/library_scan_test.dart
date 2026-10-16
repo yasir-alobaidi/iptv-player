@@ -3,7 +3,7 @@
 // picture), the Library's pages and the player (media_kit) — on a folder
 // of the user's own, keys only:
 //
-// Ctrl+7: the Library, with nothing in it → Add folder: the system's
+// Ctrl+6: the Library, with nothing in it → Add folder: the system's
 // dialog, answered here with the folder → the scan: each video read by
 // ffprobe; a text file and a clip too small to be a film left out →
 // Movies: the film, named by its folder, with what ffprobe read in it
@@ -134,9 +134,9 @@ void main() {
       final coordinator = container.read(playbackCoordinatorProvider);
       final library = container.read(libraryRepositoryProvider);
 
-      // ── Ctrl+7: the Library, with nothing in it yet. Add folder.
+      // ── Ctrl+6: the Library, with nothing in it yet. Add folder.
       await k.waitFor(find.text('Start watching'), seconds: 30);
-      await k.chord(LogicalKeyboardKey.digit7);
+      await k.chord(LogicalKeyboardKey.digit6);
       final add = byLabel('Add folder');
       await k.waitFor(add);
       await k.tabTo(add.first);

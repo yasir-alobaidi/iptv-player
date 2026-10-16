@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -145,6 +146,7 @@ class HomeRow extends StatefulWidget {
     required this.cardHeight,
     required this.gap,
     required this.card,
+    required this.inset,
     this.onSeeAll,
     super.key,
   });
@@ -162,8 +164,15 @@ class HomeRow extends StatefulWidget {
   final Widget Function(BuildContext context, int index, FocusNode focus) card;
   final VoidCallback? onSeeAll;
 
-  /// Room round the cards for a focused card's growth and ring.
-  static double inset(AppTokens tokens) => tokens.spacing.s8;
+  /// Room round the cards for a focused card's growth and ring: [insetFor].
+  final double inset;
+
+  /// The room a focused card [longest] px at its longest side needs round
+  /// it, so the row's edge never cuts its ring (ADR-029); 8 px at least.
+  static double insetFor(AppTokens tokens, double longest) => math.max(
+    tokens.spacing.s8,
+    tokens.focus.tileReach(longest).ceilToDouble(),
+  );
 
   @override
   State<HomeRow> createState() => _HomeRowState();
@@ -172,8 +181,7 @@ class HomeRow extends StatefulWidget {
 class _HomeRowState extends State<HomeRow> {
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final inset = HomeRow.inset(tokens);
+    final inset = widget.inset;
     final onSeeAll = widget.onSeeAll;
     final seeAllCard = TvMode.of(context) && onSeeAll != null;
     final count = widget.count + (seeAllCard ? 1 : 0);

@@ -12,18 +12,23 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 
 /// Icons the canvas doesn't draw but the app needs, drawn to match its
-/// set (24 px grid, 1.8 px round strokes). Written after the extracted
-/// ones, since extraction clears the folder.
+/// set (24 px grid, 1.8 px round strokes), and the few redrawn over the
+/// canvas's. Written after the extracted ones, since extraction clears
+/// the folder.
 const _handDrawn = <String, String>{
   'arrow-left': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   'bell': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg>',
   'bell-filled': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" fill="currentColor"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg>',
   'channel-list': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.6"/></svg>',
   'edit': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>',
+  // Redrawn over the canvas's (ADR-029): its Guide was a bare table and
+  // its Series a stack of layers; these say a schedule and episodes.
+  'guide': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.33h18M3 14.67h18M11 4v5.33M8 9.33v5.34M15 9.33v5.34M13 14.67V20"/></svg>',
   'forward-10': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5h-3a8 8 0 1 0 8 8"/><path d="m12.5 2 3 3-3 3"/><path d="m8.9 11.3 1.5-1.1v5.6M13.1 12v2a1.6 1.6 0 0 0 3.2 0v-2a1.6 1.6 0 0 0-3.2 0z" stroke-width="1.5"/></svg>',
   'last-channel': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h15M16 5l3 3-3 3"/><path d="M20 16H5M8 13l-3 3 3 3"/></svg>',
   'more': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>',
   'replay-10': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h3a8 8 0 1 1-8 8"/><path d="m11.5 2-3 3 3 3"/><path d="m8.9 11.3 1.5-1.1v5.6M13.1 12v2a1.6 1.6 0 0 0 3.2 0v-2a1.6 1.6 0 0 0-3.2 0z" stroke-width="1.5"/></svg>',
+  'series': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M5.5 5h13M8 2h8"/><path d="M10.5 11.8v5.4l4.5-2.7z" fill="currentColor" stroke-width="1.4"/></svg>',
   'skip-next': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5v13l9.5-6.5z"/><path d="M18.5 5.5v13" fill="none"/></svg>',
   'start-over': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h3a8 8 0 1 1-8 8"/><path d="m11.5 2-3 3 3 3"/><path d="M10.6 10.2v5.6l4.4-2.8z" fill="currentColor" stroke-width="1.4"/></svg>',
   'trash': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9L17.5 7M10 11v5M14 11v5"/></svg>',

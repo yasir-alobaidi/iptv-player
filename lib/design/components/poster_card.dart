@@ -14,7 +14,8 @@ double cardCaptionHeight(BuildContext context) =>
     context.scaledAround(56, fixed: 20);
 
 /// A 2:3 poster for a movie or a series (canvas: radius 12, title 14/700,
-/// year and rating below). Focus grows it to 1.03.
+/// year and rating below). Focus grows it and rings the poster, not the
+/// caption (canvas `Movies`, ADR-029).
 class PosterCard extends StatelessWidget {
   const new({
     required this.title,
@@ -89,6 +90,8 @@ class PosterCard extends StatelessWidget {
       growth: FocusGrowth.tile,
       borderRadius: tokens.radii.mdAll,
       semanticLabel: title,
+      // The ring is the picture's, not the caption's (ADR-029).
+      ring: false,
       builder: (context, states) => _Dimmed(
         dimmed: dimmed,
         child: SizedBox(
@@ -97,40 +100,44 @@ class PosterCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              ClipRRect(
+              AppFocusRing(
+                visible: states.focused,
                 borderRadius: tokens.radii.mdAll,
-                child: SizedBox(
-                  width: width,
-                  height: width * 3 / 2,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ArtworkImage(
-                        image: image,
-                        fallback: frame == null
-                            ? _ArtworkFallback(title: title)
-                            : _FrameInPoster(frame: frame!, title: title),
-                      ),
-                      if (badge != null)
-                        Positioned(
-                          top: tokens.spacing.s8,
-                          left: tokens.spacing.s8,
-                          child: badge!,
+                child: ClipRRect(
+                  borderRadius: tokens.radii.mdAll,
+                  child: SizedBox(
+                    width: width,
+                    height: width * 3 / 2,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ArtworkImage(
+                          image: image,
+                          fallback: frame == null
+                              ? _ArtworkFallback(title: title)
+                              : _FrameInPoster(frame: frame!, title: title),
                         ),
-                      if (cornerBadge != null)
-                        Positioned(
-                          top: tokens.spacing.s8,
-                          right: tokens.spacing.s8,
-                          child: cornerBadge!,
-                        ),
-                      if (progress != null)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: ProgressBar(value: progress),
-                        ),
-                    ],
+                        if (badge != null)
+                          Positioned(
+                            top: tokens.spacing.s8,
+                            left: tokens.spacing.s8,
+                            child: badge!,
+                          ),
+                        if (cornerBadge != null)
+                          Positioned(
+                            top: tokens.spacing.s8,
+                            right: tokens.spacing.s8,
+                            child: cornerBadge!,
+                          ),
+                        if (progress != null)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: ProgressBar(value: progress),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -345,7 +352,8 @@ class _ArtworkFallback extends StatelessWidget {
   ];
 }
 
-/// A 16:9 card for episodes and Continue Watching.
+/// A 16:9 card for episodes and Continue Watching; focus rings its
+/// picture, not the caption (canvas `Home`, ADR-029).
 class LandscapeCard extends StatelessWidget {
   const new({
     required this.title,
@@ -399,6 +407,8 @@ class LandscapeCard extends StatelessWidget {
       growth: FocusGrowth.tile,
       borderRadius: tokens.radii.mdAll,
       semanticLabel: title,
+      // The ring is the picture's, not the caption's (ADR-029).
+      ring: false,
       builder: (context, states) => _Dimmed(
         dimmed: dimmed,
         child: SizedBox(
@@ -407,41 +417,45 @@ class LandscapeCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              ClipRRect(
+              AppFocusRing(
+                visible: states.focused,
                 borderRadius: tokens.radii.mdAll,
-                child: SizedBox(
-                  width: width,
-                  height: width * 9 / 16,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ArtworkImage(
-                        image: image,
-                        fallback: _ArtworkFallback(
-                          title: title,
-                          landscape: true,
+                child: ClipRRect(
+                  borderRadius: tokens.radii.mdAll,
+                  child: SizedBox(
+                    width: width,
+                    height: width * 9 / 16,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ArtworkImage(
+                          image: image,
+                          fallback: _ArtworkFallback(
+                            title: title,
+                            landscape: true,
+                          ),
                         ),
-                      ),
-                      if (badge != null)
-                        Positioned(
-                          top: tokens.spacing.s8,
-                          left: tokens.spacing.s8,
-                          child: badge!,
-                        ),
-                      if (cornerBadge != null)
-                        Positioned(
-                          top: tokens.spacing.s8 + 2,
-                          right: tokens.spacing.s8 + 2,
-                          child: cornerBadge!,
-                        ),
-                      if (progress != null)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: ProgressBar(value: progress),
-                        ),
-                    ],
+                        if (badge != null)
+                          Positioned(
+                            top: tokens.spacing.s8,
+                            left: tokens.spacing.s8,
+                            child: badge!,
+                          ),
+                        if (cornerBadge != null)
+                          Positioned(
+                            top: tokens.spacing.s8 + 2,
+                            right: tokens.spacing.s8 + 2,
+                            child: cornerBadge!,
+                          ),
+                        if (progress != null)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: ProgressBar(value: progress),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

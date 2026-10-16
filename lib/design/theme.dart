@@ -10,13 +10,15 @@ ThemeData buildAppTheme({
   AppDensity density = AppDensity.comfortable,
   bool reduceMotion = false,
   TimeStyle timeStyle = TimeStyle.h12,
+  bool tv = false,
 }) {
+  // A TV's focus is its own (ADR-029).
   final tokens = AppTokens.defaults(
     accent: accent,
     density: density,
     reduceMotion: reduceMotion,
     timeStyle: timeStyle,
-  );
+  ).copyWith(focus: tv ? AppFocusTokens.tv : null);
   final colors = tokens.colors;
   final text = tokens.text;
 

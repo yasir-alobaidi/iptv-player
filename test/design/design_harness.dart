@@ -32,6 +32,7 @@ Future<void> pumpDesign(
         accent: accent,
         density: density,
         reduceMotion: reduceMotion,
+        tv: tv,
       ),
       builder: textScale == 1 && !tv && around == null
           ? null

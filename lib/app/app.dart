@@ -29,6 +29,7 @@ class IptvPlayerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final look = ref.watch(appearanceProvider);
+    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
     return ArtworkScope(
       images: ref.watch(artworkImagesProvider),
       child: MaterialApp.router(
@@ -39,13 +40,13 @@ class IptvPlayerApp extends ConsumerWidget {
           density: look.density,
           reduceMotion: look.reduceMotion,
           timeStyle: look.timeStyle,
+          tv: onTv,
         ),
         // The theme changes at once: an accent that fades in over
         // Material's 200 ms is motion nobody asked for.
         themeAnimationDuration: Duration.zero,
         routerConfig: ref.watch(routerProvider),
         builder: (context, child) {
-          final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
           final app = AppTextScale(
             // A TV's text is larger, to read from across a room (ADR-026).
             scale: look.textScale * (onTv ? TvCanvas.textScale : 1),

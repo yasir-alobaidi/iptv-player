@@ -1,7 +1,8 @@
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/app_icon.dart';
 
-/// The shell's navigation destinations, in nav-rail order (docs/05).
+/// The shell's navigation destinations, in nav-rail order (docs/05): what
+/// is watched most first, the Guide last (ADR-029).
 ///
 /// Each one is a branch of the router's stateful shell route, so its
 /// screen keeps its scroll position and state while the user is somewhere
@@ -15,34 +16,35 @@ enum AppDestination {
     icon: AppIcons.liveTv,
     shortcut: 'Ctrl 2',
   ),
-  guide(
-    path: '/guide',
-    label: 'Guide',
-    icon: AppIcons.guide,
-    shortcut: 'Ctrl 3',
-  ),
   movies(
     path: '/movies',
     label: 'Movies',
     icon: AppIcons.movies,
-    shortcut: 'Ctrl 4',
+    shortcut: 'Ctrl 3',
   ),
   series(
     path: '/series',
     label: 'Series',
     icon: AppIcons.series,
-    shortcut: 'Ctrl 5',
+    shortcut: 'Ctrl 4',
   ),
   favorites(
     path: '/favorites',
     label: 'Favorites',
     icon: AppIcons.star,
-    shortcut: 'Ctrl 6',
+    shortcut: 'Ctrl 5',
   ),
   library(
     path: '/library',
     label: 'Library',
     icon: AppIcons.library,
+    shortcut: 'Ctrl 6',
+  ),
+  // Last: the least used (the user, 2026-10-15; ADR-029).
+  guide(
+    path: '/guide',
+    label: 'Guide',
+    icon: AppIcons.guide,
     shortcut: 'Ctrl 7',
   ),
   settings(

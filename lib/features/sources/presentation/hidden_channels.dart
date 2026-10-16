@@ -218,6 +218,7 @@ class _HiddenRow extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       focusNode: focusNode,
       onPressed: onShow,
       hoverBackground: colors.surface3,

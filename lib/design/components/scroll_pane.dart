@@ -133,8 +133,6 @@ class _ScrollPaneState extends State<ScrollPane> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final colors = tokens.colors;
-    final focus = tokens.focus;
     final radius = widget.borderRadius ?? tokens.radii.controlAll;
     return Focus(
       canRequestFocus: false,
@@ -149,15 +147,9 @@ class _ScrollPaneState extends State<ScrollPane> {
         child: Semantics(
           label: widget.semanticLabel,
           container: true,
-          child: FocusRing(
+          child: AppFocusRing(
             visible: _focused,
             borderRadius: radius,
-            ringColor: colors.accentBase,
-            glowColor: colors.accentBase.withValues(alpha: focus.glowOpacity),
-            ringWidth: focus.ringWidth,
-            glowWidth: focus.glowWidth,
-            duration: tokens.motion.fast,
-            curve: tokens.motion.fastCurve,
             child: ClipRRect(
               borderRadius: radius,
               // Nothing inside is a stop of its own: the pane is.

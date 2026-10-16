@@ -179,6 +179,7 @@ class _NavItem extends StatelessWidget {
     return Semantics(
       selected: selected,
       child: FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         onPressed: onPressed,
         borderRadius: tokens.radii.smAll,
         background: selected ? colors.surface3 : null,

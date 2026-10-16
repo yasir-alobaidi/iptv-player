@@ -532,6 +532,7 @@ class _RowFrame extends StatelessWidget {
     final colors = tokens.colors;
     return Builder(
       builder: (anchor) => FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         focusNode: focus,
         borderRadius: tokens.radii.mdAll,
         semanticLabel: label,

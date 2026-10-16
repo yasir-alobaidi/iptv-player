@@ -1,7 +1,7 @@
 // Phase 5's exit walk, keys only, on the real app, database, sync and
-// player against the fake panel: Home → Ctrl+4 Movies → the filter → a
+// player against the fake panel: Home → Ctrl+3 Movies → the filter → a
 // movie → Play → past a minute → Ctrl+1 Home, where Continue watching has
-// it → Ctrl+5 Series → the filter → a series → its episodes → S1 · E2 →
+// it → Ctrl+4 Series → the filter → a series → its episodes → S1 · E2 →
 // to its last seconds → the countdown → S1 · E3 plays → Esc → Ctrl+1
 // Home, the series first in Continue watching → Enter plays S1 · E3.
 //
@@ -138,8 +138,8 @@ void main() {
       // ── Home, first run: the hero.
       await k.waitFor(find.text('Start watching'), seconds: 30);
 
-      // ── Ctrl+4: Movies; the movie through the filter; its page; Play.
-      await k.chord(LogicalKeyboardKey.digit4);
+      // ── Ctrl+3: Movies; the movie through the filter; its page; Play.
+      await k.chord(LogicalKeyboardKey.digit3);
       await openFromGrid('Filter movies', movie.name);
       await k.waitUntil(
         () => app.location == movieDetailsPath(movie),
@@ -178,8 +178,8 @@ void main() {
         seconds: 5,
       );
 
-      // ── Ctrl+5: Series; the series through the filter; its page.
-      await k.chord(LogicalKeyboardKey.digit5);
+      // ── Ctrl+4: Series; the series through the filter; its page.
+      await k.chord(LogicalKeyboardKey.digit4);
       await openFromGrid('Filter series', series.name);
       await k.waitUntil(
         () => app.location == seriesDetailsPath(series),

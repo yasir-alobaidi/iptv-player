@@ -358,19 +358,64 @@ class AppMotion {
 /// Focus ring geometry. The canvas draws a 2 px ring plus a 4 px glow at
 /// 25 %; on an accent-filled surface the ring inverts to [AppColors
 /// .textPrimary] with a 5 px glow at 35 %, because accent-on-accent is
-/// invisible.
+/// invisible. A TV has its own: [tv].
 @immutable
 class AppFocusTokens {
-  const new();
+  const new({
+    this.ringWidth = 2,
+    this.glowWidth = 4,
+    this.glowOpacity = 0.25,
+    this.onAccentGlowWidth = 5,
+    this.onAccentGlowOpacity = 0.35,
+    this.gap = 0,
+    this.light = false,
+    this.tileScale = 1.03,
+    this.revealMargin = 0,
+  });
 
-  double get ringWidth => 2;
-  double get glowWidth => 4;
-  double get glowOpacity => 0.25;
-  double get onAccentGlowWidth => 5;
-  double get onAccentGlowOpacity => 0.35;
+  /// A TV's focus (canvas `Google TV Home`, ADR-029): a white ring, as
+  /// thick as the canvas's 4 px at 1920 is on the 1280 canvas, 2 px off
+  /// the control so a white poster's edge never runs into it, no glow; a
+  /// tile grows to 1.06; and a focused control keeps 24 px from the
+  /// screen's edge, so what is beyond it shows.
+  static const tv = AppFocusTokens(
+    ringWidth: 3,
+    glowWidth: 0,
+    glowOpacity: 0,
+    onAccentGlowWidth: 0,
+    onAccentGlowOpacity: 0,
+    gap: 2,
+    light: true,
+    tileScale: 1.06,
+    revealMargin: 24,
+  );
+
+  final double ringWidth;
+  final double glowWidth;
+  final double glowOpacity;
+  final double onAccentGlowWidth;
+  final double onAccentGlowOpacity;
+
+  /// Between a control's edge and a ring drawn outside it.
+  final double gap;
+
+  /// The ring in [AppColors.textPrimary] everywhere, not the accent: a
+  /// TV's selection is the accent, its focus white.
+  final bool light;
 
   /// Tiles and cards grow on focus; rows stay at 1.0 (docs/05).
-  double get tileScale => 1.03;
+  final double tileScale;
+
+  /// Kept between a focused control's ring and the edge of what scrolls
+  /// it into view.
+  final double revealMargin;
+
+  /// How far a ring drawn outside a control reaches past its edge.
+  double get reach => gap + ringWidth + glowWidth;
+
+  /// How far a focused tile [extent] px across reaches past its box at
+  /// most: its growth and its ring.
+  double tileReach(double extent) => reach + extent * (tileScale - 1) / 2;
 }
 
 /// The details pages' measures (canvas `Movie details`, `Series

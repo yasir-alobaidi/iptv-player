@@ -106,6 +106,7 @@ class ChannelRow extends StatelessWidget {
     final height = context.scaled(tokens.density.rowHeight);
 
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onPressed: onPressed,
       onMenu: onMenu,
       autofocus: autofocus,

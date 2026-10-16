@@ -1,6 +1,6 @@
 // Phase 8 step 6's walk, keys only, on the real app, database, download
 // queue and player against the fake panel: Movies → D on a movie → the
-// top bar's indicator → Ctrl+7, the Library → Downloads → Enter pauses
+// top bar's indicator → Ctrl+6, the Library → Downloads → Enter pauses
 // it, Enter resumes it → it finishes → Enter plays its file → Esc →
 // Movies → a movie of the user's own → Resume → Esc → its menu → Edit
 // details → Save → its menu → Delete file → Keep.
@@ -199,10 +199,10 @@ void main() {
           );
 
       // ── Home, where the film left part-way is first to continue; then
-      // Ctrl+4: Movies; the movie's poster through the filter; D
+      // Ctrl+3: Movies; the movie's poster through the filter; D
       // downloads it.
       await k.waitFor(find.text('Continue watching'), seconds: 30);
-      await k.chord(LogicalKeyboardKey.digit4);
+      await k.chord(LogicalKeyboardKey.digit3);
       final filter = find.descendant(
         of: find.byWidgetPredicate(
           (w) => w is SearchField && w.hint == 'Filter movies',
@@ -230,9 +230,9 @@ void main() {
       await k.waitFor(find.textContaining(RegExp(r'^1 · \d+ %$')));
       expect(await tester.runAsync(panel.activeConnections), 1);
 
-      // ── Ctrl+7: the Library; its Downloads tab; the download's row.
+      // ── Ctrl+6: the Library; its Downloads tab; the download's row.
       // Enter pauses it; Enter again, with the limit lifted, resumes it.
-      await k.chord(LogicalKeyboardKey.digit7);
+      await k.chord(LogicalKeyboardKey.digit6);
       await k.waitUntil(
         () => app.location == AppDestination.library.path,
         'the Library (${app.location})',

@@ -9,7 +9,7 @@
 // and listed → Enter on it: the channel moves to the TV and the player
 // hands over to the casting view → the TV plays it from the relay → ↓:
 // the next channel on the TV → Esc: Live TV, its card for the cast and
-// the bar → C: the picker says what is on → Esc → Ctrl+4: a movie's page →
+// the bar → C: the picker says what is on → Esc → Ctrl+3: a movie's page →
 // Play: on the TV, straight from the panel, which the TV can't read (no
 // CORS), so through the relay from then on → → three times: on from 0:30
 // → Stop casting in the view: the movie's place kept, the TV gone home,
@@ -240,10 +240,10 @@ void main() {
       );
       expect(cast.state.phase, CastPhase.playing);
 
-      // ── Ctrl+4: Movies → a movie's page → Play: on the TV. The panel
+      // ── Ctrl+3: Movies → a movie's page → Play: on the TV. The panel
       // sends no CORS headers, so the TV can't read the file itself: the
       // relay sends it from then on, and a toast says so.
-      await k.chord(LogicalKeyboardKey.digit4);
+      await k.chord(LogicalKeyboardKey.digit3);
       final filter = find.descendant(
         of: find.byWidgetPredicate(
           (w) => w is SearchField && w.hint == 'Filter movies',

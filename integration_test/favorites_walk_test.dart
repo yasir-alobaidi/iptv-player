@@ -181,8 +181,8 @@ void main() {
       three.name,
     ]);
 
-    // ── Ctrl+6: Favorites → New group "Sport".
-    await k.chord(LogicalKeyboardKey.digit6);
+    // ── Ctrl+5: Favorites → New group "Sport".
+    await k.chord(LogicalKeyboardKey.digit5);
     await k.waitFor(row(three));
     await k.tabTo(find.text('New group'));
     await k.press(LogicalKeyboardKey.enter);
@@ -227,7 +227,7 @@ void main() {
     expect(resynced!.isOk, isTrue, reason: '${resynced.failureOrNull}');
     expect(await tester.runAsync(favorites), arranged);
     k = await show();
-    await k.chord(LogicalKeyboardKey.digit6);
+    await k.chord(LogicalKeyboardKey.digit5);
     await k.waitFor(find.text('SPORT'));
     await k.waitFor(row(three));
     final shown = [

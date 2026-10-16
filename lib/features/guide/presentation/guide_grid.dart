@@ -484,7 +484,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     setState(() {});
   }
 
-  /// A jump to the Guide (G, Ctrl+3) places the focus as the screen
+  /// A jump to the Guide (G, Ctrl+7) places the focus as the screen
   /// opens, which can be before its rows are read: then nothing had the
   /// focus but the route's scope, and the grid takes it once its rows
   /// show. It never takes it from a control (the rail, the toolbar).
@@ -1611,7 +1611,6 @@ class _StripState extends State<_Strip> {
   ) {
     final tokens = context.tokens;
     final guide = tokens.guide;
-    final colors = tokens.colors;
     final cut = _cutAt(cells, _timeline.timeAt(offset));
     final children = <Widget>[];
     if (cut != null) {
@@ -1657,17 +1656,10 @@ class _StripState extends State<_Strip> {
             bottom: guide.cellInsetY,
             width: width,
             child: IgnorePointer(
-              child: FocusRing(
+              child: AppFocusRing(
                 visible: true,
                 borderRadius: tokens.radii.smAll,
-                ringColor: colors.accentBase,
-                glowColor: colors.accentBase.withValues(
-                  alpha: tokens.focus.glowOpacity,
-                ),
-                ringWidth: tokens.focus.ringWidth,
-                glowWidth: tokens.focus.glowWidth,
-                duration: Duration.zero,
-                curve: tokens.motion.fastCurve,
+                animated: false,
                 child: const SizedBox.expand(),
               ),
             ),
@@ -1892,17 +1884,10 @@ class _CellView extends StatelessWidget {
       );
     }
     if (ring) {
-      box = FocusRing(
+      box = AppFocusRing(
         visible: true,
         borderRadius: radius,
-        ringColor: colors.accentBase,
-        glowColor: colors.accentBase.withValues(
-          alpha: tokens.focus.glowOpacity,
-        ),
-        ringWidth: tokens.focus.ringWidth,
-        glowWidth: tokens.focus.glowWidth,
-        duration: Duration.zero,
-        curve: tokens.motion.fastCurve,
+        animated: false,
         child: box,
       );
     }
@@ -2122,17 +2107,10 @@ class _NoGuideCell extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: focused
-          ? FocusRing(
+          ? AppFocusRing(
               visible: true,
               borderRadius: radius,
-              ringColor: colors.accentBase,
-              glowColor: colors.accentBase.withValues(
-                alpha: tokens.focus.glowOpacity,
-              ),
-              ringWidth: tokens.focus.ringWidth,
-              glowWidth: tokens.focus.glowWidth,
-              duration: Duration.zero,
-              curve: tokens.motion.fastCurve,
+              animated: false,
               child: outline,
             )
           : outline,

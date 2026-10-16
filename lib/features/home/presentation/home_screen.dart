@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -326,8 +327,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onAction: () => context.go(AppDestination.liveTv.path),
       );
     }
-    final inset = HomeRow.inset(tokens);
-    final side = tokens.spacing.s32 - inset;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth - tokens.spacing.s32 * 2;
@@ -349,6 +348,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           layout.posterMin,
           HomeScreen.postersGap,
         );
+        final caption = cardCaptionHeight(context);
+        final inset = HomeRow.insetFor(
+          tokens,
+          [
+            continueWidth,
+            posterWidth * 3 / 2 + caption,
+            tileWidth,
+          ].reduce(math.max),
+        );
+        final side = tokens.spacing.s32 - inset;
         final now = ref.watch(appClockProvider)();
         final sections = <Widget>[
           if (firstRun)
@@ -380,6 +389,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardWidth: continueWidth,
                   cardHeight:
                       continueWidth * 9 / 16 + cardCaptionHeight(context),
+                  inset: inset,
                   gap: HomeScreen.continueGap,
                   card: (context, i, focus) =>
                       _continueCard(continuing[i], focus, continueWidth),
@@ -389,6 +399,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   channels: favorites,
                   controller: _rows[row]!,
                   width: tileWidth,
+                  inset: inset,
                   onSeeAll: _seeFavorites,
                   onWatch: (channel) => unawaited(
                     _watch(
@@ -407,6 +418,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   channels: recent,
                   controller: _rows[row]!,
                   width: tileWidth,
+                  inset: inset,
                   onWatch: (channel) => unawaited(
                     _watch(channel, ChannelQuery(sourceId: source.id)),
                   ),
@@ -419,6 +431,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   count: movies.length,
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
+                  inset: inset,
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.movie),
                   card: (context, i, focus) => _cardKeys(
@@ -441,6 +454,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   count: series.length,
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
+                  inset: inset,
                   gap: HomeScreen.postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.series),
                   card: (context, i, focus) => _cardKeys(
@@ -474,7 +488,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final (i, section) in sections.indexed) ...[
-                  if (i > 0) SizedBox(height: tokens.spacing.s32 - inset * 2),
+                  if (i > 0)
+                    SizedBox(
+                      height: math.max(0, tokens.spacing.s32 - inset * 2),
+                    ),
                   section,
                 ],
               ],
@@ -599,6 +616,7 @@ class _ChannelRow extends ConsumerStatefulWidget {
     required this.channels,
     required this.controller,
     required this.width,
+    required this.inset,
     required this.onWatch,
     required this.onToggle,
     required this.onMenu,
@@ -609,6 +627,7 @@ class _ChannelRow extends ConsumerStatefulWidget {
   final List<ChannelItem> channels;
   final HomeRowController controller;
   final double width;
+  final double inset;
   final void Function(ChannelItem channel) onWatch;
   final Future<void> Function(ChannelItem channel) onToggle;
   final Future<void> Function(BuildContext anchor, ChannelItem channel) onMenu;
@@ -642,6 +661,7 @@ class _ChannelRowState extends ConsumerState<_ChannelRow> {
       count: widget.channels.length,
       cardWidth: widget.width,
       cardHeight: ChannelTile.heightOf(context),
+      inset: widget.inset,
       gap: HomeScreen.channelsGap,
       onSeeAll: widget.onSeeAll,
       card: (context, i, focus) {

@@ -387,20 +387,36 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
         tabStop: true,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Room for a focused card's growth and ring at the edges.
-            final inset = tokens.spacing.s8;
-            final width = constraints.maxWidth - inset * 2;
             final shape = widget.shape;
-            _columns = math.max(
-              1,
-              ((width + TitleGrid.columnGap) /
-                      (shape.minCardWidth + TitleGrid.columnGap))
-                  .floor(),
-            );
-            final cardWidth =
-                (width - TitleGrid.columnGap * (_columns - 1)) / _columns;
-            final extent =
-                cardWidth * shape.pictureAspect + cardCaptionHeight(context);
+            (int, double, double) cardsFor(double inset) {
+              final width = constraints.maxWidth - inset * 2;
+              final columns = math.max(
+                1,
+                ((width + TitleGrid.columnGap) /
+                        (shape.minCardWidth + TitleGrid.columnGap))
+                    .floor(),
+              );
+              final cardWidth =
+                  (width - TitleGrid.columnGap * (columns - 1)) / columns;
+              return (
+                columns,
+                cardWidth,
+                cardWidth * shape.pictureAspect + cardCaptionHeight(context),
+              );
+            }
+
+            // Room for a focused card's growth and ring at the edges, so
+            // the grid's edge never cuts its ring (ADR-029).
+            var inset = tokens.spacing.s8;
+            var (columns, cardWidth, extent) = cardsFor(inset);
+            final reach = tokens.focus
+                .tileReach(math.max(cardWidth, extent))
+                .ceilToDouble();
+            if (reach > inset) {
+              inset = reach;
+              (columns, cardWidth, extent) = cardsFor(inset);
+            }
+            _columns = columns;
             _stride = extent + TitleGrid.rowGap;
             _inset = inset;
             final grid = GridView.builder(

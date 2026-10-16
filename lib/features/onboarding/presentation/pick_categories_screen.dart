@@ -641,6 +641,7 @@ class _CategoryTile extends StatelessWidget {
     return Semantics(
       toggled: on,
       child: FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         onPressed: onPressed,
         background: colors.surface2,
         hoverBackground: colors.surface3,

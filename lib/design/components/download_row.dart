@@ -62,6 +62,7 @@ class DownloadRow extends StatelessWidget {
     ].join(' · ');
 
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onPressed: onPressed,
       onMenu: onMenu,
       hoverBackground: colors.surface3,

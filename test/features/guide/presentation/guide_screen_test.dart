@@ -144,7 +144,7 @@ void main() {
       await _settle(tester);
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
       await _settle(tester);
 

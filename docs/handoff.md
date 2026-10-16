@@ -1,6 +1,85 @@
-# Handoff — 2026-10-15, end of the twelfth session: the round icon on the Bedroom TV (and the eleventh's: a resume plays from its place, Arabic, git fixed) (start with "Start here")
+# Handoff — 2026-10-15, the twelfth session, cut short: the TV focus sweep is half done on branch `tv-focus-sweep` (start with "Start here")
 
 ## Start here (the next session)
+**The focus sweep (ADR-029), unfinished — the user asked for this
+handoff mid-way.** All of it is on **branch `tv-focus-sweep`** (one WIP
+commit on top of main's two). `main` is clean, ahead of origin by 2
+(the round icon, ADR-028): the user can push `main`. **Don't merge the
+branch until the steps below are done.**
+
+The user's request: "do a sweep and check for the design and the sizes
+of the buttons and the highlight blue lines when I use the keyboard or
+when I highlight a movie or a series or even the tabs … it's not fit
+and it doesn't look good … even on the live TV show selections", then
+"the guide will be the least used one so make it the last one … is
+there a better icons to use". ADR-029 (docs/decisions.md) has what the
+Bedroom TV showed and every decision; docs/05's focus section has the
+rules. **Built (on the branch, analyze clean, not yet on the TV):**
+- `AppFocusRing` / `RingPlacement` (focus_ring.dart): the ring from the
+  tokens; outside (with a gap) or inside a row.
+- `AppFocusTokens` has fields now and `AppFocusTokens.tv` (white 3 px,
+  2 px gap, no glow, tiles 1.06, 24 px reveal margin);
+  `buildAppTheme(tv: true)` gives it to a TV (app.dart; the test
+  harness's `pumpDesign(tv: true)` too).
+- `FocusableSurface`: `ringPlacement`; `_reveal()` scrolls the focused
+  control into view with its ring + growth + margin (`showOnScreen`).
+- Cards ring the picture only (`PosterCard`, `LandscapeCard`);
+  `CountTab` rebuilt (ring round the label, underline below) and used
+  for a series' seasons; rows in lists use `RingPlacement.inside` (17
+  places); Home's rows and `TitleGrid` leave `tileReach` room;
+  `AppIconButton`'s box grows with the text (☆ beside Play, ⋯ beside
+  Edit); text fields and the Guide's cells use the ring (white on a TV).
+- No "Drag to reorder" or drag handles on a TV (Favorites, Sources,
+  Categories).
+- The rail: Home, Live TV, Movies, Series, Favorites, (Library), Guide;
+  Ctrl+1…7 follow; tests' and integration tests' Ctrl+digits and the
+  shortcut table remapped. New icons `guide.svg` and `series.svg`
+  (`tools/extract_icons.dart` `_handDrawn`).
+- `test/golden/tv_focus_golden_test.dart` + `images/tv_focus.png`: every
+  kind of control focused as a TV draws it (looked at: right).
+
+**Left, in this order:**
+1. **A hang:** `flutter test test/golden/reminders_golden_test.dart
+   --plain-name "reminders the list"` never finishes (also its two
+   1024×640 audits failed in the full run). Likely the new `_reveal()`
+   (a `showOnScreen` animation after each focus highlight) keeps
+   `pumpAndSettle` from settling in that dialog's list, or loops with
+   it. Find it (`--timeout=45s` didn't print in 200 s: run it alone with
+   prints in `_reveal`), fix, and check no other test hangs.
+2. **The non-golden failures** of the last full run were fixed after it
+   (text_scale's icon button 52 × 52 at 130 %; shell_keyboard's,
+   guide_screen's and library_screen's Ctrl+digits); run the suite again
+   (`TZ=UTC flutter test`).
+3. **Re-record the goldens and look at every one** (`flutter test
+   test/golden --update-goldens`, then check the diffs): ~65 changed for
+   the rail's order and icons, the cards' rings, Home's and the grids'
+   room. Look especially at Home (row spacing: the inset grew from 8 to
+   `tileReach`), Movies, Favorites' tabs, Live TV's rows.
+4. `UPDATE_SHORTCUT_DOCS=1 flutter test test/app/shortcut_table_test.dart`
+   (the destinations line changed order).
+5. **Build and install on the Bedroom TV** (ask first) and walk it as the
+   sweep did: Home's rows (the rings not cut at the screen's bottom),
+   Movies' grid, a film's page (☆ as tall as Play), Favorites' tabs,
+   Settings → Sources (⋯ as tall as Edit), the switcher's menu, Live TV's
+   categories and channels (rings inside, not clipped), the player's
+   controls, Search's keyboard (not seen this session). The rail's new
+   order and icons.
+6. Merge into main, commit messages per step, then progress/handoff.
+
+**Also seen on the TV, not fixed:** Up from Movies' filter field stayed
+there (three presses) though ADR-026 fixed it — check on the new build;
+Left from Settings' section list once went to the top bar; a key right
+after switching source was dropped.
+
+**The TV right now:** Bijou is open on Home, **browsing the fake panel**
+(source "192.168.1.254" was added back this session, test/test) — the
+fake panel was left running on this laptop (`dart run
+tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`); if it
+stops, that source errors. The user can switch back to xvip.pro with the
+top bar's switcher. Nothing was played from the user's provider. Never
+press OK on Home's Continue watching while testing: those are the
+provider's films.
+
 **The twelfth session (ADR-028), short:** the user: the icon on the
 Bedroom TV still isn't round. A screenshot (with their yes) showed why:
 Google TV's home has no banner row any more, **"Your apps" is a row of
@@ -467,10 +546,10 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-028
-in docs/decisions.md. Check git (fetch) and CI on the last push.
-Then check the build on the Bedroom TV (the Arabic keyboard, a film
-resumed after a channel), then carry on with the
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-029
+in docs/decisions.md. Check git (fetch) and CI on the last push. Finish
+the focus sweep on branch tv-focus-sweep ("Start here": the hanging
+test, the goldens, the TV check), then merge it; then carry on with the
 Google TV list in "Start here". Ask me before using the TV and before
 playing from my provider.
 ```

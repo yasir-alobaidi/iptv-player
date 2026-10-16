@@ -390,6 +390,7 @@ class _CategoryItem extends StatelessWidget {
       },
       child: Builder(
         builder: (anchor) => FocusableSurface(
+          ringPlacement: RingPlacement.inside,
           onPressed: onPressed,
           onMenu: menu == null ? null : () => menu(anchor),
           background: selected ? colors.surface3 : null,

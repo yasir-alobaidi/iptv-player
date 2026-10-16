@@ -432,7 +432,7 @@ void main() {
     expect(tester.widget<PosterCard>(card).cornerBadge, isNull);
   });
 
-  testWidgets('by keys alone: Ctrl+7 opens it; Tab walks the tabs, Add '
+  testWidgets('by keys alone: Ctrl+6 opens it; Tab walks the tabs, Add '
       'folder, the chips and the grid; the arrows move in the grid', (
     tester,
   ) async {
@@ -442,7 +442,7 @@ void main() {
       before: _canvas,
     );
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit6);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await settle(tester);
     expect(app.location, '/library');

@@ -87,7 +87,7 @@ const shortcutTable = <ShortcutGroup>[
       ],
     ),
     ShortcutEntry(
-      'Home, Live TV, Guide, Movies, Series, Favorites, Library',
+      'Home, Live TV, Movies, Series, Favorites, Library, Guide',
       [
         ['Ctrl', '1'],
         ['Ctrl', '7'],

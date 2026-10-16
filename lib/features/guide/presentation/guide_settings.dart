@@ -1233,6 +1233,7 @@ class _ChannelRow extends StatelessWidget {
     final status = matchStatus(channel);
     final number = channel.number;
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onPressed: onMatch,
       borderRadius: tokens.radii.controlAll,
       background: colors.surface2,

@@ -325,7 +325,7 @@ void main() {
       'Source: No source',
       AppDestination.settings.label,
       'Expand menu',
-      AppDestination.library.label,
+      AppDestination.guide.label,
     ]) {
       await _tab(tester, shift: true);
 
@@ -386,10 +386,10 @@ void main() {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, 'Source: No source');
-    await _pressCtrl(tester, LogicalKeyboardKey.digit6);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit5);
 
     expect(app.location, AppDestination.favorites.path);
-    // Ctrl+6 means "take me to my favorites", so focus is already there —
+    // Ctrl+5 means "take me to my favorites", so focus is already there —
     // no Tab walk back into the content, and no ring left behind.
     expect(_focusedLabel(tester), _screenActionLabel);
 
@@ -417,7 +417,7 @@ void main() {
     final app = await pumpApp(tester);
 
     await _tabTo(tester, AppDestination.movies.label);
-    await _pressCtrl(tester, LogicalKeyboardKey.digit3);
+    await _pressCtrl(tester, LogicalKeyboardKey.digit7);
 
     expect(app.location, AppDestination.guide.path);
     // The user is working in the rail; Up/Down must keep working.

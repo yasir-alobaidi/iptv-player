@@ -106,6 +106,7 @@ class _LicensesDialogState extends ConsumerState<LicensesDialog> {
                   child: Semantics(
                     selected: selected,
                     child: FocusableSurface(
+                      ringPlacement: RingPlacement.inside,
                       autofocus: selected,
                       onPressed: () =>
                           setState(() => _chosen = package.package),

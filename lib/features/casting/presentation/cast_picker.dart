@@ -360,6 +360,7 @@ class _DeviceRow extends StatelessWidget {
     final label = castDeviceStatusLabel(device, status);
     final model = castModelLine(device, known);
     return FocusableSurface(
+      ringPlacement: RingPlacement.inside,
       onPressed: onCast,
       enabled: onCast != null,
       autofocus: autofocus,

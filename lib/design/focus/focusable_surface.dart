@@ -3,6 +3,9 @@ import 'package:iptv_player/design/focus/app_intents.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
 import 'package:iptv_player/design/tokens.dart';
 
+export 'package:iptv_player/design/focus/focus_ring.dart'
+    show AppFocusRing, RingPlacement;
+
 /// The interaction states a [FocusableSurface] passes to its builder.
 @immutable
 class SurfaceStates {
@@ -80,6 +83,7 @@ class FocusableSurface extends StatefulWidget {
     this.mouseCursor,
     this.canRequestFocus = true,
     this.ring = true,
+    this.ringPlacement = RingPlacement.outside,
     super.key,
   });
 
@@ -101,6 +105,7 @@ class FocusableSurface extends StatefulWidget {
     bool semanticButton = true,
     MouseCursor? mouseCursor,
     bool canRequestFocus = true,
+    RingPlacement ringPlacement = RingPlacement.outside,
     Key? key,
   }) => FocusableSurface(
     key: key,
@@ -119,6 +124,7 @@ class FocusableSurface extends StatefulWidget {
     semanticButton: semanticButton,
     mouseCursor: mouseCursor,
     canRequestFocus: canRequestFocus,
+    ringPlacement: ringPlacement,
   );
 
   final Widget Function(BuildContext context, SurfaceStates states) builder;
@@ -137,10 +143,14 @@ class FocusableSurface extends StatefulWidget {
   final MouseCursor? mouseCursor;
   final bool canRequestFocus;
 
-  /// The focus ring outside the control. Off only where the control draws
-  /// its focus itself and sits too close to its neighbours for a ring
-  /// (the TV's keyboard keys, ADR-026: a neighbour painted over it).
+  /// The focus ring. Off where the control draws its focus itself: the
+  /// TV's keyboard keys (ADR-026: neighbours 6 px away), a card that
+  /// rings its picture and not its caption (ADR-029).
   final bool ring;
+
+  /// The ring outside the control, or inside it for a row that fills its
+  /// list (ADR-029).
+  final RingPlacement ringPlacement;
 
   /// A disabled element is never focusable (hard rule 5's counterpart: it
   /// must not be a dead stop in the tab order).
@@ -165,10 +175,37 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
     widget.onMenu?.call();
   }
 
+  /// Scrolls the focused control into view with its ring, its growth and
+  /// [AppFocusTokens.revealMargin] round it: the traversal's own scroll
+  /// stops at the control's edge, which left the ring cut off by the
+  /// screen or a row's edge (ADR-029).
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focused) return;
+      final box = context.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) return;
+      final focus = context.tokens.focus;
+      final size = box.size;
+      final reach = switch ((widget.ring, widget.ringPlacement)) {
+        _ when widget.growth == FocusGrowth.tile => focus.tileReach(
+          size.longestSide,
+        ),
+        (true, RingPlacement.outside) => focus.reach,
+        _ => 0.0,
+      };
+      final margin = reach + focus.revealMargin;
+      if (margin <= 0) return;
+      box.showOnScreen(
+        rect: (Offset.zero & size).inflate(margin),
+        duration: context.tokens.motion.fast,
+        curve: context.tokens.motion.fastCurve,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final colors = tokens.colors;
     final focus = tokens.focus;
     final motion = tokens.motion;
     final radius = widget.borderRadius ?? tokens.radii.controlAll;
@@ -183,14 +220,6 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
           disabled: disabled,
         );
 
-    final ringColor = widget.onAccent ? colors.textPrimary : colors.accentBase;
-    final glowColor = colors.accentBase.withValues(
-      alpha: widget.onAccent ? focus.onAccentGlowOpacity : focus.glowOpacity,
-    );
-    final glowWidth = widget.onAccent
-        ? focus.onAccentGlowWidth
-        : focus.glowWidth;
-
     final background = states.hovered && !states.disabled
         ? (widget.hoverBackground ?? widget.background)
         : widget.background;
@@ -200,15 +229,11 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
         ? focus.tileScale
         : 1.0;
 
-    Widget surface = FocusRing(
+    Widget surface = AppFocusRing(
       visible: states.focused && widget.ring,
       borderRadius: radius,
-      ringColor: ringColor,
-      glowColor: glowColor,
-      ringWidth: focus.ringWidth,
-      glowWidth: glowWidth,
-      duration: motion.fast,
-      curve: motion.fastCurve,
+      onAccent: widget.onAccent,
+      placement: widget.ringPlacement,
       child: AnimatedContainer(
         duration: motion.fast,
         curve: motion.fastCurve,
@@ -257,7 +282,9 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
         ),
       },
       onShowFocusHighlight: (value) {
-        if (value != _focused) setState(() => _focused = value);
+        if (value == _focused) return;
+        setState(() => _focused = value);
+        if (value) _reveal();
       },
       onShowHoverHighlight: (value) {
         if (value != _hovered) setState(() => _hovered = value);

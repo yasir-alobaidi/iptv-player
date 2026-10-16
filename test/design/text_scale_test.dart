@@ -214,7 +214,9 @@ void main() {
   });
 
   group('pictures keep their size', () {
-    testWidgets('an icon button, a checkbox and a poster', (tester) async {
+    testWidgets('a poster; an icon button grows as a button does', (
+      tester,
+    ) async {
       await pumpDesign(
         tester,
         Row(
@@ -233,7 +235,20 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(tester.getSize(find.byType(AppIconButton)), const Size(40, 40));
+      // As tall as a text button beside it at this size (ADR-029: ☆ was
+      // shorter than Play on a TV), its icon the same 20 px.
+      expect(tester.getSize(find.byType(AppIconButton)), const Size(52, 52));
+      expect(
+        tester
+            .getSize(
+              find.descendant(
+                of: find.byType(AppIconButton),
+                matching: find.byType(AppIcon),
+              ),
+            )
+            .width,
+        20,
+      );
       // The artwork is 160 × 240 whatever the text; the card under it
       // grows by its two lines.
       final card = tester.getSize(find.byType(PosterCard));

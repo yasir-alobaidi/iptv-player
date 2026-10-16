@@ -374,7 +374,9 @@ class SourceCard extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (count > 1)
+              // A remote drags nothing (docs/07): Move up and down are
+              // in the source's menu.
+              if (count > 1 && !TvMode.of(context))
                 ReorderableDragStartListener(
                   index: index,
                   child: MouseRegion(

@@ -145,13 +145,16 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                     ],
                     const Spacer(),
                     if (_tab == _Tab.channels) ...[
-                      Text(
-                        'Drag to reorder',
-                        style: tokens.text.caption
-                            .withWeight(600)
-                            .copyWith(color: colors.textTertiary),
-                      ),
-                      SizedBox(width: spacing.s16),
+                      // A remote drags nothing (docs/07).
+                      if (!TvMode.of(context)) ...[
+                        Text(
+                          'Drag to reorder',
+                          style: tokens.text.caption
+                              .withWeight(600)
+                              .copyWith(color: colors.textTertiary),
+                        ),
+                        SizedBox(width: spacing.s16),
+                      ],
                       AppButton(
                         label: 'New group',
                         icon: AppIcons.plus,
@@ -690,17 +693,20 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
       timeLeft: on ? formatTimeLeft(programme.end.difference(now)) : null,
       isFavorite: true,
       focusNode: _nodeFor('c${channel.remoteKey}'),
-      leading: ReorderableDragStartListener(
-        index: index,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.grab,
-          child: AppIcon(
-            AppIcons.dragHandle,
-            size: 18,
-            color: colors.textTertiary,
-          ),
-        ),
-      ),
+      // A remote drags nothing (docs/07).
+      leading: TvMode.of(context)
+          ? null
+          : ReorderableDragStartListener(
+              index: index,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: AppIcon(
+                  AppIcons.dragHandle,
+                  size: 18,
+                  color: colors.textTertiary,
+                ),
+              ),
+            ),
       onPressed: () => unawaited(_watch(channel)),
       onToggleFavorite: () => unawaited(_remove(channel, entries)),
       onMenu: () {
@@ -777,6 +783,7 @@ class _Header extends StatelessWidget {
     if (group == null) return padded;
     return Builder(
       builder: (anchor) => FocusableSurface(
+        ringPlacement: RingPlacement.inside,
         focusNode: focusNode,
         onPressed: onToggle,
         onMenu: onMenu == null ? null : () => onMenu!(anchor),
