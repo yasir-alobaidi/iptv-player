@@ -12,20 +12,25 @@ import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
+import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
+import 'package:iptv_player/features/home/data/db_home_repository.dart';
 import 'package:iptv_player/features/home/data/home_providers.dart';
 import 'package:iptv_player/features/home/domain/home.dart';
 import 'package:iptv_player/features/home/presentation/home_rows.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/library/data/library_scans.dart';
+import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
+import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/title_cards.dart';
 
@@ -572,6 +577,86 @@ void main() {
     expect(_focused(), AppDestination.home.label);
   });
 
+  group("on a TV, at launch: Home's first card has the focus", () {
+    Future<_LateHome> launch(
+      WidgetTester tester, {
+      Future<void>? sources,
+    }) async {
+      final rows = _LateHome();
+      await open(
+        tester,
+        history: true,
+        size: const Size(960, 540),
+        extra: [
+          formFactorProvider.overrideWithValue(FormFactor.tv),
+          if (sources != null)
+            sourcesProvider.overrideWith((ref) async* {
+              await sources;
+              yield* ref.watch(sourceRepositoryProvider).watchAll();
+            }),
+          homeRepositoryProvider.overrideWith(
+            (ref) => rows
+              ..rows = DbHomeRepository(
+                ref.watch(appDatabaseProvider),
+                channels: ref.watch(channelRepositoryProvider),
+                movies: ref.watch(movieRepositoryProvider),
+                series: ref.watch(seriesRepositoryProvider),
+              ),
+          ),
+        ],
+      );
+      if (sources != null) return rows;
+      // Seconds on the skeletons: the rail's Home holds the focus
+      // meanwhile, as something always has it.
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(SkeletonPoster), findsWidgets);
+      expect(_focused(), AppDestination.home.label);
+      return rows;
+    }
+
+    testWidgets('once its rows arrive, however late (the Bedroom TV, a '
+        "provider's Home: it stayed on the rail's Home)", (tester) async {
+      final rows = await launch(tester);
+
+      rows.arrive();
+      await settle(tester);
+      expect(find.text('Continue watching'), findsOneWidget);
+      expect(_focused(), 'The Quiet Harbor');
+    });
+
+    testWidgets('after the source is read too: until then Home offers to '
+        'add one, and its button had the focus', (tester) async {
+      final sources = Completer<void>();
+      final rows = await launch(tester, sources: sources.future);
+      expect(find.text('Add a source'), findsOneWidget);
+      expect(_focused(), 'Add a source');
+
+      sources.complete();
+      await settle(tester);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(SkeletonPoster), findsWidgets);
+      expect(_focused(), AppDestination.home.label);
+
+      rows.arrive();
+      await settle(tester);
+      expect(_focused(), 'The Quiet Harbor');
+    });
+
+    testWidgets('but not once the user has moved it: their place is kept', (
+      tester,
+    ) async {
+      final rows = await launch(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await settle(tester);
+      expect(_focused(), AppDestination.liveTv.label);
+
+      rows.arrive();
+      await settle(tester);
+      expect(find.text('Continue watching'), findsOneWidget);
+      expect(_focused(), AppDestination.liveTv.label);
+    });
+  });
+
   testWidgets('the desktop has no See all card: its header links stay', (
     tester,
   ) async {
@@ -695,4 +780,37 @@ final class _ScriptedHome implements HomeRepository {
 
   @override
   Stream<bool> watchedAnything() => _answer(false);
+}
+
+/// Home's rows from [rows], held back until [arrive]: a provider's Home
+/// read from a large catalogue comes seconds after the first frames.
+final class _LateHome implements HomeRepository {
+  late HomeRepository rows;
+  final _arrived = Completer<void>();
+
+  void arrive() => _arrived.complete();
+
+  Stream<T> _late<T>(Stream<T> Function() read) async* {
+    await _arrived.future;
+    yield* read();
+  }
+
+  @override
+  Stream<List<ChannelItem>> favoriteChannels(String id, {int limit = 20}) =>
+      _late(() => rows.favoriteChannels(id, limit: limit));
+
+  @override
+  Stream<List<ChannelItem>> recentChannels(String id, {int limit = 20}) =>
+      _late(() => rows.recentChannels(id, limit: limit));
+
+  @override
+  Stream<List<MovieItem>> recentMovies(String id, {int limit = 20}) =>
+      _late(() => rows.recentMovies(id, limit: limit));
+
+  @override
+  Stream<List<SeriesItem>> recentSeries(String id, {int limit = 20}) =>
+      _late(() => rows.recentSeries(id, limit: limit));
+
+  @override
+  Stream<bool> watchedAnything() => _late(rows.watchedAnything);
 }

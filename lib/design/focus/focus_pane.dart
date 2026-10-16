@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/design/focus/focusable_surface.dart';
@@ -68,6 +70,39 @@ class FocusPaneController extends ChangeNotifier {
   /// Focuses the remembered item, or the first one. Left/Right between
   /// panes uses this (docs/05).
   bool focusPane() => focusLast() || focusFirst();
+
+  /// Focuses the item nearest above [from], a control under the pane (in
+  /// global coordinates), as an arrow Up picks one inside a screen: of
+  /// the items across its width, the nearest; with none, the one with an
+  /// edge nearest its middle. Returns false when the pane has nothing
+  /// above it, so the caller can fall back to [focusPane].
+  ///
+  /// Not the remembered item: Up from Movies' sort went to the top bar's
+  /// source switcher, not the search right above it (the user, on the
+  /// Bedroom TV).
+  bool focusAbove(Rect from) {
+    final middle = from.center;
+    final above = [
+      for (final node in items)
+        if (node is! FocusScopeNode && node.canRequestFocus)
+          if (_rectOf(node) case final rect? when rect.center.dy <= from.top)
+            (node, rect),
+    ];
+    double up(Rect rect) => (rect.center.dy - middle.dy).abs();
+    double aside(Rect rect) => (rect.center.dx - middle.dx).abs();
+    double edgeAside(Rect rect) =>
+        math.min((rect.left - middle.dx).abs(), (rect.right - middle.dx).abs());
+    final across = [
+      for (final item in above)
+        if (item.$2.left < from.right && item.$2.right > from.left) item,
+    ];
+    final nearest = across.isNotEmpty
+        ? (across..sort((a, b) => _closer(a.$2, b.$2, up, aside)))
+        : (above..sort((a, b) => _closer(a.$2, b.$2, edgeAside, up)));
+    final node = nearest.firstOrNull?.$1;
+    node?.requestFocus();
+    return node != null;
+  }
 
   /// Drops the pane reference when that [FocusPane] goes away.
   void _forget(FocusNode pane) {
@@ -312,6 +347,17 @@ Rect? _rectOf(FocusNode node) {
   if (box == null || !box.attached) return null;
   if (box is RenderBox && !box.hasSize) return null;
   return node.rect;
+}
+
+/// Which of [a] and [b] is nearer by [first], [then] breaking a tie.
+int _closer(
+  Rect a,
+  Rect b,
+  double Function(Rect rect) first,
+  double Function(Rect rect) then,
+) {
+  final order = first(a).compareTo(first(b));
+  return order != 0 ? order : then(a).compareTo(then(b));
 }
 
 /// Top to bottom, then left to right among controls on one line.

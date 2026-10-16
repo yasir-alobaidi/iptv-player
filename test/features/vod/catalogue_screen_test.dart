@@ -29,6 +29,7 @@ void main() {
     bool seed = true,
     bool movies = true,
     AppDestination at = AppDestination.movies,
+    String? location,
     List<Override> overrides = const [],
     Size size = const Size(1440, 900),
   }) async {
@@ -38,7 +39,7 @@ void main() {
     final app = await pumpApp(
       tester,
       size: size,
-      initialLocation: at.path,
+      initialLocation: location ?? at.path,
       overrides: [
         // One override per provider: a test's own replaces the fake's.
         for (final o in vod.overrides)
@@ -353,6 +354,70 @@ void main() {
     }
     expect(onPoster(), isTrue);
   });
+
+  testWidgets("on a TV, a launch on a title's page leaves the focus on its "
+      "Play, the page's own, not on the page's first control (‹ Movies), "
+      'though the page comes after the first frames', (tester) async {
+    await pump(
+      tester,
+      location: '/movies/src-1/501',
+      size: const Size(960, 540),
+      overrides: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    expect(find.byType(MovieDetailsScreen), findsOneWidget);
+    expect(focusedLabel(), 'Play');
+  });
+
+  for (final at in [AppDestination.movies, AppDestination.series]) {
+    testWidgets("on a TV, Up from ${at.label}' sort lands on the search "
+        "above it, not the top bar's remembered item (the Bedroom TV: the "
+        'source switcher), and Down comes back to the sort', (tester) async {
+      await pump(
+        tester,
+        at: at,
+        size: const Size(960, 540),
+        overrides: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      void focus(bool Function(String label) which) => Focus.of(
+        tester.element(
+          find
+              .descendant(
+                of: find.byWidgetPredicate(
+                  (w) =>
+                      w is FocusableSurface &&
+                      w.semanticLabel != null &&
+                      which(w.semanticLabel!),
+                ),
+                matching: find.byType(GestureDetector),
+              )
+              .first,
+        ),
+      ).requestFocus();
+      bool onSearch() =>
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<SearchField>()
+              ?.onTap !=
+          null;
+
+      for (final sort in ['Recently added', 'Name', 'Rating']) {
+        // The top bar was last left from the source switcher.
+        focus((label) => label.startsWith('Source: '));
+        await settle(tester);
+        expect(focusedLabel(), startsWith('Source: '));
+        focus((label) => label == sort);
+        await settle(tester);
+        expect(focusedLabel(), sort);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await settle(tester);
+        expect(onSearch(), isTrue, reason: 'Up from $sort: ${focusedLabel()}');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await settle(tester);
+        expect(focusedLabel(), sort);
+      }
+    });
+  }
 
   testWidgets('a filter with no match says so, and Clear filter brings them '
       'back', (tester) async {

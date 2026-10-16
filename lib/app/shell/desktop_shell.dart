@@ -56,6 +56,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_keepFocusOnTv);
+    HardwareKeyboard.instance.removeHandler(_userPressed);
     _railPane.dispose();
     _topBarPane.dispose();
     _contentPane.dispose();
@@ -78,9 +79,24 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     // opens with its first control focused, as every screen after it
     // does (docs/07). A desktop starts with nothing focused.
     if (ref.read(formFactorProvider) == FormFactor.tv) {
+      _launching = true;
+      HardwareKeyboard.instance.addHandler(_userPressed);
       _focusFirstOnTv();
       FocusManager.instance.addListener(_keepFocusOnTv);
     }
+  }
+
+  /// From launch until the user's first press: until then the focus is
+  /// the launch's to place ([_focusFirstOnTv]).
+  bool _launching = false;
+
+  /// The user's first press ends the launch's say over the focus.
+  bool _userPressed(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      _launching = false;
+      HardwareKeyboard.instance.removeHandler(_userPressed);
+    }
+    return false;
   }
 
   bool _refocusing = false;
@@ -113,27 +129,60 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
             last.requestFocus();
           } else if (!_contentPane.focusFirst()) {
             _railPane.focusPane();
+            // At launch, only until the screen has a control.
+            _focusFirstOnTv();
           }
         }),
       )
       ..scheduleFrame();
   }
 
-  /// The first screen's controls come with its data (Home's rows), and
-  /// the route's own scope takes the focus once after the first frame:
-  /// checks every 100 ms for 2 s until a control has it, and stops at
-  /// anything focused, the user's own first press included.
-  void _focusFirstOnTv([int tries = 20]) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || tries == 0) return;
-      final focused = FocusManager.instance.primaryFocus;
-      if (focused != null && focused is! FocusScopeNode) return;
-      _contentPane.focusFirst();
-      Timer(
-        const Duration(milliseconds: 100),
-        () => _focusFirstOnTv(tries - 1),
-      );
-    });
+  /// Whether [_focusFirstOnTv] waits for a frame.
+  bool _awaitingFirst = false;
+
+  /// The first screen's controls come with its data: Home's rows, seconds
+  /// after the first frames from a provider's large catalogue. After each
+  /// frame, until a control of the screen has the focus, its first takes
+  /// it, from nothing or from the rail's item that held it meanwhile
+  /// ([_keepFocusOnTv]). Not after the user's first press: the focus is
+  /// never moved from where they put it. (The Bedroom TV, build 217: this
+  /// stopped at anything focused, the rail's Home too, and checked for
+  /// 2 s; the rows came later, and the focus stayed in the rail.)
+  void _focusFirstOnTv() {
+    if (!_launching || _awaitingFirst) return;
+    _awaitingFirst = true;
+    WidgetsBinding.instance.addPostFrameCallback(
+      // After the screen's own autofocus (a title's Play), a microtask
+      // queued while it was built: before it, the page's first control
+      // (‹ Movies) took Play's place.
+      (_) => scheduleMicrotask(() {
+        _awaitingFirst = false;
+        if (!mounted || !_launching) return;
+        final focused = FocusManager.instance.primaryFocus;
+        if (_contentPane.hasFocus && focused is! FocusScopeNode) return;
+        // Not from under a page or a dialog above the shell.
+        if ((ModalRoute.of(context)?.isCurrent ?? true) &&
+            _contentPane.focusFirst()) {
+          return;
+        }
+        _focusFirstOnTv();
+      }),
+    );
+  }
+
+  /// Up from the top of the screen, on a TV: onto the top bar's item
+  /// above the control it leaves, as an arrow picks one inside the
+  /// screen, not onto the item the bar remembers (the Bedroom TV: Up from
+  /// Movies' sort reached the source switcher, not the search over it).
+  /// Down comes back to the control, the screen's remembered item.
+  bool _upToTopBar() {
+    final from = FocusManager.instance.primaryFocus;
+    if (from != null &&
+        from is! FocusScopeNode &&
+        _topBarPane.focusAbove(from.rect)) {
+      return true;
+    }
+    return _topBarPane.focusPane();
   }
 
   GoRouter get _router => GoRouter.of(context);
@@ -308,7 +357,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                               // A remote reaches the top bar (search, the
                               // source) only so; a keyboard also by Tab.
                               onLeaveUp: onTv && !widget.immersive
-                                  ? _topBarPane.focusPane
+                                  ? _upToTopBar
                                   : null,
                               textFieldsKeepArrows: !onTv,
                               child: overlay == null
