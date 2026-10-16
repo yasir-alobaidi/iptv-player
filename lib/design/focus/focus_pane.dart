@@ -54,7 +54,12 @@ class FocusPaneController extends ChangeNotifier {
         if (node is! FocusScopeNode && node.canRequestFocus)
           if (_rectOf(node) case final rect?) (node, rect),
     ]..sort((a, b) => _readingOrder(a.$2, b.$2));
-    final first = placed.firstOrNull?.$1;
+    final first =
+        placed
+            .where((e) => e.$1.ancestors.any((a) => a is _LandingNode && a.on))
+            .firstOrNull
+            ?.$1 ??
+        placed.firstOrNull?.$1;
     first?.requestFocus();
     return first != null;
   }
@@ -250,6 +255,49 @@ class _FocusPaneState extends State<FocusPane> {
       child: pane,
     );
   }
+}
+
+/// Where a pane's [FocusPaneController.focusFirst] lands when [on]: the
+/// first control inside this, rather than the screen's first. With
+/// nothing focusable inside (still loading, empty), the screen's first
+/// control as before. On a TV, Movies' and Series' posters: their filter
+/// field above them is a keyboard away, and a remote comes for the
+/// titles (the user, on the Bedroom TV: two Downs to reach the grid).
+class FocusLanding extends StatefulWidget {
+  const new({required this.child, this.on = true, super.key});
+
+  final Widget child;
+  final bool on;
+
+  @override
+  State<FocusLanding> createState() => _FocusLandingState();
+}
+
+class _FocusLandingState extends State<FocusLanding> {
+  final _marker = _LandingNode();
+
+  @override
+  void dispose() {
+    _marker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _marker.on = widget.on;
+    return Focus(focusNode: _marker, child: widget.child);
+  }
+}
+
+class _LandingNode extends FocusNode {
+  new()
+    : super(
+        debugLabel: 'FocusLanding',
+        canRequestFocus: false,
+        skipTraversal: true,
+      );
+
+  bool on = true;
 }
 
 /// Where [node] is on screen; null before it is laid out, and for an

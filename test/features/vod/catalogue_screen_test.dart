@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
@@ -123,6 +124,64 @@ void main() {
     await settle(tester);
     expect(find.text('1 movie'), findsOneWidget);
   });
+
+  for (final tv in [true, false]) {
+    testWidgets(
+      tv
+          ? 'on a TV, Right from the rail lands on the first poster, not '
+                'the filter above it (the user: two Downs to the grid)'
+          : 'on the desktop, Right from the rail lands on the filter, '
+                'to type at once',
+      (tester) async {
+        await pump(
+          tester,
+          at: AppDestination.favorites,
+          size: tv ? const Size(960, 540) : const Size(1440, 900),
+          overrides: [
+            if (tv) formFactorProvider.overrideWithValue(FormFactor.tv),
+          ],
+        );
+        bool inRail() =>
+            FocusManager.instance.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<NavRail>() !=
+            null;
+        // OK on the rail's Movies: the screen opens, the rail keeps the
+        // focus.
+        Focus.of(
+          tester.element(
+            find
+                .descendant(
+                  of: find.byWidgetPredicate(
+                    (w) => w is FocusableSurface && w.semanticLabel == 'Movies',
+                  ),
+                  matching: find.byType(GestureDetector),
+                )
+                .first,
+          ),
+        ).requestFocus();
+        await settle(tester);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await settle(tester);
+        expect(find.text('All movies'), findsOneWidget);
+        expect(inRail(), isTrue);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await settle(tester);
+        final context = FocusManager.instance.primaryFocus?.context;
+        if (tv) {
+          expect(
+            context?.findAncestorWidgetOfExactType<PosterCard>()?.title,
+            'The Quiet Harbor',
+          );
+        } else {
+          expect(
+            context?.findAncestorWidgetOfExactType<EditableText>(),
+            isNotNull,
+          );
+        }
+      },
+    );
+  }
 
   testWidgets('on a TV, after typing in the filter and deleting it all, ↓ '
       'leaves the filter for the posters (the user: stuck there)', (

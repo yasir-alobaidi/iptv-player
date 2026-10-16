@@ -118,12 +118,15 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
             ),
             SizedBox(height: tokens.spacing.s12),
             Expanded(
-              child: CatalogueGrid(
-                kind: kind,
-                query: query,
-                count: count,
-                controller: _grid,
-                empty: () => _empty(query),
+              child: FocusLanding(
+                on: TvMode.of(context),
+                child: CatalogueGrid(
+                  kind: kind,
+                  query: query,
+                  count: count,
+                  controller: _grid,
+                  empty: () => _empty(query),
+                ),
               ),
             ),
           ],
