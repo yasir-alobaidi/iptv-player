@@ -374,17 +374,17 @@ class AppFocusTokens {
   });
 
   /// A TV's focus (canvas `Google TV Home`, ADR-029): a white ring, as
-  /// thick as the canvas's 4 px at 1920 is on the 1280 canvas, 2 px off
-  /// the control so a white poster's edge never runs into it, no glow; a
-  /// tile grows to 1.06; and a focused control keeps 24 px from the
-  /// screen's edge, so what is beyond it shows.
+  /// thick as the canvas's 4 px at 1920 is on the 1280 canvas, hugging
+  /// the control's edge (the user: a ring 2 px off it looked loose, a dark
+  /// band round every chip and button), no glow; a tile grows to 1.06;
+  /// and a focused control keeps 24 px from the screen's edge, so what is
+  /// beyond it shows.
   static const tv = AppFocusTokens(
     ringWidth: 3,
     glowWidth: 0,
     glowOpacity: 0,
     onAccentGlowWidth: 0,
     onAccentGlowOpacity: 0,
-    gap: 2,
     light: true,
     tileScale: 1.06,
     revealMargin: 24,

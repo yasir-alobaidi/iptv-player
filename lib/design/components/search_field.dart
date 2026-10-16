@@ -85,8 +85,10 @@ class _SearchFieldState extends State<SearchField> {
     final asButton = widget.onTap != null;
     final onTv = TvMode.of(context);
     // In button mode FocusableSurface draws the ring, so the box keeps
-    // its resting border instead of showing focus twice.
-    final showsOwnFocus = _focused && !asButton;
+    // its resting border instead of showing focus twice; so does a TV's
+    // field, whose focus is the white ring alone.
+    final ringed = _focused && !asButton && tokens.focus.light;
+    final showsOwnFocus = _focused && !asButton && !tokens.focus.light;
 
     final body = asButton
         ? Text(
@@ -131,7 +133,7 @@ class _SearchFieldState extends State<SearchField> {
     final box = AppFocusRing(
       // A TV's focus is the white ring (ADR-029); the desktop's, the
       // field's own border and glow.
-      visible: showsOwnFocus && tokens.focus.light,
+      visible: ringed,
       borderRadius: tokens.radii.controlAll,
       child: AnimatedContainer(
         duration: tokens.motion.fast,

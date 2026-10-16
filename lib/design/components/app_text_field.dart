@@ -102,9 +102,12 @@ class _AppTextFieldState extends State<AppTextField> {
     final obscured = widget.obscure && !_revealed;
     final onTv = TvMode.of(context);
 
+    // A TV's focus is the white ring alone: the border stays at rest under
+    // it, not a second, blue ring inside (the Bedroom TV).
+    final ownFocus = _focused && !tokens.focus.light;
     final borderColor = hasError
         ? colors.danger
-        : _focused
+        : ownFocus
         ? colors.accentBase
         : colors.border;
 
@@ -160,7 +163,7 @@ class _AppTextFieldState extends State<AppTextField> {
                 border: Border.all(color: borderColor),
                 // Focused in its error state too: the glow in the error's
                 // color (hard rule 5; a remote has no caret to show it).
-                boxShadow: _focused
+                boxShadow: ownFocus
                     ? [
                         BoxShadow(
                           color: (hasError ? colors.danger : colors.accentBase)

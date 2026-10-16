@@ -49,18 +49,25 @@ class AppMenu extends StatelessWidget {
   final List<AppMenuItem> items;
   final double width;
 
-  /// Focuses the first enabled item: a menu opened from the keyboard is
-  /// walked with the arrows at once.
+  /// Focuses the chosen item of a menu of choices, else the first enabled
+  /// one: a menu opened from the keyboard is walked with the arrows at
+  /// once, and an OK pressed at once keeps what was chosen (the Bedroom
+  /// TV: the source switcher opened on the other source).
   final bool autofocus;
 
-  AppMenuItem? get _firstEnabled => items
-      .where((item) => item is! _MenuSeparator && item.onPressed != null)
-      .firstOrNull;
+  AppMenuItem? get _firstFocus {
+    final enabled = items.where(
+      (item) => item is! _MenuSeparator && item.onPressed != null,
+    );
+    return enabled.where((item) => item.checked).firstOrNull ??
+        enabled.firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final first = autofocus ? _firstFocus : null;
 
     return FocusPane(
       debugLabel: 'menu',
@@ -87,10 +94,7 @@ class AppMenu extends StatelessWidget {
                     child: Divider(height: 1, color: colors.border),
                   )
                 else
-                  _MenuRow(
-                    item: item,
-                    autofocus: autofocus && identical(item, _firstEnabled),
-                  ),
+                  _MenuRow(item: item, autofocus: identical(item, first)),
             ],
           ),
         ),

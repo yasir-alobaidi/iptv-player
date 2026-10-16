@@ -192,6 +192,44 @@ void main() {
       await tester.pumpAndSettle();
       expect(chosen, 'Category 80');
     });
+
+    testWidgets('a menu of choices opens on the chosen one, so an OK at once '
+        'keeps it (the Bedroom TV: the switcher opened on the other '
+        'source)', (tester) async {
+      String? chosen;
+      await pumpDesign(
+        tester,
+        Builder(
+          builder: (anchor) => AppButton(
+            label: 'Source',
+            onPressed: () => showAppMenu(
+              anchor,
+              items: [
+                for (final name in ['xvip.pro', 'Fake panel'])
+                  AppMenuItem(
+                    label: name,
+                    checked: name == 'Fake panel',
+                    onPressed: () => chosen = name,
+                  ),
+                const AppMenuItem.separator(),
+                AppMenuItem(
+                  label: 'Manage sources…',
+                  onPressed: () => chosen = 'manage',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppMenu), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(chosen, 'Fake panel');
+    });
   });
 
   group('AppSlider', () {

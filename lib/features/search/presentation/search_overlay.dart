@@ -1024,7 +1024,6 @@ class _EntryRowState extends State<_EntryRow> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final focus = tokens.focus;
     final entry = widget.entry;
     final selected = widget.selected;
     final radius = tokens.radii.controlAll;
@@ -1038,15 +1037,13 @@ class _EntryRowState extends State<_EntryRow> {
         child: Semantics(
           button: true,
           selected: selected,
-          child: FocusRing(
+          // The row the keys move and Enter opens: the focus as a remote
+          // sees it, so the focus's ring (white on a TV), inside the row
+          // as in every list (ADR-029).
+          child: AppFocusRing(
             visible: selected,
             borderRadius: radius,
-            ringColor: colors.accentBase,
-            glowColor: colors.accentBase.withValues(alpha: focus.glowOpacity),
-            ringWidth: focus.ringWidth,
-            glowWidth: focus.glowWidth,
-            duration: tokens.motion.fast,
-            curve: tokens.motion.fastCurve,
+            placement: RingPlacement.inside,
             child: AnimatedContainer(
               duration: tokens.motion.fast,
               curve: tokens.motion.fastCurve,
