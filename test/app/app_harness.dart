@@ -113,6 +113,12 @@ Future<AppUnderTest> pumpApp(
             ),
     ),
   );
+  // A failed test leaves its tree mounted (flutter_test leaves it alone),
+  // and then a fixture's `db.close` in an earlier tear-down waited for
+  // ever on the screens' queries: a failing golden hung the run instead
+  // of failing it. Tear-downs run last first, so this one unmounts the
+  // app before any database closes.
+  addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
   if (settle) await settleApp(tester);
 
   return AppUnderTest(router: router, errors: errors);
