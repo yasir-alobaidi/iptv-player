@@ -1,6 +1,19 @@
-# Handoff — 2026-10-15, end of the eleventh session: a resume plays from its place, Arabic on the keyboard and in search, the round banner, git fixed (start with "Start here")
+# Handoff — 2026-10-15, end of the twelfth session: the round icon on the Bedroom TV (and the eleventh's: a resume plays from its place, Arabic, git fixed) (start with "Start here")
 
 ## Start here (the next session)
+**The twelfth session (ADR-028), short:** the user: the icon on the
+Bedroom TV still isn't round. A screenshot (with their yes) showed why:
+Google TV's home has no banner row any more, **"Your apps" is a row of
+circles** (each app's adaptive icon), and Bijou's held the square tile
+from its first install. The APK already had the round icon, but every
+build's version code was 1 and the launcher keeps an icon until the code
+changes. **The Android version code is now the commit count**
+(`android/app/build.gradle.kts`); the build installed on the Bedroom TV
+(205, 04:29 the TV's time) showed the round icon at once. Nothing was
+played; the only keys sent were Down, Right and Left on Google TV's home.
+An older APK (`dist/`'s, CI's: code 1) no longer installs over it without
+an uninstall. Everything below is still the eleventh session's.
+
 The eleventh session (ADR-027) answered the user's four points:
 1. **Git:** the user had pushed the tenth session's first three commits
    while it ran; it then reworded b3e5725 and rebased the rest, so their
@@ -28,9 +41,10 @@ The eleventh session (ADR-027) answered the user's four points:
    (settings key `tv.keyboard_language`). **Search** finds each Arabic
    spelling from the others (ا أ إ آ, a closing ة/ه and ى/ي, ٧٧/77): the
    user's catalogue has ~8,000 Arabic titles written both ways.
-4. **The icon:** Google TV's home row shows the app's **banner**, not its
-   launcher icon, so ADR-026's round icon never showed there. The banner is
-   now the round icon and "Bijou" on the dark background.
+4. **The icon:** it took the banner for what Google TV's home row shows;
+   it isn't (ADR-028 above): the row shows the adaptive icon in a circle.
+   The banner (the round icon and "Bijou" on dark) stays for launchers
+   that show banners.
 
 Also: Bijou's **log file on Android** is now under
 `/sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs` (`adb
@@ -45,8 +59,8 @@ nothing was played from the provider, no key was sent to the TV.
 `dist/bijou-0.1.0.apk` is still the tenth session's.
 
 ### First, on the Bedroom TV (ask first; the new build is on it)
-1. **The banner:** Google TV's home, the apps row (D-pad down on the
-   launcher): Bijou's card should be the round jewel and the name on dark.
+1. ~~The banner~~: done in the twelfth session; the round icon shows in
+   "Your apps" (ADR-028).
 2. **The Arabic keyboard:** Search → OK → عربي. Arabic needs Android's
    own Arabic font (the app's Manrope has none): check it draws, right to
    left, the caret at the left; search an Arabic title (browsing only),
@@ -119,7 +133,9 @@ nothing was played from the provider, no key was sent to the TV.
   flutter command during a build** (`flutter test`, even `flutter
   analyze`): it rewrites Android's plugin list with the test plugin and
   the build fails (`dev.flutter.plugins.integration_test does not
-  exist`).
+  exist`). The version code is the commit count (ADR-028): build from a
+  newer commit than the installed one (205 now): an older one is refused
+  as a downgrade, and on the same one an icon change doesn't show.
 - **The fake panel on the LAN:** `dart run
   tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
   Bijou has it as a source ("192.168.1.254", test/test) and is **browsing
@@ -409,8 +425,8 @@ TV's bar and Phase 9.
 2. **The old Co-Authored-By line in bdab868** (2026-09-15) is still on
    GitHub. Say if you want it gone: that rewrites every commit and needs a
    force push from you; otherwise it stays.
-3. **On the Bedroom TV (the new build is installed):** the round banner in
-   Google TV's apps row; Search → OK → **عربي**, type an Arabic title; and
+3. **On the Bedroom TV (the new build is installed; its round icon is
+   seen in "Your apps"):** Search → OK → **عربي**, type an Arabic title; and
    your case once: a channel, then The Bad Guys 2 from Continue watching
    (it should say "Preparing…" on black, then play from your place, no
    channel picture, no "Reconnecting").
@@ -451,10 +467,10 @@ Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025, ADR-026 and
-ADR-027 in docs/decisions.md. Check git (fetch) and CI on the last push.
-Then check the eleventh session's build on the Bedroom TV (the banner, the
-Arabic keyboard, a film resumed after a channel), then carry on with the
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-028
+in docs/decisions.md. Check git (fetch) and CI on the last push.
+Then check the build on the Bedroom TV (the Arabic keyboard, a film
+resumed after a channel), then carry on with the
 Google TV list in "Start here". Ask me before using the TV and before
 playing from my provider.
 ```
@@ -467,7 +483,9 @@ playing from my provider.
   playback off screen, "Still watching?" (ADR-025); Bijou's keyboard, the
   shell's edges, the player by remote, See all cards, a round icon
   (ADR-026); a resume that plays from its place, Arabic on the keyboard
-  and in search, the round banner, the log file adb reads (ADR-027).
+  and in search, the round banner, the log file adb reads (ADR-027); the
+  round icon in Google TV's "Your apps", the version code the commit
+  count (ADR-028).
   What's left is in "Start here".
 - **Phase 9: all nine steps built and run;** ADR-016's "The exit" lists
   what is not met. Its close is the user's call.

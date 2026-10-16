@@ -15,7 +15,7 @@ Data layer (Xtream/M3U/XMLTV, sync, drift DB) · domain interfaces · Riverpod p
 | Downloads & library | Not on the TV in v2 (Chromecast with Google TV has 8 GB of storage). Downloads and local files reach the TV by casting from the desktop app |
 | Performance | Low-end target: Chromecast with Google TV (2 GB RAM). Smaller image caches, shorter EPG retention (−2 h to +3 days), gradients instead of blurs, cheap list items |
 | Lifecycle | Stop playback when the app goes to background (Home); restore state on return; handle audio focus |
-| Manifest | LEANBACK_LAUNCHER intent category, 320×180 banner, `android.software.leanback` and `android.hardware.touchscreen` declared `required="false"` |
+| Manifest | LEANBACK_LAUNCHER intent category, an adaptive icon (Google TV's "Your apps" row shows it in a circle; the version code is the commit count, so an update's icon shows, ADR-028), 320×180 banner, `android.software.leanback` and `android.hardware.touchscreen` declared `required="false"` |
 | Distribution | Sideloaded APK via adb for personal use |
 
 ## TV-0 — player engine spike (before any TV screens)
