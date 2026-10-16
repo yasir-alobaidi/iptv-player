@@ -238,6 +238,50 @@ void main() {
       final artwork = tester.getSize(find.byType(ClipRRect).first);
       expect(artwork.width / artwork.height, closeTo(16 / 9, 0.01));
     });
+
+    testWidgets("a card's progress is on its picture's bottom edge; on a TV "
+        'inside it, clear of the ring drawn inside the edge', (tester) async {
+      Future<(Rect, Rect)> bar({required bool tv}) async {
+        await pumpDesign(
+          tester,
+          Center(
+            child: LandscapeCard(
+              key: ValueKey(tv),
+              title: 'The Long Way Home',
+              subtitle: 'Movie · 46 min left',
+              progress: 0.6,
+              width: 320,
+              autofocus: true,
+              onPressed: () {},
+            ),
+          ),
+          tv: tv,
+        );
+        await tester.pumpAndSettle();
+        return (
+          tester.getRect(find.byType(ClipRRect).first),
+          tester.getRect(find.byType(ProgressBar)),
+        );
+      }
+
+      final (picture, edge) = await bar(tv: false);
+      expect(edge.bottom, closeTo(picture.bottom, 0.01));
+      expect(edge.width, closeTo(picture.width, 0.01));
+
+      const focus = AppFocusTokens.tv;
+      final (tvPicture, inside) = await bar(tv: true);
+      // The focused card grows; the bar and the gap grow with it.
+      final scale = tvPicture.width / 320;
+      expect(inside.height, closeTo(focus.cardBarHeight * scale, 0.01));
+      expect(
+        tvPicture.bottom - inside.bottom,
+        closeTo(focus.cardBarInset * scale, 0.5),
+      );
+      expect(
+        tvPicture.bottom - inside.bottom,
+        greaterThan(focus.ringWidth * scale),
+      );
+    });
   });
 
   group('SectionHeader', () {

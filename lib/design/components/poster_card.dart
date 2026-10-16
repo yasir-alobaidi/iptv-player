@@ -129,13 +129,8 @@ class PosterCard extends StatelessWidget {
                             right: tokens.spacing.s8,
                             child: cornerBadge!,
                           ),
-                        if (progress != null)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: ProgressBar(value: progress),
-                          ),
+                        if (progress case final value?)
+                          _progressBar(context, value),
                       ],
                     ),
                   ),
@@ -484,13 +479,8 @@ class LandscapeCard extends StatelessWidget {
                             right: tokens.spacing.s8 + 2,
                             child: cornerBadge!,
                           ),
-                        if (progress != null)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: ProgressBar(value: progress),
-                          ),
+                        if (progress case final value?)
+                          _progressBar(context, value),
                       ],
                     ),
                   ),
@@ -526,4 +516,18 @@ class LandscapeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A card's watch progress over its picture: along the bottom edge, or on
+/// a TV a little inside it, where the ring drawn inside the edge never
+/// covers it ([AppFocusTokens.cardBarInset]).
+Widget _progressBar(BuildContext context, double value) {
+  final focus = context.tokens.focus;
+  final inset = focus.cardBarInset;
+  return Positioned(
+    left: inset,
+    right: inset,
+    bottom: inset,
+    child: ProgressBar(value: value, height: focus.cardBarHeight),
+  );
 }

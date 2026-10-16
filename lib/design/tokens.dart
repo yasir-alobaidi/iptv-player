@@ -372,6 +372,8 @@ class AppFocusTokens {
     this.inside = false,
     this.tileScale = 1.03,
     this.revealMargin = 0,
+    this.cardBarInset = 0,
+    this.cardBarHeight = 3,
   });
 
   /// A TV's focus (canvas `Google TV Home`, ADR-029): a white ring, as
@@ -392,6 +394,8 @@ class AppFocusTokens {
     inside: true,
     tileScale: 1.06,
     revealMargin: 24,
+    cardBarInset: 8,
+    cardBarHeight: 4,
   );
 
   final double ringWidth;
@@ -416,6 +420,15 @@ class AppFocusTokens {
   /// Kept between a focused control's ring and the edge of what scrolls
   /// it into view.
   final double revealMargin;
+
+  /// How far a card's watch progress sits inside its picture's edges: on
+  /// a TV clear of the ring drawn inside the edge, which covered it
+  /// (ADR-030); on the desktop along the bottom edge (the canvas).
+  final double cardBarInset;
+
+  /// That bar's thickness: the canvas's 5 px at 1920 is 3.3 on the TV's
+  /// 1280 canvas, a little more where it floats over the picture.
+  final double cardBarHeight;
 
   /// How far a ring drawn outside a control reaches past its edge.
   double get reach => inside ? 0 : gap + ringWidth + glowWidth;
