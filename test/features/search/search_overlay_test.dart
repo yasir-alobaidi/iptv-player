@@ -9,6 +9,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -25,6 +26,7 @@ import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
 
 import '../../app/app_harness.dart';
 import '../live_tv/live_tv_fakes.dart';
+import '../settings/appearance_fakes.dart';
 import 'search_fakes.dart';
 
 ChannelItem _channel(String key, String name, {int? number}) => ChannelItem(
@@ -51,16 +53,21 @@ void main() {
     WidgetTester tester, {
     bool seed = true,
     FormFactor formFactor = FormFactor.desktop,
+    Size size = const Size(1440, 900),
+    bool withAppearance = false,
   }) async {
     live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
     if (seed) await tester.runAsync(live.seed);
     app = await pumpApp(
       tester,
+      size: size,
+      withAppearance: withAppearance,
       overrides: [
         ...live.overrides,
         searchRepositoryProvider.overrideWithValue(search),
         formFactorProvider.overrideWithValue(formFactor),
+        if (withAppearance) ...appearanceOverrides(),
       ],
     );
     await settle(tester);
@@ -133,6 +140,81 @@ void main() {
       return true;
     });
     return bold;
+  }
+
+  /// Search as the TV has it: the app's own root (its TV theme, white
+  /// focus, no keycaps) in the window Android gives a 1080p TV.
+  Future<void> openTv(WidgetTester tester) => open(
+    tester,
+    formFactor: FormFactor.tv,
+    size: const Size(960, 540),
+    withAppearance: true,
+  );
+
+  /// The label of the keyboard's key the remote is on.
+  String? focusedKey() => FocusManager.instance.primaryFocus?.context
+      ?.findAncestorWidgetOfExactType<FocusableSurface>()
+      ?.semanticLabel;
+
+  /// The rows of the results drawn with the focus ring: each one's name.
+  Finder rings() => find.descendant(
+    of: find.byType(SearchOverlay),
+    matching: find.byWidgetPredicate((w) => w is AppFocusRing && w.visible),
+  );
+
+  List<String> ringed(WidgetTester tester) => [
+    for (final ring in rings().evaluate())
+      () {
+        final texts = tester.widgetList<Text>(
+          find.descendant(
+            of: find.byWidget(ring.widget),
+            matching: find.byType(Text),
+          ),
+        );
+        // A result's name is its one rich text (a logo's letters come
+        // first); a recent search and Show all are plain.
+        return texts
+                .where((text) => text.textSpan != null)
+                .firstOrNull
+                ?.textSpan!
+                .toPlainText() ??
+            texts.map((text) => text.data ?? '').firstWhere((t) => t != '');
+      }(),
+  ];
+
+  /// The remote's keys, one press at a time, as a TV sends them.
+  Future<void> press(
+    WidgetTester tester,
+    LogicalKeyboardKey key, {
+    int times = 1,
+  }) async {
+    for (var i = 0; i < times; i++) {
+      await tester.sendKeyEvent(key);
+      await tester.pump();
+    }
+    await settle(tester);
+  }
+
+  /// OK, let go at once.
+  Future<void> ok(WidgetTester tester) async {
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pump(searchDelay);
+    await settle(tester);
+  }
+
+  /// [text] typed on the remote's keyboard, a key at a time.
+  Future<void> typeOnKeys(WidgetTester tester, String text) async {
+    for (final letter in text.split('')) {
+      await tester.tap(
+        find.descendant(
+          of: find.byType(RemoteKeyboard),
+          matching: findByLabel(letter),
+        ),
+      );
+      await tester.pump();
+    }
+    await tester.pump(searchDelay);
+    await settle(tester);
   }
 
   final now = DateTime.utc(2026, 9, 14, 12);
@@ -377,12 +459,15 @@ void main() {
       }
       await tester.pump(searchDelay);
       await settle(tester);
-      expect(cursorRow(tester), 'Arena Sports 1');
+      expect(find.text('CHANNELS'), findsOneWidget);
+      // The keys have the focus: no row is drawn as the cursor's.
+      expect(cursorRow(tester), isNull);
 
       await tester.tap(findByLabel('Done'));
       await settle(tester);
       expect(find.byType(RemoteKeyboard), findsNothing);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'search field');
+      expect(cursorRow(tester), 'Arena Sports 1');
 
       await key(tester, LogicalKeyboardKey.arrowDown);
       expect(cursorRow(tester), 'Arena Sports 2');
@@ -546,6 +631,204 @@ void main() {
       await settle(tester);
       expect(search.asked, ['cup final']);
       expect(find.text('CHANNELS'), findsOneWidget);
+    });
+  });
+
+  // The user, on the Bedroom TV: "on the keyboard I can't go to the right
+  // and move from the keyboard to the search results, and go back to the
+  // keyboard when I go left"; "I can't control if I wanna select history
+  // search or type a new one"; "the search still has the blue border".
+  group('on a TV, by remote', () {
+    testWidgets("→ from the keyboard's right edge moves to the results, ↑/↓ "
+        'walk them, ← returns to the key it left from; a row is ringed, '
+        'white, only while the results have the focus', (tester) async {
+      search.answers['arena'] = full('arena');
+      await openTv(tester);
+      await typeOnKeys(tester, 'arena');
+      expect(find.text('CHANNELS'), findsOneWidget);
+      expect(focusedKey(), 'q');
+      expect(ringed(tester), isEmpty, reason: 'the keys have the focus');
+
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 9);
+      expect(focusedKey(), 'p');
+      expect(ringed(tester), isEmpty);
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search results');
+      expect(ringed(tester), ['Arena Sports 1']);
+      final ring = tester.widget<FocusRing>(
+        find.descendant(of: rings(), matching: find.byType(FocusRing)).first,
+      );
+      expect(
+        ring.ringColor,
+        tester.element(find.byType(SearchOverlay)).tokens.colors.textPrimary,
+        reason: "a TV's focus is white, not the accent",
+      );
+
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(ringed(tester), ['Arena Sports 2']);
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(ringed(tester), ['Show all in Live TV']);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(ringed(tester), ['Arena Sports 2']);
+      expect(find.byType(RemoteKeyboard), findsOneWidget, reason: 'still up');
+
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'p');
+      expect(ringed(tester), isEmpty);
+      // And back where the list was left.
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(ringed(tester), ['Arena Sports 2']);
+    });
+
+    testWidgets('a recent search is chosen by → ↓ OK: its words go in the '
+        "query and the keyboard's box, it runs, and the remote stays on the "
+        'results, on the first', (tester) async {
+      search
+        ..recent = ['tennis open', 'cup final']
+        ..answers['cup final'] = full('cup final');
+      await openTv(tester);
+      expect(find.text('RECENT SEARCHES'), findsOneWidget);
+      expect(ringed(tester), isEmpty);
+
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 10);
+      expect(ringed(tester), ['tennis open']);
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(ringed(tester), ['cup final']);
+      await ok(tester);
+
+      expect(search.asked, ['cup final']);
+      expect(
+        find.descendant(
+          of: find.byType(RemoteKeyboard),
+          matching: find.text('cup final'),
+        ),
+        findsOneWidget,
+        reason: "the keyboard's box shows the words, to change them",
+      );
+      expect(find.text('CHANNELS'), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search results');
+      expect(ringed(tester), ['Arena Sports 1']);
+      // ← to change the words: the key the remote left from.
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'p');
+    });
+
+    testWidgets('OK on a recent search, the keyboard closed, runs it (it '
+        'opened the keyboard: the user, on the TV)', (tester) async {
+      search
+        ..recent = ['tennis open', 'cup final']
+        ..answers['tennis open'] = full('tennis open');
+      await openTv(tester);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search field');
+      expect(ringed(tester), ['tennis open']);
+
+      await ok(tester);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+      expect(search.asked, ['tennis open']);
+      expect(find.text('CHANNELS'), findsOneWidget);
+      expect(ringed(tester), ['Arena Sports 1']);
+    });
+
+    testWidgets('a click on a recent search runs it, the keyboard up', (
+      tester,
+    ) async {
+      search
+        ..recent = ['tennis open', 'cup final']
+        ..answers['cup final'] = full('cup final');
+      await openTv(tester);
+      await tester.tap(find.text('cup final'));
+      await tester.pump(searchDelay);
+      await settle(tester);
+
+      expect(search.asked, ['cup final']);
+      expect(find.text('CHANNELS'), findsOneWidget);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+    });
+
+    testWidgets('Back from the results returns to the keyboard; Back there '
+        'closes it and keeps the words; Back again closes search', (
+      tester,
+    ) async {
+      search.answers['arena'] = full('arena');
+      await openTv(tester);
+      await typeOnKeys(tester, 'arena');
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 10);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search results');
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+      expect(focusedKey(), 'p');
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+      expect(find.byType(SearchOverlay), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search field');
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        'arena',
+      );
+      expect(ringed(tester), ['Arena Sports 1']);
+
+      // ← from the field: the keyboard, on the left, with the words.
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+      expect(focusedKey(), 'q');
+      expect(
+        find.descendant(
+          of: find.byType(RemoteKeyboard),
+          matching: find.text('arena'),
+        ),
+        findsOneWidget,
+      );
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(SearchOverlay), findsNothing);
+    });
+
+    testWidgets('holding OK on a result opens its menu; Back closes the menu '
+        'first, and the remote is on the results again', (tester) async {
+      search.answers['arena'] = full('arena');
+      await openTv(tester);
+      await typeOnKeys(tester, 'arena');
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 10);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      await tester.pump(TvSelectKey.hold + const Duration(milliseconds: 50));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await settle(tester);
+      expect(find.text('Add to favorites'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.text('Add to favorites'), findsNothing);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search results');
+      expect(ringed(tester), ['Arena Sports 1']);
+    });
+
+    testWidgets('OK on a result in the list, the keyboard up, opens it and '
+        'closes search with the keyboard', (tester) async {
+      search.answers['arena'] = full('arena');
+      await openTv(tester);
+      await typeOnKeys(tester, 'arena');
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 10);
+      await ok(tester);
+
+      expect(app.location, '/player');
+      expect(find.byType(SearchOverlay), findsNothing);
+      expect(find.byType(RemoteKeyboard), findsNothing);
+      expect(live.rig.coordinator.current?.remoteKey, '201');
+      expect(search.remembered, ['arena']);
+      await tester.runAsync(live.rig.coordinator.stop);
+      await settle(tester);
     });
   });
 

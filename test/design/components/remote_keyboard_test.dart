@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/design/tokens.dart';
 
 import '../design_harness.dart';
 
@@ -169,6 +170,39 @@ void main() {
             )
             .where((ring) => ring.visible),
         isEmpty,
+      );
+    });
+
+    testWidgets("the words' box has a field's resting border, not the "
+        'accent: it is not the focus (the user, on the TV: "the blue '
+        'border")', (tester) async {
+      await open(tester);
+      final colors = tester.element(find.byType(RemoteKeyboard)).tokens.colors;
+      final borders = [
+        for (final box in tester.widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(RemoteKeyboard),
+            matching: find.byType(DecoratedBox),
+          ),
+        ))
+          if (box.decoration case BoxDecoration(:final Border border)
+              when border.isUniform)
+            border.top.color,
+      ];
+      expect(borders, [colors.border]);
+    });
+
+    testWidgets('the box shows words put in the field from elsewhere (a '
+        'recent search chosen beside it)', (tester) async {
+      await open(tester);
+      controller.text = 'cup final';
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byType(RemoteKeyboard),
+          matching: find.text('cup final'),
+        ),
+        findsOneWidget,
       );
     });
 

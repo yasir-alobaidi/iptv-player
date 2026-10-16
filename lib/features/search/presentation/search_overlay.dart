@@ -45,6 +45,13 @@ import 'package:iptv_player/features/vod/domain/titles.dart';
 /// a movie downloads with Ctrl+D and an upcoming programme gets its
 /// reminder with Ctrl+R, or from their menus. The mouse highlights on
 /// hover and opens on a click.
+///
+/// **On a TV** the remote's keyboard is down the left side, the results
+/// beside it. → from the keys' right edge gives the results the focus
+/// (their cursor's row ringed, white): ↑/↓ walk them, OK opens one or runs
+/// a recent search, ← and Back return to the key the remote left from.
+/// Back on the keys closes the keyboard, the words kept; the field then
+/// has the focus, its ↑/↓ moving the cursor and OK opening its row.
 class SearchOverlay extends ConsumerStatefulWidget {
   const new({this.onClose, super.key});
 
@@ -78,9 +85,20 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// overlay, and again from the field.
   bool get _onTv => ref.read(formFactorProvider) == FormFactor.tv;
 
+  /// On a TV, the results' own focus: → from the keys' right edge comes
+  /// here. Its keys move the cursor, as the field's do.
+  final _results = FocusNode(debugLabel: 'search results');
+
+  /// The keyboard's keys, a scope of their own: their first key takes the
+  /// focus as the keyboard opens, and the scope keeps the key the remote
+  /// left from, for ← and Back from the results.
+  final _keys = FocusScopeNode(debugLabel: 'search keyboard');
+
   @override
   void initState() {
     super.initState();
+    // The cursor's row is ringed only while the results have the focus.
+    _results.addListener(_onResultsFocus);
     if (_onTv) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _openKeyboard();
@@ -88,26 +106,72 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     }
   }
 
+  void _onResultsFocus() {
+    if (mounted) setState(() {});
+  }
+
   /// The remote's keyboard is open: the results make room for it, beside
   /// it, so they show as the words are typed (the user: "I can't see the
   /// suggestions").
   bool _typing = false;
 
-  void _openKeyboard() => unawaited(() async {
+  /// The remote's keyboard, down the screen's left side, its first key
+  /// focused. Search's own, not [showRemoteKeyboard]'s dialog over it: the
+  /// results beside it take the focus from the keys and give it back,
+  /// which a route over them can't share (the user, on the TV: "I can't go
+  /// to the right … to the search results").
+  void _openKeyboard() {
+    if (_typing) return;
     setState(() => _typing = true);
-    await showRemoteKeyboard(
-      context,
-      controller: _query,
-      label: searchHint,
-      onChanged: _session.setText,
-    );
-    if (mounted) setState(() => _typing = false);
-  }());
+  }
 
-  /// OK on the field (a TV): what the results' cursor is on, once there
-  /// are words; else the keyboard.
+  /// Done, Back or Esc on the keys: the keyboard goes, the words stay, and
+  /// the field has the focus.
+  void _closeKeyboard() {
+    if (!_typing) return;
+    _field.requestFocus();
+    setState(() => _typing = false);
+  }
+
+  /// → at the keys' right edge: the results, on the cursor's row (the
+  /// first of new results). With nothing to open there, the keys keep it.
+  void _toResults() {
+    if (_selectable.isEmpty) return;
+    _results.requestFocus();
+    _reveal(_cursor);
+  }
+
+  /// ← and Back from the results: the key the remote left from; the field
+  /// when the keyboard has gone.
+  void _backFromResults() {
+    if (_typing) {
+      _keys.requestFocus();
+    } else {
+      _field.requestFocus();
+    }
+  }
+
+  /// A TV's Back: from the results, back to the keys; on the keys, the
+  /// keyboard closes and the words stay; else search closes, as before.
+  /// Anything over search (a result's menu) is closed first.
+  Future<bool> _onBack() async {
+    if (!mounted || !(ModalRoute.isCurrentOf(context) ?? true)) return false;
+    if (_results.hasFocus) {
+      _backFromResults();
+      return true;
+    }
+    if (_typing) {
+      _closeKeyboard();
+      return true;
+    }
+    return false;
+  }
+
+  /// OK on the field (a TV, the keyboard closed): what the cursor is on,
+  /// a result or a recent search; with nothing listed, the keyboard. (A
+  /// recent search's OK opened the keyboard: the user, on the TV.)
   void _onFieldActivated() {
-    if (_query.text.trim().isNotEmpty && _at(_selectable) != null) {
+    if (_at(_selectable) != null) {
       _submit();
     } else {
       _openKeyboard();
@@ -116,6 +180,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   @override
   void dispose() {
+    _results
+      ..removeListener(_onResultsFocus)
+      ..dispose();
+    _keys.dispose();
     _query.dispose();
     _field.dispose();
     _scroll.dispose();
@@ -142,8 +210,12 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     switch (key) {
       case LogicalKeyboardKey.arrowDown:
         return _moveBy(1, selectable);
-      // At the top on a TV, ↑ goes back to the words.
+      // At the top on a TV, ↑ goes back to the words; ← too, the keyboard
+      // being on the left.
       case LogicalKeyboardKey.arrowUp when _onTv && _cursor == 0:
+        _openKeyboard();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowLeft when _onTv:
         _openKeyboard();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
@@ -174,6 +246,46 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  /// The keys on the keyboard's panel: → at its right edge moves to the
+  /// results; Esc (a keyboard plugged into the TV) closes it, as Back
+  /// does.
+  KeyEventResult _onKeysKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowRight:
+        final key = FocusManager.instance.primaryFocus;
+        if (key == null || !key.focusInDirection(TraversalDirection.right)) {
+          _toResults();
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.escape:
+        _closeKeyboard();
+        return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// The results with the focus (a TV): the field's keys, and ← (or Esc)
+  /// back to the keys. The arrows and Tab never take the focus elsewhere:
+  /// nothing is above the first row or right of the rows.
+  KeyEventResult _onResultsKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowLeft || LogicalKeyboardKey.escape:
+        _backFromResults();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowUp when _cursor == 0:
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowUp ||
+          LogicalKeyboardKey.arrowDown ||
+          LogicalKeyboardKey.arrowRight ||
+          LogicalKeyboardKey.tab:
+        _onKey(node, event);
+        return KeyEventResult.handled;
+    }
+    return _onKey(node, event);
   }
 
   _Entry? _at(List<_Entry> selectable) => selectable.isEmpty
@@ -476,11 +588,14 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         source != null &&
         source.lastSyncedAt == null &&
         ref.watch(syncStatusProvider(source.id)).value is SyncRunning;
+    // Words whose first results are still to come: the skeletons.
+    final loading =
+        source != null && !view.idle && results == null && view.failure == null;
 
     // The overlay is its own route with no Scaffold, and Material's
     // text field needs a Material ancestor; transparency adds nothing
     // visible.
-    return Material(
+    final overlay = Material(
       type: MaterialType.transparency,
       child: Semantics(
         label: 'Search',
@@ -560,8 +675,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                                 ),
                                 if (syncing) const _StillArriving(),
                                 Flexible(
-                                  child: _hug(
-                                    _body(context, view, results, source),
+                                  child: _resultsFocus(
+                                    _hug(_body(context, view, results, source)),
+                                    loading: loading,
                                   ),
                                 ),
                                 // After the body, which lists the entries.
@@ -580,10 +696,83 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                     ),
                   ),
                 ),
+                if (_typing) _keyboard(context),
               ],
             );
           },
         ),
+      ),
+    );
+    return _onTv
+        ? BackButtonListener(onBackButtonPressed: _onBack, child: overlay)
+        : overlay;
+  }
+
+  /// The remote's keyboard, down the left side (ADR-026's addendum): it
+  /// fades in, as its dialog did.
+  Widget _keyboard(BuildContext context) {
+    final motion = context.tokens.motion;
+    return Positioned(
+      left: 0,
+      top: 0,
+      bottom: 0,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: motion.fast,
+        curve: motion.fastCurve,
+        builder: (context, opacity, child) =>
+            Opacity(opacity: opacity, child: child),
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: _onKeysKey,
+          child: FocusScope(
+            node: _keys,
+            child: RemoteKeyboard(
+              controller: _query,
+              label: searchHint,
+              onChanged: _session.setText,
+              onDone: _closeKeyboard,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// On a TV the results take the focus themselves (→ from the keys): OK
+  /// opens the cursor's row, holding it its menu. With the focus there and
+  /// nothing left to open (a recent search that finds nothing now), the
+  /// focus goes back where it came from rather than stay on nothing.
+  Widget _resultsFocus(Widget body, {required bool loading}) {
+    if (!_onTv) return body;
+    if (_results.hasFocus && !loading && _selectable.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _results.hasFocus && _selectable.isEmpty) {
+          _backFromResults();
+        }
+      });
+    }
+    return Actions(
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            _submit();
+            return null;
+          },
+        ),
+        AppMenuIntent: CallbackAction<AppMenuIntent>(
+          onInvoke: (_) {
+            _menu(_selectable);
+            return null;
+          },
+        ),
+      },
+      child: Focus(
+        focusNode: _results,
+        skipTraversal: true,
+        onKeyEvent: _onResultsKey,
+        child: body,
       ),
     );
   }
@@ -704,6 +893,11 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     }
     final sources = results?.sourceCount ?? 1;
     final cursor = _cursor.clamp(0, math.max(0, _selectable.length - 1));
+    // On a TV the cursor's row is where the focus is, ringed white, only
+    // while the results have it, or the field (the keyboard closed) whose
+    // ↑/↓ move it; while the keys have it the rows rest, one focus on the
+    // screen (the user, on the TV: "the blue border").
+    final shown = !_onTv || _results.hasFocus || !_typing;
     var index = -1;
     return ListView(
       controller: _scroll,
@@ -720,11 +914,11 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
             _ => () {
               index++;
               final at = index;
-              final selected = at == cursor;
+              final atCursor = at == cursor;
               return _EntryRow(
-                key: selected ? _cursorRow : null,
+                key: atCursor ? _cursorRow : null,
                 entry: entry,
-                selected: selected,
+                selected: atCursor && shown,
                 words: words,
                 now: now,
                 sources: sources,

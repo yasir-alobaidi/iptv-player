@@ -190,7 +190,9 @@ Future<void> showRemoteKeyboard(
 }
 
 /// The keyboard's panel ([showRemoteKeyboard] opens it). Public for the
-/// Component Gallery, tests, and the screens that make room for it.
+/// Component Gallery, tests, and the screens that make room for it;
+/// Search shows it itself, beside its results, so the remote moves
+/// between the two.
 class RemoteKeyboard extends StatefulWidget {
   const new({
     required this.controller,
@@ -247,6 +249,33 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
 
   /// Null until the scope above is read.
   KeyboardLanguage? _language;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onText);
+  }
+
+  @override
+  void didUpdateWidget(RemoteKeyboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onText);
+      widget.controller.addListener(_onText);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onText);
+    super.dispose();
+  }
+
+  /// The box shows the field's words whoever changes them: Search puts a
+  /// recent search chosen beside the keyboard in them.
+  void _onText() {
+    if (mounted) setState(() {});
+  }
 
   bool get _arabic => _language == KeyboardLanguage.arabic;
 
@@ -361,7 +390,9 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
           ),
           SizedBox(height: tokens.spacing.s8),
           // The words so far, in a box like the field's: where the
-          // next key goes, the caret blinks.
+          // next key goes, the caret blinks. Its border is a field's at
+          // rest: the focus is on the keys, and a TV's focus is white
+          // (ADR-029); the accent border read as a second, blue focus.
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: tokens.spacing.s12,
@@ -370,7 +401,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
             decoration: BoxDecoration(
               color: colors.surfaceSunken,
               borderRadius: tokens.radii.controlAll,
-              border: Border.all(color: colors.accentBase),
+              border: Border.all(color: colors.border),
             ),
             child: _Typed(
               text: shown,
