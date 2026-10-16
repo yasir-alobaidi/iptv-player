@@ -186,8 +186,9 @@ void main() {
         Duration position() =>
             seen<PlayerProgress>().lastOrNull?.position ?? Duration.zero;
 
+        // Both places fit CI's 120 s sample.
         const delay = Duration(seconds: 4);
-        const start = Duration(seconds: 90);
+        const start = Duration(seconds: 30);
         final url =
             '${panel.movie(id, extension: extension)}'
             '?seek_delay_ms=${delay.inMilliseconds}';
@@ -230,7 +231,7 @@ void main() {
         // ── A seek the panel holds back: buffering while it waits, then
         // playing from there.
         events.clear();
-        final target = start + const Duration(seconds: 120);
+        final target = start + const Duration(seconds: 60);
         final sought = watch.elapsed;
         await tester.runAsync(() => engine.seek(target));
         await _until(
@@ -258,7 +259,7 @@ void main() {
         // The measurement is this test's output.
         // ignore: avoid_print
         print(
-          'slow panel, $name: first frame at 1:30 after '
+          'slow panel, $name: first frame at ${start.inSeconds} s after '
           '${firstFrame.$1.inMilliseconds} ms (the range held '
           '${delay.inMilliseconds} ms); a seek buffering after '
           '${(buffering.$1 - sought).inMilliseconds} ms, playing after '
