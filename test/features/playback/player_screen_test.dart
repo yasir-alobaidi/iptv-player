@@ -23,6 +23,7 @@ void main() {
   Future<void> open(
     WidgetTester tester, {
     FormFactor formFactor = FormFactor.desktop,
+    Size size = const Size(1440, 900),
   }) async {
     live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
@@ -30,6 +31,7 @@ void main() {
     app = await pumpApp(
       tester,
       initialLocation: AppDestination.liveTv.path,
+      size: size,
       overrides: [
         ...live.overrides,
         formFactorProvider.overrideWithValue(formFactor),
@@ -99,35 +101,39 @@ void main() {
       await finish(tester);
     });
 
-    testWidgets('→ walks every control to the last, never to the picture '
-        '(the user: "I cant do anything with the remote")', (tester) async {
-      await open(tester, formFactor: FormFactor.tv);
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await _settle(tester);
-      final walk = <String?>[];
-      for (var i = 0; i < 12; i++) {
-        walk.add(
-          FocusManager.instance.primaryFocus?.context
-              ?.findAncestorWidgetOfExactType<OsdButton>()
-              ?.tooltip,
-        );
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    for (final size in [const Size(1440, 900), const Size(960, 540)]) {
+      testWidgets('→ walks every control to the last, never to the picture '
+          '(the user: "I cant do anything with the remote"), at $size', (
+        tester,
+      ) async {
+        await open(tester, formFactor: FormFactor.tv, size: size);
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
         await _settle(tester);
-      }
-      expect(walk.toSet().toList(), [
-        'Channels',
-        'Previous channel',
-        'Next channel',
-        'Last channel',
-        'Add to favorites',
-        'Audio',
-        'Subtitles',
-        'Picture size: Fit',
-        'Stream info',
-      ]);
-      expect(walk.last, 'Stream info');
-      await finish(tester);
-    });
+        final walk = <String?>[];
+        for (var i = 0; i < 12; i++) {
+          walk.add(
+            FocusManager.instance.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<OsdButton>()
+                ?.tooltip,
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await _settle(tester);
+        }
+        expect(walk.toSet().toList(), [
+          'Channels',
+          'Previous channel',
+          'Next channel',
+          'Last channel',
+          'Add to favorites',
+          'Audio',
+          'Subtitles',
+          'Picture size: Fit',
+          'Stream info',
+        ]);
+        expect(walk.last, 'Stream info');
+        await finish(tester);
+      });
+    }
 
     testWidgets('Back from a control gives the picture the focus and hides '
         'the OSD; the next Back leaves', (tester) async {

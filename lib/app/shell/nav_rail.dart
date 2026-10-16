@@ -161,17 +161,22 @@ class _RailItem extends StatelessWidget {
   final bool expanded;
   final VoidCallback onPressed;
 
+  // The rail's first stop when it is entered with nothing to return to:
+  // the screen shown.
   @override
-  Widget build(BuildContext context) => _RailSlot(
-    selected: selected,
-    child: _RailButton(
-      icon: destination.icon,
-      label: destination.label,
-      tooltip: destination.label,
-      shortcut: destination.shortcut,
+  Widget build(BuildContext context) => FocusLanding(
+    on: selected,
+    child: _RailSlot(
       selected: selected,
-      expanded: expanded,
-      onPressed: onPressed,
+      child: _RailButton(
+        icon: destination.icon,
+        label: destination.label,
+        tooltip: destination.label,
+        shortcut: destination.shortcut,
+        selected: selected,
+        expanded: expanded,
+        onPressed: onPressed,
+      ),
     ),
   );
 }

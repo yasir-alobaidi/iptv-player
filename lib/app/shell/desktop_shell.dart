@@ -297,7 +297,14 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                           Expanded(
                             child: _ContentPane(
                               controller: _contentPane,
-                              onLeaveLeft: _railPane.focusPane,
+                              // A remote's Left lands on the screen's own
+                              // item, as a TV's menus do, not on the item
+                              // last focused there (the Bedroom TV:
+                              // Settings, from Home). A keyboard's
+                              // returns where it left the rail.
+                              onLeaveLeft: onTv
+                                  ? _railPane.focusFirst
+                                  : _railPane.focusPane,
                               // A remote reaches the top bar (search, the
                               // source) only so; a keyboard also by Tab.
                               onLeaveUp: onTv && !widget.immersive

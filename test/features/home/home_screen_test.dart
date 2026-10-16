@@ -55,6 +55,7 @@ void main() {
     bool history = false,
     List<Override> extra = const [],
     FutureOr<void> Function(HomeFakes home)? before,
+    Size size = const Size(1440, 900),
   }) async {
     final home = HomeFakes();
     addTearDown(() => tester.runAsync(home.db.close));
@@ -63,7 +64,11 @@ void main() {
       if (history) await home.seedHistory();
       await before?.call(home);
     });
-    final app = await pumpApp(tester, overrides: [...home.overrides, ...extra]);
+    final app = await pumpApp(
+      tester,
+      size: size,
+      overrides: [...home.overrides, ...extra],
+    );
     await settle(tester);
     return (home, app);
   }
@@ -495,6 +500,76 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await settle(tester);
     expect(app.location, AppDestination.movies.path);
+  });
+
+  testWidgets("on a TV, a card focused again shows its row's heading whole, "
+      'not half under the top bar (the Bedroom TV)', (tester) async {
+    await open(
+      tester,
+      history: true,
+      size: const Size(960, 540),
+      extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    _node(tester, 'The Quiet Harbor').requestFocus();
+    await settle(tester);
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await settle(tester);
+    }
+    final heading = find.text('Continue watching');
+    final page = find
+        .ancestor(of: heading, matching: find.byType(Scrollable))
+        .first;
+    expect(
+      tester.getRect(heading).top,
+      lessThan(tester.getRect(page).top),
+      reason: 'scrolled down past it',
+    );
+
+    // As the focus comes back to Home's first card (Back to Home).
+    _node(tester, 'The Quiet Harbor').requestFocus();
+    await settle(tester);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_focused(), 'The Quiet Harbor');
+    expect(
+      tester.getRect(heading).top,
+      greaterThanOrEqualTo(tester.getRect(page).top),
+    );
+  });
+
+  testWidgets("on a TV, Left from Home lands on the rail's Home, not the "
+      'rail item focused last (the Bedroom TV: Settings, from a poster)', (
+    tester,
+  ) async {
+    await open(
+      tester,
+      history: true,
+      size: const Size(960, 540),
+      extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    // The rail was last left from Settings.
+    Focus.of(
+      tester.element(
+        find
+            .descendant(
+              of: find.byWidgetPredicate(
+                (w) =>
+                    w is FocusableSurface &&
+                    w.semanticLabel == AppDestination.settings.label,
+              ),
+              matching: find.byType(GestureDetector),
+            )
+            .first,
+      ),
+    ).requestFocus();
+    await settle(tester);
+    expect(_focused(), AppDestination.settings.label);
+    _node(tester, 'The Quiet Harbor').requestFocus();
+    await settle(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle(tester);
+    expect(_focused(), AppDestination.home.label);
   });
 
   testWidgets('the desktop has no See all card: its header links stay', (

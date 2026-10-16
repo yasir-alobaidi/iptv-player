@@ -179,6 +179,20 @@ void main() {
       expect(inRail(), isTrue);
       // Through Settings' own list on the way.
       expect(walked.length, greaterThan(1));
+      // Onto the screen's own item.
+      expect(walked.last, 'Settings', reason: '$walked');
+    });
+
+    testWidgets('Left from the top of a screen lands on its own rail item, '
+        "not the rail's first", (tester) async {
+      await open(tester, formFactor: FormFactor.tv);
+      // The first section of Settings' list, level with Home.
+      Focus.of(tester.element(find.text('Sources').first)).requestFocus();
+      await settleApp(tester);
+      expect(focused(), isNot('Settings'));
+
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focused(), 'Settings');
     });
 
     testWidgets('the rail has no expand toggle on a TV (it is too narrow '

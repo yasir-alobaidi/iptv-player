@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:iptv_player/design/focus/app_intents.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 export 'package:iptv_player/design/focus/focus_ring.dart'
     show AppFocusRing, RingPlacement;
+
+/// What a focused control inside brings into view with it, above it: a
+/// row of cards' heading (Home). Back on a row, the TV showed its card
+/// with the heading half under the top bar (ADR-029).
+class RevealArea extends SingleChildRenderObjectWidget {
+  const new({required super.child, super.key});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderRevealArea();
+}
+
+class _RenderRevealArea extends RenderProxyBox;
 
 /// The interaction states a [FocusableSurface] passes to its builder.
 @immutable
@@ -194,9 +207,18 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
         _ => 0.0,
       };
       final margin = reach + focus.revealMargin;
-      if (margin <= 0) return;
+      var rect = (Offset.zero & size).inflate(margin);
+      // What the control comes with, above it: its row's heading.
+      final area = context.findAncestorRenderObjectOfType<_RenderRevealArea>();
+      if (area != null && area.attached && area.hasSize) {
+        final top = box.globalToLocal(area.localToGlobal(Offset.zero)).dy;
+        if (top < rect.top) {
+          rect = Rect.fromLTRB(rect.left, top, rect.right, rect.bottom);
+        }
+      }
+      if (rect == Offset.zero & size) return;
       box.showOnScreen(
-        rect: (Offset.zero & size).inflate(margin),
+        rect: rect,
         duration: context.tokens.motion.fast,
         curve: context.tokens.motion.fastCurve,
       );

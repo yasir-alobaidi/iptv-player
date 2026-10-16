@@ -188,39 +188,45 @@ class _HomeRowState extends State<HomeRow> {
     widget.controller
       ..count = count
       ..stride = widget.cardWidth + widget.gap;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: inset),
-          child: SectionHeader(title: widget.title, onSeeAll: widget.onSeeAll),
-        ),
-        FocusPane(
-          debugLabel: 'home row ${widget.title}',
-          tabStop: true,
-          child: HorizontalRail(
-            controller: widget.controller.scroll,
-            height: widget.cardHeight + inset * 2,
-            spacing: widget.gap,
-            padding: EdgeInsets.all(inset),
-            itemCount: count,
-            itemBuilder: (context, index) => _RowCard(
-              key: ValueKey(index),
-              index: index,
-              controller: widget.controller,
-              builder: (context, focus) => index == widget.count
-                  ? _SeeAllCard(
-                      focus: focus,
-                      width: widget.cardWidth,
-                      height: widget.cardHeight,
-                      onPressed: onSeeAll!,
-                    )
-                  : widget.card(context, index, focus),
+    // A card scrolled into view brings its heading.
+    return RevealArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: inset),
+            child: SectionHeader(
+              title: widget.title,
+              onSeeAll: widget.onSeeAll,
             ),
           ),
-        ),
-      ],
+          FocusPane(
+            debugLabel: 'home row ${widget.title}',
+            tabStop: true,
+            child: HorizontalRail(
+              controller: widget.controller.scroll,
+              height: widget.cardHeight + inset * 2,
+              spacing: widget.gap,
+              padding: EdgeInsets.all(inset),
+              itemCount: count,
+              itemBuilder: (context, index) => _RowCard(
+                key: ValueKey(index),
+                index: index,
+                controller: widget.controller,
+                builder: (context, focus) => index == widget.count
+                    ? _SeeAllCard(
+                        focus: focus,
+                        width: widget.cardWidth,
+                        height: widget.cardHeight,
+                        onPressed: onSeeAll!,
+                      )
+                    : widget.card(context, index, focus),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
