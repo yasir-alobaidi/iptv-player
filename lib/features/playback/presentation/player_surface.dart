@@ -299,6 +299,7 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
         border: Border.all(color: colors.border),
       ),
       child: FocusTraversalGroup(
+        policy: appTraversalPolicy(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

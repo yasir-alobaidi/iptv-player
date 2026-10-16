@@ -186,4 +186,63 @@ void main() {
       expect(hasFocusRing(tester), isTrue);
     });
   });
+
+  // The user, on the Bedroom TV: moving between posters was "like
+  // jumping". The arrows' move jumped the view to the card's edge, then
+  // the reveal glided on for its ring and margin.
+  testWidgets('an arrow to a control below the fold scrolls once, '
+      'smoothly, to the control with its ring and margin', (tester) async {
+    final scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await pumpDesign(
+      tester,
+      tv: true,
+      FocusTraversalGroup(
+        policy: appTraversalPolicy(),
+        child: SizedBox(
+          height: 300,
+          child: SingleChildScrollView(
+            controller: scroll,
+            child: Column(
+              children: [
+                for (var i = 0; i < 12; i++)
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: FocusableSurface.child(
+                      autofocus: i == 3,
+                      onPressed: () {},
+                      semanticLabel: 'row $i',
+                      child: const SizedBox(width: 200, height: 60),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final before = scroll.offset;
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    final first = scroll.offset;
+    final offsets = <double>[];
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      offsets.add(scroll.offset);
+    }
+    await tester.pumpAndSettle();
+    final end = scroll.offset;
+
+    // Row 4 (76 px a row) and its ring and 24 px margin below 300 px.
+    expect(end - before, greaterThan(40));
+    // No jump: the first frame moves a fraction of the way.
+    expect(first - before, lessThan((end - before) / 2));
+    // And on, never back.
+    for (var i = 1; i < offsets.length; i++) {
+      expect(offsets[i], greaterThanOrEqualTo(offsets[i - 1]));
+    }
+  });
 }

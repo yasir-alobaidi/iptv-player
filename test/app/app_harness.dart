@@ -99,8 +99,11 @@ Future<AppUnderTest> pumpApp(
               builder: (context, child) => Consumer(
                 builder: (context, ref, _) {
                   final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
-                  final app = AppGlobalShortcuts(
-                    child: AppToasts(child: child ?? const SizedBox.shrink()),
+                  final app = FocusTraversalGroup(
+                    policy: appTraversalPolicy(),
+                    child: AppGlobalShortcuts(
+                      child: AppToasts(child: child ?? const SizedBox.shrink()),
+                    ),
                   );
                   return TvMode(
                     on: onTv,

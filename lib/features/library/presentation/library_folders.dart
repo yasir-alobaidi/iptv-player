@@ -79,6 +79,7 @@ class LibraryFolderList extends ConsumerWidget {
         onAction: () => unawaited(addLibraryFolder(ref)),
       ),
       AsyncData(:final value) => FocusTraversalGroup(
+        policy: appTraversalPolicy(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

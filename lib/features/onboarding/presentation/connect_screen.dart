@@ -689,6 +689,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     final gap = SizedBox(height: spacing.s20 + 2);
 
     return FocusTraversalGroup(
+      policy: appTraversalPolicy(),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

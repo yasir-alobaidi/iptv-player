@@ -43,7 +43,7 @@ final class HomeRowController {
     final target = index.clamp(0, count - 1);
     final node = _nodes[target];
     if (node != null && node.context != null) {
-      FocusTraversalPolicy.defaultTraversalRequestFocusCallback(node);
+      revealingFocus(node);
       return;
     }
     if (scroll.hasClients) {
@@ -61,7 +61,7 @@ final class HomeRowController {
       ..addPostFrameCallback((_) {
         final built = _nodes[target];
         if (built != null && built.context != null) {
-          FocusTraversalPolicy.defaultTraversalRequestFocusCallback(built);
+          revealingFocus(built);
         }
       })
       ..scheduleFrame();

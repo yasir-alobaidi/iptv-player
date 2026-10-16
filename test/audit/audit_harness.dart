@@ -323,9 +323,12 @@ Future<List<String>> _keyboardFindings(WidgetTester tester) async {
   var round = false;
   for (var i = 0; i < _maxStops; i++) {
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    // The ring is drawn the frame after the focus lands, and fades in.
+    // The ring is drawn the frame after the focus lands, and fades in;
+    // a control below the fold glides into view as that frame ends (its
+    // reveal, ADR-029), and the glide's clock starts on the next.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 250));
     final node = FocusManager.instance.primaryFocus;
     if (node == null || node is FocusScopeNode || node.context == null) {
       findings.add(

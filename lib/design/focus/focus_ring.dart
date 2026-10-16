@@ -52,7 +52,7 @@ class AppFocusRing extends StatelessWidget {
       ringWidth: focus.ringWidth,
       glowWidth: onAccent ? focus.onAccentGlowWidth : focus.glowWidth,
       gap: focus.gap,
-      placement: placement,
+      placement: focus.inside ? RingPlacement.inside : placement,
       duration: animated ? tokens.motion.fast : Duration.zero,
       curve: tokens.motion.fastCurve,
       child: child,

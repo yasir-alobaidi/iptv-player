@@ -360,6 +360,7 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
         border: Border.all(color: colors.border),
       ),
       child: FocusTraversalGroup(
+        policy: appTraversalPolicy(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

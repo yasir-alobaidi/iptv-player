@@ -290,7 +290,7 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     // left edge) came before the filter, so Tab from the filter skipped
     // it. Inside, the header comes first, then the list.
     return FocusTraversalGroup(
-      policy: ReadingOrderTraversalPolicy(),
+      policy: appTraversalPolicy(),
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface1,

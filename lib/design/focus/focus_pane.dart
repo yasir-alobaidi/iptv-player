@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_player/design/focus/focusable_surface.dart';
 
 /// Remembers which item a [FocusPane] last had focused, so Left/Right
 /// between panes returns to where the user was (docs/05). The shell holds
@@ -199,7 +200,7 @@ class _FocusPaneState extends State<FocusPane> {
     if (entered && widget.tabStop && _tabHeld) {
       final wanted = _remembered ?? _items.firstOrNull;
       if (wanted != null && wanted != focused) {
-        FocusTraversalPolicy.defaultTraversalRequestFocusCallback(wanted);
+        revealingFocus(wanted);
         return;
       }
     }
@@ -226,7 +227,7 @@ class _FocusPaneState extends State<FocusPane> {
     // is the pane's edge. The focus itself only moves once, to where the
     // walk lands.
     final edge = (forward ? items.last : items.first)..requestFocus();
-    final walk = widget.policy ?? ReadingOrderTraversalPolicy();
+    final walk = widget.policy ?? appTraversalPolicy();
     return forward ? walk.next(edge) : walk.previous(edge);
   }
 
@@ -251,7 +252,7 @@ class _FocusPaneState extends State<FocusPane> {
       );
     }
     return FocusTraversalGroup(
-      policy: widget.policy ?? ReadingOrderTraversalPolicy(),
+      policy: widget.policy ?? appTraversalPolicy(),
       child: pane,
     );
   }

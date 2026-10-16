@@ -47,11 +47,16 @@ class IptvPlayerApp extends ConsumerWidget {
         themeAnimationDuration: Duration.zero,
         routerConfig: ref.watch(routerProvider),
         builder: (context, child) {
+          // Every move of the arrows and Tab scrolls once, smoothly
+          // (revealingFocus): the default policy jumps first.
           final app = AppTextScale(
             // A TV's text is larger, to read from across a room (ADR-026).
             scale: look.textScale * (onTv ? TvCanvas.textScale : 1),
-            child: AppGlobalShortcuts(
-              child: AppToasts(child: child ?? const SizedBox.shrink()),
+            child: FocusTraversalGroup(
+              policy: appTraversalPolicy(),
+              child: AppGlobalShortcuts(
+                child: AppToasts(child: child ?? const SizedBox.shrink()),
+              ),
             ),
           );
           final tv = TvMode(

@@ -7,6 +7,42 @@ import 'package:iptv_player/design/tokens.dart';
 export 'package:iptv_player/design/focus/focus_ring.dart'
     show AppFocusRing, RingPlacement;
 
+/// The arrows' and Tab's move to [node], every traversal policy's
+/// `requestFocusCallback` ([appTraversalPolicy]). A [FocusableSurface]
+/// scrolls itself into view, its ring and margin with it, in one
+/// animation (its reveal); Flutter's own callback first jumps the view to
+/// the control's edge, so each move was a jump and then a glide (the
+/// user, on the Bedroom TV: moving between posters "like jumping").
+/// Anything else is scrolled to as Flutter does, animated.
+void revealingFocus(
+  FocusNode node, {
+  double? alignment,
+  ScrollPositionAlignmentPolicy? alignmentPolicy,
+  Curve? curve,
+  Duration? duration,
+}) {
+  if (_surfaceNodes[node] ?? false) {
+    node.requestFocus();
+    return;
+  }
+  final motion = node.context?.tokens.motion;
+  FocusTraversalPolicy.defaultTraversalRequestFocusCallback(
+    node,
+    alignment: alignment,
+    alignmentPolicy: alignmentPolicy,
+    curve: curve ?? motion?.baseCurve ?? Curves.ease,
+    duration: duration ?? motion?.base ?? Duration.zero,
+  );
+}
+
+/// The traversal policy of every pane and group: reading order, moved by
+/// [revealingFocus].
+FocusTraversalPolicy appTraversalPolicy() =>
+    ReadingOrderTraversalPolicy(requestFocusCallback: revealingFocus);
+
+/// The nodes [FocusableSurface]s focus by, which reveal themselves.
+final _surfaceNodes = Expando<bool>('FocusableSurface');
+
 /// What a focused control inside brings into view with it, above it: a
 /// row of cards' heading (Home). Back on a row, the TV showed its card
 /// with the heading half under the top bar (ADR-029).
@@ -178,6 +214,20 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
   bool _hovered = false;
   bool _pressed = false;
 
+  /// The node when the widget gives none: [revealingFocus] knows a
+  /// surface by its node.
+  FocusNode? _ownNode;
+
+  FocusNode get _node =>
+      widget.focusNode ??
+      (_ownNode ??= FocusNode(debugLabel: 'FocusableSurface'));
+
+  @override
+  void dispose() {
+    _ownNode?.dispose();
+    super.dispose();
+  }
+
   void _activate() {
     if (!widget._interactive) return;
     widget.onPressed?.call();
@@ -216,11 +266,12 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
           rect = Rect.fromLTRB(rect.left, top, rect.right, rect.bottom);
         }
       }
-      if (rect == Offset.zero & size) return;
+      // Always, even with no margin: the arrows' move leaves the scroll
+      // to this ([revealingFocus]).
       box.showOnScreen(
         rect: rect,
-        duration: context.tokens.motion.fast,
-        curve: context.tokens.motion.fastCurve,
+        duration: context.tokens.motion.base,
+        curve: context.tokens.motion.baseCurve,
       );
     });
   }
@@ -273,9 +324,11 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
       );
     }
 
+    final node = _node;
+    _surfaceNodes[node] = true;
     return FocusableActionDetector(
       enabled: widget._interactive && widget.canRequestFocus,
-      focusNode: widget.focusNode,
+      focusNode: node,
       autofocus: widget.autofocus,
       mouseCursor:
           widget.mouseCursor ??

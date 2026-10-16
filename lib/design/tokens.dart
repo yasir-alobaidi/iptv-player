@@ -369,16 +369,19 @@ class AppFocusTokens {
     this.onAccentGlowOpacity = 0.35,
     this.gap = 0,
     this.light = false,
+    this.inside = false,
     this.tileScale = 1.03,
     this.revealMargin = 0,
   });
 
   /// A TV's focus (canvas `Google TV Home`, ADR-029): a white ring, as
-  /// thick as the canvas's 4 px at 1920 is on the 1280 canvas, hugging
-  /// the control's edge (the user: a ring 2 px off it looked loose, a dark
-  /// band round every chip and button), no glow; a tile grows to 1.06;
-  /// and a focused control keeps 24 px from the screen's edge, so what is
-  /// beyond it shows.
+  /// thick as the canvas's 4 px at 1920 is on the 1280 canvas, drawn
+  /// inside the control's edge, over its border, no glow; a tile grows to
+  /// 1.06; and a focused control keeps 24 px from the screen's edge, so
+  /// what is beyond it shows. The user: a ring 2 px off the control looked
+  /// loose, and one just outside it still left a dark seam where the two
+  /// edges meet on the TV's 1.5x screen; inside, the ring is the control's
+  /// edge.
   static const tv = AppFocusTokens(
     ringWidth: 3,
     glowWidth: 0,
@@ -386,6 +389,7 @@ class AppFocusTokens {
     onAccentGlowWidth: 0,
     onAccentGlowOpacity: 0,
     light: true,
+    inside: true,
     tileScale: 1.06,
     revealMargin: 24,
   );
@@ -403,6 +407,9 @@ class AppFocusTokens {
   /// TV's selection is the accent, its focus white.
   final bool light;
 
+  /// Every ring inside its control's edge, whatever the control asks.
+  final bool inside;
+
   /// Tiles and cards grow on focus; rows stay at 1.0 (docs/05).
   final double tileScale;
 
@@ -411,7 +418,7 @@ class AppFocusTokens {
   final double revealMargin;
 
   /// How far a ring drawn outside a control reaches past its edge.
-  double get reach => gap + ringWidth + glowWidth;
+  double get reach => inside ? 0 : gap + ringWidth + glowWidth;
 
   /// How far a focused tile [extent] px across reaches past its box at
   /// most: its growth and its ring.

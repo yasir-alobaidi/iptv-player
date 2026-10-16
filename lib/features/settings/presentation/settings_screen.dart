@@ -56,6 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                     tokens.spacing.s20,
                   ),
                   child: FocusTraversalGroup(
+                    policy: appTraversalPolicy(),
                     child: switch (section) {
                       SettingsSection.sources => const SourcesSettings(),
                       SettingsSection.categories => const CategoriesManager(),
@@ -123,6 +124,7 @@ class _SettingsNav extends StatelessWidget {
     return _Card(
       padding: EdgeInsets.all(tokens.spacing.s12),
       child: FocusTraversalGroup(
+        policy: appTraversalPolicy(),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
