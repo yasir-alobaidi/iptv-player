@@ -430,6 +430,12 @@ class AppFocusTokens {
   /// 1280 canvas, a little more where it floats over the picture.
   final double cardBarHeight;
 
+  /// The bar floats over the picture (a TV): its track is the text colour
+  /// at [cardBarTrackOpacity] (the canvas's `Google TV Home` draws 20 %
+  /// white; a little more reads on a dark poster), over a soft shadow.
+  bool get cardBarFloats => cardBarInset > 0;
+  double get cardBarTrackOpacity => 0.3;
+
   /// How far a ring drawn outside a control reaches past its edge.
   double get reach => inside ? 0 : gap + ringWidth + glowWidth;
 
@@ -824,6 +830,12 @@ class AppElevation {
   /// Large artwork on the casting screen.
   List<BoxShadow> get hero => const [
     BoxShadow(color: Color(0x73000000), blurRadius: 60, offset: Offset(0, 30)),
+  ];
+
+  /// A thin bar floating over a picture (a TV card's watch progress): a
+  /// soft dark edge, so it reads over a bright picture too.
+  List<BoxShadow> get overArtwork => const [
+    BoxShadow(color: Color(0x80000000), blurRadius: 4),
   ];
 }
 

@@ -522,12 +522,30 @@ class LandscapeCard extends StatelessWidget {
 /// a TV a little inside it, where the ring drawn inside the edge never
 /// covers it ([AppFocusTokens.cardBarInset]).
 Widget _progressBar(BuildContext context, double value) {
-  final focus = context.tokens.focus;
+  final tokens = context.tokens;
+  final focus = tokens.focus;
   final inset = focus.cardBarInset;
+  final bar = ProgressBar(
+    value: value,
+    height: focus.cardBarHeight,
+    // Over the picture: a track that reads on a dark poster, and a soft
+    // shadow for a bright one.
+    trackColor: focus.cardBarFloats
+        ? tokens.colors.textPrimary.withValues(alpha: focus.cardBarTrackOpacity)
+        : null,
+  );
   return Positioned(
     left: inset,
     right: inset,
     bottom: inset,
-    child: ProgressBar(value: value, height: focus.cardBarHeight),
+    child: focus.cardBarFloats
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(focus.cardBarHeight),
+              boxShadow: tokens.elevation.overArtwork,
+            ),
+            child: bar,
+          )
+        : bar,
   );
 }
