@@ -105,19 +105,38 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   @override
   void initState() {
     super.initState();
-    // Back from a cancelled or failed first sync: the form as it was.
+    // Back from a cancelled or failed first sync, or from this form: the
+    // form as it was. A file chosen on Welcome is asked for now, and wins.
     final pending = ref.read(pendingSourceDraftProvider);
     if (_isEdit) {
       unawaited(_loadEdit());
-    } else if (pending != null) {
-      _restore(pending);
     } else if (widget.preset case final preset?) {
       _type = preset.type;
       if (preset.path != null) _file.text = preset.path!;
+    } else if (pending != null) {
+      _restore(pending);
     }
+    _opened = _draft();
     for (final controller in _controllers) {
       controller.addListener(_onEdited);
     }
+  }
+
+  /// The form as it opened, to tell whether leaving it changes the kept
+  /// draft.
+  late final SourceDraft _opened;
+
+  /// Leaving the form by Back (its button, Esc, a remote's Back) keeps
+  /// what was typed for the next time it opens: on a TV every letter was
+  /// a walk over the keyboard, and Back is one press away (the user, on
+  /// the Bedroom TV). A form left as it opened changes nothing; one
+  /// emptied by hand forgets it. In memory only, as after a failed sync.
+  void _keepDraft() {
+    if (_isEdit) return;
+    final draft = _draft();
+    if (draft == _opened) return;
+    final empty = _controllers.every((c) => c.text.trim().isEmpty);
+    ref.read(pendingSourceDraftProvider.notifier).draft = empty ? null : draft;
   }
 
   /// Edit mode: fills the form from the source and its keyring entry. A
@@ -435,7 +454,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   }
 
   Future<void> _back() async {
-    if (!_isEdit) ref.read(pendingSourceDraftProvider.notifier).draft = null;
+    _keepDraft();
     if (context.canPop()) {
       context.pop();
       return;
@@ -498,59 +517,65 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
     if (_isEdit) return _editFrame(context, form, card, narrow: narrow);
 
-    return OnboardingFrame(
-      step: 1,
-      title: 'Connect your provider',
-      subtitle: ref.watch(formFactorProvider) == FormFactor.tv
-          ? "Your password is kept encrypted on this TV, never in the app's "
-                'files.'
-          : 'Your password is kept in your system keychain, never in the '
-                "app's files.",
-      body: narrow
-          ? form
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(width: 620, child: form),
-                SizedBox(width: spacing.s48),
-                Expanded(
-                  child: Center(child: SingleChildScrollView(child: card)),
-                ),
-              ],
-            ),
-      footer: OnboardingFooter(
-        leading: AppButton(
-          label: 'Back',
-          variant: AppButtonVariant.ghost,
-          size: AppButtonSize.l,
-          onPressed: _saving ? null : () => unawaited(_back()),
+    // The remote's Back pops the route without the Back button.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _keepDraft();
+      },
+      child: OnboardingFrame(
+        step: 1,
+        title: 'Connect your provider',
+        subtitle: ref.watch(formFactorProvider) == FormFactor.tv
+            ? "Your password is kept encrypted on this TV, never in the app's "
+                  'files.'
+            : 'Your password is kept in your system keychain, never in the '
+                  "app's files.",
+        body: narrow
+            ? form
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(width: 620, child: form),
+                  SizedBox(width: spacing.s48),
+                  Expanded(
+                    child: Center(child: SingleChildScrollView(child: card)),
+                  ),
+                ],
+              ),
+        footer: OnboardingFooter(
+          leading: AppButton(
+            label: 'Back',
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.l,
+            onPressed: _saving ? null : () => unawaited(_back()),
+          ),
+          actions: [
+            if (passed)
+              AppButton(
+                label: 'Test again',
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.l,
+                onPressed: _saving ? null : () => unawaited(_test()),
+              ),
+            if (passed)
+              AppButton(
+                label: 'Start sync',
+                trailingIcon: AppIcons.arrowRight,
+                size: AppButtonSize.l,
+                focusNode: _primaryNode,
+                loading: _saving,
+                onPressed: () => unawaited(_start()),
+              )
+            else
+              AppButton(
+                label: _check is CheckFailed ? 'Test again' : 'Test connection',
+                size: AppButtonSize.l,
+                focusNode: _primaryNode,
+                loading: checking,
+                onPressed: () => unawaited(_test()),
+              ),
+          ],
         ),
-        actions: [
-          if (passed)
-            AppButton(
-              label: 'Test again',
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.l,
-              onPressed: _saving ? null : () => unawaited(_test()),
-            ),
-          if (passed)
-            AppButton(
-              label: 'Start sync',
-              trailingIcon: AppIcons.arrowRight,
-              size: AppButtonSize.l,
-              focusNode: _primaryNode,
-              loading: _saving,
-              onPressed: () => unawaited(_start()),
-            )
-          else
-            AppButton(
-              label: _check is CheckFailed ? 'Test again' : 'Test connection',
-              size: AppButtonSize.l,
-              focusNode: _primaryNode,
-              loading: checking,
-              onPressed: () => unawaited(_test()),
-            ),
-        ],
       ),
     );
   }

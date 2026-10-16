@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -320,6 +322,38 @@ void main() {
       expect(draft.userAgent, 'Special/1.0');
       expect(draft.epgUrl, 'http://epg.test/guide.xml');
       expect(draft.liveFormat, LiveFormat.hls);
+    });
+
+    testWidgets('Back keeps what was typed for the next time (the user, on '
+        'the Bedroom TV: Back dropped a form typed by remote); emptied, it '
+        'is forgotten', (tester) async {
+      final app = await pumpApp(tester, overrides: fakes.overrides);
+      Future<void> open() async {
+        unawaited(app.router.push(addSourceRoutePath));
+        await settleApp(tester);
+        expect(find.text('Connect your provider'), findsOneWidget);
+      }
+
+      await open();
+      await fillXtream(tester);
+      // The remote's Back: the route pops, the Back button isn't pressed.
+      await tester.binding.handlePopRoute();
+      await settleApp(tester);
+      expect(find.text('Connect your provider'), findsNothing);
+
+      await open();
+      expect(find.text('line.northwind.test:8080'), findsOneWidget);
+      expect(find.text('living-room'), findsOneWidget);
+
+      for (final label in ['Server address', 'Username', 'Password']) {
+        await type(tester, label, '');
+      }
+      await press(tester, 'Back');
+      expect(find.text('Connect your provider'), findsNothing);
+
+      await open();
+      expect(find.text('line.northwind.test:8080'), findsNothing);
+      expect(find.text('living-room'), findsNothing);
     });
 
     testWidgets('comes back filled in after a cancelled sync', (tester) async {
