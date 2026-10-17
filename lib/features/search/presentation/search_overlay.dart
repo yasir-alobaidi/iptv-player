@@ -89,6 +89,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// here. Its keys move the cursor, as the field's do.
   final _results = FocusNode(debugLabel: 'search results');
 
+  /// The recent searches' Clear: on a TV ↑ from the first of them (the
+  /// user: "the focus never goes there"), inside [_results].
+  final _clear = FocusNode(debugLabel: 'clear recent searches');
+
   /// The keyboard's keys, a scope of their own: their first key takes the
   /// focus as the keyboard opens, and the scope keeps the key the remote
   /// left from, for ← and Back from the results.
@@ -184,6 +188,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       ..removeListener(_onResultsFocus)
       ..dispose();
     _keys.dispose();
+    _clear.dispose();
     _query.dispose();
     _field.dispose();
     _scroll.dispose();
@@ -194,6 +199,17 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   SearchActions _actions() =>
       SearchActions(ProviderScope.containerOf(context), GoRouter.of(context));
+
+  /// The recent searches show, with their Clear above the first.
+  bool get _clearShown =>
+      _entries.any((entry) => entry is _HeadingEntry && entry.recent);
+
+  /// Clear: the recent searches go; on a TV the remote goes back where
+  /// it came from, Clear going with them.
+  void _clearRecent() {
+    if (_onTv && _clear.hasFocus) _backFromResults();
+    unawaited(_session.clearRecent());
+  }
 
   List<_Entry> get _selectable => [
     for (final entry in _entries)
@@ -210,10 +226,11 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     switch (key) {
       case LogicalKeyboardKey.arrowDown:
         return _moveBy(1, selectable);
-      // At the top on a TV, ↑ goes back to the words; ← too, the keyboard
-      // being on the left.
+      // At the top on a TV, ↑ goes back to the words, by the recent
+      // searches' Clear when they show; ← too, the keyboard being on the
+      // left.
       case LogicalKeyboardKey.arrowUp when _onTv && _cursor == 0:
-        _openKeyboard();
+        _clearShown ? _clear.requestFocus() : _openKeyboard();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft when _onTv:
         _openKeyboard();
@@ -269,14 +286,26 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   /// The results with the focus (a TV): the field's keys, and ← (or Esc)
   /// back to the keys. The arrows and Tab never take the focus elsewhere:
-  /// nothing is above the first row or right of the rows.
+  /// nothing is above the first row or right of the rows but the recent
+  /// searches' Clear, whose ↓ is the list again and ↑ the keyboard.
   KeyEventResult _onResultsKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowLeft || LogicalKeyboardKey.escape:
         _backFromResults();
         return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowDown when _clear.hasFocus:
+        _results.requestFocus();
+        _reveal(_cursor);
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowUp when _clear.hasFocus:
+        _openKeyboard();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowRight || LogicalKeyboardKey.tab
+          when _clear.hasFocus:
+        return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp when _cursor == 0:
+        if (_clearShown) _clear.requestFocus();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp ||
           LogicalKeyboardKey.arrowDown ||
@@ -897,7 +926,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     // while the results have it, or the field (the keyboard closed) whose
     // ↑/↓ move it; while the keys have it the rows rest, one focus on the
     // screen (the user, on the TV: "the blue border").
-    final shown = !_onTv || _results.hasFocus || !_typing;
+    final shown =
+        !_onTv || (!_clear.hasFocus && (_results.hasFocus || !_typing));
     var index = -1;
     return ListView(
       controller: _scroll,
@@ -909,7 +939,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
           switch (entry) {
             _HeadingEntry() => _Heading(
               entry: entry,
-              onClear: () => unawaited(_session.clearRecent()),
+              clearFocus: _clear,
+              onClear: _clearRecent,
             ),
             _ => () {
               index++;
@@ -1138,9 +1169,14 @@ class _StillArriving extends StatelessWidget {
 }
 
 class _Heading extends StatelessWidget {
-  const new({required this.entry, required this.onClear});
+  const new({
+    required this.entry,
+    required this.clearFocus,
+    required this.onClear,
+  });
 
   final _HeadingEntry entry;
+  final FocusNode clearFocus;
   final VoidCallback onClear;
 
   @override
@@ -1174,6 +1210,7 @@ class _Heading extends StatelessWidget {
                 label: 'Clear',
                 variant: AppButtonVariant.ghost,
                 size: AppButtonSize.s,
+                focusNode: clearFocus,
                 onPressed: onClear,
               ),
           ],

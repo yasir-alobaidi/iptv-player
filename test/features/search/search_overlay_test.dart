@@ -736,6 +736,48 @@ void main() {
       expect(focusedKey(), 'p');
     });
 
+    testWidgets("the recent searches' Clear is reached by remote (the user: "
+        '"the focus never goes there"): ↑ from the first, ↓ back, ← to the '
+        'keys; OK clears them and the keys have the focus', (tester) async {
+      search.recent = ['tennis open', 'cup final'];
+      await openTv(tester);
+      await press(tester, LogicalKeyboardKey.arrowRight, times: 10);
+      expect(ringed(tester), ['tennis open']);
+
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(ringed(tester), ['Clear'], reason: 'one ring: Clear alone');
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(ringed(tester), ['tennis open']);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'p', reason: 'the key the remote left from');
+
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(ringed(tester), ['Clear']);
+      await ok(tester);
+      expect(search.recent, isEmpty);
+      expect(find.text('RECENT SEARCHES'), findsNothing);
+      expect(focusedKey(), 'p');
+    });
+
+    testWidgets('the keyboard closed, ↑ from the first recent search is Clear, '
+        '↑ again the keyboard', (tester) async {
+      search.recent = ['tennis open', 'cup final'];
+      await openTv(tester);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'search field');
+      expect(ringed(tester), ['tennis open']);
+
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(ringed(tester), ['Clear']);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      await settle(tester);
+      expect(find.byType(RemoteKeyboard), findsOneWidget);
+      expect(focusedKey(), isNotNull);
+    });
+
     testWidgets('OK on a recent search, the keyboard closed, runs it (it '
         'opened the keyboard: the user, on the TV)', (tester) async {
       search
