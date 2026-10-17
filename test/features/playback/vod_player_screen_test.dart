@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -502,6 +503,38 @@ void main() {
       await settle(tester);
       expect(t.rig.engine.calls.last, 'paused:false');
       expect(find.byType(OsdCenterPlay), findsNothing);
+    });
+
+    _vodTest('a hidden OSD is not rebuilt as the film plays (its time '
+        'moved 4 times a second); it is up to date the moment it shows', (
+      tester,
+      t,
+    ) async {
+      await play(tester, t);
+      Duration shown() => tester
+          .widget<VodOsdBottom>(find.byType(VodOsdBottom))
+          .timeline
+          .position;
+      t.rig.engine.progress(const Duration(minutes: 6));
+      await settle(tester);
+      expect(shown(), const Duration(minutes: 6));
+
+      // It hides on its own, then fades out.
+      await tester.pump(PlayerScreen.osdTimeout);
+      await tester.pump(const Duration(seconds: 1));
+      t.rig.engine.progress(const Duration(minutes: 7));
+      await settle(tester);
+      expect(shown(), const Duration(minutes: 6));
+
+      // A mouse move brings it back, at the film's place.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: tester.getCenter(find.byType(PlayerScreen)),
+      );
+      await mouse.moveBy(const Offset(4, 4));
+      await tester.pump();
+      expect(shown(), const Duration(minutes: 7));
+      await mouse.removePointer();
     });
 
     _vodTest('a double click is full screen, not a pause', (tester, t) async {

@@ -107,6 +107,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _osd = true;
   Timer? _osdTimer;
 
+  /// The OSD has faded out: a file's stops following its time, which
+  /// moves 4 times a second, until it shows again.
+  bool _osdFaded = false;
+
+  /// What a faded-out file's OSD listens to: nothing.
+  static final Listenable _still = Listenable.merge(const []);
+
   ChannelItem? _zapTarget;
   Timer? _zapTimer;
   ChannelItem? _banner;
@@ -1005,6 +1012,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     Widget osd(Widget child) => AnimatedOpacity(
       opacity: showOsd ? 1 : 0,
       duration: showOsd ? tokens.motion.osdIn : tokens.motion.osdOut,
+      onEnd: () {
+        if (mounted && _osdFaded == showOsd) {
+          setState(() => _osdFaded = !showOsd);
+        }
+      },
       child: IgnorePointer(ignoring: !showOsd, child: child),
     );
 
@@ -1074,7 +1086,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                             if (vod)
                               osd(
                                 ListenableBuilder(
-                                  listenable: _vod,
+                                  // Still built while hidden (a TV focuses
+                                  // its controls before they fade in), but
+                                  // not rebuilt: a show catches it up.
+                                  listenable: !showOsd && _osdFaded
+                                      ? _still
+                                      : _vod,
                                   builder: (context, _) =>
                                       _vodOsd(item, tracks, sound),
                                 ),
