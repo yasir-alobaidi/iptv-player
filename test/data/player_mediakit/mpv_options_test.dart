@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
@@ -169,6 +170,16 @@ void main() {
         mpvOptionsFor(const PlayRequest(url: 'u')).containsKey('force-window'),
         isFalse,
       );
+    });
+
+    test("Android's direct output skips mpv's scaler, so Fill and Stretch "
+        "are the picture widget's fit (a 4:3 channel kept its bars on the "
+        "Bedroom TV); the ratios stay mpv's", () {
+      expect(directOutputFit(AspectMode.fit), BoxFit.contain);
+      expect(directOutputFit(AspectMode.fill), BoxFit.cover);
+      expect(directOutputFit(AspectMode.stretch), BoxFit.fill);
+      expect(directOutputFit(AspectMode.ratio16x9), BoxFit.contain);
+      expect(directOutputFit(AspectMode.ratio4x3), BoxFit.contain);
     });
   });
 }

@@ -79,6 +79,19 @@ const _directOutput = 'mediacodec_embed';
 /// (docs/setup.md §7).
 const _mpvLog = String.fromEnvironment('BIJOU_MPV_LOG');
 
+/// The picture widget's fit on Android's direct output, which draws whole
+/// frames and skips mpv's scaler: `keepaspect` and `panscan` do nothing
+/// there, so Fill and Stretch are the widget's (a 4:3 channel kept its
+/// bars on the Bedroom TV). The ratios are mpv's `video-aspect-override`,
+/// which the widget follows. Exposed for tests.
+BoxFit directOutputFit(AspectMode mode) => switch (mode) {
+  AspectMode.fill => BoxFit.cover,
+  AspectMode.stretch => BoxFit.fill,
+  AspectMode.fit ||
+  AspectMode.ratio16x9 ||
+  AspectMode.ratio4x3 => BoxFit.contain,
+};
+
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
 /// the preset, then what varies per stream. Exposed for tests.
 ///
@@ -203,6 +216,9 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
 
   final _events = StreamController<PlayerEvent>.broadcast();
   final _subscriptions = <StreamSubscription<Object?>>[];
+
+  /// Picture size on the direct output ([directOutputFit]).
+  final ValueNotifier<BoxFit> _directFit = ValueNotifier(BoxFit.contain);
 
   NativePlayer get _native => _player.platform! as NativePlayer;
 
@@ -598,6 +614,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       AspectMode.ratio16x9 => ('yes', '16:9', '0'),
       AspectMode.ratio4x3 => ('yes', '4:3', '0'),
     };
+    if (_direct) _directFit.value = directOutputFit(mode);
     await _set('keepaspect', keep);
     await _set('video-aspect-override', override);
     await _set('panscan', panscan);
@@ -653,6 +670,18 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         child: const SizedBox.expand(),
       );
     }
+    if (_direct) {
+      return ValueListenableBuilder(
+        key: key,
+        valueListenable: _directFit,
+        builder: (context, directFit, _) => Video(
+          controller: controller,
+          fit: directFit == BoxFit.contain ? fit : directFit,
+          controls: null,
+          fill: background,
+        ),
+      );
+    }
     return Video(
       key: key,
       controller: controller,
@@ -671,6 +700,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       await subscription.cancel();
     }
     await _events.close();
+    _directFit.dispose();
     await _player.dispose();
   }
 }
