@@ -14,7 +14,7 @@ On Linux the app depends on our patched media_kit_video (ADR-003). Every unpatch
 | network-timeout | `10` | fail fast; the watchdog retries |
 | user-agent | source UA | many panels require it |
 | stream-lavf-o | `reconnect=1,reconnect_streamed=1,reconnect_delay_max=5` | FFmpeg-level reconnect for short drops |
-| demuxer-max-back-bytes | small for live | bound memory |
+| demuxer-max-back-bytes | 16MiB live, 64MiB a file; 16MiB for both on a TV | bound memory |
 | alang / slang | from settings | preferred audio/subtitle languages |
 
 ### Buffer presets (Settings → Playback)
@@ -23,6 +23,8 @@ On Linux the app depends on our patched media_kit_video (ADR-003). Every unpatch
 | Low latency | 2 | 32MiB | 2 | 500000 | 0.5 | sports, strong connection |
 | **Balanced (default)** | 8 | 64MiB | 8 | 1000000 | 1 | most cases |
 | Stable | 20 | 128MiB | 20 | 2000000 | 2 | weak Wi-Fi, unstable providers |
+
+On a TV (Android) `demuxer-max-bytes` is at most 32MiB, whatever the preset, and 16MiB is kept behind, a film's too (ADR-031): the Chromecast with Google TV had about 200 MB free with a film playing. The preset's seconds still apply below the cap; a seek further back than what is kept asks the server again.
 
 Every option and property name in this doc was verified against the system libmpv 0.34.1 (Ubuntu 22.04) in ADR-003. media_kit also sets `subs-fallback`, which 0.34.1 doesn't have; it logs one harmless error.
 

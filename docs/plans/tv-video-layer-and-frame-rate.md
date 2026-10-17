@@ -1,0 +1,80 @@
+# Google TV — the picture on its own layer, and Match frame rate: plan
+
+## Context
+The user's list of recommendations (2026-10-16), items 4 and 5: a trial of the full-screen video on its own Android layer (the biggest CPU win during playback, sharper scaling, and the only way to real HDR10/HLG with mpv), and an optional "Match frame rate" for films. Both need the Bedroom TV, so this plan was researched read-only on 2026-10-17 (an agent, nothing built or run on a device) for the session that has the TV. Confidence tags: **[H]** read in the code or official docs, **[M]** inferred or third-party, **[L]** a guess. "TV:" is what only the TV can show.
+
+Measured before (progress.md, Measurements, 2026-10-16): a 1080p H.264 film, controls hidden: ~50 % of one core of four; Flutter's raster thread 12–17 %, the main thread ~10 %, the hardware decoder ~19 %, SurfaceFlinger ~12 %; 151 MB PSS; ~200 MB free on the TV.
+
+## Item 1 — The full-screen video on its own SurfaceView
+
+### (a) How the picture reaches mpv today [H]
+- `lib/data/player_mediakit/media_kit_player_engine.dart` makes `VideoController(vo: 'mediacodec_embed', hwdec: 'mediacodec')` when `direct` (Android, hardware decoding).
+- `third_party/media_kit_video/lib/src/video_controller/video_controller.dart:92-93` → `AndroidVideoController.create` (`android_video_controller/real.dart:133-212`): `VideoOutputManager.Create`, then `vo=null, hwdec, vid=auto, opengl-es, force-window, gpu-context=android, hwdec-codecs`.
+- Java: `MediaKitVideoPlugin.java:39-53` → `VideoOutputManager.create` (`VideoOutputManager.java:29-37`) → `VideoOutput` → `textureRegistry.createSurfaceProducer()` (`VideoOutput.java:52-57`). On API 29+ that is Flutter's `ImageReaderSurfaceProducer`, whose `onImageAvailable` runs on the main looper for every frame (Flutter's `FlutterRenderer.java:225-248, 529-547`); with Flutter compositing the texture again, that is the measured main ~10 % and raster 12–17 %.
+- No surface until the first `video-params`: `real.dart:87-129` → `SetSurfaceSize` → `VideoOutput.setSurfaceSize` (79-91) → `onSurfaceAvailable` (93-101): `wid` = a JNI global ref to the ImageReader's `android.view.Surface` (`MediaKitAndroidHelper`, reflection), sent as `VideoOutput.Resize {id, wid, rect}` → `real.dart:258-273` → `widListener` (49-76): `vo=null`, `android-surface-size`, `wid`, `vo=mediacodec_embed`, `vid=auto` (a new decoder), then `seek(position)`.
+- Every size change repeats that with a new Surface (ADR-027's "surface remade"); `onSurfaceCleanup` (103-113, the app in the background) sends wid 0 → `vo=null`, `vid=no`.
+- `Video` draws `Texture(id)` in a `FittedBox` (`video_texture.dart:390, 420`), media_kit's `SubtitleView` above it (454), and holds a wakelock while playing (131, 338).
+- **mpv's `vo_mediacodec_embed` does nothing to the picture** [H, mpv source]: it hands `WinID` to MediaCodec; no scaling, aspect, colour or HDR handling. So **Picture size (`setAspect`: keepaspect, panscan, video-aspect-override) very likely does nothing on the TV today** [M]. TV: try Picture size → Stretch / 4:3 on a film.
+
+### (b) The options
+Flutter's `FlutterActivity.getRenderMode()` / `getTransparencyMode()` can be overridden [H]; `surface` + `transparent` makes `FlutterSurfaceView(ctx, true)` with `PixelFormat.TRANSPARENT` and `setZOrderOnTop(true)` (`FlutterSurfaceView.java:116-118`); its javadoc calls it "less performant than opaque" (measure it). Keep the background opaque (no `windowIsTranslucent`). Z-order: the video SurfaceView < the window (black) < Flutter, transparent where nothing is painted.
+
+| Option | A real video layer? | Verdict |
+|---|---|---|
+| **A. SurfaceView under a transparent FlutterSurfaceView** | Yes: the hardware composer scales and composites it; OSD over it; focus unchanged | **The trial** (mpv-android's model) |
+| `RenderMode.texture` + transparent | Video yes, but Flutter's UI goes through a TextureView (a copy per UI frame) | No |
+| Platform view, Virtual Display / TLHC | No: a texture again | Defeats the purpose |
+| Platform view, Hybrid Composition | Yes, but Flutter above goes into overlays, threads merge | Likely eats the win [M]. No |
+| HCPP (`initHybridAndroidView`, `EnableHcpp`) | Yes (SurfaceControl); needs API 34 + Impeller + Vulkan | Experimental; later |
+| **D. SurfaceControl** reparented into a SurfaceView | Yes; the Surface never dies, so mpv's wid never changes | The hardening option; more code |
+
+### (c) The smallest trial
+- **T0 — the layer stack alone, no mpv** (half a day, debug build): `MainActivity` overrides the two modes and adds a SurfaceView under the FlutterView painting a moving pattern; a debug screen with a transparent middle, an OSD-like gradient and focusable buttons. TV: Impeller-on-Vulkan transparency on the Mali-G31 (the main unknown; fallback `io.flutter.embedding.android.ImpellerBackend=opengles`), z-order, focus, the composition type in `dumpsys SurfaceFlinger`, Home's idle cost with a transparent Flutter layer.
+- **T1 — films only, full screen only:** on a TV a film opens on the layer, a channel on the texture as now. The switch happens only at an open (a film only plays full screen: `player_screen.dart` stops it when the player closes), so no mid-play wid change. Proves the CPU win, the picture, HDR, and is the base for frame-rate matching.
+- **T2 — channels:** one layer for both (recommended): the SurfaceView moves between the preview's rect and full screen by LayoutParams; the Surface stays (only `surfaceChanged`), so the wid never changes; Flutter paints the preview's corners over it; likely also ends the black first preview [M]. (Texture preview + layer full screen would change the wid on every OK and Back: 0.5–2 s black each way, ADR-027's path. No.)
+- Keeping the Surface alive: on API 34 `SurfaceView.setSurfaceLifecycle(SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT)`. TV: log `surfaceDestroyed` on Home; if it doesn't hold, option D.
+
+### (d) HDR
+- A texture can't carry it: Android "TextureView transcodes the video from HDR to SDR … use SurfaceView" [H] — today's washed-out HDR.
+- mpv needs nothing on the layer: MediaCodec into a SurfaceView, "without any special handling" [H]; vendor-dependent in practice [M].
+- Caveat [H, FFmpeg `mediacodecdec.c`]: FFmpeg sets no `color-standard`/`color-transfer`/`hdr-static-info` before configure, so HDR depends on the Amlogic decoder reading the HEVC stream's colour description [M]. If PQ still shows as SDR, the fix is in FFmpeg (a rebuilt libmpv): out of scope.
+- Check the decoder knows the colour: mpv's `video-params/gamma` (`pq`/`hlg`) and `video-params/primaries` (`bt.2020`) into StreamInfo, the I overlay and the first-frame log line.
+- Display: `Display.getHdrCapabilities()`; `DisplayManager.getHdrConversionMode()` (API 34). Entering/leaving HDR is likely a 1–3 s HDMI resync [M]. Dolby Vision opens as `video/hevc`: profile 8.1 plays as its HDR10 base, profile 5 with wrong colours [M].
+- Verify on the TV: HDR10 and HLG 23.976 samples from the bundled ffmpeg (libx265: `-pix_fmt yuv420p10le -r 24000/1001 -x265-params colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:master-display=…:max-cll=1000,400:hdr10=1`; `transfer=arib-std-b67` for HLG) in `tools/media_samples/generate.sh`; `dumpsys SurfaceFlinger` (the video layer's dataspace BT2020_PQ/HLG, composition DEVICE); `dumpsys display | grep -iE "hdr|HdrConversion"`; the Roku TV's own HDR badge (the user's eyes; screenshots are SDR, and the video plane may be black in `screencap`).
+
+### (e) Risks and rollback
+1. Transparency on this GPU (T0 answers it).
+2. A transparent Flutter layer everywhere: the composer blends 2–3 full-screen layers even on Home; a GPU (CLIENT) fallback costs SurfaceFlinger more. Measure in T0; hide the container when there is no picture.
+3. Stale/black frames: the layer keeps the last item's buffer; Flutter keeps painting `colors.video` until the first frame (`player_surface.dart:71-75`); add a 1–2 frame margin after `PlayerFirstFrame`.
+4. Z-order: Flutter above everything in its window; dialogs and toasts are separate windows [H].
+5. The OSD's alpha: watch for CLIENT fallback while it shows [M].
+6. Focus: the container and SurfaceView not focusable, `IMPORTANT_FOR_ACCESSIBILITY_NO`, at index 0 [H].
+7. Back/Home: `surfaceDestroyed` can't wait for Dart (Dart on the main thread); FOLLOWS_ATTACHMENT or D [M].
+8. Lost with the `Video` widget: the wakelock (`SurfaceView.setKeepScreenOn(true)` while playing, or ambient mode starts mid-film) and subtitles (keep media_kit's `SubtitleView`).
+9. Aspect becomes the layer's rect (from `dw`/`dh` and the mode) — also fixes Picture size.
+10. Memory: no ImageReader buffers, so PSS equal or lower [M]; soak it.
+11. adb screenshots may show black where the picture is.
+12. A second patch for the vendor script to apply.
+
+Rollback: `--dart-define=BIJOU_VIDEO_LAYER=true` (off by default during the trial; Gradle turns it into `BuildConfig.VIDEO_LAYER` for `MainActivity` [M]); after acceptance, a Settings → Playback (TV) choice if T0 shows the transparent surface can stay on.
+
+### (f) Steps
+1. **T0.** `android/app/src/main/kotlin/io/github/yasiralobaidi/bijou/MainActivity.kt`, `android/app/build.gradle.kts`, a debug-only Dart screen. Go/no-go on the TV.
+2. **Patch media_kit_video:** `third_party/patches/media_kit_video-2.0.1-android-video-layer.patch`; `tools/vendor_media_kit_video.sh` applies every patch in order. `MediaKitVideoPlugin.java` implements `ActivityAware`, gains `VideoLayer.Attach/Detach/SetRect/SetKeepScreenOn` and the callback `VideoLayer.Surface {handle, wid}`; a new `VideoLayer.java` (a black FrameLayout + SurfaceView at index 0 of `android.R.id.content`, the wid through `MediaKitAndroidHelper`, placed at the physical-pixel rect given); `real.dart` gains `useLayer(bool)` (layer mode: no `SetSurfaceSize`, still sets `rect` and completes the first frame; back to the texture forces `SetSurfaceSize`; `widListener` skips the seek when nothing plays).
+3. **Engine:** `open()` chooses the layer for `!request.live` on Android's direct output (T1), waits up to 1 s for the layer's wid, else the texture; `videoView()` returns a transparent box + `SubtitleView` on the layer; aspect maths in a pure `lib/data/player_mediakit/video_layer_geometry.dart`; `streamInfo()` adds gamma and primaries; the first-frame log says "layer" or "texture".
+4. **Interface:** `PlayerEngine` gains `ValueListenable<bool> get pictureBehindApp` (no media_kit types, hard rule 6); the fake engine implements it.
+5. **UI:** transparent when `pictureBehindApp && showPicture`, else `colors.video`: `player_surface.dart:130-135`, `player_screen.dart` (its Material and ColoredBox); T2 adds `preview_pane.dart` and corner masks.
+6. **Kotlin:** `MainActivity` overrides `getRenderMode()`/`getTransparencyMode()`, gated on `BuildConfig.VIDEO_LAYER`.
+7. **Desktop tests:** `video_layer_geometry_test` (fit, letterbox, pillarbox, fill, stretch, 16:9, 4:3, anamorphic via `dw`); the engine's choice (a TV film → layer; live → texture in T1; never on the desktop or with the define off); `player_surface_test` (opening, reconnecting, failed paint the video colour; playing on the layer paints nothing over it); the TV player tests again with `pictureBehindApp` true. The vendored Java only on the TV.
+8. **TV measurements, before and after** (same release build but the define, the fake panel's 1080p film, OSD hidden, 60 s in): `top -H -b -d 5 -n 4 -p <pid>` (raster, main, CodecLooper, mpv); `top -b -d 5 -n 4 -m 15` (SurfaceFlinger, composer, codec service); `dumpsys SurfaceFlinger --latency '<layer>'` — **Flutter's frames a second: about the film's fps before, about 0 after** (the clearest proof); the composition type and dataspace per layer; `dumpsys meminfo` (151 MB PSS before) and `/proc/meminfo`; dropped frames from the I overlay over 5 min; Home at rest; a 2-hour film soak (meminfo every 10 min, the screen stays on).
+
+## Item 2 — "Match frame rate" for films (TV only, off by default)
+- **`Surface.setFrameRate(fps, FIXED_SOURCE, CHANGE_FRAME_RATE_ALWAYS)`** (API 31) only affects surfaces the system compositor presents [H]: nothing on today's ImageReader texture; it needs item 1's layer, and a non-seamless switch also needs the system's "Match content frame rate" opt-in [H].
+- **`WindowManager.LayoutParams.preferredDisplayModeId`** (API 23) works with any rendering; Google recommends it when a heavy mode switch is wanted, "for example, on an Android TV device" [H]; Kodi's method [M]. **Choose this** (ADR-025 named it). Whether it ignores the system's Match-content setting: TV.
+- The rate: `streamInfo()` already prefers `container-fps` on the direct output. Act only on 23.9–24.1 (29.97/30 on 59.94/60 is already even; no 50 Hz mode on this TV). Pick the mode at the current size (1080p) within 0.01 Hz: 23.976 and 24.000 are separate modes.
+- Switch only for a film or episode of 15 min or more, at 23.976/24, with a matching mode, the setting on, on a TV; never channels or short clips. At `PlayerFirstFrame` (`playback_coordinator.dart:580`): pause → request the mode → wait for `DisplayListener.onDisplayChanged` (5 s timeout) + ~1.5 s settle (tune on the TV) → play unless the user paused meanwhile; the watchdog never counts that pause. Back to normal (`preferredDisplayModeId = 0`) when the player closes, the coordinator goes idle or a channel plays, after a 2 s grace (a next episode at the same rate doesn't flip twice). Home: the system drops the request while away and applies it on return [M]. Expect 1–3 s of black and silence at each switch [M].
+- Steps: `MainActivity.kt` a `bijou/display` channel (`modes()`, `request(id)`, a `modeChanged` event, `getMatchContentFrameRateUserPreference()` for diagnostics); `lib/core/platform/display_modes.dart` (interface + a do-nothing one); `lib/data/platform/android_display_modes.dart` (overridden in bootstrap on a TV only); `lib/features/playback/domain/frame_rate_match.dart` (pure `pickDisplayMode()` and a `FrameRateMatcher` with an injected clock); `PlaybackSettings.matchFrameRate` (JSON `matchFps`, default off); a TV-only "Match frame rate" row in `playback_settings.dart` saying the screen goes dark for a second or two when a film starts and ends; the display's rate in the I overlay.
+- Tests (desktop): `pickDisplayMode` (23.976 → 23.976, 24 → 24, none for 25/29.97/50/no fps); never for live, short clips, the setting off, or the desktop; the sequence with fakes and a fake clock; a stop during the switch clears the request; the user's pause is kept; a next episode keeps the mode; the settings JSON (round-trip, default off, junk). TV only: the switch (`dumpsys display` shows 1080p 23.976), the black's length, A/V sync after it, back to 59.94 on Back and Home, with the system's Match content setting at each value.
+
+## Sources
+[Android frame rate guide](https://developer.android.com/media/optimize/performance/frame-rate) · [Surface (setFrameRate)](https://developer.android.com/reference/android/view/Surface) · [Android TV: adjust display settings](https://developer.android.com/training/tv/playback/adjust-display-settings) · [Android HDR playback](https://developer.android.com/media/grow/hdr-playback) · [AOSP: HDR video playback](https://source.android.com/docs/core/display/hdr) · [HdrConversionMode](https://developer.android.com/reference/android/hardware/display/HdrConversionMode) · [Flutter: Android platform views](https://docs.flutter.dev/platform-integration/android/platform-views) · [mpv vo_mediacodec_embed.c](https://raw.githubusercontent.com/mpv-player/mpv/master/video/out/vo_mediacodec_embed.c) · [FFmpeg mediacodecdec.c](https://ffmpeg.org/doxygen/trunk/mediacodecdec_8c_source.html) · [9to5Google: frame-rate switching on the Chromecast](https://9to5google.com/2022/10/20/chromecast-google-tv-frame-rate-switching/) · the local Flutter 3.47.4 engine and framework sources.
