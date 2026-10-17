@@ -41,7 +41,7 @@ void main() {
   });
 
   test('a TV (low memory) reads at most 32 MiB ahead and keeps 16 MiB '
-      'behind, a film too; the seconds asked for stay the preset\'s', () {
+      "behind, a film too; the seconds asked for stay the preset's", () {
     for (final preset in BufferPreset.values) {
       for (final live in [true, false]) {
         final options = mpvOptionsFor(
