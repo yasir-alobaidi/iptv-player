@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -14,6 +16,22 @@ val commitCount: Int =
         providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
             .standardOutput.asText.get().trim().toInt()
     }.getOrDefault(0)
+
+// The TV video-layer trial (docs/plans/tv-video-layer-t0.md): true only when
+// the build passes `--dart-define=BIJOU_VIDEO_LAYER=true`. Flutter hands its
+// dart defines to Gradle as the `dart-defines` property: each `KEY=value`
+// UTF-8, base64-encoded, the entries joined by commas. Release builds never
+// pass it, so MainActivity stays as it is.
+val videoLayer: Boolean =
+    providers.gradleProperty("dart-defines").orNull.orEmpty()
+        .split(",")
+        .filter { it.isNotBlank() }
+        .mapNotNull { encoded ->
+            runCatching {
+                String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            }.getOrNull()
+        }
+        .any { it == "BIJOU_VIDEO_LAYER=true" }
 
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
@@ -36,6 +54,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = maxOf(flutter.versionCode, commitCount)
         versionName = flutter.versionName
+        buildConfigField("boolean", "VIDEO_LAYER", videoLayer.toString())
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
