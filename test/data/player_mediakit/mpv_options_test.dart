@@ -40,6 +40,26 @@ void main() {
     );
   });
 
+  test('a TV (low memory) reads at most 32 MiB ahead and keeps 16 MiB '
+      'behind, a film too; the seconds asked for stay the preset\'s', () {
+    for (final preset in BufferPreset.values) {
+      for (final live in [true, false]) {
+        final options = mpvOptionsFor(
+          PlayRequest(url: 'u', preset: preset, live: live),
+          lowMemory: true,
+        );
+        final reason = '${preset.name}, live: $live';
+        expect(options['demuxer-max-bytes'], '32MiB', reason: reason);
+        expect(options['demuxer-max-back-bytes'], '16MiB', reason: reason);
+        expect(
+          options['cache-secs'],
+          mpvOptionsFor(PlayRequest(url: 'u', preset: preset))['cache-secs'],
+          reason: reason,
+        );
+      }
+    }
+  });
+
   test('the source User-Agent, languages and deinterlace ride along', () {
     final options = mpvOptionsFor(
       const PlayRequest(

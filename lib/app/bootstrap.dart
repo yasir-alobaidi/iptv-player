@@ -161,7 +161,12 @@ Future<void> bootstrap() async {
     PaintingBinding.instance.imageCache,
     bytes: onDesktop ? decodedArtworkBytes : decodedArtworkBytesOnTv,
   );
-  final artwork = paths == null ? null : ArtworkCache(directory: paths.artwork);
+  final artwork = paths == null
+      ? null
+      : ArtworkCache(
+          directory: paths.artwork,
+          maxBytes: onDesktop ? artworkDiskBytes : artworkDiskBytesOnTv,
+        );
 
   final container = ProviderContainer(
     overrides: [

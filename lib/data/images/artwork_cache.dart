@@ -22,6 +22,13 @@ final class ArtworkUnavailable implements Exception {
   String toString() => 'ArtworkUnavailable: $reason';
 }
 
+/// docs/06's cap on the picture folder.
+const int artworkDiskBytes = 500 * 1024 * 1024;
+
+/// A TV's (docs/07: smaller caches on a 2 GB device with little storage):
+/// about Home, a few rows of Movies and Series, and their pages.
+const int artworkDiskBytesOnTv = 150 * 1024 * 1024;
+
 /// The app's own picture cache (Phase 5 decision 6): files in [directory]
 /// named by a hash of the URL, fetched at most [concurrency] at a time —
 /// the newest request first, and the oldest waiting ones dropped past
@@ -32,7 +39,7 @@ final class ArtworkCache {
   new({
     required this.directory,
     this.userAgent = defaultUserAgent,
-    this.maxBytes = 500 * 1024 * 1024,
+    this.maxBytes = artworkDiskBytes,
     this.concurrency = 6,
     this.maxWaiting = 96,
     this.maxFileBytes = 10 * 1024 * 1024,

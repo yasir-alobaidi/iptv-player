@@ -52,6 +52,14 @@ const Map<BufferPreset, Map<String, String>> _presetOptions = {
 const _liveBackBytes = '16MiB';
 const _vodBackBytes = '64MiB';
 
+/// A TV's caps (docs/07: a 2 GB device; the Chromecast with Google TV had
+/// about 200 MB free with a film playing): at most this much read ahead,
+/// whatever the preset, and this much kept behind, a film's too. The
+/// preset's seconds still apply below the cap; a seek further back than
+/// [_lowMemoryBackBytes] asks the server again.
+const _lowMemoryAheadBytes = '32MiB';
+const _lowMemoryBackBytes = '16MiB';
+
 /// mpv's `hwdec` for Settings → Playback → Hardware decoding: Automatic
 /// (ADR-003: only the decoders mpv lists as safe) and Off.
 const hwdecAutomatic = 'auto-safe';
@@ -78,10 +86,12 @@ const _mpvLog = String.fromEnvironment('BIJOU_MPV_LOG');
 /// leaves `hwdec` alone (nothing for a graphics card to draw to), and Off
 /// still says no. [direct] is Android's direct output, which shows only
 /// what MediaCodec decodes: Off there waits for the next launch.
+/// [lowMemory] is a TV's smaller buffers.
 Map<String, String> mpvOptionsFor(
   PlayRequest request, {
   bool picture = true,
   bool direct = false,
+  bool lowMemory = false,
 }) {
   // mpv's list option parts paths at ':' (';' on Windows), so a path
   // holding one is left out.
@@ -98,7 +108,12 @@ Map<String, String> mpvOptionsFor(
       'hwdec': hwdecOff
     else if (picture)
       'hwdec': hwdecAutomatic,
-    'demuxer-max-back-bytes': request.live ? _liveBackBytes : _vodBackBytes,
+    if (lowMemory) 'demuxer-max-bytes': _lowMemoryAheadBytes,
+    'demuxer-max-back-bytes': lowMemory
+        ? _lowMemoryBackBytes
+        : request.live
+        ? _liveBackBytes
+        : _vodBackBytes,
     'user-agent': request.userAgent ?? '',
     'alang': request.audioLanguages.join(','),
     'slang': request.subtitleLanguages.join(','),
@@ -363,6 +378,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       request,
       picture: _controller != null,
       direct: _direct,
+      lowMemory: Platform.isAndroid,
     );
     for (final MapEntry(:key, :value) in options.entries) {
       await _set(key, value);
