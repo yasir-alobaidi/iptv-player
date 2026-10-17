@@ -155,5 +155,20 @@ void main() {
         );
       }
     });
+
+    test("Android's direct output drops its window when nothing plays (it "
+        'spun a core of a TV after every film); other outputs keep theirs', () {
+      expect(
+        mpvOptionsFor(
+          const PlayRequest(url: 'u'),
+          direct: true,
+        )['force-window'],
+        'no',
+      );
+      expect(
+        mpvOptionsFor(const PlayRequest(url: 'u')).containsKey('force-window'),
+        isFalse,
+      );
+    });
   });
 }

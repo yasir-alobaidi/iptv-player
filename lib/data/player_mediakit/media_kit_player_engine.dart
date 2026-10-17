@@ -102,6 +102,9 @@ Map<String, String> mpvOptionsFor(
     ..._presetOptions[request.preset]!,
     // Read when the file's decoder starts, so a change in Settings applies
     // to the next thing played.
+    // media_kit keeps the output while nothing plays (`force-window`); the
+    // direct output then spun a core of a TV after every film (ADR-032).
+    if (direct) 'force-window': 'no',
     if (direct)
       'hwdec': hwdecDirect
     else if (!request.hardwareDecoding)
