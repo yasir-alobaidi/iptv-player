@@ -78,7 +78,7 @@ States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 ## VOD & series
 - Resume prompt when position > 60 s and < 95 % (Resume / Start over)
 - Mark complete at ≥ 95 %
-- Series: "Next episode" card with a cancelable 10 s countdown
+- Series: a "Next episode" card in the last minute (Next episode / Hide), then a cancelable 10 s countdown; never on a film (ADR-033)
 - Seek: ←/→ 10 s, Shift+←/→ 60 s, time bubble on the seek bar
 
 ### As built (Phase 5 step 6; ADR-012)
@@ -87,7 +87,9 @@ States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 - **Progress** (`WatchProgress`): saved every 10 s of playing, on pause, after a seek, on leaving (a stop, another item), on a failure and at the end; nothing for a file that never showed a picture. Watched at 95 %. Continue watching lists what is between a minute and 95 %, and a series' next episode after a watched one.
 - **The player stops a file** whenever it closes (Esc, a destination shortcut, the end); Live TV and the Guide stop only a channel.
 - **Keys:** Space, ←/→ 10 s and Shift+←/→ 60 s (one seek once the keys rest 300 ms), Home to the start, M/A/S/I/F as for live; the seek bar isn't a Tab stop. On a TV (ADR-030) ←/→ held seek in growing steps (10 s, then 30 s after about a second, a minute after about three), on the picture or on the seek bar, which is a stop above Play there; OK while a seek waits runs it now and plays. "Resumed from 24:10 · Home starts over" for 5 s; "Preparing…" while a file opens.
-- **The next episode:** the card counts from 10 at 20 s left and plays it where it was left; a pause holds the count; Esc cancels, and the end card offers Play next episode / Back to series. After the last episode, the series page.
+- **The next episode (ADR-033):** an episode with one after it has Next episode in the row. From 60 s left (an episode over 4 minutes) the card offers it with no count: Next episode plays it now (where it was left); Hide. At 20 s left it counts from 10 (Play now · N / Cancel) and plays it; a pause holds the count. Hide, Cancel, Esc or a remote's Back hide the card for the episode: nothing plays by itself, and the end card offers Play next episode / Back to series. Seeking back out of the last minute takes the card away; the last minute brings it back unless hidden. The card stands on its own, bottom right: it doesn't pin the OSD, which shows and hides around it without moving it (the end card pins it). **The focus:** on the desktop the picture keeps it, so ←/→ seek and Space pauses with the card up; Tab reaches its buttons, Enter/Space press. On a TV its first button takes it unless the remote is on one of the OSD's controls (scrubbing on the seek bar, say), and then gets it when the OSD hides; ←/→ move between its two buttons (they don't seek there), OK presses. The end card takes it on both. After Hide the picture has it. After the last episode, the series page. A film has neither the card nor the button.
+- **The OSD's menus** (Audio, Subtitles, Speed, Picture size) hold it up while open, since their keys never reach the player; closed, the focus is back on the control that opened it and the OSD's clock starts again.
+- **The keyboard is the player's while it is on top:** a page under it that takes the focus gives it back (the series page's autofocus did, when the episode just watched changed what it would play next, and Esc then left the player).
 - **Measured on the fake panel:** 532 ms to the first frame 30 s into the MP4 sample; mpv and FFmpeg ride through a connection dropped mid-file by themselves. The user's own panel: ADR-012 step 8.
 
 ## Local files and downloads

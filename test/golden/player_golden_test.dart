@@ -11,6 +11,7 @@ import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 
 import '../app/app_harness.dart';
 import '../features/live_tv/live_tv_fakes.dart';
@@ -156,6 +157,37 @@ void main() {
         await settle(tester);
 
         await golden(tester, 'images/player_episode_1920x1080.png');
+        await t.finish(tester);
+      },
+    );
+
+    sceneTest(
+      "an episode's last minute: the next episode offered, the OSD hidden "
+      '(ADR-033)',
+      // A look of its own: the hidden OSD's controls are still there to
+      // focus (a TV focuses them before they fade in).
+      audit: false,
+      (tester) async {
+        const length = Duration(minutes: 45);
+        const at = Duration(minutes: 44, seconds: 10);
+        final t = await play(
+          tester,
+          '/series/src-1/77',
+          length: length,
+          at: at,
+        );
+        // On the desktop the picture keeps the focus and the OSD hides on
+        // its own; it plays on all the while (a still picture is a stall).
+        for (var s = 1; s <= PlayerScreen.osdTimeout.inSeconds + 1; s++) {
+          t.rig.engine.progress(
+            at + Duration(seconds: s),
+            buffered: const Duration(seconds: 30),
+          );
+          await tester.pump(const Duration(seconds: 1));
+        }
+        await settle(tester);
+
+        await golden(tester, 'images/player_episode_next_offer.png');
         await t.finish(tester);
       },
     );

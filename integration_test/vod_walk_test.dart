@@ -208,10 +208,12 @@ void main() {
       final e2Length = coordinator.timeline.duration!;
 
       // ── To its last 25 s by keys: the card counts down, and S1 · E3
-      // plays on its own.
+      // plays on its own. A sample over 4 minutes (the local 10-minute
+      // ones) offers it first, from a minute left, with no count (ADR-033);
+      // the picture keeps the focus, so the arrows go on seeking past it.
       await seekByKeysTo(e2Length - const Duration(seconds: 25));
-      await k.waitFor(find.text('NEXT EPISODE'), seconds: 40);
-      expect(find.textContaining('Play now · '), findsOneWidget);
+      await k.waitFor(find.textContaining('Play now · '), seconds: 40);
+      expect(find.text('NEXT EPISODE'), findsOneWidget);
       await playing((item) => isEpisode(item, 3), 'S1 · E3 after the count');
       expect(find.text('NEXT EPISODE'), findsNothing);
 

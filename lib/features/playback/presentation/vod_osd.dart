@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
@@ -333,25 +334,48 @@ class VodOsdBottom extends StatelessWidget {
   };
 }
 
-/// The next-episode card (decision 4; the approved sketch), bottom right
-/// above the seek bar. Counting ([countdown] set): Play now, focused, its
-/// bar running down with the count, and Cancel. At the end after a cancel
-/// ([countdown] null): Play next episode and Back to series.
+/// The next-episode card (decision 4, ADR-033; the approved sketch),
+/// bottom right above the seek bar. It stands on its own: the OSD shows
+/// and hides around it. Its first button takes the focus when it comes
+/// if [autofocus]; with [arrowsMove] (a TV remote's) ←/→ move between its
+/// two buttons and never seek from here. In the credits
+/// ([NextCardPhase.offer]): Next episode, which plays it at once, and
+/// Hide. Counting: Play now, its bar running down with the count, and
+/// Cancel. At the end after a Hide: Play next episode and Back to series.
 class NextEpisodeCard extends StatefulWidget {
   const new({
     required this.next,
-    required this.countdown,
+    required this.phase,
     required this.onPlay,
     required this.onSecondary,
+    this.countdown,
+    this.playFocusNode,
+    this.autofocus = true,
+    this.arrowsMove = true,
     super.key,
   });
 
   final NextEpisode next;
+  final NextCardPhase phase;
+
+  /// 10 … 1 while counting.
   final int? countdown;
   final VoidCallback onPlay;
 
-  /// Cancel while counting; Back to series at the end.
+  /// Hide in the credits, Cancel while counting, Back to series at the
+  /// end.
   final VoidCallback onSecondary;
+
+  /// The first button's focus, for the player to hand it back; the card's
+  /// own when null.
+  final FocusNode? playFocusNode;
+
+  /// The first button takes the focus when the card comes.
+  final bool autofocus;
+
+  /// ←/→ move between the two buttons (a TV's); otherwise they are the
+  /// player's, which seeks with them.
+  final bool arrowsMove;
 
   static const width = 440.0;
 
@@ -360,22 +384,51 @@ class NextEpisodeCard extends StatefulWidget {
 }
 
 class _NextEpisodeCardState extends State<NextEpisodeCard> {
-  final _play = FocusNode(debugLabel: 'next episode');
+  FocusNode? _ownPlay;
+  final _secondary = FocusNode(debugLabel: 'next episode card, second');
+
+  FocusNode get _play =>
+      widget.playFocusNode ??
+      (_ownPlay ??= FocusNode(debugLabel: 'next episode'));
 
   @override
   void initState() {
     super.initState();
     // The player holds the focus in this scope, so autofocus can't take
     // it: ask once the card is in.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _play.requestFocus();
-    });
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _play.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
-    _play.dispose();
+    _ownPlay?.dispose();
+    _secondary.dispose();
     super.dispose();
+  }
+
+  /// ←/→ with [NextEpisodeCard.arrowsMove]: from one button to the other.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!widget.arrowsMove || event is KeyUpEvent) {
+      return KeyEventResult.ignored;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isControlPressed ||
+        keyboard.isAltPressed ||
+        keyboard.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
+    final to = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowLeft => _play,
+      LogicalKeyboardKey.arrowRight => _secondary,
+      _ => null,
+    };
+    if (to == null) return KeyEventResult.ignored;
+    if (!to.hasPrimaryFocus) to.requestFocus();
+    return KeyEventResult.handled;
   }
 
   @override
@@ -384,6 +437,11 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
     final colors = tokens.colors;
     final episode = widget.next;
     final countdown = widget.countdown;
+    final (play, secondary) = switch (widget.phase) {
+      NextCardPhase.count => ('Play now · ${countdown ?? ''}', 'Cancel'),
+      NextCardPhase.end => ('Play next episode', 'Back to series'),
+      NextCardPhase.offer || NextCardPhase.none => ('Next episode', 'Hide'),
+    };
     const still = Size(144, 81);
     return Container(
       width: NextEpisodeCard.width,
@@ -456,45 +514,60 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
               ],
             ),
             SizedBox(height: tokens.spacing.s16),
-            Row(
-              children: [
-                // The count's bar is as wide as the button above it.
-                IntrinsicWidth(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AppButton(
-                        label: countdown == null
-                            ? 'Play next episode'
-                            : 'Play now · $countdown',
-                        icon: AppIcons.play,
-                        size: AppButtonSize.s,
-                        focusNode: _play,
-                        onPressed: widget.onPlay,
-                      ),
-                      if (countdown != null) ...[
-                        SizedBox(height: tokens.spacing.s4),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(
-                            end: countdown / VodPlayerController.countdownFrom,
-                          ),
-                          duration: const Duration(seconds: 1),
-                          builder: (context, value, _) =>
-                              ProgressBar(value: value),
+            Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onKeyEvent: _onKey,
+              child: Row(
+                // The two buttons on one line, the count's bar under the
+                // first.
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // The count's bar is as wide as the button above it.
+                  IntrinsicWidth(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppButton(
+                          label: play,
+                          icon: AppIcons.play,
+                          size: AppButtonSize.s,
+                          focusNode: _play,
+                          onPressed: widget.onPlay,
                         ),
+                        if (widget.phase != NextCardPhase.end) ...[
+                          SizedBox(height: tokens.spacing.s4),
+                          // The offer keeps the bar's room: the card does
+                          // not grow when the count starts.
+                          Visibility.maintain(
+                            visible: countdown != null,
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(
+                                end:
+                                    (countdown ??
+                                        VodPlayerController.countdownFrom) /
+                                    VodPlayerController.countdownFrom,
+                              ),
+                              duration: const Duration(seconds: 1),
+                              builder: (context, value, _) =>
+                                  ProgressBar(value: value),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                SizedBox(width: tokens.spacing.s8),
-                AppButton(
-                  label: countdown == null ? 'Back to series' : 'Cancel',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  onPressed: widget.onSecondary,
-                ),
-              ],
+                  SizedBox(width: tokens.spacing.s8),
+                  AppButton(
+                    label: secondary,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    focusNode: _secondary,
+                    onPressed: widget.onSecondary,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

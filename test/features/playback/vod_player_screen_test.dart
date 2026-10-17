@@ -52,6 +52,70 @@ Future<void> _key(
   await settle(tester);
 }
 
+String? _focused() => FocusManager.instance.primaryFocus?.debugLabel;
+
+/// The control with the focus, by the name it gives assistive technology.
+String? _control() => FocusManager.instance.primaryFocus?.context
+    ?.findAncestorWidgetOfExactType<FocusableSurface>()
+    ?.semanticLabel;
+
+/// The focus is on one of the next-episode card's buttons.
+bool _focusOnCard() =>
+    FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<NextEpisodeCard>() !=
+    null;
+
+Finder _onCard(String text) => find.descendant(
+  of: find.byType(NextEpisodeCard),
+  matching: find.text(text),
+);
+
+List<String> _seeks(_Vod t) => [
+  for (final c in t.rig.engine.calls)
+    if (c.startsWith('seek:')) c,
+];
+
+/// How far a file's OSD has faded in: 1 shown, 0 hidden.
+double _osd(WidgetTester tester) => tester
+    .widget<AnimatedOpacity>(
+      find.ancestor(
+        of: find.byType(VodOsdBottom),
+        matching: find.byType(AnimatedOpacity),
+      ),
+    )
+    .opacity;
+
+/// Tab until [control] has the focus (on the next-episode card when
+/// [onCard]; a label that starts with [control]).
+Future<void> _tabTo(
+  WidgetTester tester,
+  String control, {
+  bool onCard = false,
+}) async {
+  bool there() =>
+      (_control()?.startsWith(control) ?? false) && (!onCard || _focusOnCard());
+  for (var i = 0; i < 40 && !there(); i++) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+  }
+  await settle(tester);
+  expect(there(), isTrue, reason: 'Tab reaches $control');
+}
+
+/// Plays a film on from [from] for [seconds], a second at a time (a
+/// picture that stands still for 8 s is a stall).
+Future<void> _playOn(
+  _Vod t,
+  WidgetTester tester, {
+  required Duration from,
+  required int seconds,
+}) async {
+  for (var s = 1; s <= seconds; s++) {
+    t.rig.engine.progress(from + Duration(seconds: s));
+    await tester.pump(const Duration(seconds: 1));
+  }
+}
+
 void main() {
   group('a movie', () {
     _vodTest('Play opens the player on it, full screen, with its own face', (
@@ -618,6 +682,80 @@ void main() {
       expect(t.rig.engine.calls, contains('aspect:fit'));
     });
 
+    _vodTest("an open menu holds the OSD up (its keys aren't the player's); "
+        'after a choice the focus is back on its button, and the OSD hides '
+        'as usual', (tester, t) async {
+      await play(tester, t);
+      const from = Duration(minutes: 5);
+      final wait = PlayerScreen.osdFocusTimeout.inSeconds + 1;
+
+      await _tabTo(tester, 'Picture size: Fit');
+      await _key(tester, LogicalKeyboardKey.enter);
+      expect(find.text('Fill (crop)'), findsOneWidget);
+      await _playOn(t, tester, from: from, seconds: wait);
+      expect(_osd(tester), 1);
+      expect(find.text('Fill (crop)'), findsOneWidget);
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.enter);
+      expect(t.rig.engine.calls, contains('aspect:fill'));
+      expect(find.text('Fill (crop)'), findsNothing);
+      expect(_osd(tester), 1);
+      expect(_control(), 'Picture size: Fill (crop)');
+
+      await _playOn(
+        t,
+        tester,
+        from: from + Duration(seconds: wait),
+        seconds: wait,
+      );
+      expect(_osd(tester), 0);
+      expect(_focused(), 'player');
+    });
+
+    _vodTest('on a TV an open menu holds the OSD up too; after a choice the '
+        'focus is back on its button, then the OSD hides as usual and the '
+        'picture has the focus', (tester, t) async {
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        extra: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
+      await _key(tester, LogicalKeyboardKey.enter);
+      await t.firstFrame(tester);
+      const from = Duration(minutes: 5);
+      t.rig.engine.progress(from);
+      await settle(tester);
+      final wait = PlayerScreen.osdFocusTimeout.inSeconds + 1;
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused(), 'player controls');
+      for (var i = 0; i < 12 && _control() != 'Picture size: Fit'; i++) {
+        await _key(tester, LogicalKeyboardKey.arrowRight);
+      }
+      expect(_control(), 'Picture size: Fit');
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(find.text('Fill (crop)'), findsOneWidget);
+      await _playOn(t, tester, from: from, seconds: wait);
+      expect(_osd(tester), 1);
+      expect(find.text('Fill (crop)'), findsOneWidget);
+
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.calls, contains('aspect:fill'));
+      expect(_osd(tester), 1);
+      expect(_control(), 'Picture size: Fill (crop)');
+
+      await _playOn(
+        t,
+        tester,
+        from: from + Duration(seconds: wait),
+        seconds: wait,
+      );
+      expect(_osd(tester), 0);
+      expect(_focused(), 'player');
+    });
+
     _vodTest('a movie has no Next episode; Back leaves, saving its place', (
       tester,
       t,
@@ -651,12 +789,66 @@ void main() {
     });
   });
 
+  group('a film never has the next-episode card, its count or Next episode '
+      '(ADR-033)', () {
+    for (final formFactor in FormFactor.values) {
+      _vodTest('${formFactor.name}: a minute and 20 s from its end', (
+        tester,
+        t,
+      ) async {
+        await t.open(
+          tester,
+          '/movies/src-1/501',
+          extra: [formFactorProvider.overrideWithValue(formFactor)],
+        );
+        await _key(tester, LogicalKeyboardKey.enter);
+        await t.firstFrame(tester);
+        void nothing() {
+          expect(find.byType(NextEpisodeCard), findsNothing);
+          expect(find.text('NEXT EPISODE'), findsNothing);
+          expect(find.textContaining('Play now'), findsNothing);
+          expect(find.text('Next episode'), findsNothing);
+          expect(findByLabel('Next episode'), findsNothing);
+        }
+
+        for (final left in [61, 60, 45, 21]) {
+          t.rig.engine.progress(_hour - Duration(seconds: left));
+          await settle(tester);
+          nothing();
+        }
+        // Playing on through where a count would have run.
+        for (var left = 20; left >= 5; left--) {
+          t.rig.engine.progress(_hour - Duration(seconds: left));
+          await tester.pump(const Duration(seconds: 1));
+          nothing();
+        }
+        expect(t.rig.engine.opened, hasLength(1));
+        expect(t.app.location, playerRoutePath);
+      });
+    }
+  });
+
   group('an episode', () {
-    /// Series 77's page, then its primary action (Play S1 · E1).
-    Future<void> playFirst(WidgetTester tester, _Vod t) async {
-      await t.open(tester, '/series/src-1/77');
+    /// Series 77's page, then its primary action (Play S1 · E1): Enter on
+    /// the desktop, where it has the focus; on a [tv] (whose page opens
+    /// on Back) a press.
+    Future<void> playFirst(
+      WidgetTester tester,
+      _Vod t, {
+      bool tv = false,
+    }) async {
+      await t.open(
+        tester,
+        '/series/src-1/77',
+        extra: [if (tv) formFactorProvider.overrideWithValue(FormFactor.tv)],
+      );
       expect(find.text('Play S1 · E1'), findsOneWidget);
-      await _key(tester, LogicalKeyboardKey.enter);
+      if (tv) {
+        await tester.tap(find.text('Play S1 · E1'));
+        await settle(tester);
+      } else {
+        await _key(tester, LogicalKeyboardKey.enter);
+      }
       await t.firstFrame(tester, length: const Duration(minutes: 45));
     }
 
@@ -668,14 +860,30 @@ void main() {
       await settle(tester);
     }
 
+    /// Plays on from [from] seconds left for [seconds], a second at a time
+    /// (a picture that stands still for 8 s is a stall).
+    Future<void> playOn(
+      _Vod t,
+      WidgetTester tester, {
+      required int from,
+      required int seconds,
+    }) async {
+      for (var s = 1; s <= seconds; s++) {
+        t.rig.engine.progress(
+          const Duration(minutes: 45) - Duration(seconds: from - s),
+        );
+        await tester.pump(const Duration(seconds: 1));
+      }
+    }
+
     _vodTest('the top says the series and S · E', (tester, t) async {
       await playFirst(tester, t);
       expect(find.text('Glass Tide'), findsOneWidget);
       expect(find.text('S1 · E1 · Low Water'), findsOneWidget);
     });
 
-    _vodTest('at 20 s left the card counts down, and Enter plays the next '
-        'now', (tester, t) async {
+    _vodTest('at 20 s left the card counts down; Tab reaches Play now, and '
+        'Enter plays the next now', (tester, t) async {
       await playFirst(tester, t);
       await credits(t, tester, 19);
 
@@ -684,7 +892,9 @@ void main() {
       expect(find.text('Play now · 10'), findsOneWidget);
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Play now · 9'), findsOneWidget);
+      expect(_focused(), 'player', reason: 'the desktop card never takes it');
 
+      await _tabTo(tester, 'Play now', onCard: true);
       await _key(tester, LogicalKeyboardKey.enter);
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
       expect(t.rig.state.item, isA<PlayableEpisode>());
@@ -702,6 +912,38 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await settle(tester);
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
+    });
+
+    _vodTest('when the count plays the next episode the player has the '
+        'keyboard: Space pauses it', (tester, t) async {
+      await playFirst(tester, t);
+      await credits(t, tester, 20);
+      await playOn(t, tester, from: 20, seconds: 10);
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
+      await t.firstFrame(tester, length: const Duration(minutes: 48));
+      for (var i = 0; i < 4; i++) {
+        await settle(tester);
+      }
+      expect(_focused(), 'player');
+      await _key(tester, LogicalKeyboardKey.space);
+      expect(t.rig.engine.calls.last, 'paused:true');
+    });
+
+    _vodTest('a page under the player that takes the focus gives it back '
+        'while the player is on top', (tester, t) async {
+      await playFirst(tester, t);
+      expect(_focused(), 'player');
+      // The series page's Play, under the player, asks for it (its
+      // autofocus does, when what it would play changes).
+      final under = find.byWidgetPredicate(
+        (w) => w is Focus && w.focusNode?.debugLabel == 'series primary',
+        skipOffstage: false,
+      );
+      tester.widget<Focus>(under.first).focusNode!.requestFocus();
+      await settle(tester);
+      expect(_focused(), 'player');
+      await _key(tester, LogicalKeyboardKey.space);
+      expect(t.rig.engine.calls.last, 'paused:true');
     });
 
     _vodTest('Esc cancels; at the end the card is back without the count, '
@@ -736,6 +978,261 @@ void main() {
             .first,
       );
       expect(mark?.completed, isTrue);
+    });
+
+    _vodTest('from a minute left the card offers the next episode with no '
+        'count; on the desktop the picture keeps the focus, so → seeks and '
+        'Space pauses; Tab reaches Next episode, which plays it at once', (
+      tester,
+      t,
+    ) async {
+      await playFirst(tester, t);
+      await credits(t, tester, 61);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+
+      await credits(t, tester, 60);
+      expect(find.text('NEXT EPISODE'), findsOneWidget);
+      expect(find.text('Ledger'), findsOneWidget);
+      expect(_onCard('Next episode'), findsOneWidget);
+      expect(_onCard('Hide'), findsOneWidget);
+      expect(find.textContaining('Play now'), findsNothing);
+      expect(_focused(), 'player');
+      // No count before the last 20 s: nothing plays by itself.
+      await playOn(t, tester, from: 60, seconds: 15);
+      expect(find.textContaining('Play now'), findsNothing);
+      expect(t.rig.engine.opened, hasLength(1));
+      expect(_focused(), 'player');
+
+      // The player's keys, with the card up.
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(_seeks(t), ['seek:${(45 * 60 - 35) * 1000}']);
+      t.rig.engine.progress(const Duration(minutes: 45, seconds: -35));
+      await settle(tester);
+      await _key(tester, LogicalKeyboardKey.space);
+      expect(t.rig.engine.calls.last, 'paused:true');
+      expect(t.rig.engine.opened, hasLength(1));
+      await _key(tester, LogicalKeyboardKey.space);
+      expect(t.rig.engine.calls.last, 'paused:false');
+
+      await _tabTo(tester, 'Next episode', onCard: true);
+      await _key(tester, LogicalKeyboardKey.enter);
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
+    });
+
+    _vodTest('the card stands on its own: offering or counting, the OSD '
+        'hides and shows around it, and it stays where it is', (
+      tester,
+      t,
+    ) async {
+      await playFirst(tester, t);
+      await credits(t, tester, 50);
+      double osd() => _osd(tester);
+      Rect card() => tester.getRect(find.byType(NextEpisodeCard));
+      final at = card();
+      expect(osd(), 1);
+      expect(
+        find.ancestor(
+          of: find.byType(NextEpisodeCard),
+          matching: find.byType(AnimatedOpacity),
+        ),
+        findsNothing,
+        reason: 'the card does not fade with the OSD',
+      );
+
+      await playOn(
+        t,
+        tester,
+        from: 50,
+        seconds: PlayerScreen.osdTimeout.inSeconds + 1,
+      );
+      expect(osd(), 0);
+      expect(card(), at);
+      expect(_focused(), 'player');
+
+      // The count doesn't hold the OSD up either, and runs while it hides.
+      await credits(t, tester, 19);
+      expect(find.text('Play now · 10'), findsOneWidget);
+      expect(osd(), 0);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Play now · 9'), findsOneWidget);
+      expect(card(), at);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: tester.getCenter(find.byType(PlayerScreen)),
+      );
+      await mouse.moveBy(const Offset(4, 4));
+      await settle(tester);
+      expect(osd(), 1);
+      expect(card(), at);
+      await mouse.removePointer();
+    });
+
+    _vodTest('Hide skips it: Tab reaches it and Space presses it (on the '
+        "desktop the card's ←/→ still seek); the picture has the focus; no "
+        'card again for this episode, nothing plays by itself, and the end '
+        'card offers the next', (tester, t) async {
+      await playFirst(tester, t);
+      await credits(t, tester, 45);
+      expect(_focused(), 'player');
+
+      await _tabTo(tester, 'Next episode', onCard: true);
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(_seeks(t), ['seek:${(45 * 60 - 35) * 1000}']);
+      expect(_control(), 'Next episode', reason: 'the arrow seeked');
+      t.rig.engine.progress(const Duration(minutes: 45, seconds: -35));
+      await settle(tester);
+
+      await _tabTo(tester, 'Hide', onCard: true);
+      await _key(tester, LogicalKeyboardKey.space);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(_focused(), 'player');
+      expect(t.rig.engine.calls, isNot(contains('paused:true')));
+
+      // Out of the last minute and back, then through the count's time.
+      await credits(t, tester, 120);
+      await credits(t, tester, 40);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      await credits(t, tester, 21);
+      await playOn(t, tester, from: 21, seconds: 18);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(t.rig.engine.opened, hasLength(1));
+
+      await credits(t, tester, 2);
+      t.rig.engine.end();
+      await settle(tester);
+      expect(_onCard('Play next episode'), findsOneWidget);
+      expect(_onCard('Back to series'), findsOneWidget);
+      expect(_control(), 'Play next episode');
+      await _key(tester, LogicalKeyboardKey.enter);
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
+    });
+
+    _vodTest('seeking back out of the last minute takes the card away; '
+        'the last minute brings it back; Esc hides it', (tester, t) async {
+      await playFirst(tester, t);
+      await credits(t, tester, 50);
+      expect(find.byType(NextEpisodeCard), findsOneWidget);
+
+      await credits(t, tester, 90);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(_focused(), 'player');
+
+      await credits(t, tester, 40);
+      expect(_onCard('Next episode'), findsOneWidget);
+      expect(_focused(), 'player');
+
+      await _key(tester, LogicalKeyboardKey.escape);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(t.app.location, playerRoutePath, reason: 'Esc only hid it');
+      expect(_focused(), 'player');
+    });
+
+    _vodTest('on a TV the card takes the focus: ←/→ move between its two '
+        "buttons and don't seek; OK plays the next", (tester, t) async {
+      await playFirst(tester, t, tv: true);
+      await credits(t, tester, 50);
+      expect(_focusOnCard(), isTrue);
+      expect(_control(), 'Next episode');
+
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(_control(), 'Hide');
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(_control(), 'Hide');
+      await _key(tester, LogicalKeyboardKey.arrowLeft);
+      expect(_control(), 'Next episode');
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(_seeks(t), isEmpty);
+
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
+    });
+
+    _vodTest('on a TV, scrubbing on the seek bar into the last minute: → '
+        "keeps seeking, the card doesn't take the focus; when the OSD hides, "
+        "the card's first button has it", (tester, t) async {
+      await playFirst(tester, t, tv: true);
+      await credits(t, tester, 80);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused(), 'player controls');
+      await _key(tester, LogicalKeyboardKey.arrowUp);
+      expect(_focused(), 'seek bar');
+
+      Future<void> scrub(int toLeft) async {
+        await _key(tester, LogicalKeyboardKey.arrowRight);
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(_seeks(t).last, 'seek:${(45 * 60 - toLeft) * 1000}');
+        t.rig.engine.progress(Duration(seconds: 45 * 60 - toLeft));
+        await settle(tester);
+      }
+
+      await scrub(70);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      await scrub(60);
+      expect(_onCard('Next episode'), findsOneWidget);
+      expect(_focused(), 'seek bar');
+      await scrub(50);
+      expect(_focused(), 'seek bar');
+
+      // The OSD hides on its own (the longer wait, a control having the
+      // focus): the card, still in sight, takes it.
+      await playOn(
+        t,
+        tester,
+        from: 50,
+        seconds: PlayerScreen.osdFocusTimeout.inSeconds + 1,
+      );
+      expect(_osd(tester), 0);
+      expect(_focusOnCard(), isTrue);
+      expect(_control(), 'Next episode');
+    });
+
+    _vodTest('on a TV the end card takes the focus, even from one of the '
+        "OSD's controls (nothing plays any more, and the OSD stays up)", (
+      tester,
+      t,
+    ) async {
+      await playFirst(tester, t, tv: true);
+      await credits(t, tester, 50);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused(), 'player controls');
+
+      await credits(t, tester, 3);
+      t.rig.engine.end();
+      await settle(tester);
+      expect(_focusOnCard(), isTrue);
+      expect(_control(), 'Play next episode');
+    });
+
+    _vodTest('on a TV Back hides the card and gives the picture the focus; '
+        'nothing plays by itself, and the end card offers the next', (
+      tester,
+      t,
+    ) async {
+      await playFirst(tester, t, tv: true);
+      await credits(t, tester, 50);
+      expect(_focusOnCard(), isTrue);
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(_focused(), 'player');
+      expect(t.app.location, playerRoutePath);
+
+      await credits(t, tester, 21);
+      await playOn(t, tester, from: 21, seconds: 18);
+      expect(find.byType(NextEpisodeCard), findsNothing);
+      expect(t.rig.engine.opened, hasLength(1));
+      t.rig.engine.end();
+      await settle(tester);
+      expect(_control(), 'Play next episode');
+      await _key(tester, LogicalKeyboardKey.select);
+      expect(t.rig.engine.opened.last.url, contains('/7102.'));
     });
 
     _vodTest('a failed episode offers the next one', (tester, t) async {

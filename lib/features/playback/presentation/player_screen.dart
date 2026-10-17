@@ -126,6 +126,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _panel = false;
   bool _info = false;
 
+  /// One of the OSD's menus is open (Audio, Subtitles, Speed, Picture
+  /// size): the OSD stays up, since the keys in the menu never reach the
+  /// player to keep it.
+  bool _menu = false;
+
   /// The window is in full screen (the player opens it so; F leaves it).
   bool _fullScreen = false;
   AspectMode _aspect = AspectMode.fit;
@@ -139,13 +144,27 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   late final PlaybackCoordinator _coordinator;
   late final VodPlayerController _vod;
 
+  /// What the screen keeps of the file's controller ([_vodFlags]).
+  _VodFlags _flags = _noFlags;
+
   /// A file's OSD stays up while it opens, while paused or seeking, and
-  /// while its card shows.
-  bool _pinned = false;
-  bool _card = false;
+  /// at the end card. The next-episode card offering or counting stands
+  /// on its own (ADR-033).
+  bool get _pinned => _flags.pinned;
 
   /// An episode with one after it: the failure card offers it.
-  bool _hasNext = false;
+  bool get _hasNext => _flags.hasNext;
+
+  /// The next-episode card as one node: the focus is on it.
+  final _cardNode = FocusNode(
+    debugLabel: 'next episode card',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+
+  /// The card's first button: the focus goes there from a control of an
+  /// OSD that hid, the card being in sight.
+  final _cardPlay = FocusNode(debugLabel: 'next episode');
 
   @override
   void initState() {
@@ -161,10 +180,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       library: ref.read(libraryRepositoryProvider),
     )..addListener(_onVod);
     // The file was asked for before the player came up: its state so far.
-    final (pinned, card, hasNext) = _vodFlags();
-    _pinned = pinned;
-    _card = card;
-    _hasNext = hasNext;
+    _flags = _vodFlags();
     // While casting, the casting view takes the player's place (Phase 7
     // decision 2): a play that opened the player, or Cast from its OSD.
     // The coordinator is asked too: what the provider says may be from
@@ -183,11 +199,32 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     // The keyboard moving onto a control restarts the OSD's clock with
     // the longer wait (the Tab that moved it was heard before it moved).
     _focus.addListener(_onFocusMoved);
+    FocusManager.instance.addListener(_onFocusAnywhere);
     _showOsd();
   }
 
   void _onFocusMoved() {
     if (mounted && _osd) _showOsd();
+  }
+
+  /// The player's page, to know whether it is the one on top.
+  ModalRoute<Object?>? _route;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+  }
+
+  /// While the player is the page on top the keyboard is its own: a page
+  /// under it that takes the focus gives it back. The series page's
+  /// autofocus did, when the episode just watched changed what it would
+  /// play next, and the player's keys went to it (Esc left the player).
+  /// Menus, dialogs and Search are pages above it.
+  void _onFocusAnywhere() {
+    if (!mounted || _handedOff || _focus.hasFocus) return;
+    if (_route?.isCurrent != true) return;
+    _focus.requestFocus();
   }
 
   bool _handedOff = false;
@@ -211,12 +248,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _vod
       ..removeListener(_onVod)
       ..dispose();
+    FocusManager.instance.removeListener(_onFocusAnywhere);
     _focus
       ..removeListener(_onFocusMoved)
       ..dispose();
     _entry.dispose();
     _seekBar.dispose();
     _controlRow.dispose();
+    _cardNode.dispose();
+    _cardPlay.dispose();
     unawaited(_window?.setFullScreen(on: false));
     // The preview and the next thing played are at the recorded speed
     // and shape again.
@@ -232,32 +272,43 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   bool get _isVod => _coordinator.item?.live == false;
 
-  /// Whether a file's OSD is pinned up, its card shows, and it has a next
-  /// episode.
-  (bool, bool, bool) _vodFlags() {
-    final card = _vod.countdown != null || _vod.ended;
-    final pinned =
+  /// Whether a file's OSD is pinned up, what its next-episode card shows
+  /// (with its count), and whether it has a next episode. A change
+  /// rebuilds the screen, so the card follows its count while the
+  /// faded-out OSD isn't rebuilt.
+  _VodFlags _vodFlags() => (
+    pinned:
         _vod.item != null &&
         (_vod.timeline.paused ||
             _vod.preparing ||
             _vod.pendingSeek != null ||
-            card);
-    return (pinned, card, _vod.next != null);
-  }
+            _vod.ended),
+    card: _vod.card,
+    countdown: _vod.countdown,
+    hasNext: _vod.next != null,
+  );
 
   void _onVod() {
-    final (pinned, card, hasNext) = _vodFlags();
-    if (pinned == _pinned && card == _card && hasNext == _hasNext) return;
-    final cardGone = _card && !card;
-    setState(() {
-      _pinned = pinned;
-      _card = card;
-      _hasNext = hasNext;
-    });
-    // The card had the focus; the player takes it back.
-    if (cardGone) _focus.requestFocus();
-    if (!pinned) _showOsd();
+    final flags = _vodFlags();
+    final was = _flags;
+    if (flags == was) return;
+    final cardGone =
+        was.card != NextCardPhase.none && flags.card == NextCardPhase.none;
+    // Asked before the card leaves the tree, and the focus with it.
+    final cardFocused = _cardNode.hasFocus;
+    setState(() => _flags = flags);
+    // The card had the focus; the picture takes it back.
+    if (cardGone && cardFocused) _focus.requestFocus();
+    // The card comes, counts and goes without the OSD.
+    final cardOnly = flags.pinned == was.pinned && flags.hasNext == was.hasNext;
+    if (!flags.pinned && !cardOnly) _showOsd();
   }
+
+  /// The next-episode card offers or counts: Esc or Back hides it.
+  bool get _cardUp => switch (_vod.card) {
+    NextCardPhase.offer || NextCardPhase.count => true,
+    NextCardPhase.none || NextCardPhase.end => false,
+  };
 
   /// A movie played to its end, or the last episode: back to its page.
   void _finished(Playable item) {
@@ -295,10 +346,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _osdTimer = Timer(
       onControl ? PlayerScreen.osdFocusTimeout : PlayerScreen.osdTimeout,
       () {
-        if (!mounted || _panel || _pinned) return;
+        if (!mounted || _panel || _pinned || _menu) return;
         setState(() => _osd = false);
-        // A control nobody can see must not be the one Enter presses.
-        if (_onControl) _focus.requestFocus();
+        // A control nobody can see must not be the one Enter presses:
+        // the next-episode card, still in sight, keeps the focus; on a
+        // TV it takes it; otherwise the picture does.
+        if (_onControl && !_cardNode.hasFocus) {
+          (_onTv && _cardNode.descendants.contains(_cardPlay)
+                  ? _cardPlay
+                  : _focus)
+              .requestFocus();
+        }
       },
     );
   }
@@ -481,8 +539,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _closePanel();
     } else if (_info) {
       setState(() => _info = false);
-    } else if (_isVod && _vod.countdown != null) {
-      _vod.cancelNext();
+    } else if (_isVod && _cardUp) {
+      _vod.hideNext();
     } else if (_onTv && _onControl) {
       _toPicture();
     } else {
@@ -714,8 +772,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       case LogicalKeyboardKey.escape:
         if (_info) {
           setState(() => _info = false);
-        } else if (_vod.countdown != null) {
-          _vod.cancelNext();
+        } else if (_cardUp) {
+          _vod.hideNext();
         } else {
           _exit();
         }
@@ -797,35 +855,54 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _ => t.title ?? 'Track ${t.id}',
   };
 
+  /// Opens one of the OSD's menus, which holds the OSD up while it is
+  /// open (the Bedroom TV: it hid behind the menu, and after a choice the
+  /// focus was on a control nobody could see). Closed, the OSD's clock
+  /// starts again, the focus back on the control that opened it.
+  Future<void> _holdingOsd(Future<void> Function() menu) async {
+    _osdTimer?.cancel();
+    setState(() => _menu = true);
+    try {
+      await menu();
+    } finally {
+      if (mounted) {
+        setState(() => _menu = false);
+        _showOsd();
+      }
+    }
+  }
+
   Future<void> _trackMenu(BuildContext anchor, {required bool audio}) {
     final tracks = ref.read(playerTracksProvider).value;
-    return showAppMenu(
-      anchor,
-      width: 280,
-      items: audio
-          ? [
-              for (final t in tracks?.audio ?? const <MediaTrack>[])
+    return _holdingOsd(
+      () => showAppMenu(
+        anchor,
+        width: 280,
+        items: audio
+            ? [
+                for (final t in tracks?.audio ?? const <MediaTrack>[])
+                  AppMenuItem(
+                    label: _trackLine(t),
+                    checked: t.id == tracks?.audioId,
+                    onPressed: () => unawaited(_engine.selectAudio(t.id)),
+                  ),
+                if ((tracks?.audio ?? const []).isEmpty)
+                  const AppMenuItem(label: 'No audio tracks'),
+              ]
+            : [
                 AppMenuItem(
-                  label: _trackLine(t),
-                  checked: t.id == tracks?.audioId,
-                  onPressed: () => unawaited(_engine.selectAudio(t.id)),
+                  label: 'Off',
+                  checked: tracks?.subtitleId == null,
+                  onPressed: () => unawaited(_engine.selectSubtitle(null)),
                 ),
-              if ((tracks?.audio ?? const []).isEmpty)
-                const AppMenuItem(label: 'No audio tracks'),
-            ]
-          : [
-              AppMenuItem(
-                label: 'Off',
-                checked: tracks?.subtitleId == null,
-                onPressed: () => unawaited(_engine.selectSubtitle(null)),
-              ),
-              for (final t in tracks?.subtitles ?? const <MediaTrack>[])
-                AppMenuItem(
-                  label: _trackLine(t),
-                  checked: t.id == tracks?.subtitleId,
-                  onPressed: () => unawaited(_engine.selectSubtitle(t.id)),
-                ),
-            ],
+                for (final t in tracks?.subtitles ?? const <MediaTrack>[])
+                  AppMenuItem(
+                    label: _trackLine(t),
+                    checked: t.id == tracks?.subtitleId,
+                    onPressed: () => unawaited(_engine.selectSubtitle(t.id)),
+                  ),
+              ],
+      ),
     );
   }
 
@@ -837,35 +914,39 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     (AspectMode.ratio4x3, '4:3'),
   ];
 
-  Future<void> _aspectMenu(BuildContext anchor) => showAppMenu(
-    anchor,
-    items: [
-      for (final (mode, name) in _aspects)
-        AppMenuItem(
-          label: name,
-          checked: mode == _aspect,
-          onPressed: () {
-            setState(() => _aspect = mode);
-            unawaited(_engine.setAspect(mode));
-          },
-        ),
-    ],
+  Future<void> _aspectMenu(BuildContext anchor) => _holdingOsd(
+    () => showAppMenu(
+      anchor,
+      items: [
+        for (final (mode, name) in _aspects)
+          AppMenuItem(
+            label: name,
+            checked: mode == _aspect,
+            onPressed: () {
+              setState(() => _aspect = mode);
+              unawaited(_engine.setAspect(mode));
+            },
+          ),
+      ],
+    ),
   );
 
   /// "1×", "1.25×".
   static String _speedLabel(double speed) =>
       '${speed == speed.roundToDouble() ? speed.round() : speed}×';
 
-  Future<void> _speedMenu(BuildContext anchor) => showAppMenu(
-    anchor,
-    items: [
-      for (final speed in PlayerScreen.speeds)
-        AppMenuItem(
-          label: speed == 1 ? '1× · Normal' : _speedLabel(speed),
-          checked: speed == _speed,
-          onPressed: () => _setSpeed(speed),
-        ),
-    ],
+  Future<void> _speedMenu(BuildContext anchor) => _holdingOsd(
+    () => showAppMenu(
+      anchor,
+      items: [
+        for (final speed in PlayerScreen.speeds)
+          AppMenuItem(
+            label: speed == 1 ? '1× · Normal' : _speedLabel(speed),
+            checked: speed == _speed,
+            onPressed: () => _setSpeed(speed),
+          ),
+      ],
+    ),
   );
 
   /// On a TV the remote's volume and mute keys work the TV itself, and
@@ -1007,7 +1088,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final vod = item != null && !item.live;
     final tracks = ref.watch(playerTracksProvider).value;
     final sound = ref.watch(playerSoundControllerProvider);
-    final showOsd = _osd || _panel || _pinned || state is PlaybackFailed;
+    final showOsd =
+        _osd || _panel || _pinned || _menu || state is PlaybackFailed;
 
     Widget osd(Widget child) => AnimatedOpacity(
       opacity: showOsd ? 1 : 0,
@@ -1084,17 +1166,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           fit: StackFit.expand,
                           children: [
                             if (vod)
-                              osd(
-                                ListenableBuilder(
-                                  // Still built while hidden (a TV focuses
-                                  // its controls before they fade in), but
-                                  // not rebuilt: a show catches it up.
-                                  listenable: !showOsd && _osdFaded
-                                      ? _still
-                                      : _vod,
-                                  builder: (context, _) =>
-                                      _vodOsd(item, tracks, sound),
-                                ),
+                              ListenableBuilder(
+                                // Still built while hidden (a TV focuses
+                                // its controls before they fade in), but
+                                // not rebuilt: a show catches it up. The
+                                // next-episode card, which doesn't fade,
+                                // follows its count through [_onVod].
+                                listenable: !showOsd && _osdFaded
+                                    ? _still
+                                    : _vod,
+                                builder: (context, _) =>
+                                    _vodOsd(item, tracks, sound, fade: osd),
                               )
                             else if (channel != null)
                               osd(
@@ -1195,53 +1277,78 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     );
   }
 
-  Widget _vodOsd(Playable item, PlayerTracks? tracks, PlayerSound sound) {
+  /// A file's OSD, each part [fade]d in and out on its own, and the
+  /// next-episode card between them, which isn't (ADR-033): the bottom is
+  /// laid out shown or not, so the card never moves when the OSD does.
+  Widget _vodOsd(
+    Playable item,
+    PlayerTracks? tracks,
+    PlayerSound sound, {
+    required Widget Function(Widget child) fade,
+  }) {
     final tokens = context.tokens;
     final next = _vod.next;
-    final countdown = _vod.countdown;
-    final card = next != null && (countdown != null || _vod.ended);
+    final phase = _vod.card;
+    final card = next != null && phase != NextCardPhase.none;
     return Stack(
       fit: StackFit.expand,
       children: [
         // Paused: Play where the eye is. Not while the file still opens,
         // or under the next-episode card.
-        if (_vod.timeline.paused && !_vod.preparing && !card && !_vod.ended)
-          Center(child: OsdCenterPlay(onPressed: _vod.togglePause)),
+        if (_vod.timeline.paused && !_vod.preparing && !card)
+          fade(Center(child: OsdCenterPlay(onPressed: _vod.togglePause))),
         Column(
           children: [
-            VodOsdTop(item: item, onBack: _exit),
+            fade(VodOsdTop(item: item, onBack: _exit)),
             const Spacer(),
             if (card)
               Align(
                 alignment: Alignment.centerRight,
                 child: Padding(
                   padding: EdgeInsets.only(right: tokens.spacing.s32),
-                  child: NextEpisodeCard(
-                    key: ValueKey(next.item.remoteKey),
-                    next: next,
-                    countdown: countdown,
-                    onPlay: _vod.playNext,
-                    onSecondary: countdown != null
-                        ? _vod.cancelNext
-                        : _backToSeries,
+                  child: Focus(
+                    focusNode: _cardNode,
+                    child: NextEpisodeCard(
+                      key: ValueKey(next.item.remoteKey),
+                      next: next,
+                      phase: phase,
+                      countdown: _vod.countdown,
+                      playFocusNode: _cardPlay,
+                      // The desktop's picture keeps the focus (←/→ seek
+                      // and Space pauses, as everywhere in the player;
+                      // Tab reaches the card). A TV's card takes it
+                      // unless the remote is on one of the OSD's
+                      // controls: it goes to the card when the OSD hides.
+                      // The end card, with nothing left playing and the
+                      // OSD held up, takes it on both.
+                      autofocus:
+                          phase == NextCardPhase.end || (_onTv && !_onControl),
+                      arrowsMove: _onTv,
+                      onPlay: _vod.playNext,
+                      onSecondary: phase == NextCardPhase.end
+                          ? _backToSeries
+                          : _vod.hideNext,
+                    ),
                   ),
                 ),
               ),
-            VodOsdBottom(
-              timeline: _vod.timeline,
-              seeking: _vod.pendingSeek != null,
-              resumedFrom: _vod.resumedFrom,
-              preparing: _vod.preparing,
-              onTogglePause: _vod.togglePause,
-              onNudge: _vod.nudge,
-              onDrag: _vod.dragTo,
-              onStartOver: _vod.startOver,
-              onNext: next == null ? null : _vod.playNext,
-              playFocusNode: _entry,
-              seekFocusNode: _onTv ? _seekBar : null,
-              rowFocusNode: _onTv ? _controlRow : null,
-              leading: [if (!_onTv) _volume(sound)],
-              trailing: _controls(tracks, vod: true),
+            fade(
+              VodOsdBottom(
+                timeline: _vod.timeline,
+                seeking: _vod.pendingSeek != null,
+                resumedFrom: _vod.resumedFrom,
+                preparing: _vod.preparing,
+                onTogglePause: _vod.togglePause,
+                onNudge: _vod.nudge,
+                onDrag: _vod.dragTo,
+                onStartOver: _vod.startOver,
+                onNext: next == null ? null : _vod.playNext,
+                playFocusNode: _entry,
+                seekFocusNode: _onTv ? _seekBar : null,
+                rowFocusNode: _onTv ? _controlRow : null,
+                leading: [if (!_onTv) _volume(sound)],
+                trailing: _controls(tracks, vod: true),
+              ),
             ),
           ],
         ),
@@ -1255,3 +1362,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _showOsd();
   }
 }
+
+/// What the player keeps of a file's controller ([VodPlayerController]):
+/// a change rebuilds it.
+typedef _VodFlags = ({
+  bool pinned,
+  NextCardPhase card,
+  int? countdown,
+  bool hasNext,
+});
+
+const _VodFlags _noFlags = (
+  pinned: false,
+  card: NextCardPhase.none,
+  countdown: null,
+  hasNext: false,
+);
