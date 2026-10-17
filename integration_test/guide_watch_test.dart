@@ -41,6 +41,7 @@ import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import 'support/fake_panel.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 
 void main() {
@@ -233,6 +234,7 @@ final class _App {
         startLocationProvider.overrideWithValue('/'),
         playerEngineProvider.overrideWithValue(engine),
         ...sourceShellOverrides,
+        guideSwitchedOn(),
       ],
     );
     final added = await container

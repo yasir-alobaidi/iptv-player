@@ -22,10 +22,14 @@ import '../live_tv/live_tv_fakes.dart';
 /// with a guide, Summit Outdoor (209) without — plus a hidden News
 /// category the Guide must leave out. The real repositories and guide
 /// over an in-memory database; the importer and the matcher are fakes.
+/// The guide is switched on unless [guideOn] is false (it is off by
+/// default, ADR-031).
 final class GuideFixture {
-  new() : live = LiveTvFakes() {
+  new({this.guideOn = true}) : live = LiveTvFakes() {
     live.fakes.now = now;
   }
+
+  final bool guideOn;
 
   /// A local wall-clock time, never an instant: the grid draws times in
   /// the viewer's zone (see `goldenNow()`).
@@ -45,7 +49,7 @@ final class GuideFixture {
       DateTime(2026, 9, 15, hour, minute);
 
   List<Override> get overrides => [
-    ...live.importedGuideOverrides(_short),
+    ...live.importedGuideOverrides(_short, guideOn: guideOn),
     guideImportServiceProvider.overrideWithValue(imports),
     guideMatchingProvider.overrideWithValue(matching),
   ];

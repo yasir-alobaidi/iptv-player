@@ -6,6 +6,7 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shortcuts.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 
+import '../features/guide/guide_switch.dart';
 import 'app_harness.dart';
 
 Future<void> _press(
@@ -19,11 +20,26 @@ Future<void> _press(
   await settleApp(tester);
 }
 
+/// A TV remote's Guide key; whether something took it. The simulated
+/// Android event needs a scan code its map knows, and has none for the
+/// Guide key's own: the shortcut reads the logical key only.
+Future<bool> _remoteGuideKey(WidgetTester tester) async {
+  final handled = await tester.sendKeyEvent(
+    LogicalKeyboardKey.guide,
+    physicalKey: PhysicalKeyboardKey.lang3,
+  );
+  await settleApp(tester);
+  return handled;
+}
+
 void main() {
   testWidgets('Ctrl+1 … Ctrl+7 go to the first seven destinations', (
     tester,
   ) async {
-    final app = await pumpApp(tester, overrides: emptyLibraryOverrides);
+    final app = await pumpApp(
+      tester,
+      overrides: [...emptyLibraryOverrides, guideSwitchedOn()],
+    );
 
     const numberKeys = [
       LogicalKeyboardKey.digit1,
@@ -109,7 +125,7 @@ void main() {
   testWidgets('G opens the Guide from anywhere, search included', (
     tester,
   ) async {
-    final app = await pumpApp(tester);
+    final app = await pumpApp(tester, overrides: [guideSwitchedOn()]);
 
     await _press(tester, LogicalKeyboardKey.keyG);
     expect(app.location, AppDestination.guide.path);
@@ -126,10 +142,39 @@ void main() {
     expect(app.location, AppDestination.guide.path);
   });
 
+  testWidgets('a remote’s Guide key opens the Guide', (tester) async {
+    final app = await pumpApp(tester, overrides: [guideSwitchedOn()]);
+
+    expect(await _remoteGuideKey(tester), isTrue);
+    expect(app.location, AppDestination.guide.path);
+  });
+
+  testWidgets('with the Guide switched off, as by default (ADR-031): '
+      'Ctrl+7 and G do nothing, a remote’s Guide key opens Live TV; '
+      'Ctrl+1 … Ctrl+6 still work', (tester) async {
+    final app = await pumpApp(tester, overrides: emptyLibraryOverrides);
+
+    await _press(tester, LogicalKeyboardKey.digit7, control: true);
+    expect(app.location, AppDestination.home.path, reason: 'Ctrl+7');
+
+    // G is a letter again, for whatever has the focus.
+    expect(await tester.sendKeyEvent(LogicalKeyboardKey.keyG), isFalse);
+    await settleApp(tester);
+    expect(app.location, AppDestination.home.path, reason: 'G');
+
+    // Taken, so Android doesn't act on it instead: Live TV's channels
+    // say what is on now and next.
+    expect(await _remoteGuideKey(tester), isTrue);
+    expect(app.location, AppDestination.liveTv.path, reason: 'Guide');
+
+    await _press(tester, LogicalKeyboardKey.digit6, control: true);
+    expect(app.location, AppDestination.library.path, reason: 'Ctrl+6');
+  });
+
   testWidgets('G types into a text field instead of opening the Guide', (
     tester,
   ) async {
-    final app = await pumpApp(tester);
+    final app = await pumpApp(tester, overrides: [guideSwitchedOn()]);
 
     await _press(tester, LogicalKeyboardKey.keyK, control: true);
     await tester.enterText(find.byType(EditableText), 'a');

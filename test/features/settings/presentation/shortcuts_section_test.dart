@@ -13,6 +13,10 @@ import '../../../design/design_harness.dart';
 import '../../onboarding/onboarding_fakes.dart';
 
 void main() {
+  // The list as the page shows it by default: no Guide keys while the
+  // Guide is switched off (ADR-031).
+  final shortcutTable = shortcutTableFor(guide: false);
+
   Future<void> open(
     WidgetTester tester, {
     Size size = const Size(1440, 900),
@@ -37,6 +41,7 @@ void main() {
     for (final group in shortcutTable) {
       expect(find.text(group.title.toUpperCase()), findsOneWidget);
     }
+    expect(find.text('THE GUIDE'), findsNothing);
   });
 
   testWidgets('in a wide window the groups sit in two columns; in the '

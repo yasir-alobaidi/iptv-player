@@ -124,6 +124,55 @@ void main() {
 
     expect(changes, 2);
   });
+
+  group('with the guide switched off (ADR-031)', () {
+    setUp(() => guide.importedOn = false);
+
+    test('the short EPG answers alone; the imported guide is not '
+        'asked', () async {
+      imported.answers['201'] = NowNext(now: programme('Imported'));
+      short.answers['201'] = NowNext(now: programme('From the panel'));
+
+      final found = await guide.nowNext(arena);
+
+      expect(found.valueOrNull!.now!.title, 'From the panel');
+      expect(imported.asked, isEmpty);
+    });
+
+    test('remembers only what the short EPG has a programme for: a channel '
+        'without one is unknown, never "no guide"', () {
+      imported.remembered['201'] = NowNext(now: programme('Imported'));
+      short.remembered['201'] = NowNext(now: programme('Short'));
+      short.remembered['203'] = NowNext.none;
+
+      expect(guide.cached(arena)!.now!.title, 'Short');
+      expect(guide.cached(velocity), isNull);
+    });
+
+    test('warming does nothing: no lookup at all', () async {
+      await guide.warm([arena, velocity]);
+
+      expect(imported.warmed, isEmpty);
+      expect(short.warmed, isEmpty);
+    });
+
+    test('a switch says every answer may have changed, once per '
+        'change', () async {
+      var changes = 0;
+      final subscription = guide.changes.listen((_) => changes++);
+      addTearDown(subscription.cancel);
+
+      guide
+        ..importedOn = false
+        ..importedOn = true;
+      await Future<void>.delayed(Duration.zero);
+      expect(changes, 1);
+      expect(guide.cached(arena), isNull, reason: 'neither has looked');
+
+      imported.remembered['201'] = NowNext(now: programme('Imported'));
+      expect(guide.cached(arena)!.now!.title, 'Imported');
+    });
+  });
 }
 
 /// A guide that answers from maps and records what it was asked.

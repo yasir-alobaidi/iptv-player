@@ -46,6 +46,7 @@ import 'package:iptv_player/features/search/presentation/search_text.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 
 import 'support/fake_panel.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 import 'support/panel_app.dart';
 
@@ -83,6 +84,7 @@ void main() {
           appClockProvider.overrideWithValue(clock),
           systemNotificationsProvider.overrideWithValue(desktop),
           windowControlsProvider.overrideWithValue(window),
+          guideSwitchedOn(),
         ],
       ),
     ))!;

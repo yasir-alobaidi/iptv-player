@@ -8,6 +8,7 @@ import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -30,32 +31,109 @@ import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
 
-/// Settings → Guide (the approved sketch, ADR-011 step 5): where a
-/// source's guide comes from and how much of it matched, Refresh, the
-/// days kept, the source's time offset, and its channels without a guide
-/// with a Match… picker for each.
-class GuideSettingsSection extends ConsumerWidget {
+/// Settings → Guide (the approved sketch, ADR-011 step 5): the guide's
+/// switch (ADR-031), then where a source's guide comes from and how much
+/// of it matched, Refresh, the days kept, the source's time offset, and
+/// its channels without a guide with a Match… picker for each. Switched
+/// off, only the switch shows, and the reminders when there are some:
+/// they work without the guide.
+class GuideSettingsSection extends ConsumerStatefulWidget {
   const new({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GuideSettingsSection> createState() =>
+      _GuideSettingsSectionState();
+}
+
+class _GuideSettingsSectionState extends ConsumerState<GuideSettingsSection> {
+  /// The switch keeps its place, and the keyboard's focus, as the rest of
+  /// the page comes and goes around it.
+  final GlobalKey _switchKey = GlobalKey(debugLabel: 'guide-switch');
+
+  String? _switchError;
+
+  Future<void> _setEnabled(bool on) async {
+    final result = await ref
+        .read(guideSettingsControllerProvider.notifier)
+        .setEnabled(on: on);
+    if (!mounted) return;
+    setState(() {
+      _switchError = switch (result) {
+        Err(:final failure) =>
+          "Couldn't save that change. ${failureMessage(failure)}",
+        Ok() => null,
+      };
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final enabled = ref.watch(guideEnabledProvider);
+    final top = [
+      if (_switchError case final error?) ...[
+        AppBanner(
+          message: error,
+          tone: BannerTone.error,
+          onDismiss: () => setState(() => _switchError = null),
+        ),
+        SizedBox(height: tokens.spacing.s8),
+      ],
+      _GuideSwitch(
+        key: _switchKey,
+        enabled: enabled,
+        onChanged: (on) => unawaited(_setEnabled(on)),
+      ),
+    ];
+
+    if (!enabled) {
+      final reminders = ref.watch(remindersProvider).value?.length ?? 0;
+      return SettingsPanel(
+        title: 'Guide',
+        subtitle:
+            'Off: no guide is downloaded or kept. The preview and the '
+            "player still say what's on now and next.",
+        body: ListView(
+          children: [...top, if (reminders > 0) const _RemindersRow()],
+        ),
+      );
+    }
+
     final sources = ref.watch(sourcesProvider).value;
     final wanted = ref.watch(settingsLocationProvider).guideSourceId;
     final current = ref.watch(currentSourceProvider);
     final source = sources?.where((s) => s.id == wanted).firstOrNull ?? current;
 
     if (sources == null) {
-      return const SettingsPanel(title: 'Guide', body: _Loading());
+      return SettingsPanel(
+        title: 'Guide',
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...top,
+            SizedBox(height: tokens.spacing.s16),
+            const Expanded(child: _Loading()),
+          ],
+        ),
+      );
     }
     if (source == null) {
       return SettingsPanel(
         title: 'Guide',
-        body: EmptyState(
-          icon: AppIcons.guide,
-          title: 'No guide yet',
-          message: 'Add a source first; its guide is set up here.',
-          actionLabel: 'Add a source',
-          onAction: () => _addSource(context, ref),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...top,
+            Expanded(
+              child: EmptyState(
+                icon: AppIcons.guide,
+                title: 'No guide yet',
+                message: 'Add a source first; its guide is set up here.',
+                actionLabel: 'Add a source',
+                onAction: () => _addSource(context, ref),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -96,7 +174,7 @@ class GuideSettingsSection extends ConsumerWidget {
       ],
       // Keyed by source: the list, its filter and anything pending belong
       // to one source.
-      body: _GuideBody(key: ValueKey(source.id), source: source),
+      body: _GuideBody(key: ValueKey(source.id), source: source, top: top),
     );
   }
 
@@ -110,9 +188,12 @@ class GuideSettingsSection extends ConsumerWidget {
 }
 
 class _GuideBody extends ConsumerStatefulWidget {
-  const new({required this.source, super.key});
+  const new({required this.source, required this.top, super.key});
 
   final Source source;
+
+  /// The page's first rows: the switch, and its error.
+  final List<Widget> top;
 
   @override
   ConsumerState<_GuideBody> createState() => _GuideBodyState();
@@ -354,9 +435,10 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
         (coverage.value?.isImporting ?? false) ||
         ref.watch(guideImportServiceProvider).isImporting(_sourceId);
     final keepDays = ref.watch(guideSettingsControllerProvider).keepDays;
-    final reminderCount = ref.watch(remindersProvider).value?.length ?? 0;
+    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
 
     final rows = [
+      ...widget.top,
       if (_error case final error?) ...[
         AppBanner(
           message: error,
@@ -376,7 +458,9 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
       _Setting(
         title: 'Keep',
         description: Text(
-          "Days of programmes to keep ahead, plus yesterday's, for every "
+          // A TV keeps the last two hours behind now, not a day (docs/07).
+          'Days of programmes to keep ahead, plus '
+          "${onTv ? 'the last two hours' : "yesterday's"}, for every "
           'source. More days take longer to import.',
           style: _descriptionStyle(context),
         ),
@@ -416,22 +500,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
           onChanged: _stepOffset,
         ),
       ),
-      // The second door to the one list of reminders (Phase 9 decision
-      // 13); the first is the bell in the Guide's toolbar.
-      _Setting(
-        title: remindersTitle(reminderCount),
-        // One line: every row here is height the channels below lose.
-        description: Text(
-          'Each shows when its programme starts, while the app is open.',
-          style: _descriptionStyle(context),
-        ),
-        control: AppButton(
-          label: 'Manage',
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.s,
-          onPressed: () => unawaited(showRemindersDialog(context)),
-        ),
-      ),
+      const _RemindersRow(),
     ];
 
     final Widget list;
@@ -513,9 +582,59 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
   }
 }
 
+/// The guide's switch (ADR-031): the page's first row, Off and On as
+/// every switch in Settings.
+class _GuideSwitch extends StatelessWidget {
+  const new({required this.enabled, required this.onChanged, super.key});
+
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => _Setting(
+    title: 'Programme guide',
+    description: Text(
+      "Downloads your provider's XMLTV guide for the Guide screen and "
+      'programme search. Off saves space and time.',
+      style: _descriptionStyle(context),
+    ),
+    control: SegmentedControl<bool>(
+      options: const [
+        SegmentOption(value: false, label: 'Off'),
+        SegmentOption(value: true, label: 'On'),
+      ],
+      value: enabled,
+      onChanged: onChanged,
+    ),
+  );
+}
+
+/// The second door to the one list of reminders (Phase 9 decision 13);
+/// the first is the bell in the Guide's toolbar.
+class _RemindersRow extends ConsumerWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Setting(
+    title: remindersTitle(ref.watch(remindersProvider).value?.length ?? 0),
+    // One line: every row here is height the channels below lose.
+    description: Text(
+      'Each shows when its programme starts, while the app is open.',
+      style: _descriptionStyle(context),
+    ),
+    control: AppButton(
+      label: 'Manage',
+      variant: AppButtonVariant.secondary,
+      size: AppButtonSize.s,
+      onPressed: () => unawaited(showRemindersDialog(context)),
+    ),
+  );
+}
+
 /// The page's height from which the settings stay put and the channels
-/// take what is left: under it they would get two rows or fewer.
-const double _fixedLayoutFrom = 532;
+/// take what is left: under it they would get two rows or fewer. 532
+/// before the guide's switch took a row of its own (ADR-031).
+const double _fixedLayoutFrom = 604;
 
 TextStyle _descriptionStyle(BuildContext context) => context.tokens.text.caption
     .copyWith(color: context.tokens.colors.textTertiary);

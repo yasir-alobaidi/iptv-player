@@ -82,6 +82,7 @@ import 'package:vm_service/vm_service_io.dart';
 
 import 'support/cast_tv.dart';
 import 'support/fake_panel.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 import 'support/panel_app.dart';
 
@@ -139,6 +140,8 @@ void main() {
           video: video,
           maxConnections: 1,
           overrides: [
+            // The soak opens and scrolls the Guide.
+            guideSwitchedOn(),
             ...castOverrides(binaries!, folder),
             ...downloadShellOverrides,
             // Never the user's own Videos folder.

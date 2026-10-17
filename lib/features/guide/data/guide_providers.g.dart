@@ -113,19 +113,22 @@ final class EpgMatchServiceProvider
 String _$epgMatchServiceHash() => r'4cc99273195e860baff2e2eaaa9aefae7ded4f1a';
 
 /// The one guide importer, which rematches after every swap. Cancels its
-/// imports when the app closes.
+/// imports when the app closes. A TV keeps the last two hours behind now,
+/// not a day (docs/07).
 
 @ProviderFor(epgImporter)
 final epgImporterProvider = EpgImporterProvider._();
 
 /// The one guide importer, which rematches after every swap. Cancels its
-/// imports when the app closes.
+/// imports when the app closes. A TV keeps the last two hours behind now,
+/// not a day (docs/07).
 
 final class EpgImporterProvider
     extends $FunctionalProvider<EpgImporter, EpgImporter, EpgImporter>
     with $Provider<EpgImporter> {
   /// The one guide importer, which rematches after every swap. Cancels its
-  /// imports when the app closes.
+  /// imports when the app closes. A TV keeps the last two hours behind now,
+  /// not a day (docs/07).
   EpgImporterProvider._()
     : super(
         from: null,
@@ -159,25 +162,31 @@ final class EpgImporterProvider
   }
 }
 
-String _$epgImporterHash() => r'f337ee0f1378480bb0e23ed03915d1a4221da365';
+String _$epgImporterHash() => r'334433e460069f5d7ac49d86cef2e965d48b9a52';
 
 /// Imports guides on its own: after the launch's syncs, hourly, and
-/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
-/// engine tells it of every sync that succeeds.
+/// after each sync (ADR-011 decision 5); nothing while the guide is
+/// switched off (ADR-031), and on a TV nothing while anything plays.
+/// `bootstrap()` starts it; the sync engine tells it of every sync that
+/// succeeds, and Settings → Guide's switch of every change.
 
 @ProviderFor(guideScheduler)
 final guideSchedulerProvider = GuideSchedulerProvider._();
 
 /// Imports guides on its own: after the launch's syncs, hourly, and
-/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
-/// engine tells it of every sync that succeeds.
+/// after each sync (ADR-011 decision 5); nothing while the guide is
+/// switched off (ADR-031), and on a TV nothing while anything plays.
+/// `bootstrap()` starts it; the sync engine tells it of every sync that
+/// succeeds, and Settings → Guide's switch of every change.
 
 final class GuideSchedulerProvider
     extends $FunctionalProvider<GuideScheduler, GuideScheduler, GuideScheduler>
     with $Provider<GuideScheduler> {
   /// Imports guides on its own: after the launch's syncs, hourly, and
-  /// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
-  /// engine tells it of every sync that succeeds.
+  /// after each sync (ADR-011 decision 5); nothing while the guide is
+  /// switched off (ADR-031), and on a TV nothing while anything plays.
+  /// `bootstrap()` starts it; the sync engine tells it of every sync that
+  /// succeeds, and Settings → Guide's switch of every change.
   GuideSchedulerProvider._()
     : super(
         from: null,
@@ -211,7 +220,7 @@ final class GuideSchedulerProvider
   }
 }
 
-String _$guideSchedulerHash() => r'8b7c6a981148150a94cde6dac458cc01898633ec';
+String _$guideSchedulerHash() => r'3551cdcc42c36de5bd5c11cbd0ec53d2dd27678c';
 
 /// The importer as the screens see it.
 
@@ -801,26 +810,239 @@ final class GuideSettingsStoreProvider
 }
 
 String _$guideSettingsStoreHash() =>
-    r'5e5fcdc3c0e351f2139d31d12b378e4f6a08da1a';
+    r'0d71116f414c8c235c811e552ee63620b05c5cb9';
 
-/// Settings → Guide's choices: the days kept (global) and a source's time
-/// offset. The defaults at once, the stored choices as soon as they are
-/// read. A change is saved, then re-imports the guides it affects
-/// (ADR-011 decision 4), one source at a time.
+/// Settings → Guide's choices as `bootstrap()` read them, before the first
+/// frame: the rail, the keys and the guide's page are right from the
+/// start, with no Guide appearing a moment after launch. Null: read by the
+/// controller once it is made (tests, a read that failed).
+
+@ProviderFor(launchGuideSettings)
+final launchGuideSettingsProvider = LaunchGuideSettingsProvider._();
+
+/// Settings → Guide's choices as `bootstrap()` read them, before the first
+/// frame: the rail, the keys and the guide's page are right from the
+/// start, with no Guide appearing a moment after launch. Null: read by the
+/// controller once it is made (tests, a read that failed).
+
+final class LaunchGuideSettingsProvider
+    extends $FunctionalProvider<GuideSettings?, GuideSettings?, GuideSettings?>
+    with $Provider<GuideSettings?> {
+  /// Settings → Guide's choices as `bootstrap()` read them, before the first
+  /// frame: the rail, the keys and the guide's page are right from the
+  /// start, with no Guide appearing a moment after launch. Null: read by the
+  /// controller once it is made (tests, a read that failed).
+  LaunchGuideSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'launchGuideSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$launchGuideSettingsHash();
+
+  @$internal
+  @override
+  $ProviderElement<GuideSettings?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GuideSettings? create(Ref ref) {
+    return launchGuideSettings(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GuideSettings? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GuideSettings?>(value),
+    );
+  }
+}
+
+String _$launchGuideSettingsHash() =>
+    r'7e80a174ed940b135bc61cd9f23999de08a191da';
+
+/// Completes once Settings → Guide's stored choices have been read, or
+/// couldn't be.
+
+@ProviderFor(guideSettingsLoaded)
+final guideSettingsLoadedProvider = GuideSettingsLoadedProvider._();
+
+/// Completes once Settings → Guide's stored choices have been read, or
+/// couldn't be.
+
+final class GuideSettingsLoadedProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Completes once Settings → Guide's stored choices have been read, or
+  /// couldn't be.
+  GuideSettingsLoadedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'guideSettingsLoadedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideSettingsLoadedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return guideSettingsLoaded(ref);
+  }
+}
+
+String _$guideSettingsLoadedHash() =>
+    r'21d6ca681b658b97b8f9743abc4afad62f7d423a';
+
+/// Whether the Guide is switched on (ADR-031): its place in the rail, its
+/// keys, its import. Off by default, and off until the stored choice has
+/// been read. Its dependents hear only a change of the switch, not of the
+/// days kept.
+
+@ProviderFor(guideEnabled)
+final guideEnabledProvider = GuideEnabledProvider._();
+
+/// Whether the Guide is switched on (ADR-031): its place in the rail, its
+/// keys, its import. Off by default, and off until the stored choice has
+/// been read. Its dependents hear only a change of the switch, not of the
+/// days kept.
+
+final class GuideEnabledProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether the Guide is switched on (ADR-031): its place in the rail, its
+  /// keys, its import. Off by default, and off until the stored choice has
+  /// been read. Its dependents hear only a change of the switch, not of the
+  /// days kept.
+  GuideEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'guideEnabledProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideEnabledHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return guideEnabled(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$guideEnabledHash() => r'd744da2d96125f7108e0cbb5f6e4b43a79aad01c';
+
+/// True once the stored choice has been read and the Guide is off: its
+/// page goes Home, and draws nothing. Until it is read the page is let
+/// be (the app never opens on it).
+
+@ProviderFor(guideSwitchedOff)
+final guideSwitchedOffProvider = GuideSwitchedOffProvider._();
+
+/// True once the stored choice has been read and the Guide is off: its
+/// page goes Home, and draws nothing. Until it is read the page is let
+/// be (the app never opens on it).
+
+final class GuideSwitchedOffProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// True once the stored choice has been read and the Guide is off: its
+  /// page goes Home, and draws nothing. Until it is read the page is let
+  /// be (the app never opens on it).
+  GuideSwitchedOffProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'guideSwitchedOffProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$guideSwitchedOffHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return guideSwitchedOff(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$guideSwitchedOffHash() => r'6424096762ae0a268dbd4296719c14279c2af9b0';
+
+/// Settings → Guide's choices: the switch and the days kept (global), and
+/// a source's time offset. The choices bootstrap read at once
+/// ([launchGuideSettings]); without them the device's defaults
+/// (`GuideSettings.defaultsOn`), then the stored choices as soon as they
+/// are read. A change is saved, then re-imports the guides it affects
+/// (ADR-011 decision 4), one source at a time; the switch starts or ends
+/// the guide's imports, and off clears it.
 
 @ProviderFor(GuideSettingsController)
 final guideSettingsControllerProvider = GuideSettingsControllerProvider._();
 
-/// Settings → Guide's choices: the days kept (global) and a source's time
-/// offset. The defaults at once, the stored choices as soon as they are
-/// read. A change is saved, then re-imports the guides it affects
-/// (ADR-011 decision 4), one source at a time.
+/// Settings → Guide's choices: the switch and the days kept (global), and
+/// a source's time offset. The choices bootstrap read at once
+/// ([launchGuideSettings]); without them the device's defaults
+/// (`GuideSettings.defaultsOn`), then the stored choices as soon as they
+/// are read. A change is saved, then re-imports the guides it affects
+/// (ADR-011 decision 4), one source at a time; the switch starts or ends
+/// the guide's imports, and off clears it.
 final class GuideSettingsControllerProvider
     extends $NotifierProvider<GuideSettingsController, GuideSettings> {
-  /// Settings → Guide's choices: the days kept (global) and a source's time
-  /// offset. The defaults at once, the stored choices as soon as they are
-  /// read. A change is saved, then re-imports the guides it affects
-  /// (ADR-011 decision 4), one source at a time.
+  /// Settings → Guide's choices: the switch and the days kept (global), and
+  /// a source's time offset. The choices bootstrap read at once
+  /// ([launchGuideSettings]); without them the device's defaults
+  /// (`GuideSettings.defaultsOn`), then the stored choices as soon as they
+  /// are read. A change is saved, then re-imports the guides it affects
+  /// (ADR-011 decision 4), one source at a time; the switch starts or ends
+  /// the guide's imports, and off clears it.
   GuideSettingsControllerProvider._()
     : super(
         from: null,
@@ -849,12 +1071,15 @@ final class GuideSettingsControllerProvider
 }
 
 String _$guideSettingsControllerHash() =>
-    r'c737c1877282d4429370cc41bbad40ae21fe939c';
+    r'6500c3a89819671576670b464689b1bcfcaa91ca';
 
-/// Settings → Guide's choices: the days kept (global) and a source's time
-/// offset. The defaults at once, the stored choices as soon as they are
-/// read. A change is saved, then re-imports the guides it affects
-/// (ADR-011 decision 4), one source at a time.
+/// Settings → Guide's choices: the switch and the days kept (global), and
+/// a source's time offset. The choices bootstrap read at once
+/// ([launchGuideSettings]); without them the device's defaults
+/// (`GuideSettings.defaultsOn`), then the stored choices as soon as they
+/// are read. A change is saved, then re-imports the guides it affects
+/// (ADR-011 decision 4), one source at a time; the switch starts or ends
+/// the guide's imports, and off clears it.
 
 abstract class _$GuideSettingsController extends $Notifier<GuideSettings> {
   GuideSettings build();

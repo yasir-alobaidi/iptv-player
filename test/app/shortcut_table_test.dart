@@ -115,6 +115,51 @@ void main() {
     expect(row('Move around').keysText, '↑ ↓ ← →');
   });
 
+  group('with the Guide switched off (ADR-031)', () {
+    List<ShortcutEntry> rows(List<ShortcutGroup> groups) => [
+      for (final group in groups) ...group.entries,
+    ];
+
+    test('the list leaves out its keys, its group and what only works on '
+        'programmes, and the destinations end at Ctrl 6', () {
+      final off = shortcutTableFor(guide: false);
+      final actions = rows(off).map((entry) => entry.action).toList();
+
+      expect(off.map((group) => group.title), isNot(contains('The Guide')));
+      expect(actions, isNot(contains('The Guide')));
+      expect(
+        actions,
+        isNot(contains("Set an upcoming programme's reminder, or remove it")),
+      );
+      expect(actions, isNot(contains("Step the Guide's time offset")));
+      final destinations = rows(off)
+          .singleWhere((entry) => entry.action.startsWith('Home, Live TV'));
+      expect(
+        destinations.action,
+        'Home, Live TV, Movies, Series, Favorites, Library',
+      );
+      expect(destinations.keysText, 'Ctrl 1 … Ctrl 6');
+      // Everything else is as the whole list has it, in its order.
+      final whole = rows(shortcutTable).map((entry) => entry.action).toList();
+      expect(
+        whole.where(
+          (action) =>
+              actions.contains(action) ||
+              action ==
+                  'Home, Live TV, Movies, Series, Favorites, Library, Guide',
+        ),
+        hasLength(actions.length),
+      );
+      for (final group in off) {
+        expect(group.entries, isNotEmpty, reason: group.title);
+      }
+    });
+
+    test('switched on, the list is the whole table', () {
+      expect(shortcutTableFor(guide: true), same(shortcutTable));
+    });
+  });
+
   // The page, the F1 panel and docs/05 say the same, for good: the doc's
   // section is this text. After changing the list, run this test with
   // UPDATE_SHORTCUT_DOCS=1 to write it.

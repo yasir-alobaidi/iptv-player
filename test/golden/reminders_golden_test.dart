@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/guide/presentation/guide_settings.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
@@ -133,7 +134,18 @@ void main() {
         inSettings: true,
       );
       expect(tester.takeException(), isNull, reason: 'Settings → Guide');
-      await tester.ensureVisible(find.widgetWithText(AppButton, 'Manage'));
+      // The page scrolls as a whole in this window, and its list builds
+      // only what is near the screen: the row is scrolled to.
+      await tester.scrollUntilVisible(
+        find.widgetWithText(AppButton, 'Manage'),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byType(GuideSettingsSection),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await _settle(tester);
       await tester.tap(find.widgetWithText(AppButton, 'Manage'));
       await _settle(tester);

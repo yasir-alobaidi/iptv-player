@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/library/presentation/library_actions.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -61,9 +62,15 @@ final class SearchActions {
   }
 
   /// On now: its channel, full screen. Upcoming: the Guide on it, with
-  /// its sheet open.
+  /// its sheet open; with the Guide switched off (ADR-031: a guide still
+  /// stored at launch, until it is cleared), its channel in Live TV,
+  /// where the preview says what's on and next.
   Future<void> openProgramme(ProgrammeHit hit, DateTime now) async {
     if (hit.isOnAt(now)) return await watch(hit.channel);
+    if (!_container.read(guideEnabledProvider)) {
+      showInLiveTv(hit.channel);
+      return;
+    }
     _close();
     _browse(hit.channel.sourceId);
     _container

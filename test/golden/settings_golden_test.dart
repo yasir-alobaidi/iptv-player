@@ -18,6 +18,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/diagnostics/domain/log_lines.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
+import 'package:iptv_player/features/guide/domain/guide_settings.dart';
 import 'package:iptv_player/features/settings/data/data_providers.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 import 'package:iptv_player/features/settings/presentation/data_section.dart';
@@ -122,10 +123,15 @@ void main() {
       await golden(tester, 'images/settings_playback.png');
     });
 
-    sceneTest('Guide', (tester) async {
+    /// Settings → Guide with a guide of 1,290 channels; [guideOn] false,
+    /// the guide's switch off (its default, ADR-031) and nothing else.
+    Future<void> guidePage(WidgetTester tester, {bool guideOn = true}) async {
       hideDebugBanner();
       final base = sketch();
       final fakes = GuideFakes(base);
+      if (guideOn) {
+        fakes.settingsStore.stored = const GuideSettings(enabled: true);
+      }
       final updated = base.now.subtract(const Duration(hours: 2));
       fakes.guide
         ..setCoverage(
@@ -171,8 +177,18 @@ void main() {
       );
       await settleApp(tester);
       await settleApp(tester);
+    }
+
+    sceneTest('Guide', (tester) async {
+      await guidePage(tester);
 
       await golden(tester, 'images/settings_guide.png');
+    });
+
+    sceneTest('Guide, switched off', (tester) async {
+      await guidePage(tester, guideOn: false);
+
+      await golden(tester, 'images/settings_guide_off.png');
     });
 
     /// Settings → Appearance with [settings] in use, at 8:05 in the
@@ -237,12 +253,14 @@ void main() {
       await golden(tester, 'images/shortcuts_panel_1024x640.png');
     });
 
-    /// Settings → Data, with 412 MB of pictures and a guide; Import…
-    /// answers with sketch C's file.
+    /// Settings → Data, with 412 MB of pictures and a guide (switched on:
+    /// one is kept only then, ADR-031); Import… answers with sketch C's
+    /// file.
     Future<void> data(WidgetTester tester) async {
       hideDebugBanner();
       final base = sketch();
-      final fakes = GuideFakes(base);
+      final fakes = GuideFakes(base)
+        ..settingsStore.stored = const GuideSettings(enabled: true);
       final updated = base.now.subtract(const Duration(hours: 2));
       fakes.guide.setCoverage(
         'src-1',

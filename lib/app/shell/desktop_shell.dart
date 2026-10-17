@@ -16,6 +16,7 @@ import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 
 /// The desktop shell (docs/05): nav rail, top bar, the current
 /// destination and the casting bar. Toasts show over every route
@@ -275,6 +276,12 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     }
     _hadOverlay = overlay != null;
 
+    // The Guide switched off (or found off at launch) while its page
+    // shows: Home, as the router sends any later visit (ADR-031).
+    ref.listen(guideSwitchedOffProvider, (_, off) {
+      if (off && _current == AppDestination.guide) _go(AppDestination.home);
+    });
+
     final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
     final shell = LayoutBuilder(
       builder: (context, constraints) {
@@ -308,6 +315,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                       showToggle: !onTv,
                       destinations: AppDestination.primaryOn(
                         ref.watch(formFactorProvider),
+                        guide: ref.watch(guideEnabledProvider),
                       ),
                     ),
                     Expanded(

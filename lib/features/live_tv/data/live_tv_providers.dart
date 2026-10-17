@@ -43,7 +43,10 @@ GuideService shortEpgGuide(Ref ref) =>
     ShortEpgGuide(ref.watch(sourceRepositoryProvider));
 
 /// Now and next for the channels on screen: the imported guide first, the
-/// short EPG behind it (Phase 4 decision 1).
+/// short EPG behind it (Phase 4 decision 1); the short EPG alone while the
+/// guide is switched off (ADR-031). The switch is listened to, not
+/// watched: the cast session holds this service, and must not be made
+/// again for it.
 @Riverpod(keepAlive: true)
 GuideService guideService(Ref ref) {
   final imported = DbGuide(
@@ -51,10 +54,15 @@ GuideService guideService(Ref ref) {
     clock: ref.watch(appClockProvider),
   );
   ref.onDispose(() => unawaited(imported.dispose()));
-  return CompositeGuide(
+  final guide = CompositeGuide(
     imported: imported,
     fallback: ref.watch(shortEpgGuideProvider),
+    importedOn: ref.read(guideEnabledProvider),
   );
+  ref
+    ..listen(guideEnabledProvider, (_, on) => guide.importedOn = on)
+    ..onDispose(() => unawaited(guide.dispose()));
+  return guide;
 }
 
 /// What's on [channel] now and next; [NowNext.none] when unknown. Asks

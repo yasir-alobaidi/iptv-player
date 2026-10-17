@@ -27,6 +27,7 @@ import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 
 import 'support/fake_panel.dart';
 import 'support/frames.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 import 'support/panel_app.dart';
 
@@ -57,7 +58,8 @@ void main() {
     ))!;
     addTearDown(() => tester.runAsync(panel.stop));
     final app = (await tester.runAsync(
-      () => PanelApp.open(panel, video: false),
+      // Its programmes are found in the imported guide: switched on.
+      () => PanelApp.open(panel, video: false, overrides: [guideSwitchedOn()]),
     ))!;
     addTearDown(() => tester.runAsync(app.close));
     final imported = await tester.runAsync(

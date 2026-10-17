@@ -14,6 +14,7 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
+import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/search/data/search_providers.dart';
 import 'package:iptv_player/features/search/domain/search.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
@@ -25,6 +26,7 @@ import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
 
 import '../../app/app_harness.dart';
+import '../guide/guide_switch.dart';
 import '../live_tv/live_tv_fakes.dart';
 import '../settings/appearance_fakes.dart';
 import 'search_fakes.dart';
@@ -55,6 +57,7 @@ void main() {
     FormFactor formFactor = FormFactor.desktop,
     Size size = const Size(1440, 900),
     bool withAppearance = false,
+    bool guideOn = false,
   }) async {
     live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
@@ -68,6 +71,7 @@ void main() {
         searchRepositoryProvider.overrideWithValue(search),
         formFactorProvider.overrideWithValue(formFactor),
         if (withAppearance) ...appearanceOverrides(),
+        if (guideOn) guideSwitchedOn(),
       ],
     );
     await settle(tester);
@@ -521,7 +525,7 @@ void main() {
     testWidgets('Enter on an upcoming programme opens the Guide on it', (
       tester,
     ) async {
-      await open(tester);
+      await open(tester, guideOn: true);
       search.answers['arena'] = full('arena');
       await type(tester, 'arena');
       await key(tester, LogicalKeyboardKey.tab);
@@ -530,6 +534,25 @@ void main() {
 
       await enter(tester);
       expect(app.location, AppDestination.guide.path);
+    });
+
+    testWidgets('with the Guide switched off (ADR-031), Enter on an upcoming '
+        'programme shows its channel in Live TV', (tester) async {
+      await open(tester);
+      search.answers['arena'] = full('arena');
+      await type(tester, 'arena');
+      await key(tester, LogicalKeyboardKey.tab);
+      await key(tester, LogicalKeyboardKey.arrowDown);
+      expect(cursorRow(tester), 'Arena Weekly');
+
+      await enter(tester);
+      expect(app.location, AppDestination.liveTv.path);
+      expect(find.byType(SearchOverlay), findsNothing);
+      final view = ProviderScope.containerOf(
+        tester.element(find.byType(Navigator).first),
+      ).read(liveTvControllerProvider);
+      expect(view?.query.text, 'Arena Sports 1');
+      expect(view?.selected?.remoteKey, '201');
     });
 
     testWidgets('Enter on a movie opens its page', (tester) async {

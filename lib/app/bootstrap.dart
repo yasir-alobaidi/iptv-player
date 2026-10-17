@@ -55,7 +55,9 @@ import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart
 import 'package:iptv_player/features/diagnostics/data/file_log_reader.dart';
 import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/downloads/presentation/download_actions.dart';
+import 'package:iptv_player/features/guide/data/db_guide_settings_store.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
+import 'package:iptv_player/features/guide/domain/guide_settings.dart';
 import 'package:iptv_player/features/library/data/library_providers.dart';
 import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
@@ -148,6 +150,13 @@ Future<void> bootstrap() async {
     );
   }
 
+  // The guide's switch (ADR-031), before the first frame: the rail never
+  // gains its Guide a moment after launch.
+  final guideSettings = (await DbGuideSettingsStore(
+    settings,
+    defaults: GuideSettings.defaultsOn(formFactor),
+  ).load()).valueOrNull;
+
   // What the user chose for the decoder, before the player is made: its
   // video controller sets `hwdec` once by itself (Phase 9 decision 4).
   final playback =
@@ -194,6 +203,7 @@ Future<void> bootstrap() async {
       windowBoundsStoreProvider.overrideWithValue(windowBounds),
       uiPreferencesProvider.overrideWithValue(uiPreferences),
       appearanceStoreProvider.overrideWithValue(appearance),
+      launchGuideSettingsProvider.overrideWithValue(guideSettings),
       startLocationProvider.overrideWithValue(
         firstRun ? welcomeRoutePath : '/',
       ),

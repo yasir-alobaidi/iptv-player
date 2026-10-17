@@ -92,6 +92,11 @@ const noRemindersMessage =
     'Press R on an upcoming programme in the Guide, or choose Remind me '
     'in Search.';
 
+/// The same with the Guide switched off (ADR-031): nowhere sets one then.
+const noRemindersMessageGuideOff =
+    'Reminders are set on programmes in the Guide, which is switched '
+    'off. Switch it on in Settings → Guide to set one.';
+
 /// A row of the list, for assistive technology: "The Harbor Pilot, Blue
 /// Water, Tomorrow, 9:30 PM".
 String reminderRowLabel(Reminder reminder, DateTime now, TimeStyle style) => [

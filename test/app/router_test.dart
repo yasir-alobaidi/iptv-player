@@ -5,9 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
+import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/library/presentation/library_screen.dart';
@@ -18,6 +20,9 @@ import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/series/presentation/series_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
+import '../features/guide/guide_switch.dart';
+import '../features/guide/presentation/guide_settings_fakes.dart';
+import '../features/onboarding/onboarding_fakes.dart';
 import 'app_harness.dart';
 
 void main() {
@@ -57,7 +62,7 @@ void main() {
       final app = await pumpApp(
         tester,
         initialLocation: destination.path,
-        overrides: emptyLibraryOverrides,
+        overrides: [...emptyLibraryOverrides, guideSwitchedOn()],
       );
 
       expect(app.location, destination.path);
@@ -76,6 +81,50 @@ void main() {
         reason: '${destination.label} has no screen',
       );
     }
+  });
+
+  group('the Guide switched off (ADR-031)', () {
+    testWidgets('its page goes Home; on again, it opens', (tester) async {
+      final fakes = GuideFakes(OnboardingFakes()..sources.seed());
+      final app = await pumpApp(tester, overrides: fakes.overrides);
+
+      app.router.go(AppDestination.guide.path);
+      await settleApp(tester);
+      expect(app.location, AppDestination.home.path);
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      await container
+          .read(guideSettingsControllerProvider.notifier)
+          .setEnabled(on: true);
+      await settleApp(tester);
+      app.router.go(AppDestination.guide.path);
+      await settleApp(tester);
+      expect(app.location, AppDestination.guide.path);
+      expect(find.byType(GuideScreen), findsOneWidget);
+    });
+
+    testWidgets('a page opened before the choice was read goes Home once it '
+        'is, and holds nothing', (tester) async {
+      final app = await pumpApp(
+        tester,
+        initialLocation: AppDestination.guide.path,
+        settle: false,
+      );
+      expect(app.location, AppDestination.guide.path, reason: 'not read yet');
+
+      await settleApp(tester);
+      expect(app.location, AppDestination.home.path);
+      expect(
+        find.descendant(
+          of: find.byType(GuideScreen, skipOffstage: false),
+          matching: find.byType(FocusPane, skipOffstage: false),
+        ),
+        findsNothing,
+      );
+    });
   });
 
   testWidgets('switching branches keeps the shell', (tester) async {

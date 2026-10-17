@@ -48,6 +48,7 @@ import 'package:iptv_player/features/reminders/presentation/reminder_watch.dart'
 import 'package:logger/logger.dart';
 
 import '../support/fake_panel.dart';
+import '../support/guide_on.dart';
 import '../support/panel_app.dart';
 
 /// How long after the window is covered the programme starts.
@@ -99,6 +100,7 @@ void main() {
           appClockProvider.overrideWithValue(clock),
           systemNotificationsProvider.overrideWithValue(desktop),
           windowControlsProvider.overrideWithValue(window),
+          guideSwitchedOn(),
         ],
       ),
     ))!;

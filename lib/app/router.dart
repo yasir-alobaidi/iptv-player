@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/presentation/guide_screen.dart';
 import 'package:iptv_player/features/home/presentation/home_screen.dart';
 import 'package:iptv_player/features/library/presentation/library_movie_page.dart';
@@ -96,6 +98,9 @@ GoRouter buildRouter({String initialLocation = '/'}) {
                 GoRoute(
                   path: destination.path,
                   builder: (context, state) => _screenFor(destination),
+                  redirect: destination == AppDestination.guide
+                      ? _guideRedirect
+                      : null,
                   routes: _pagesOf(destination),
                 ),
               ],
@@ -163,6 +168,18 @@ GoRouter buildRouter({String initialLocation = '/'}) {
     ],
   );
 }
+
+/// The Guide's page goes Home while the Guide is switched off (ADR-031):
+/// nothing leads there then, and a jump that still does (an old link, a
+/// key) lands somewhere useful. Read from the app's providers above the
+/// router.
+String? _guideRedirect(BuildContext context, GoRouterState state) =>
+    ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(guideSwitchedOffProvider)
+    ? AppDestination.home.path
+    : null;
 
 /// A title's page, inside its branch (Phase 5 step 5).
 /// The pages inside a destination's branch: a title's page under Movies

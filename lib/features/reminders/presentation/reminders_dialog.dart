@@ -7,6 +7,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
@@ -37,7 +38,8 @@ Future<void> showRemindersDialog(BuildContext context) =>
     showAppDialog<void>(context, builder: (_) => const RemindersDialog());
 
 /// Every reminder, soonest first. The list is one Tab stop: ↑/↓ between
-/// rows, Enter opens the Guide on the programme, Delete removes it with
+/// rows, Enter opens the Guide on the programme (its channel in Live TV
+/// while the Guide is switched off, ADR-031), Delete removes it with
 /// Undo; a row's Remove is the mouse's way to the same. Esc closes.
 class RemindersDialog extends ConsumerStatefulWidget {
   const new({super.key});
@@ -154,9 +156,14 @@ class _RemindersDialogState extends ConsumerState<RemindersDialog> {
                         spacing: tokens.spacing.s16,
                         runSpacing: tokens.spacing.s8,
                         crossAxisAlignment: WrapCrossAlignment.center,
-                        children: const [
-                          _KeyHint('Enter', 'Show in the Guide'),
-                          _KeyHint('Del', 'Remove'),
+                        children: [
+                          _KeyHint(
+                            'Enter',
+                            ref.watch(guideEnabledProvider)
+                                ? 'Show in the Guide'
+                                : 'Show in Live TV',
+                          ),
+                          const _KeyHint('Del', 'Remove'),
                         ],
                       ),
                     ),
@@ -189,11 +196,13 @@ class _RemindersDialogState extends ConsumerState<RemindersDialog> {
     if (list != null && list.isEmpty) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: tokens.spacing.s16),
-        child: const EmptyState(
+        child: EmptyState(
           compact: true,
           icon: AppIcons.bell,
           title: noRemindersTitle,
-          message: noRemindersMessage,
+          message: ref.watch(guideEnabledProvider)
+              ? noRemindersMessage
+              : noRemindersMessageGuideOff,
         ),
       );
     }

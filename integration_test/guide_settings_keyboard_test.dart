@@ -2,7 +2,8 @@
 // database, sync, guide import and match jobs, against the fake panel
 // (in its own process) and its xmltv.php.
 //
-// Ctrl+, → Settings → Guide → Import guide → Keep: 3 days (re-imports) →
+// Ctrl+, → Settings → Guide, off by default (ADR-031): its switch alone →
+// On → Import guide → Keep: 3 days (re-imports) →
 // Time offset +1 h (re-imports once) → the Unmatched list → Enter opens
 // the Match… picker → type a guide channel's name → Enter maps it → the
 // channel leaves Unmatched and the focus stays in the list.
@@ -79,11 +80,23 @@ void main() {
       await k.waitFor(find.textContaining('updated just now'));
     }
 
-    // ── Ctrl+, → Settings; Tab to Guide in its list; Enter.
+    // ── Ctrl+, → Settings; Tab to Guide in its list; Enter: the guide is
+    // off, as it is by default, and its switch is all the page has.
     await k.chord(LogicalKeyboardKey.comma);
     await k.waitFor(find.byType(SettingsScreen));
     await k.tabTo(inSettings('Guide'));
     await k.press(LogicalKeyboardKey.enter);
+    await k.waitFor(inSettings('Programme guide'));
+    expect(app.container.read(guideEnabledProvider), isFalse);
+    expect(find.text('Import guide'), findsNothing);
+
+    // ── On: Tab to it, Enter; the page fills in around the switch.
+    await k.tabTo(inSettings('On'));
+    await k.press(LogicalKeyboardKey.enter);
+    await k.waitUntil(
+      () => app.container.read(guideEnabledProvider),
+      'the guide switched on',
+    );
     await k.waitFor(
       find.text(
         'No guide imported yet. '

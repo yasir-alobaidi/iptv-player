@@ -13,6 +13,7 @@ import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components.dart';
 
+import '../features/guide/guide_switch.dart';
 import 'app_harness.dart';
 
 /// The rail's rendered width, which is what "collapsed" and "expanded"
@@ -87,7 +88,7 @@ void main() {
     testWidgets('shows every destination and marks the current one', (
       tester,
     ) async {
-      await pumpApp(tester);
+      await pumpApp(tester, overrides: [guideSwitchedOn()]);
 
       for (final destination in AppDestination.values) {
         expect(
@@ -97,6 +98,21 @@ void main() {
         );
       }
       expect(find.text('Home'), findsOneWidget, reason: 'the top bar title');
+    });
+
+    testWidgets('has no Guide while its switch is off, as it is by default '
+        '(ADR-031)', (tester) async {
+      await pumpApp(tester);
+
+      expect(findByLabel(AppDestination.guide.label), findsNothing);
+      for (final destination in AppDestination.values) {
+        if (destination == AppDestination.guide) continue;
+        expect(
+          findByLabel(destination.label),
+          findsWidgets,
+          reason: '${destination.label} is missing from the rail',
+        );
+      }
     });
 
     testWidgets('is collapsed by default and the toggle expands it', (

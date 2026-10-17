@@ -86,23 +86,7 @@ const shortcutTable = <ShortcutGroup>[
         SingleActivator(LogicalKeyboardKey.slash),
       ],
     ),
-    ShortcutEntry(
-      'Home, Live TV, Movies, Series, Favorites, Library, Guide',
-      [
-        ['Ctrl', '1'],
-        ['Ctrl', '7'],
-      ],
-      between: '…',
-      binds: [
-        SingleActivator(LogicalKeyboardKey.digit1, control: true),
-        SingleActivator(LogicalKeyboardKey.digit2, control: true),
-        SingleActivator(LogicalKeyboardKey.digit3, control: true),
-        SingleActivator(LogicalKeyboardKey.digit4, control: true),
-        SingleActivator(LogicalKeyboardKey.digit5, control: true),
-        SingleActivator(LogicalKeyboardKey.digit6, control: true),
-        SingleActivator(LogicalKeyboardKey.digit7, control: true),
-      ],
-    ),
+    _destinations,
     ShortcutEntry(
       'Settings',
       [
@@ -110,17 +94,7 @@ const shortcutTable = <ShortcutGroup>[
       ],
       binds: [SingleActivator(LogicalKeyboardKey.comma, control: true)],
     ),
-    ShortcutEntry(
-      'The Guide',
-      [
-        ['G'],
-      ],
-      // And a TV remote's Guide key, which a keyboard hasn't.
-      binds: [
-        SingleActivator(LogicalKeyboardKey.keyG),
-        SingleActivator(LogicalKeyboardKey.guide),
-      ],
-    ),
+    _guideKey,
     ShortcutEntry(
       'Cast, or choose a TV',
       [
@@ -222,27 +196,7 @@ const shortcutTable = <ShortcutGroup>[
       ['−'],
     ], between: ''),
   ]),
-  ShortcutGroup('The Guide', [
-    ShortcutEntry('From programme to programme, channel to channel', [
-      ['←'],
-      ['→'],
-      ['↑'],
-      ['↓'],
-    ], between: ''),
-    ShortcutEntry('A screen of channels up or down', [
-      ['PageUp'],
-      ['PageDown'],
-    ]),
-    ShortcutEntry('Back to now', [
-      ['Home'],
-    ]),
-    ShortcutEntry("A programme's details", [
-      ['Enter'],
-    ]),
-    ShortcutEntry("Set the programme's reminder, or remove it", [
-      ['R'],
-    ]),
-  ]),
+  _guideGroup,
   ShortcutGroup('Search', [
     ShortcutEntry('Through the results', [
       ['↑'],
@@ -258,9 +212,7 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry('Download the result', [
       ['Ctrl', 'D'],
     ]),
-    ShortcutEntry("Set an upcoming programme's reminder, or remove it", [
-      ['Ctrl', 'R'],
-    ]),
+    _programmeReminder,
     ShortcutEntry('Forget a recent search', [
       ['Delete'],
     ]),
@@ -298,11 +250,103 @@ const shortcutTable = <ShortcutGroup>[
     ShortcutEntry('Remove a reminder from the list', [
       ['Delete'],
     ]),
-    ShortcutEntry("Step the Guide's time offset", [
-      ['←'],
-      ['→'],
-      ['−'],
-      ['+'],
-    ], between: ''),
+    _guideOffset,
   ]),
 ];
+
+/// [shortcutTable] as the app lists it: with the Guide switched off
+/// (ADR-031), its keys, its group and what only works on programmes are
+/// left out, and Ctrl 1 … Ctrl 6 go to the rest. docs/05 has the whole
+/// table.
+List<ShortcutGroup> shortcutTableFor({required bool guide}) {
+  if (guide) return shortcutTable;
+  return [
+    for (final group in shortcutTable)
+      if (!identical(group, _guideGroup))
+        ShortcutGroup(group.title, [
+          for (final entry in group.entries)
+            if (identical(entry, _destinations))
+              _destinationsWithoutGuide
+            else if (!_guideOnly.any((only) => identical(only, entry)))
+              entry,
+        ]),
+  ];
+}
+
+const _destinations = ShortcutEntry(
+  'Home, Live TV, Movies, Series, Favorites, Library, Guide',
+  [
+    ['Ctrl', '1'],
+    ['Ctrl', '7'],
+  ],
+  between: '…',
+  binds: [
+    SingleActivator(LogicalKeyboardKey.digit1, control: true),
+    SingleActivator(LogicalKeyboardKey.digit2, control: true),
+    SingleActivator(LogicalKeyboardKey.digit3, control: true),
+    SingleActivator(LogicalKeyboardKey.digit4, control: true),
+    SingleActivator(LogicalKeyboardKey.digit5, control: true),
+    SingleActivator(LogicalKeyboardKey.digit6, control: true),
+    SingleActivator(LogicalKeyboardKey.digit7, control: true),
+  ],
+);
+
+const _destinationsWithoutGuide = ShortcutEntry(
+  'Home, Live TV, Movies, Series, Favorites, Library',
+  [
+    ['Ctrl', '1'],
+    ['Ctrl', '6'],
+  ],
+  between: '…',
+);
+
+const _guideKey = ShortcutEntry(
+  'The Guide',
+  [
+    ['G'],
+  ],
+  // And a TV remote's Guide key, which a keyboard hasn't.
+  binds: [
+    SingleActivator(LogicalKeyboardKey.keyG),
+    SingleActivator(LogicalKeyboardKey.guide),
+  ],
+);
+
+const _guideGroup = ShortcutGroup('The Guide', [
+  ShortcutEntry('From programme to programme, channel to channel', [
+    ['←'],
+    ['→'],
+    ['↑'],
+    ['↓'],
+  ], between: ''),
+  ShortcutEntry('A screen of channels up or down', [
+    ['PageUp'],
+    ['PageDown'],
+  ]),
+  ShortcutEntry('Back to now', [
+    ['Home'],
+  ]),
+  ShortcutEntry("A programme's details", [
+    ['Enter'],
+  ]),
+  ShortcutEntry("Set the programme's reminder, or remove it", [
+    ['R'],
+  ]),
+]);
+
+/// Search finds programmes only in the imported guide.
+const _programmeReminder = ShortcutEntry(
+  "Set an upcoming programme's reminder, or remove it",
+  [
+    ['Ctrl', 'R'],
+  ],
+);
+
+const _guideOffset = ShortcutEntry("Step the Guide's time offset", [
+  ['←'],
+  ['→'],
+  ['−'],
+  ['+'],
+], between: '');
+
+const _guideOnly = <ShortcutEntry>[_guideKey, _programmeReminder, _guideOffset];

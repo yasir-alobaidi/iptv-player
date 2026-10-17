@@ -277,19 +277,28 @@ final class ShortEpgGuideProvider
 String _$shortEpgGuideHash() => r'358c8b3d242681f50e793fce31cf14505a579713';
 
 /// Now and next for the channels on screen: the imported guide first, the
-/// short EPG behind it (Phase 4 decision 1).
+/// short EPG behind it (Phase 4 decision 1); the short EPG alone while the
+/// guide is switched off (ADR-031). The switch is listened to, not
+/// watched: the cast session holds this service, and must not be made
+/// again for it.
 
 @ProviderFor(guideService)
 final guideServiceProvider = GuideServiceProvider._();
 
 /// Now and next for the channels on screen: the imported guide first, the
-/// short EPG behind it (Phase 4 decision 1).
+/// short EPG behind it (Phase 4 decision 1); the short EPG alone while the
+/// guide is switched off (ADR-031). The switch is listened to, not
+/// watched: the cast session holds this service, and must not be made
+/// again for it.
 
 final class GuideServiceProvider
     extends $FunctionalProvider<GuideService, GuideService, GuideService>
     with $Provider<GuideService> {
   /// Now and next for the channels on screen: the imported guide first, the
-  /// short EPG behind it (Phase 4 decision 1).
+  /// short EPG behind it (Phase 4 decision 1); the short EPG alone while the
+  /// guide is switched off (ADR-031). The switch is listened to, not
+  /// watched: the cast session holds this service, and must not be made
+  /// again for it.
   GuideServiceProvider._()
     : super(
         from: null,
@@ -323,7 +332,7 @@ final class GuideServiceProvider
   }
 }
 
-String _$guideServiceHash() => r'ec0470fcf5ae72c88df6fe0edc0d3185b6fbd625';
+String _$guideServiceHash() => r'7c0b469aaa8ca1ff3b56ceb5cb817ed9ae5d364e';
 
 /// What's on [channel] now and next; [NowNext.none] when unknown. Asks
 /// again when the guide changes, and when the answer changes shape (the

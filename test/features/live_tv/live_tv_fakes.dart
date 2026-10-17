@@ -20,6 +20,7 @@ import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
+import '../guide/guide_switch.dart';
 import '../onboarding/onboarding_fakes.dart';
 import '../playback/support/playback_fakes.dart';
 
@@ -106,10 +107,16 @@ final class LiveTvFakes {
   ];
 
   /// The real guide: the imported one read from [db], with [shortEpg] in
-  /// place of the provider's short EPG behind it.
-  List<Override> importedGuideOverrides(GuideService shortEpg) => [
+  /// place of the provider's short EPG behind it. The guide is switched on
+  /// ([guideOn]: it is off by default, ADR-031, and then the short EPG
+  /// answers alone).
+  List<Override> importedGuideOverrides(
+    GuideService shortEpg, {
+    bool guideOn = true,
+  }) => [
     ..._common,
     shortEpgGuideProvider.overrideWithValue(shortEpg),
+    if (guideOn) guideSwitchedOn(),
   ];
 
   List<Override> get _common => [

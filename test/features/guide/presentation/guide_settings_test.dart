@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
@@ -13,12 +16,16 @@ import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
 import 'package:iptv_player/features/guide/domain/guide_settings.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_picker.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_request.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
 import '../../../app/app_harness.dart';
+import '../../casting/support/cast_ui_harness.dart' show focusedLabelOf;
 import '../../onboarding/onboarding_fakes.dart';
+import '../../reminders/reminder_fakes.dart';
 import 'guide_settings_fakes.dart';
 
 void main() {
@@ -26,7 +33,10 @@ void main() {
   late GuideFakes fakes;
   setUp(() {
     base = OnboardingFakes();
-    fakes = GuideFakes(base);
+    // The page as it is with the guide switched on; off is the default
+    // (ADR-031), and 'the switch' below starts there.
+    fakes = GuideFakes(base)
+      ..settingsStore.stored = const GuideSettings(enabled: true);
   });
 
   /// The guide's state arrives a frame before the list that depends on
@@ -39,11 +49,16 @@ void main() {
   ProviderContainer containerOf(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(SettingsScreen)));
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    List<Override> overrides = const [],
+    Size size = const Size(1440, 900),
+  }) async {
     await pumpApp(
       tester,
       initialLocation: AppDestination.settings.path,
-      overrides: fakes.overrides,
+      size: size,
+      overrides: [...fakes.overrides, ...overrides],
     );
     await tester.tap(
       find.descendant(
@@ -102,6 +117,192 @@ void main() {
     of: find.text(name),
     matching: find.byType(FocusableSurface),
   );
+
+  group('the switch (ADR-031)', () {
+    setUp(() => fakes.settingsStore.stored = const GuideSettings());
+
+    bool switchedOn(WidgetTester tester) => tester
+        .widget<SegmentedControl<bool>>(find.byType(SegmentedControl<bool>))
+        .value;
+
+    Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await settle(tester);
+    }
+
+    /// What only shows with the guide on.
+    void expectNoGuideRows() {
+      for (final gone in [
+        'Keep',
+        'Refresh guide',
+        'Unmatched',
+        "From your provider's XMLTV · updated 2 h ago",
+      ]) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      expect(find.textContaining('Time offset'), findsNothing);
+    }
+
+    testWidgets('off by default: the switch alone, saying what it does; no '
+        'guide data, Keep, offset, reminders or channels', (tester) async {
+      seedGuide();
+      await pump(tester);
+
+      expect(find.text('Programme guide'), findsOneWidget);
+      expect(
+        find.text(
+          "Downloads your provider's XMLTV guide for the Guide screen and "
+          'programme search. Off saves space and time.',
+        ),
+        findsOneWidget,
+      );
+      expect(switchedOn(tester), isFalse);
+      expect(
+        find.text(
+          'Off: no guide is downloaded or kept. The preview and the player '
+          "still say what's on now and next.",
+        ),
+        findsOneWidget,
+      );
+      expectNoGuideRows();
+      expect(find.text('Manage'), findsNothing, reason: 'no reminders');
+      expect(fakes.imports.calls, isEmpty);
+    });
+
+    testWidgets('off with reminders set: their row stays, to manage them', (
+      tester,
+    ) async {
+      seedGuide();
+      final reminders = FakeReminders()
+        ..add(start: base.now.add(const Duration(hours: 3)));
+      await pump(
+        tester,
+        overrides: [reminderRepositoryProvider.overrideWithValue(reminders)],
+      );
+
+      expect(find.text(remindersTitle(1)), findsOneWidget);
+      expect(find.widgetWithText(AppButton, 'Manage'), findsOneWidget);
+      expectNoGuideRows();
+    });
+
+    testWidgets('on by the keyboard: saved at once, the page fills in around '
+        'the switch, which keeps the focus; off again clears the guide and '
+        'empties the page', (tester) async {
+      seedGuide();
+      await pump(tester);
+
+      // From the list of sections into the page: the switch is first.
+      Focus.of(
+        tester.element(
+          find.descendant(
+            of: find.byWidgetPredicate(
+              (w) => w is FocusableSurface && w.semanticLabel == 'Guide',
+            ),
+            matching: find.text('Guide'),
+          ),
+        ),
+      ).requestFocus();
+      await settle(tester);
+      expect(focusedLabelOf(tester), 'Guide');
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedLabelOf(tester), 'Off');
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedLabelOf(tester), 'On');
+      await press(tester, LogicalKeyboardKey.enter);
+
+      expect(fakes.settingsStore.saved, [const GuideSettings(enabled: true)]);
+      expect(switchedOn(tester), isTrue);
+      expect(
+        find.text("From your provider's XMLTV · updated 2 h ago"),
+        findsOneWidget,
+      );
+      expect(find.text('Keep'), findsOneWidget);
+      expect(find.text('Time offset · Northwind TV'), findsOneWidget);
+      expect(find.text('Unmatched'), findsOneWidget);
+      expect(focusedLabelOf(tester), 'On', reason: 'the switch keeps it');
+
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      await press(tester, LogicalKeyboardKey.enter);
+
+      expect(fakes.settingsStore.saved.last, const GuideSettings());
+      expect(switchedOn(tester), isFalse);
+      expectNoGuideRows();
+      expect(focusedLabelOf(tester), 'Off');
+      expect(fakes.imports.calls, contains('cancel src-1'));
+      expect(fakes.guide.cleared, ['src-1']);
+    });
+
+    testWidgets("a switch that can't be saved says so, and stays as it was", (
+      tester,
+    ) async {
+      seedGuide();
+      fakes.settingsStore.saveFailure = StorageFailure('the disk is full');
+      await pump(tester);
+
+      await tester.tap(find.text('On'));
+      await settle(tester);
+
+      expect(find.textContaining("Couldn't save that change."), findsOneWidget);
+      expect(switchedOn(tester), isFalse);
+      expectNoGuideRows();
+      expect(fakes.guide.cleared, isEmpty);
+    });
+
+    testWidgets('on with no source: the switch, then the way to add one', (
+      tester,
+    ) async {
+      fakes.settingsStore.stored = const GuideSettings(enabled: true);
+      await pump(tester);
+
+      expect(switchedOn(tester), isTrue);
+      expect(find.text('No guide yet'), findsOneWidget);
+      expect(find.text('Add a source'), findsOneWidget);
+    });
+
+    group('on a TV', () {
+      final tv = [formFactorProvider.overrideWithValue(FormFactor.tv)];
+      // A 1080p TV is 960 × 540 logical pixels.
+      const size = Size(960, 540);
+
+      setUp(
+        () => fakes.settingsStore.stored = GuideSettings.defaultsOn(
+          FormFactor.tv,
+        ),
+      );
+
+      testWidgets('off by default, and the switch alone', (tester) async {
+        seedGuide();
+        await pump(tester, overrides: tv, size: size);
+
+        expect(find.text('Programme guide'), findsOneWidget);
+        expect(switchedOn(tester), isFalse);
+        expectNoGuideRows();
+      });
+
+      testWidgets('the remote turns it on: three days kept ahead and the '
+          'last two hours behind, said in Keep', (tester) async {
+        seedGuide();
+        await pump(tester, overrides: tv, size: size);
+
+        await press(tester, LogicalKeyboardKey.arrowRight);
+        expect(focusedLabelOf(tester), 'Off');
+        await press(tester, LogicalKeyboardKey.arrowRight);
+        expect(focusedLabelOf(tester), 'On');
+        await press(tester, LogicalKeyboardKey.select);
+
+        expect(fakes.settingsStore.saved, [
+          const GuideSettings(enabled: true, keepDays: 3),
+        ]);
+        expect(switchedOn(tester), isTrue);
+        expect(find.text('3 days'), findsOneWidget);
+        expect(
+          find.textContaining('plus the last two hours, for every source'),
+          findsOneWidget,
+        );
+        expect(focusedLabelOf(tester), 'On');
+      });
+    });
+  });
 
   group('states', () {
     testWidgets('no source: says so and offers to add one', (tester) async {
@@ -525,14 +726,19 @@ void main() {
       await tester.tap(find.text('3 days'));
       await settle(tester);
 
-      expect(fakes.settingsStore.saved, [const GuideSettings(keepDays: 3)]);
+      expect(fakes.settingsStore.saved, [
+        const GuideSettings(enabled: true, keepDays: 3),
+      ]);
       expect(find.text('3 days'), findsOneWidget);
       expect(fakes.imports.calls, ['reimport src-1']);
     });
 
     testWidgets('the stored number of days is shown', (tester) async {
       seedGuide();
-      fakes.settingsStore.stored = const GuideSettings(keepDays: 14);
+      fakes.settingsStore.stored = const GuideSettings(
+        enabled: true,
+        keepDays: 14,
+      );
       await pump(tester);
 
       expect(find.text('14 days'), findsOneWidget);

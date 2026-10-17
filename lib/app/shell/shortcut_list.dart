@@ -1,25 +1,31 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/shortcut_table.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 
 /// The keyboard shortcuts, grouped by where they work (sketch B): each
 /// row an action and its keycaps. Two columns of groups where there is
 /// room, one where there isn't. Not scrollable itself: its owner puts it
 /// in a [ScrollPane].
-class ShortcutList extends StatelessWidget {
-  const new({this.groups = shortcutTable, super.key});
+class ShortcutList extends ConsumerWidget {
+  const new({this.groups, super.key});
 
-  final List<ShortcutGroup> groups;
+  /// What is listed; the app's keys as they are now when null (no Guide
+  /// keys while it is switched off: `shortcutTableFor`).
+  final List<ShortcutGroup>? groups;
 
   /// Two columns from this width, at the canvas's text size.
   static const _twoColumnsFrom = 760.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
+    final groups =
+        this.groups ?? shortcutTableFor(guide: ref.watch(guideEnabledProvider));
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < context.scaled(_twoColumnsFrom)) {

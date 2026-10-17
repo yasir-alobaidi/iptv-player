@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/secure/credential_store.dart';
 import 'package:iptv_player/data/db/app_database.dart';
@@ -15,6 +16,8 @@ import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/guide_matching.dart';
 import 'package:iptv_player/features/guide/domain/guide_settings.dart';
+import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
+import 'package:iptv_player/features/reminders/domain/reminder.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:logger/logger.dart';
@@ -26,6 +29,10 @@ const _password = 'Pw-7f3a9c1e';
 final class _Imports implements GuideImportService {
   /// The sources re-imported, in the order they were asked for.
   final asked = <String>[];
+
+  /// The sources imported (the scheduler's way), and those cancelled.
+  final imported = <String>[];
+  final cancelled = <String>[];
   final importing = <String>{};
   final _running = <Completer<Result<EpgImportCounts>>>[];
 
@@ -52,11 +59,13 @@ final class _Imports implements GuideImportService {
   Stream<(String, EpgImportProgress)> get progress => const Stream.empty();
 
   @override
-  Future<Result<EpgImportCounts>> importGuide(String sourceId) =>
-      throw UnsupportedError('the controller only re-imports');
+  Future<Result<EpgImportCounts>> importGuide(String sourceId) async {
+    imported.add(sourceId);
+    return const Ok(EpgImportCounts());
+  }
 
   @override
-  Future<void> cancel(String sourceId) async {}
+  Future<void> cancel(String sourceId) async => cancelled.add(sourceId);
 
   @override
   Future<Result<GuideOrigin>> guideOrigin(String sourceId) async =>
@@ -92,6 +101,8 @@ final class _Env {
     AppDatabase? database,
     bool fakeImports = true,
     GuideSettingsStore? settingsStore,
+    FormFactor formFactor = FormFactor.desktop,
+    GuideSettings? launch,
   }) {
     final env = _Env._(database ?? AppDatabase.memory());
     addTearDown(env.close);
@@ -101,10 +112,13 @@ final class _Env {
         credentialStoreProvider.overrideWithValue(env.store),
         secretRegistryProvider.overrideWithValue(env.secrets),
         appLogProvider.overrideWithValue(env.log),
+        formFactorProvider.overrideWithValue(formFactor),
         if (fakeImports)
           guideImportServiceProvider.overrideWithValue(env.imports),
         if (settingsStore != null)
           guideSettingsStoreProvider.overrideWithValue(settingsStore),
+        if (launch != null)
+          launchGuideSettingsProvider.overrideWithValue(launch),
       ],
     );
     return env;
@@ -126,6 +140,16 @@ final class _Env {
 
   SettingsRepository get settingsRepository =>
       container.read(settingsRepositoryProvider);
+
+  EpgRepository get guide => container.read(epgRepositoryProvider);
+
+  Future<bool> hasGuide(String sourceId) async =>
+      (await guide.coverage(sourceId)).valueOrNull!.hasGuide;
+
+  /// The guide's switch as stored, written past the controller.
+  Future<void> storeSwitch({required bool on}) async {
+    await settingsRepository.writeValue(SettingsKeys.guide, {'enabled': on});
+  }
 
   Future<String> add(String name, {SourceDraft? draft}) async {
     final added = await sources.add(
@@ -354,6 +378,244 @@ void main() {
     });
   });
 
+  group('the switch (ADR-031)', () {
+    for (final formFactor in FormFactor.values) {
+      test('is off by default on a ${formFactor.name}', () async {
+        final env = _Env.open(formFactor: formFactor);
+        expect(env.settings.enabled, isFalse);
+        await env.controller.loaded;
+
+        expect(env.settings.enabled, isFalse);
+        expect(env.container.read(guideEnabledProvider), isFalse);
+      });
+    }
+
+    test('is on once read as stored on', () async {
+      final env = _Env.open();
+      await env.storeSwitch(on: true);
+      env.settings;
+      await env.controller.loaded;
+
+      expect(env.settings.enabled, isTrue);
+      expect(env.container.read(guideEnabledProvider), isTrue);
+    });
+
+    test('read before the first frame (bootstrap), it is on from the very '
+        'start, and nothing is read again', () async {
+      final store = _CountingStore();
+      final env = _Env.open(
+        settingsStore: store,
+        launch: const GuideSettings(enabled: true, keepDays: 5),
+      );
+
+      expect(
+        env.container.read(guideEnabledProvider),
+        isTrue,
+        reason: 'at once',
+      );
+      expect(env.settings, const GuideSettings(enabled: true, keepDays: 5));
+      await env.controller.loaded;
+      await pumpEventQueue();
+      expect(env.container.read(guideSwitchedOffProvider), isFalse);
+      expect(store.loads, 0);
+    });
+
+    test('the Guide counts as switched off only once the stored choice is '
+        'read', () async {
+      final env = _Env.open();
+      final off = <bool>[];
+      env.container.listen(
+        guideSwitchedOffProvider,
+        (_, value) => off.add(value),
+        fireImmediately: true,
+      );
+
+      await env.controller.loaded;
+      await pumpEventQueue();
+      expect(off, [false, true]);
+
+      expect(await env.controller.setEnabled(on: true), const Ok<void>(null));
+      await pumpEventQueue();
+      expect(off, [false, true, false]);
+    });
+
+    test('a TV keeps three days ahead unless told otherwise', () async {
+      final tv = _Env.open(formFactor: FormFactor.tv);
+      await tv.controller.loaded;
+      expect(tv.settings, const GuideSettings(keepDays: 3));
+
+      await tv.settingsRepository.writeValue(SettingsKeys.guide, {
+        'enabled': true,
+        'keep_days': 10,
+      });
+      await tv.controller.reload();
+      expect(tv.settings, const GuideSettings(enabled: true, keepDays: 10));
+    });
+
+    for (final (formFactor, holds) in [
+      (FormFactor.tv, true),
+      (FormFactor.desktop, false),
+    ]) {
+      test('on a ${formFactor.name} the scheduled imports '
+          '${holds ? 'wait' : 'don’t wait'} while anything plays', () {
+        final env = _Env.open(formFactor: formFactor);
+
+        expect(
+          env.container.read(guideSchedulerProvider).holdsWhilePlaying,
+          holds,
+        );
+      });
+    }
+
+    test('a desktop keeps a week ahead unless told otherwise', () async {
+      final desktop = _Env.open();
+      await desktop.controller.loaded;
+      expect(desktop.settings, const GuideSettings());
+    });
+
+    test('on is saved at once, and every source’s guide is imported, as '
+        'at a first launch', () async {
+      final env = _Env.open();
+      final a = await env.add('Alpha');
+      final b = await env.add('Bravo');
+      await env.container.read(guideSchedulerProvider).startUp();
+      expect(env.imports.imported, isEmpty, reason: 'off: nothing');
+
+      final saved = env.controller.setEnabled(on: true);
+      expect(env.settings.enabled, isTrue, reason: 'at once');
+      expect(await saved, const Ok<void>(null));
+      await _until(() async => env.imports.imported.length == 2);
+
+      expect(
+        (await env.container.read(guideSettingsStoreProvider).load())
+            .valueOrNull,
+        const GuideSettings(enabled: true),
+      );
+      expect(env.imports.imported, [a, b]);
+    });
+
+    test('off is saved, cancels the imports and clears every stored '
+        'guide; the user’s matches, offsets and reminders stay', () async {
+      final env = _Env.open();
+      await env.storeSwitch(on: true);
+      final a = await env.add('Alpha');
+      final b = await env.add('Bravo');
+      await env.giveGuide(a);
+      await env.giveGuide(b);
+      await env.controller.loaded;
+      await env.controller.setOffset(await env.source(a), 90);
+      await env.guide.setMapping(
+        sourceId: a,
+        channelRemoteKey: 'ch-1',
+        xmltvId: 'one.uk',
+      );
+      final start = DateTime.now().toUtc().add(const Duration(hours: 3));
+      final reminder = await env.container
+          .read(reminderRepositoryProvider)
+          .set(
+            ReminderDraft(
+              sourceId: a,
+              channelKey: 'ch-1',
+              xmltvId: 'one.uk',
+              channelName: 'One',
+              title: 'News',
+              start: start,
+              end: start.add(const Duration(hours: 1)),
+            ),
+          );
+      expect(reminder.isOk, isTrue, reason: '${reminder.failureOrNull}');
+
+      expect(await env.controller.setEnabled(on: false), const Ok<void>(null));
+      await _until(
+        () async => !await env.hasGuide(a) && !await env.hasGuide(b),
+      );
+
+      expect(env.settings.enabled, isFalse);
+      expect(
+        (await env.container.read(guideSettingsStoreProvider).load())
+            .valueOrNull
+            ?.enabled,
+        isFalse,
+      );
+      expect(env.imports.cancelled, containsAll([a, b]));
+      expect(
+        await env.db.customSelect('SELECT id FROM epg_programs').get(),
+        isEmpty,
+      );
+      expect((await env.source(a)).epgOffsetMinutes, 90);
+      expect(
+        await env.db
+            .customSelect('SELECT xmltv_id FROM epg_mappings')
+            .map((row) => row.read<String>('xmltv_id'))
+            .get(),
+        ['one.uk'],
+      );
+      expect(
+        (await env.container.read(reminderRepositoryProvider).all())
+            .valueOrNull,
+        hasLength(1),
+      );
+    });
+
+    test('at launch, a guide still stored while the switch is off is '
+        'cleared, and nothing is imported', () async {
+      final env = _Env.open();
+      final a = await env.add('Alpha');
+      await env.giveGuide(a);
+      expect(await env.hasGuide(a), isTrue);
+
+      await env.container.read(guideSchedulerProvider).startUp();
+
+      expect(await env.hasGuide(a), isFalse);
+      expect(env.imports.imported, isEmpty);
+    });
+
+    test('a switch that can’t be saved is an error, and changes '
+        'nothing', () async {
+      final env = _Env.open(settingsStore: _FailingStore());
+      final a = await env.add('Alpha');
+      await env.giveGuide(a);
+      await env.controller.loaded;
+
+      final saved = await env.controller.setEnabled(on: true);
+      await pumpEventQueue();
+
+      expect(saved.failureOrNull, isA<StorageFailure>());
+      expect(env.settings.enabled, isFalse);
+      expect(env.imports.imported, isEmpty);
+      expect(await env.hasGuide(a), isTrue, reason: 'nothing cleared');
+    });
+
+    test('the same choice again saves nothing', () async {
+      final env = _Env.open();
+      await env.controller.loaded;
+
+      expect(await env.controller.setEnabled(on: false), const Ok<void>(null));
+
+      expect(
+        (await env.settingsRepository.readJsonText(SettingsKeys.guide))
+            .valueOrNull,
+        isNull,
+      );
+    });
+
+    test('settings brought in from a file that turn it off clear the '
+        'guide', () async {
+      final env = _Env.open();
+      await env.storeSwitch(on: true);
+      final a = await env.add('Alpha');
+      await env.giveGuide(a);
+      await env.controller.loaded;
+      expect(env.settings.enabled, isTrue);
+
+      await env.storeSwitch(on: false);
+      await env.controller.reload();
+      await _until(() async => !await env.hasGuide(a));
+
+      expect(env.settings.enabled, isFalse);
+    });
+  });
+
   group('a source’s time offset', () {
     test('is saved on the source, which keeps everything else and its '
         'password', () async {
@@ -455,6 +717,55 @@ void main() {
   group('with the real importer', () {
     setUpAll(() => HttpOverrides.global = null);
 
+    for (final (formFactor, behind, ahead, words) in [
+      (FormFactor.tv, (2, 4), (72, 74), 'two hours behind now, three days'),
+      (FormFactor.desktop, (24, 26), (168, 170), 'a day behind, a week'),
+    ]) {
+      test('a ${formFactor.name} keeps $words ahead (docs/07)', () async {
+        final directory = await Directory.systemTemp.createTemp('guide_window');
+        addTearDown(() => directory.delete(recursive: true));
+        final env = _Env.open(
+          database: AppDatabase(await openAppDatabase(directory)),
+          fakeImports: false,
+          formFactor: formFactor,
+        );
+        final list = File('${directory.path}/list.m3u')
+          ..writeAsStringSync('#EXTM3U\n');
+        final guide = File('${directory.path}/guide.xml')
+          ..writeAsStringSync(_tenDayGuide(DateTime.now()));
+        final id = await env.add(
+          'List',
+          draft: SourceDraft(
+            type: SourceType.m3uFile,
+            name: 'List',
+            url: list.path,
+          ),
+        );
+        await env.sources.setAdvertisedEpgUrls(id, [guide.path]);
+        await env.controller.loaded;
+        final now = DateTime.now().toUtc();
+
+        final imported = await env.container
+            .read(guideImportServiceProvider)
+            .importGuide(id);
+
+        expect(imported.isOk, isTrue, reason: '${imported.failureOrNull}');
+        final coverage = (await env.guide.coverage(id)).valueOrNull!;
+        // Every programme that overlaps the window is kept: the first may
+        // start a programme (two hours) before the window does.
+        expect(
+          now.difference(coverage.firstStart!).inMinutes / 60,
+          inInclusiveRange(behind.$1, behind.$2),
+          reason: '$formFactor',
+        );
+        expect(
+          coverage.lastEnd!.difference(now).inHours,
+          inInclusiveRange(ahead.$1, ahead.$2),
+          reason: '$formFactor',
+        );
+      });
+    }
+
     test('an import keeps the days the controller holds, and a change '
         're-imports with the new ones', () async {
       final directory = await Directory.systemTemp.createTemp('guide_settings');
@@ -550,4 +861,18 @@ String _tenDayGuide(DateTime now) {
   }
   buffer.writeln('</tv>');
   return '$buffer';
+}
+
+/// A store that counts its reads and holds the defaults.
+final class _CountingStore implements GuideSettingsStore {
+  int loads = 0;
+
+  @override
+  Future<Result<GuideSettings>> load() async {
+    loads++;
+    return const Ok(GuideSettings());
+  }
+
+  @override
+  Future<Result<void>> save(GuideSettings settings) async => const Ok(null);
 }

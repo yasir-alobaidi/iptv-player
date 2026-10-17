@@ -9,6 +9,7 @@ import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 
+import '../features/guide/guide_switch.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import 'app_harness.dart';
 
@@ -33,9 +34,11 @@ void main() {
 
     expect(panel(), findsOneWidget);
     expect(find.text('Keyboard shortcuts'), findsOneWidget);
-    for (final group in shortcutTable) {
+    // The Guide's keys only once it is switched on (ADR-031).
+    for (final group in shortcutTableFor(guide: false)) {
       expect(find.text(group.title.toUpperCase()), findsOneWidget);
     }
+    expect(find.text('THE GUIDE'), findsNothing);
     // "Search": Ctrl, K, "or", /.
     final search = find.ancestor(
       of: find.text('Search'),
@@ -57,6 +60,22 @@ void main() {
     expect(app.location, AppDestination.home.path);
   });
 
+  testWidgets('with the Guide switched on, the list has its keys', (
+    tester,
+  ) async {
+    await pumpApp(tester, overrides: [guideSwitchedOn()]);
+
+    await press(tester, LogicalKeyboardKey.f1);
+
+    for (final group in shortcutTable) {
+      expect(find.text(group.title.toUpperCase()), findsOneWidget);
+    }
+    expect(
+      find.text('Home, Live TV, Movies, Series, Favorites, Library, Guide'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the list has the focus when it opens, and the arrows scroll '
       'it', (tester) async {
     await pumpApp(tester, size: const Size(1024, 640));
@@ -73,7 +92,11 @@ void main() {
     expect(scrollable.position.pixels, scrollable.position.maxScrollExtent);
     // The last group is on screen now.
     expect(
-      tester.getRect(find.text(shortcutTable.last.entries.last.action)).bottom,
+      tester
+          .getRect(
+            find.text(shortcutTableFor(guide: false).last.entries.last.action),
+          )
+          .bottom,
       lessThanOrEqualTo(640),
     );
   });

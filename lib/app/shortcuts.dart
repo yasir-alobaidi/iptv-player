@@ -8,17 +8,22 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/shortcut_list.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 
 /// Jump to a destination (Ctrl+1 … Ctrl+7, Ctrl+,, and G for the
 /// Guide).
 class GoToDestinationIntent extends Intent {
-  const new(this.destination, {this.printableKey = false});
+  const new(this.destination, {this.printableKey = false, this.otherwise});
 
   final AppDestination destination;
 
   /// True for G, which has to reach a text field instead when the user
   /// is typing.
   final bool printableKey;
+
+  /// Where the key goes while [destination] is switched off (the Guide,
+  /// ADR-031); nowhere when null.
+  final AppDestination? otherwise;
 }
 
 /// Open the search overlay (Ctrl+K, and `/` outside a text field).
@@ -68,9 +73,14 @@ class AppGlobalShortcuts extends ConsumerStatefulWidget {
       AppDestination.guide,
       printableKey: true,
     ),
-    // A TV remote's Guide key (docs/07).
-    const SingleActivator(LogicalKeyboardKey.guide):
-        const GoToDestinationIntent(AppDestination.guide),
+    // A TV remote's Guide key (docs/07). With the Guide off, Live TV:
+    // its channels say what is on now and next.
+    const SingleActivator(
+      LogicalKeyboardKey.guide,
+    ): const GoToDestinationIntent(
+      AppDestination.guide,
+      otherwise: AppDestination.liveTv,
+    ),
     const SingleActivator(LogicalKeyboardKey.keyK, control: true):
         const OpenSearchIntent(),
     const SingleActivator(LogicalKeyboardKey.slash): const OpenSearchIntent(
@@ -108,7 +118,10 @@ class _AppGlobalShortcutsState extends ConsumerState<AppGlobalShortcuts> {
       shortcuts: AppGlobalShortcuts.shortcuts,
       child: Actions(
         actions: {
-          GoToDestinationIntent: _GoToDestinationAction(router),
+          GoToDestinationIntent: _GoToDestinationAction(
+            router,
+            guide: ref.watch(guideEnabledProvider),
+          ),
           OpenSearchIntent: _OpenSearchAction(router),
           CloseTopIntent: _CloseTopAction(router),
           CastIntent: _CastAction(router, ref.watch(shellCastButtonProvider)),
@@ -142,21 +155,32 @@ class _ShowShortcutsAction extends Action<ShowShortcutsIntent> {
 
 /// Goes to a destination from anywhere, the player and the search
 /// overlay included. G is disabled in a text field, like `/`.
+///
+/// With the Guide switched off ([guide] false, ADR-031) G is let
+/// through, as a letter, and Ctrl+7 does nothing; a remote's Guide key
+/// opens Live TV instead (`otherwise`), and is taken either way, so
+/// Android doesn't act on it instead.
 class _GoToDestinationAction extends Action<GoToDestinationIntent> {
-  new(this._router);
+  new(this._router, {required this.guide});
 
   final GoRouter _router;
+  final bool guide;
+
+  bool _hidden(GoToDestinationIntent intent) =>
+      !guide && intent.destination == AppDestination.guide;
 
   @override
   bool isEnabled(GoToDestinationIntent intent, [BuildContext? context]) =>
-      !(intent.printableKey && textInputHasFocus());
+      !(intent.printableKey && (textInputHasFocus() || _hidden(intent)));
 
   @override
   Object? invoke(GoToDestinationIntent intent) {
+    final destination = _hidden(intent) ? intent.otherwise : intent.destination;
+    if (destination == null) return null;
     // Leave the overlay first, so Ctrl+2 from search lands on Live TV
     // rather than behind the scrim.
     if (isSearchOpen(_router) && _router.canPop()) _router.pop();
-    _router.go(intent.destination.path);
+    _router.go(destination.path);
     return null;
   }
 }

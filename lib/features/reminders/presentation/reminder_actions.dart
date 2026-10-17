@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/failure_message.dart';
@@ -12,6 +13,7 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_programme_request.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/domain/reminder.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
@@ -145,7 +147,9 @@ Future<ChannelItem?> reminderChannel(
         .valueOrNull;
 
 /// Enter on a row of the list: the Guide on [reminder]'s programme, with
-/// its sheet open, as search opens an upcoming one. [beforeLeaving] runs
+/// its sheet open, as search opens an upcoming one. With the Guide
+/// switched off (ADR-031; reminders work without it), its channel in
+/// Live TV instead, as search's "Show in Live TV". [beforeLeaving] runs
 /// once it is known there is somewhere to go (the list closes itself
 /// with it). A channel that is gone says so and goes nowhere: false.
 Future<bool> showReminderInGuide(
@@ -159,6 +163,20 @@ Future<bool> showReminderInGuide(
         .read(appNoticesProvider)
         .show(AppNotice(reminderChannelGoneText(reminder.channelName)));
     return false;
+  }
+  if (!container.read(guideEnabledProvider)) {
+    _browse(container, channel.sourceId);
+    beforeLeaving?.call();
+    container.read(routerProvider).go(AppDestination.liveTv.path);
+    // Live TV's view is made with the screen: set once it is up.
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        container.read(liveTvControllerProvider.notifier)
+          ..showSearch(channel.name)
+          ..select(channel);
+      })
+      ..ensureVisualUpdate();
+    return true;
   }
   // The guide's own programme, so the sheet has its description; the
   // reminder's copy when a refresh is between the two.
@@ -176,13 +194,19 @@ Future<bool> showReminderInGuide(
         end: reminder.end,
         title: reminder.title,
       );
-  if (container.read(currentSourceProvider)?.id != channel.sourceId) {
-    container.read(chosenSourceIdProvider.notifier).choose(channel.sourceId);
-  }
+  _browse(container, channel.sourceId);
   beforeLeaving?.call();
   container
       .read(guideProgrammeRequestProvider.notifier)
       .show(channel, programme);
   container.read(routerProvider).go(AppDestination.guide.path);
   return true;
+}
+
+/// Browses [sourceId] when the reminder is another source's: the screen
+/// it opens shows the browsed one.
+void _browse(ProviderContainer container, String sourceId) {
+  if (container.read(currentSourceProvider)?.id != sourceId) {
+    container.read(chosenSourceIdProvider.notifier).choose(sourceId);
+  }
 }

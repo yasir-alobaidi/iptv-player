@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/epg_importer.dart';
@@ -46,9 +47,11 @@ EpgMatchService epgMatchService(Ref ref) {
 }
 
 /// The one guide importer, which rematches after every swap. Cancels its
-/// imports when the app closes.
+/// imports when the app closes. A TV keeps the last two hours behind now,
+/// not a day (docs/07).
 @Riverpod(keepAlive: true)
 EpgImporter epgImporter(Ref ref) {
+  final formFactor = ref.watch(formFactorProvider);
   final importer = EpgImporter(
     database: ref.watch(appDatabaseProvider),
     guide: ref.watch(epgRepositoryProvider),
@@ -60,16 +63,24 @@ EpgImporter epgImporter(Ref ref) {
     // controller reads the importer only inside its methods, so this is
     // no cycle.
     settings: () => ref.read(guideSettingsControllerProvider),
+    keepBehind: GuideSettings.keepBehindOn(formFactor),
+    keepAhead: GuideSettings.defaultsOn(formFactor).keepAhead,
   );
   ref.onDispose(importer.dispose);
   return importer;
 }
 
 /// Imports guides on its own: after the launch's syncs, hourly, and
-/// after each sync (ADR-011 decision 5). `bootstrap()` starts it; the sync
-/// engine tells it of every sync that succeeds.
+/// after each sync (ADR-011 decision 5); nothing while the guide is
+/// switched off (ADR-031), and on a TV nothing while anything plays.
+/// `bootstrap()` starts it; the sync engine tells it of every sync that
+/// succeeds, and Settings → Guide's switch of every change.
 @Riverpod(keepAlive: true)
 GuideScheduler guideScheduler(Ref ref) {
+  bool coordinatorIn(bool Function(PlaybackState state) test) =>
+      // Never created means nothing ever played.
+      ref.exists(playbackCoordinatorProvider) &&
+      test(ref.read(playbackCoordinatorProvider).state);
   final scheduler = GuideScheduler(
     guide: ref.watch(epgRepositoryProvider),
     imports: ref.watch(guideImportServiceProvider),
@@ -81,15 +92,26 @@ GuideScheduler guideScheduler(Ref ref) {
         ref.read(guideSettingsControllerProvider.notifier).loaded,
     syncing: (sourceId) =>
         ref.read(syncServiceProvider).statusOf(sourceId) is SyncRunning,
-    busy: (sourceId) {
-      // Never created means nothing ever played.
-      if (!ref.exists(playbackCoordinatorProvider)) return false;
-      return switch (ref.read(playbackCoordinatorProvider).state) {
+    enabled: () => ref.read(guideSettingsControllerProvider).enabled,
+    busy: (sourceId) => coordinatorIn(
+      (state) => switch (state) {
         PlaybackOpening(:final item) ||
         PlaybackReconnecting(:final item) => item.sourceId == sourceId,
         _ => false,
-      };
-    },
+      },
+    ),
+    // A TV has one picture and 2 GB: the import waits for the end of
+    // whatever plays, a paused film too (docs/07).
+    playing: ref.watch(formFactorProvider) == FormFactor.tv
+        ? () => coordinatorIn(
+            (state) => switch (state) {
+              PlaybackOpening() ||
+              PlaybackPlaying() ||
+              PlaybackReconnecting() => true,
+              _ => false,
+            },
+          )
+        : null,
     notify: ref.watch(appNoticesProvider).show,
     clock: ref.watch(appClockProvider),
   );
@@ -140,21 +162,62 @@ Future<Result<GuideOrigin>> guideOrigin(Ref ref, String sourceId) {
 }
 
 @Riverpod(keepAlive: true)
-GuideSettingsStore guideSettingsStore(Ref ref) =>
-    DbGuideSettingsStore(ref.watch(settingsRepositoryProvider));
+GuideSettingsStore guideSettingsStore(Ref ref) => DbGuideSettingsStore(
+  ref.watch(settingsRepositoryProvider),
+  defaults: GuideSettings.defaultsOn(ref.watch(formFactorProvider)),
+);
 
-/// Settings → Guide's choices: the days kept (global) and a source's time
-/// offset. The defaults at once, the stored choices as soon as they are
-/// read. A change is saved, then re-imports the guides it affects
-/// (ADR-011 decision 4), one source at a time.
+/// Settings → Guide's choices as `bootstrap()` read them, before the first
+/// frame: the rail, the keys and the guide's page are right from the
+/// start, with no Guide appearing a moment after launch. Null: read by the
+/// controller once it is made (tests, a read that failed).
+@Riverpod(keepAlive: true)
+GuideSettings? launchGuideSettings(Ref ref) => null;
+
+/// Completes once Settings → Guide's stored choices have been read, or
+/// couldn't be.
+@Riverpod(keepAlive: true)
+Future<void> guideSettingsLoaded(Ref ref) =>
+    ref.watch(guideSettingsControllerProvider.notifier).loaded;
+
+/// Whether the Guide is switched on (ADR-031): its place in the rail, its
+/// keys, its import. Off by default, and off until the stored choice has
+/// been read. Its dependents hear only a change of the switch, not of the
+/// days kept.
+@Riverpod(keepAlive: true)
+bool guideEnabled(Ref ref) =>
+    ref.watch(guideSettingsControllerProvider).enabled;
+
+/// True once the stored choice has been read and the Guide is off: its
+/// page goes Home, and draws nothing. Until it is read the page is let
+/// be (the app never opens on it).
+@Riverpod(keepAlive: true)
+bool guideSwitchedOff(Ref ref) =>
+    ref.watch(guideSettingsLoadedProvider).hasValue &&
+    !ref.watch(guideEnabledProvider);
+
+/// Settings → Guide's choices: the switch and the days kept (global), and
+/// a source's time offset. The choices bootstrap read at once
+/// ([launchGuideSettings]); without them the device's defaults
+/// (`GuideSettings.defaultsOn`), then the stored choices as soon as they
+/// are read. A change is saved, then re-imports the guides it affects
+/// (ADR-011 decision 4), one source at a time; the switch starts or ends
+/// the guide's imports, and off clears it.
 @Riverpod(keepAlive: true)
 class GuideSettingsController extends _$GuideSettingsController {
   @override
   GuideSettings build() {
+    _defaults = GuideSettings.defaultsOn(ref.watch(formFactorProvider));
+    if (ref.read(launchGuideSettingsProvider) case final read?) {
+      // Read before the first frame: nothing to read again.
+      if (!_loaded.isCompleted) _loaded.complete();
+      return read;
+    }
     unawaited(_load());
-    return const GuideSettings();
+    return _defaults;
   }
 
+  var _defaults = const GuideSettings();
   var _changed = false;
   final _loaded = Completer<void>();
 
@@ -176,7 +239,7 @@ class GuideSettingsController extends _$GuideSettingsController {
     try {
       final stored = await ref.read(guideSettingsStoreProvider).load();
       // A choice made while loading wins over what was stored.
-      if (!_changed) state = stored.valueOrNull ?? const GuideSettings();
+      if (!_changed) state = stored.valueOrNull ?? _defaults;
     } on Object catch (error, stackTrace) {
       // The store answers with a Result; this is the last line of
       // defence, and the defaults stay.
@@ -194,11 +257,54 @@ class GuideSettingsController extends _$GuideSettingsController {
   }
 
   /// Reads the stored choices again: an import replaced them (Settings →
-  /// Data). Nothing is re-imported for it: the days kept apply from the
-  /// guide's next refresh.
-  Future<void> reload() {
+  /// Data). Nothing is re-imported for the days kept: they apply from the
+  /// guide's next refresh. A switch the import turned is acted on.
+  Future<void> reload() async {
+    final wasOn = state.enabled;
     _changed = false;
-    return _load();
+    await _load();
+    if (state.enabled != wasOn) _switched(on: state.enabled);
+  }
+
+  /// Switches the guide on or off (ADR-031), at once. On, every source's
+  /// guide is imported, as at a first launch; off, nothing more is, a
+  /// running import is cancelled and the stored guides are cleared. The
+  /// user's matches, offsets and reminders stay either way. Returns once
+  /// the choice is saved; the imports or the clearing carry on after it.
+  Future<Result<void>> setEnabled({required bool on}) async {
+    final previous = state;
+    final next = state.copyWith(enabled: on);
+    if (next == previous) return const Ok(null);
+    _changed = true;
+    state = next;
+    final saved = await ref.read(guideSettingsStoreProvider).save(next);
+    if (saved case Err(:final failure)) {
+      // Unless another change came in meanwhile.
+      if (state == next) state = previous;
+      return Err(failure);
+    }
+    _switched(on: on);
+    return const Ok(null);
+  }
+
+  void _switched({required bool on}) {
+    // A round of re-imports for the days kept stops at its next source.
+    _round++;
+    try {
+      final scheduler = ref.read(guideSchedulerProvider);
+      unawaited(on ? scheduler.switchedOn() : scheduler.switchedOff());
+    } on Object catch (error, stackTrace) {
+      // The choice is saved and shown; the imports or the clearing follow
+      // at the scheduler's next check.
+      ref
+          .read(appLogProvider)
+          .warning(
+            'guide',
+            'Could not act on the guide switch',
+            error: error,
+            stackTrace: stackTrace,
+          );
+    }
   }
 
   /// Keeps [days] of programmes ahead, then re-imports every source that

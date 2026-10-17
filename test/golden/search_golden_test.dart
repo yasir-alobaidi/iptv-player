@@ -24,6 +24,7 @@ import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 
 import '../app/app_harness.dart';
+import '../features/guide/guide_switch.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import '../features/reminders/reminder_fakes.dart';
 import '../features/search/search_fakes.dart';
@@ -174,6 +175,9 @@ void main() {
         searchRepositoryProvider.overrideWithValue(search),
         // No frame is made in a golden: the row draws its stand-in.
         libraryThumbnailProvider.overrideWith((ref, id) async => null),
+        // Programmes are found in the imported guide: switched on, as the
+        // canvas's search is (it is off by default, ADR-031).
+        guideSwitchedOn(),
         ...more,
       ],
     );

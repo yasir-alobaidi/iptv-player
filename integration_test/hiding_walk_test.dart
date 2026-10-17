@@ -32,6 +32,7 @@ import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/presentation/hidden_channels.dart';
 
 import 'support/fake_panel.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 import 'support/panel_app.dart';
 
@@ -58,7 +59,12 @@ void main() {
     ))!;
     addTearDown(() => tester.runAsync(panel.stop));
     final app = (await tester.runAsync(
-      () => PanelApp.open(panel, video: video),
+      () => PanelApp.open(
+        panel,
+        video: video,
+        // The walk goes through the Guide too.
+        overrides: [guideSwitchedOn()],
+      ),
     ))!;
     addTearDown(() => tester.runAsync(app.close));
     final container = app.container;

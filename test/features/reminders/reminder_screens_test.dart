@@ -15,6 +15,7 @@ import 'package:iptv_player/features/guide/presentation/guide_programme_sheet.da
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
+import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
@@ -647,6 +648,78 @@ void main() {
 
       expect(find.text("Couldn't read your reminders"), findsNothing);
       expect(find.text(noRemindersTitle), findsOneWidget);
+    });
+  });
+
+  group('with the Guide switched off (ADR-031)', () {
+    late GuideFixture fixture;
+    late AppUnderTest app;
+
+    /// Settings → Guide with the guide off, and Reminders open from it.
+    Future<void> open(WidgetTester tester) async {
+      fixture = GuideFixture(guideOn: false);
+      addTearDown(() => tester.runAsync(fixture.db.close));
+      await tester.runAsync(fixture.seed);
+      app = await pumpApp(
+        tester,
+        overrides: [
+          ...fixture.overrides,
+          reminderRepositoryProvider.overrideWithValue(reminders),
+        ],
+      );
+      await _settle(tester);
+      ProviderScope.containerOf(tester.element(find.byType(Navigator).first))
+          .read(settingsLocationProvider.notifier)
+          .showGuide('src-1');
+      app.router.go(AppDestination.settings.path);
+      await _settle(tester);
+      await tester.tap(find.widgetWithText(AppButton, 'Manage'));
+      await _settle(tester);
+    }
+
+    testWidgets('Settings → Guide still has the list; Enter shows the '
+        "programme's channel in Live TV, as its key says", (tester) async {
+      reminders
+        ..add(
+          start: GuideFixture.at(22, 5),
+          title: 'Harbor to Harbor',
+          channelKey: '208',
+          xmltvId: 'bluewater',
+        )
+        ..add(start: GuideFixture.at(23, 15), channelKey: '204');
+      await open(tester);
+      expect(find.byType(RemindersDialog), findsOneWidget);
+      expect(find.text('Show in Live TV'), findsOneWidget);
+      expect(find.text('Show in the Guide'), findsNothing);
+
+      await _key(tester, LogicalKeyboardKey.enter);
+      await _settle(tester);
+
+      expect(find.byType(RemindersDialog), findsNothing);
+      expect(app.location, AppDestination.liveTv.path);
+      final view = ProviderScope.containerOf(
+        tester.element(find.byType(LiveTvScreen)),
+      ).read(liveTvControllerProvider);
+      expect(view?.selected?.remoteKey, '208');
+      expect(view?.query.text, view?.selected?.name);
+      expect(reminders.sorted, hasLength(2), reason: 'nothing removed');
+      // Live TV's preview plays the channel: stopped, so no watchdog
+      // outlives the test.
+      await tester.pump(const Duration(milliseconds: 400));
+      await fixture.live.rig.coordinator.stop();
+      await _settle(tester);
+    });
+
+    testWidgets('the last one removed: the list says where reminders come '
+        'from, and that the guide is off', (tester) async {
+      reminders.add(start: GuideFixture.at(22, 5), channelKey: '208');
+      await open(tester);
+
+      await _key(tester, LogicalKeyboardKey.delete);
+
+      expect(find.text(noRemindersTitle), findsOneWidget);
+      expect(find.text(noRemindersMessageGuideOff), findsOneWidget);
+      expect(find.text(noRemindersMessage), findsNothing);
     });
   });
 

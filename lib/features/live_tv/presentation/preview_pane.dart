@@ -10,6 +10,7 @@ import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_preview_card.dart';
+import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/guide/presentation/guide_match_request.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
@@ -217,6 +218,7 @@ class _Details extends ConsumerWidget {
     final now = ref.watch(appClockProvider)();
     final current = guide?.now;
     final next = guide?.next;
+    final guideOn = ref.watch(guideEnabledProvider);
 
     return SingleChildScrollView(
       child: Column(
@@ -286,7 +288,7 @@ class _Details extends ConsumerWidget {
                     .copyWith(color: colors.textSecondary),
               ),
             ],
-          ] else ...[
+          ] else if (loading || next != null || guideOn) ...[
             Text(
               switch (next) {
                 _ when loading => 'Looking up what’s on…',
@@ -299,7 +301,9 @@ class _Details extends ConsumerWidget {
               ),
             ),
             // The way to fix it: Settings → Guide's Match… picker for this
-            // channel (ADR-011 step 5).
+            // channel (ADR-011 step 5). With the Guide off (ADR-031) there
+            // is nothing to match against, and nothing to say: the
+            // channel's name is the title above.
             if (next == null && !loading) ...[
               SizedBox(height: tokens.spacing.s8),
               AppButton(

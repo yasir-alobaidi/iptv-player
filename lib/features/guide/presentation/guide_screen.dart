@@ -47,6 +47,9 @@ class GuideScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Switched off (ADR-031): the router sends the page Home, and what
+    // the shell keeps of it holds nothing (no grid, no cache).
+    if (ref.watch(guideSwitchedOffProvider)) return const SizedBox.shrink();
     final source = ref.watch(currentSourceProvider);
     return FocusPane(
       debugLabel: 'screen-guide',

@@ -387,11 +387,15 @@ final class FakeGuideSettingsStore implements GuideSettingsStore {
   GuideSettings stored = const GuideSettings();
   final saved = <GuideSettings>[];
 
+  /// Makes [save] fail with this, keeping what is stored.
+  AppFailure? saveFailure;
+
   @override
   Future<Result<GuideSettings>> load() async => Ok(stored);
 
   @override
   Future<Result<void>> save(GuideSettings settings) async {
+    if (saveFailure case final failure?) return Err(failure);
     saved.add(settings);
     stored = settings;
     return const Ok(null);

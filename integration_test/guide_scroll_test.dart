@@ -43,6 +43,7 @@ import 'package:iptv_player/features/sources/presentation/source_shell_slots.dar
 
 import 'support/fake_panel.dart';
 import 'support/frames.dart';
+import 'support/guide_on.dart';
 import 'support/keyboard.dart';
 
 void main() {
@@ -78,6 +79,7 @@ void main() {
           credentialStoreProvider.overrideWithValue(InMemoryCredentialStore()),
           startLocationProvider.overrideWithValue(AppDestination.guide.path),
           ...sourceShellOverrides,
+          guideSwitchedOn(),
         ],
       );
       addTearDown(

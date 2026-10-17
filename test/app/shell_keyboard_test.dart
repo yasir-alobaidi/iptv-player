@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
 
+import '../features/guide/guide_switch.dart';
 import 'app_harness.dart';
 
 /// The search field's own default hint is the only name it has, so the
@@ -90,7 +92,7 @@ void main() {
   });
 
   testWidgets('Enter on a rail item opens that destination', (tester) async {
-    final app = await pumpApp(tester);
+    final app = await pumpApp(tester, overrides: [guideSwitchedOn()]);
 
     await _tabTo(tester, AppDestination.guide.label);
     expect(_focusedLabel(tester), AppDestination.guide.label);
@@ -303,7 +305,11 @@ void main() {
     expect(
       walk,
       containsAllInOrder([
-        ...AppDestination.primary.map((destination) => destination.label),
+        // The rail as it is by default: no Guide (ADR-031).
+        ...AppDestination.primaryOn(
+          FormFactor.desktop,
+          guide: false,
+        ).map((destination) => destination.label),
         'Expand menu',
         AppDestination.settings.label,
         'Source: No source',
@@ -325,7 +331,8 @@ void main() {
       'Source: No source',
       AppDestination.settings.label,
       'Expand menu',
-      AppDestination.guide.label,
+      // The rail's last item while the Guide is off, as by default.
+      AppDestination.library.label,
     ]) {
       await _tab(tester, shift: true);
 
@@ -414,7 +421,7 @@ void main() {
   testWidgets('a destination shortcut from the rail leaves focus there', (
     tester,
   ) async {
-    final app = await pumpApp(tester);
+    final app = await pumpApp(tester, overrides: [guideSwitchedOn()]);
 
     await _tabTo(tester, AppDestination.movies.label);
     await _pressCtrl(tester, LogicalKeyboardKey.digit7);

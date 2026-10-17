@@ -28,7 +28,10 @@ LiveTvFakes? _live;
 void main() {
   tearDown(() => _live = null);
 
-  Future<(LiveTvFakes, _ShortEpg)> pump(WidgetTester tester) async {
+  Future<(LiveTvFakes, _ShortEpg)> pump(
+    WidgetTester tester, {
+    bool guideOn = true,
+  }) async {
     final live = LiveTvFakes();
     final short = _ShortEpg();
     addTearDown(() => tester.runAsync(live.db.close));
@@ -39,12 +42,36 @@ void main() {
     await pumpApp(
       tester,
       initialLocation: AppDestination.liveTv.path,
-      overrides: live.importedGuideOverrides(short),
+      overrides: live.importedGuideOverrides(short, guideOn: guideOn),
     );
     _live = live;
     await _settle(tester);
     return (live, short);
   }
+
+  testWidgets('with the guide switched off, as by default (ADR-031): a '
+      'guide still stored is not read; the preview asks the short EPG, and '
+      'a channel it has nothing for shows its name alone, with no Match '
+      'button', (tester) async {
+    final (_, short) = await pump(tester, guideOn: false);
+
+    expect(_rowText('Continental Cup · Semi-final'), findsNothing);
+    expect(_rowText('Morning Rally'), findsNothing);
+    expect(_rowText('No guide information'), findsNothing);
+
+    await tester.tap(find.text('Velocity Motors').first);
+    await _settle(tester);
+    expect(short.asked, ['203']);
+    expect(find.text('Pit Lane Live'), findsNWidgets(2), reason: 'and the row');
+
+    await tester.tap(find.text('Arena Sports 1').first);
+    await _settle(tester);
+    expect(short.asked, ['203', '201']);
+    expect(find.text('Continental Cup · Semi-final'), findsNothing);
+    expect(find.text('No guide information'), findsNothing);
+    expect(find.text('Match to a guide channel'), findsNothing);
+    await _finish(tester);
+  });
 
   testWidgets('every row says what is on, from the database alone', (
     tester,
