@@ -4,6 +4,10 @@ import 'package:iptv_player/data/db/user_tables.dart';
 
 part 'watch_history_dao.g.dart';
 
+/// What [WatchHistoryDao.prune] took away: channels, and films and
+/// episodes.
+typedef HistoryPruned = ({int channels, int titles});
+
 @DriftAccessor(tables: [WatchHistory])
 class WatchHistoryDao extends DatabaseAccessor<AppDatabase>
     with _$WatchHistoryDaoMixin {
@@ -132,6 +136,88 @@ class WatchHistoryDao extends DatabaseAccessor<AppDatabase>
                 t.seriesKey.equals(seriesKey),
           ))
           .write(const WatchHistoryCompanion(dismissed: Value(true)));
+
+  // ---- The tidy-up (ADR-031).
+
+  /// Forgets what was watched long ago: channels last watched before
+  /// [channelsBefore], finished films and episodes before
+  /// [finishedBefore], and those never finished before [startedBefore];
+  /// dismissed or not. Whatever their age, these stay:
+  /// - each source's [channelsKept] newest channels: Last channel reads
+  ///   the newest three after a fresh start;
+  /// - each series' newest episode that counts (finished, or past
+  ///   [countsFromMs]), and the newest of those still in Continue
+  ///   watching: Continue watching and the series' "Continue S2 · E4"
+  ///   both work out the next episode from it. Ties stay together.
+  ///
+  /// The user's own files (no source) are the library's: left alone.
+  Future<HistoryPruned> prune({
+    required DateTime channelsBefore,
+    required DateTime finishedBefore,
+    required DateTime startedBefore,
+    required int countsFromMs,
+    int channelsKept = 3,
+  }) => transaction(() async {
+    final channels = await customUpdate(
+      "DELETE FROM watch_history WHERE item_type = 'live' "
+      'AND source_id IS NOT NULL '
+      'AND julianday(updated_at) < julianday(?1) '
+      'AND id NOT IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER '
+      '(PARTITION BY source_id ORDER BY updated_at DESC, id DESC) AS n '
+      "FROM watch_history WHERE item_type = 'live' "
+      'AND source_id IS NOT NULL) WHERE n <= ?2)',
+      variables: [
+        Variable.withDateTime(channelsBefore),
+        Variable.withInt(channelsKept),
+      ],
+      updates: {watchHistory},
+      updateKind: UpdateKind.delete,
+    );
+    // Ordered as Continue watching orders them (by the stored text), so
+    // the row kept is the one it reads.
+    final titles = await customUpdate(
+      "DELETE FROM watch_history WHERE item_type IN ('movie', 'episode') "
+      'AND source_id IS NOT NULL '
+      'AND ((completed = 1 AND julianday(updated_at) < julianday(?1)) '
+      'OR (completed = 0 AND julianday(updated_at) < julianday(?2))) '
+      'AND id NOT IN (SELECT id FROM (SELECT id, dismissed, RANK() OVER '
+      '(PARTITION BY source_id, series_key ORDER BY updated_at DESC) '
+      'AS newest, RANK() OVER (PARTITION BY source_id, series_key, '
+      'dismissed ORDER BY updated_at DESC) AS newest_here '
+      "FROM watch_history WHERE item_type = 'episode' "
+      'AND source_id IS NOT NULL AND series_key IS NOT NULL '
+      'AND (completed = 1 OR position_ms >= ?3)) '
+      'WHERE newest = 1 OR (dismissed = 0 AND newest_here = 1))',
+      variables: [
+        Variable.withDateTime(finishedBefore),
+        Variable.withDateTime(startedBefore),
+        Variable.withInt(countsFromMs),
+      ],
+      updates: {watchHistory},
+      updateKind: UpdateKind.delete,
+    );
+    return (channels: channels, titles: titles);
+  });
+
+  /// Forgets every row of [types] (Settings → Data's Clear watch
+  /// history), the user's own files' too. Returns how many went.
+  Future<int> clear(Set<UserItemType> types) =>
+      (delete(watchHistory)..where((t) => t.itemType.isInValues(types))).go();
+
+  /// How many channels, and how many films, episodes and files of the
+  /// user's own, have a row; again at every change.
+  Stream<({int channels, int titles})> watchCounts() =>
+      customSelect(
+        "SELECT COALESCE(SUM(item_type = 'live'), 0) AS channels, "
+        "COALESCE(SUM(item_type != 'live'), 0) AS titles "
+        'FROM watch_history',
+        readsFrom: {watchHistory},
+      ).watchSingle().map(
+        (row) => (
+          channels: row.read<int>('channels'),
+          titles: row.read<int>('titles'),
+        ),
+      );
 
   // ---- A file of the user's own (Phase 8): no source, keyed by its
   // quick hash; one row each (the `watch_history_local` index).

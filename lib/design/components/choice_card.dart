@@ -4,7 +4,8 @@ import 'package:iptv_player/design/tokens.dart';
 
 /// One of a few large, mutually exclusive options: a title and a line
 /// under it, outlined in accent when selected (canvas, onboarding source
-/// types). Behaves as a radio button.
+/// types). Behaves as a radio button. Without [onPressed] it can't be
+/// chosen: its words dim, and the focus passes it by.
 class ChoiceCard extends StatelessWidget {
   const new({
     required this.title,
@@ -27,6 +28,7 @@ class ChoiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final off = onPressed == null;
     return Semantics(
       inMutuallyExclusiveGroup: true,
       checked: selected,
@@ -62,7 +64,9 @@ class ChoiceCard extends StatelessWidget {
                 style: tokens.text.bodyStrong
                     .withWeight(selected ? 800 : 700)
                     .copyWith(
-                      color: selected
+                      color: off
+                          ? colors.textDisabled
+                          : selected
                           ? colors.textPrimary
                           : colors.textEmphasis,
                     ),
@@ -75,7 +79,9 @@ class ChoiceCard extends StatelessWidget {
                 style: tokens.text.labelSmall
                     .withWeight(500)
                     .copyWith(
-                      color: selected
+                      color: off
+                          ? colors.textDisabled
+                          : selected
                           ? colors.textSecondary
                           : colors.textTertiary,
                     ),

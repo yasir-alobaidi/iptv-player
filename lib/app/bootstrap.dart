@@ -65,6 +65,7 @@ import 'package:iptv_player/features/playback/presentation/tv_away.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_watch.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
+import 'package:iptv_player/features/settings/data/data_providers.dart';
 import 'package:iptv_player/features/settings/data/db_appearance_store.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
@@ -333,6 +334,10 @@ void _syncAfterLaunch(
         await container.read(syncServiceProvider).startUp();
         // Guides after the syncs, never beside them (ADR-011 decision 5).
         await container.read(guideSchedulerProvider).startUp();
+        // Last, once: old history and run records go, and the file gives
+        // back the room they and a cleared guide left, if nothing is at
+        // work (ADR-031). It logs and swallows its own failures.
+        await container.read(launchTidyUpProvider).run();
       }),
     );
   });

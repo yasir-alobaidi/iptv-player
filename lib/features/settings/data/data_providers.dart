@@ -1,13 +1,21 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_store.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
+import 'package:iptv_player/features/downloads/data/download_providers.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
+import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/reminders/data/db_reminder_repository.dart';
+import 'package:iptv_player/features/settings/data/db_data_upkeep.dart';
 import 'package:iptv_player/features/settings/data/db_settings_transfer.dart';
+import 'package:iptv_player/features/settings/domain/data_upkeep.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
+import 'package:iptv_player/features/sources/domain/source.dart';
+import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'data_providers.g.dart';
@@ -72,6 +80,99 @@ GuideTotals? guideTotals(Ref ref) {
     sourceIds: withGuide,
   );
 }
+
+/// The tidy-up of the database: Settings → Data's Watch history and
+/// Database rows, and the launch's own (ADR-031).
+@Riverpod(keepAlive: true)
+DataUpkeep dataUpkeep(Ref ref) => DbDataUpkeep(ref.watch(appDatabaseProvider));
+
+/// What was watched, as Settings → Data counts it.
+@riverpod
+Stream<HistoryCounts> historyCounts(Ref ref) =>
+    ref.watch(dataUpkeepProvider).watchHistoryCounts();
+
+/// The database file's size and free room; measured again after Compact.
+@riverpod
+Future<Result<DatabaseRoom>> databaseRoom(Ref ref) =>
+    ref.watch(dataUpkeepProvider).measure();
+
+/// Whether [state] holds a stream (or a cast) right now.
+bool _plays(PlaybackState state) => switch (state) {
+  PlaybackOpening() ||
+  PlaybackPlaying() ||
+  PlaybackReconnecting() ||
+  PlaybackCasting() => true,
+  PlaybackIdle() || PlaybackFailed() || PlaybackEnded() => false,
+};
+
+/// What keeps Compact from running now, as it changes; null when nothing
+/// does. The player, never made, has played nothing; a TV has no
+/// downloads.
+@riverpod
+UpkeepBlocker? compactBlocker(Ref ref) {
+  if (ref.exists(playbackCoordinatorProvider)) {
+    final state =
+        ref.watch(playbackStateProvider).value ??
+        ref.read(playbackCoordinatorProvider).state;
+    if (_plays(state)) return UpkeepBlocker.playing;
+  }
+  for (final source in ref.watch(sourcesProvider).value ?? const <Source>[]) {
+    if (ref.watch(syncStatusProvider(source.id)).value is SyncRunning) {
+      return UpkeepBlocker.syncing;
+    }
+  }
+  if (ref.watch(guideTotalsProvider)?.importing ?? false) {
+    return UpkeepBlocker.importing;
+  }
+  if (ref.watch(formFactorProvider) == FormFactor.desktop &&
+      ref.exists(downloadQueueProvider)) {
+    final tasks = ref.watch(downloadTasksProvider).value ?? const [];
+    if (tasks.any((task) => task.state.isActive)) {
+      return UpkeepBlocker.downloading;
+    }
+  }
+  return null;
+}
+
+/// What is at work at this moment, read once: the last look before a
+/// compaction starts.
+typedef UpkeepBlockerCheck = Future<UpkeepBlocker?> Function();
+
+@Riverpod(keepAlive: true)
+UpkeepBlockerCheck upkeepBlockerCheck(Ref ref) => () async {
+  if (ref.exists(playbackCoordinatorProvider) &&
+      _plays(ref.read(playbackCoordinatorProvider).state)) {
+    return UpkeepBlocker.playing;
+  }
+  final sources =
+      (await ref.read(sourceRepositoryProvider).all()).valueOrNull ??
+      const <Source>[];
+  final sync = ref.read(syncServiceProvider);
+  if (sources.any((source) => sync.statusOf(source.id) is SyncRunning)) {
+    return UpkeepBlocker.syncing;
+  }
+  final imports = ref.read(guideImportServiceProvider);
+  if (sources.any((source) => imports.isImporting(source.id))) {
+    return UpkeepBlocker.importing;
+  }
+  if (ref.exists(downloadQueueProvider)) {
+    final tasks = ref.read(downloadQueueProvider).current;
+    if (tasks.any((task) => task.state.isActive)) {
+      return UpkeepBlocker.downloading;
+    }
+  }
+  return null;
+};
+
+/// The launch's tidy-up; `bootstrap()` runs it once the launch's syncs
+/// and guide imports are done.
+@Riverpod(keepAlive: true)
+LaunchTidyUp launchTidyUp(Ref ref) => LaunchTidyUp(
+  upkeep: ref.watch(dataUpkeepProvider),
+  blocker: ref.watch(upkeepBlockerCheckProvider),
+  log: ref.watch(appLogProvider),
+  clock: ref.watch(appClockProvider),
+);
 
 /// Asks where to save a file named [suggestedName]; null when the dialog
 /// is closed.

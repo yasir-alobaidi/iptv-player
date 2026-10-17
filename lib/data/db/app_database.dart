@@ -12,6 +12,7 @@ import 'package:iptv_player/data/db/daos/downloads_dao.dart';
 import 'package:iptv_player/data/db/daos/epg_dao.dart';
 import 'package:iptv_player/data/db/daos/favorites_dao.dart';
 import 'package:iptv_player/data/db/daos/library_dao.dart';
+import 'package:iptv_player/data/db/daos/maintenance_dao.dart';
 import 'package:iptv_player/data/db/daos/movies_dao.dart';
 import 'package:iptv_player/data/db/daos/reminders_dao.dart';
 import 'package:iptv_player/data/db/daos/series_dao.dart';
@@ -75,6 +76,7 @@ const appDatabaseFileName = 'iptv_player.sqlite';
     LibraryDao,
     DownloadsDao,
     RemindersDao,
+    MaintenanceDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {

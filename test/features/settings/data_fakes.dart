@@ -2,10 +2,126 @@ import 'dart:async';
 
 import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/features/settings/domain/data_upkeep.dart';
 import 'package:iptv_player/features/settings/domain/settings_export.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 
 const int _mb = 1024 * 1024;
+
+/// The database's tidy-up, as a test scripts it: 12 channels and 38
+/// titles watched, 77 MB with 25 MB free, compacted to 52 MB.
+final class FakeDataUpkeep implements DataUpkeep {
+  HistoryCounts _counts = (channels: 12, titles: 38);
+  final _changes = StreamController<HistoryCounts>.broadcast();
+  AppFailure? countsFailure;
+
+  DatabaseRoom room = const DatabaseRoom(
+    bytes: 77 * _mb,
+    pagesBytes: 77 * _mb,
+    freeBytes: 25 * _mb,
+  );
+  AppFailure? measureFailure;
+  int measures = 0;
+
+  /// Holds [measure] until completed.
+  Completer<void>? measureGate;
+
+  /// What a compaction leaves.
+  int compactedTo = 52 * _mb;
+  AppFailure? compactFailure;
+  int compactions = 0;
+  int trims = 0;
+
+  /// Holds [compact] until completed.
+  Completer<void>? compactGate;
+
+  final cleared = <HistoryChoice>[];
+  AppFailure? clearFailure;
+
+  final pruned = <DateTime>[];
+  AppFailure? pruneFailure;
+
+  /// Thrown by [prune] instead of answering: a bug, not a failure.
+  Error? pruneThrows;
+
+  HistoryCounts get counts => _counts;
+  set counts(HistoryCounts value) {
+    _counts = value;
+    _changes.add(value);
+  }
+
+  @override
+  Future<Result<TidyCounts>> prune(DateTime now) async {
+    if (pruneThrows case final error?) throw error;
+    pruned.add(now);
+    if (pruneFailure case final failure?) return Err(failure);
+    return const Ok((channels: 4, titles: 2, syncRuns: 7, guideImports: 3));
+  }
+
+  @override
+  Stream<HistoryCounts> watchHistoryCounts() => Stream.multi((listener) {
+    if (countsFailure case final failure?) {
+      listener
+        ..addError(failure)
+        ..closeSync();
+      return;
+    }
+    listener.add(_counts);
+    final changes = _changes.stream.listen(listener.add);
+    listener.onCancel = changes.cancel;
+  });
+
+  @override
+  Future<Result<int>> clearHistory(HistoryChoice what) async {
+    if (clearFailure case final failure?) return Err(failure);
+    cleared.add(what);
+    final gone = switch (what) {
+      HistoryChoice.channels => _counts.channels,
+      HistoryChoice.titles => _counts.titles,
+      HistoryChoice.everything => _counts.channels + _counts.titles,
+    };
+    counts = switch (what) {
+      HistoryChoice.channels => (channels: 0, titles: _counts.titles),
+      HistoryChoice.titles => (channels: _counts.channels, titles: 0),
+      HistoryChoice.everything => (channels: 0, titles: 0),
+    };
+    return Ok(gone);
+  }
+
+  @override
+  Future<Result<DatabaseRoom>> measure() async {
+    measures++;
+    if (measureGate case final gate?) await gate.future;
+    if (measureFailure case final failure?) return Err(failure);
+    return Ok(room);
+  }
+
+  @override
+  Future<Result<Compacted>> compact() async {
+    compactions++;
+    if (compactGate case final gate?) await gate.future;
+    if (compactFailure case final failure?) return Err(failure);
+    final before = room.bytes;
+    room = DatabaseRoom(
+      bytes: compactedTo,
+      pagesBytes: compactedTo,
+      freeBytes: 0,
+    );
+    return Ok((before: before, after: compactedTo));
+  }
+
+  @override
+  Future<Result<Compacted>> trimLog() async {
+    trims++;
+    final before = room.bytes;
+    room = DatabaseRoom(
+      bytes: room.pagesBytes,
+      pagesBytes: room.pagesBytes,
+      freeBytes: room.freeBytes,
+    );
+    return Ok((before: before, after: room.bytes));
+  }
+}
 
 /// A picture cache a test scripts.
 final class FakeArtworkStore implements ArtworkStore {

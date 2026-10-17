@@ -73,4 +73,22 @@ class SyncRunsDao extends DatabaseAccessor<AppDatabase>
           failure: const Value(syncInterruptedFailure),
         ),
       );
+
+  /// Keeps each source's [kept] newest runs (ADR-031), and, older than
+  /// those, whatever is still read: a run still running, and each
+  /// source's last successful one ([lastSucceeded]: an empty list is
+  /// taken at its word only when that run found it empty too). Nothing
+  /// points at a run by key: `seen_run` is only ever compared with the
+  /// run under way. Returns how many went.
+  Future<int> prune({required int kept}) => customUpdate(
+    'DELETE FROM sync_runs WHERE id IN (SELECT id FROM (SELECT id, '
+    'ROW_NUMBER() OVER (PARTITION BY source_id ORDER BY id DESC) AS n '
+    'FROM sync_runs) WHERE n > ?) '
+    "AND outcome != 'running' "
+    'AND id NOT IN (SELECT MAX(id) FROM sync_runs '
+    "WHERE outcome = 'succeeded' GROUP BY source_id)",
+    variables: [Variable.withInt(kept)],
+    updates: {syncRuns},
+    updateKind: UpdateKind.delete,
+  );
 }

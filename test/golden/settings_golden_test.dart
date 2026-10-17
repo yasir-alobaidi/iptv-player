@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
@@ -19,6 +20,7 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/domain/epg_matcher.dart';
 import 'package:iptv_player/features/settings/data/data_providers.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
+import 'package:iptv_player/features/settings/presentation/data_section.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/sources/domain/provider_account.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
@@ -271,6 +273,7 @@ void main() {
           settingsOpenPickerProvider.overrideWithValue(
             () async => sketchPlan().path,
           ),
+          dataUpkeepProvider.overrideWithValue(FakeDataUpkeep()),
         ],
       );
       await tapShown(tester, find.text('Data').first);
@@ -286,11 +289,32 @@ void main() {
 
     sceneTest("Data: an import's preview", (tester) async {
       await data(tester);
+      // In the smallest window at the largest text its row is past what
+      // the list has built yet.
+      await tester.scrollUntilVisible(
+        find.text('Import…'),
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byType(DataSection),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tapShown(tester, find.text('Import…'));
       await settleApp(tester);
       await settleApp(tester);
 
       await golden(tester, 'images/settings_data_import.png');
+    });
+
+    sceneTest('Data: what Clear watch history clears', (tester) async {
+      await data(tester);
+      await tapShown(tester, find.text('Clear…'));
+      await settleApp(tester);
+      await settleApp(tester);
+
+      await golden(tester, 'images/settings_data_history.png');
     });
 
     /// Settings → About & diagnostics, as a 0.1.0 build on Linux.

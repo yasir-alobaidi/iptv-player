@@ -1,11 +1,13 @@
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/text/format.dart';
+import 'package:iptv_player/features/settings/domain/data_upkeep.dart';
 import 'package:iptv_player/features/settings/domain/settings_export.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 
 // Every sentence of Settings → Data, in one place (sketch C).
 
-/// "412 MB", "1.2 GB": a whole number from 100 of a unit up.
+/// "412 MB", "1.2 GB", "77 MB": a whole number from 100 of a unit up, and
+/// no ".0" under it.
 String dataSize(int bytes) {
   const units = ['bytes', 'KB', 'MB', 'GB', 'TB'];
   var size = bytes.toDouble();
@@ -15,8 +17,11 @@ String dataSize(int bytes) {
     unit++;
   }
   if (unit == 0) return '$bytes bytes';
-  return '${size >= 100 ? size.round() : size.toStringAsFixed(1)} '
-      '${units[unit]}';
+  final tenths = size.toStringAsFixed(1);
+  final number = size >= 100 || tenths.endsWith('.0')
+      ? '${size.round()}'
+      : tenths;
+  return '$number ${units[unit]}';
 }
 
 String _plural(int count, String one, [String? many]) =>
@@ -54,6 +59,106 @@ String guideLine({
   return '${_plural(programmes, 'programme')}$upTo. Your channel matches '
       'are kept, and the guide comes back at its next refresh.';
 }
+
+/// "12 channels, 38 films and episodes".
+String _watched(HistoryCounts counts) => [
+  if (counts.channels > 0) _plural(counts.channels, 'channel'),
+  if (counts.titles > 0) _titles(counts.titles),
+].join(', ');
+
+String _titles(int count) => count == 1
+    ? '1 film or episode'
+    : '${formatCount(count)} films and episodes';
+
+/// Under Watch history: what there is, and how long it is kept (ADR-031).
+String historyLine(HistoryCounts counts, {String device = 'this computer'}) {
+  if (counts.channels + counts.titles <= 0) {
+    return 'Nothing watched on $device yet.';
+  }
+  return '${_watched(counts)}. Channels are forgotten after '
+      '${Upkeep.channels.inDays ~/ 30} months unwatched, finished films and '
+      'episodes after ${Upkeep.finished.inDays ~/ 30} months.';
+}
+
+/// Under Watch history while it is counted.
+String historyCounting(String device) =>
+    'Counting what was watched on $device…';
+
+/// Each of Clear watch history's choices: its title, and what it holds.
+String historyChoiceTitle(HistoryChoice choice) => switch (choice) {
+  HistoryChoice.channels => 'Recently watched channels',
+  HistoryChoice.titles => 'Continue watching and watched marks',
+  HistoryChoice.everything => 'Everything',
+};
+
+/// Whether [choice] holds nothing to clear, by [counts]; never when they
+/// couldn't be read.
+bool historyChoiceEmpty(HistoryChoice choice, HistoryCounts? counts) =>
+    switch ((choice, counts)) {
+      (_, null) => false,
+      (HistoryChoice.channels, final counts?) => counts.channels <= 0,
+      (HistoryChoice.titles, final counts?) => counts.titles <= 0,
+      (HistoryChoice.everything, final counts?) =>
+        counts.channels + counts.titles <= 0,
+    };
+
+/// [counts] null: they couldn't be read, so no numbers.
+String historyChoiceLine(HistoryChoice choice, HistoryCounts? counts) {
+  if (historyChoiceEmpty(choice, counts)) return 'Nothing to clear';
+  return switch (choice) {
+    HistoryChoice.channels =>
+      '${counts == null ? 'Channels' : _plural(counts.channels, 'channel')}'
+          ', on Home and for Last channel',
+    HistoryChoice.titles =>
+      '${counts == null ? 'Films and episodes' : _titles(counts.titles)}'
+          ', started or finished',
+    HistoryChoice.everything => 'Channels, films and episodes',
+  };
+}
+
+const clearHistoryKeeps = 'Your favorites, sources and settings stay.';
+
+/// The toast after Clear watch history.
+String historyCleared(HistoryChoice choice) => switch (choice) {
+  HistoryChoice.everything => 'Watch history cleared',
+  _ => '${historyChoiceTitle(choice)} cleared',
+};
+
+/// What the Database row is about, on [device].
+String databaseKept(String device) =>
+    'Your sources, catalogues, guide and history on $device';
+
+/// Free room under this isn't worth a mention.
+const int _roomWorthSaying = 1024 * 1024;
+
+/// Under Database: its size, and the room Compact would give back.
+String databaseLine(DatabaseRoom room, {String device = 'this computer'}) {
+  final size = '${databaseKept(device)}: ${dataSize(room.bytes)}';
+  return room.freeBytes >= _roomWorthSaying
+      ? '$size, ${dataSize(room.freeBytes)} of it unused. Compact gives that '
+            'room back.'
+      : '$size.';
+}
+
+/// Why Compact is off just now.
+String compactWaits(UpkeepBlocker blocker) =>
+    'It can be compacted once ${switch (blocker) {
+      UpkeepBlocker.playing => 'nothing is playing',
+      UpkeepBlocker.syncing => 'the sync is done',
+      UpkeepBlocker.importing => 'the guide is imported',
+      UpkeepBlocker.downloading => 'the downloads are done',
+    }}.';
+
+/// Under Database while Compact works: everything else waits for it.
+String databaseCompacting(String device) =>
+    '${databaseKept(device)}. Compacting it now; lists may open slowly '
+    'until it is done.';
+
+/// The toast after Compact.
+String databaseCompacted(Compacted sizes) => sizes.after < sizes.before
+    ? 'Database compacted · ${dataSize(sizes.before)} → '
+          '${dataSize(sizes.after)}'
+    : 'Database compacted · ${dataSize(sizes.after)}';
 
 const exportDescription =
     'Settings, favorites and groups, hidden and renamed channels and '

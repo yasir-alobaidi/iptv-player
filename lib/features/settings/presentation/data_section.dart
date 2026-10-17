@@ -16,18 +16,20 @@ import 'package:iptv_player/features/guide/data/guide_providers.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/settings/data/appearance_providers.dart';
 import 'package:iptv_player/features/settings/data/data_providers.dart';
+import 'package:iptv_player/features/settings/domain/data_upkeep.dart';
 import 'package:iptv_player/features/settings/domain/settings_export.dart';
 import 'package:iptv_player/features/settings/domain/settings_transfer.dart';
 import 'package:iptv_player/features/settings/presentation/data_text.dart';
 import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
-/// What the page is busy with; one thing at a time.
-enum _Busy { pictures, guide, exporting, importing }
+/// What the page is busy with; one thing at a time. In the page's order.
+enum _Busy { pictures, guide, history, database, exporting, importing }
 
-/// Settings → Data (Phase 9 step 3, sketch C): the kept pictures and the
-/// guide, each with a Clear that asks first, and Export… / Import… of
-/// the settings and the user's choices.
+/// Settings → Data (Phase 9 step 3, sketch C): the kept pictures, the
+/// guide and the watch history, each with a Clear that asks first; the
+/// database's size with Compact (ADR-031); and Export… / Import… of the
+/// settings and the user's choices.
 class DataSection extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -161,6 +163,8 @@ class _DataSectionState extends ConsumerState<DataSection> {
       final cleared = await guide.clearGuide(id);
       failed ??= cleared.failureOrNull;
     }
+    // The room the guide leaves shows under Database, for Compact.
+    if (mounted) ref.invalidate(databaseRoomProvider);
     if (failed != null) {
       _done("Couldn't clear the whole guide. ${failureMessage(failed)}");
       return;
@@ -172,6 +176,54 @@ class _DataSectionState extends ConsumerState<DataSection> {
       ),
     );
     _done();
+  }
+
+  Future<void> _clearHistory(HistoryCounts? counts) async {
+    final choice = await showAppDialog<HistoryChoice>(
+      context,
+      builder: (context) => ClearHistoryDialog(counts: counts),
+    );
+    if (choice == null || !mounted) return;
+    final notices = _notices;
+    setState(() => _busy = _Busy.history);
+    // Home's rows and the line here read the history's streams: they
+    // follow by themselves. The database's size is measured again.
+    final cleared = await ref.read(dataUpkeepProvider).clearHistory(choice);
+    if (mounted) ref.invalidate(databaseRoomProvider);
+    switch (cleared) {
+      case Ok():
+        notices.show(
+          AppNotice(historyCleared(choice), tone: NoticeTone.success),
+        );
+        _done();
+      case Err(:final failure):
+        _done("Couldn't clear the watch history. ${failureMessage(failure)}");
+    }
+  }
+
+  /// Nothing to confirm: it changes nothing the user keeps. The last look
+  /// at what is at work is taken now, as the button may have been
+  /// pressed just as something started.
+  Future<void> _compact() async {
+    final notices = _notices;
+    final upkeep = ref.read(dataUpkeepProvider);
+    final atWork = ref.read(upkeepBlockerCheckProvider);
+    setState(() => _busy = _Busy.database);
+    if (await atWork() case final blocker?) {
+      _done("Couldn't compact the database now. ${compactWaits(blocker)}");
+      return;
+    }
+    final compacted = await upkeep.compact();
+    if (mounted) ref.invalidate(databaseRoomProvider);
+    switch (compacted) {
+      case Ok(:final value):
+        notices.show(
+          AppNotice(databaseCompacted(value), tone: NoticeTone.success),
+        );
+        _done();
+      case Err(:final failure):
+        _done("Couldn't compact the database. ${failureMessage(failure)}");
+    }
   }
 
   Future<void> _export() async {
@@ -291,6 +343,18 @@ class _DataSectionState extends ConsumerState<DataSection> {
     final pictures = usage.value?.valueOrNull;
     final picturesFailure = usage.value?.failureOrNull;
 
+    final watched = ref.watch(historyCountsProvider);
+    final counts = watched.value;
+    final countsFailure = watched.hasError
+        ? AppFailure.fromError(watched.error!)
+        : null;
+    final measured = ref.watch(databaseRoomProvider);
+    final room = measured.value?.valueOrNull;
+    final roomFailure =
+        measured.value?.failureOrNull ??
+        (measured.hasError ? AppFailure.fromError(measured.error!) : null);
+    final blocker = ref.watch(compactBlockerProvider);
+
     // Nothing kept is nothing to clear; a size that couldn't be measured
     // still can be. A guide being imported can't be cleared.
     final canClearPictures =
@@ -301,6 +365,17 @@ class _DataSectionState extends ConsumerState<DataSection> {
         guide != null &&
         !guide.importing &&
         guide.sourceIds.isNotEmpty;
+    // The same for the history: nothing watched, nothing to clear.
+    final canClearHistory =
+        busy == null &&
+        ((counts != null && counts.channels + counts.titles > 0) ||
+            countsFailure != null);
+    // A compaction holds the database while it runs: never beside a
+    // stream, a sync, an import or a download.
+    final canCompact =
+        busy == null &&
+        blocker == null &&
+        (room != null || roomFailure != null);
     // A button that has the focus and has just run out of work (Clear,
     // once the pictures are gone) would drop it nowhere: it goes to the
     // next button instead.
@@ -308,6 +383,8 @@ class _DataSectionState extends ConsumerState<DataSection> {
       final enabled = {
         _Busy.pictures: canClearPictures,
         _Busy.guide: canClearGuide,
+        _Busy.history: canClearHistory,
+        _Busy.database: canCompact,
         _Busy.exporting: true,
         _Busy.importing: true,
       };
@@ -373,6 +450,48 @@ class _DataSectionState extends ConsumerState<DataSection> {
                   : null,
             ),
           ),
+          SettingRow(
+            title: 'Watch history',
+            description: switch ((counts, countsFailure)) {
+              (_, final failure?) =>
+                "Couldn't count what was watched. ${failureMessage(failure)}",
+              (final watched?, _) => historyLine(watched, device: _device),
+              _ => historyCounting(_device),
+            },
+            control: AppButton(
+              label: 'Clear…',
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.s,
+              focusNode: _focus[_Busy.history],
+              loading: busy == _Busy.history,
+              onPressed: canClearHistory
+                  ? () => unawaited(_clearHistory(counts))
+                  : null,
+            ),
+          ),
+          SettingRow(
+            title: 'Database',
+            description: [
+              switch ((room, roomFailure)) {
+                _ when busy == _Busy.database => databaseCompacting(_device),
+                (final measured?, _) => databaseLine(measured, device: _device),
+                (_, final failure?) =>
+                  "${databaseKept(_device)}. Couldn't measure it. "
+                      '${failureMessage(failure)}',
+                _ => '${databaseKept(_device)}. Measuring it…',
+              },
+              if (blocker != null && busy != _Busy.database)
+                compactWaits(blocker),
+            ].join(' '),
+            control: AppButton(
+              label: 'Compact',
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.s,
+              focusNode: _focus[_Busy.database],
+              loading: busy == _Busy.database,
+              onPressed: canCompact ? () => unawaited(_compact()) : null,
+            ),
+          ),
           // A file to take to another device: a TV has no files to
           // write or open (ADR-025).
           if (ref.watch(formFactorProvider) == FormFactor.desktop)
@@ -403,6 +522,72 @@ class _DataSectionState extends ConsumerState<DataSection> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Clear watch history's question (ADR-031): what goes, as three choices
+/// with what each holds, Everything chosen, and what stays. Keep has the
+/// focus, as in every dialog that deletes; Up reaches the choices. Pops
+/// the choice, or null to keep everything.
+class ClearHistoryDialog extends StatefulWidget {
+  const new({required this.counts, super.key});
+
+  /// What was watched; null when it couldn't be counted.
+  final HistoryCounts? counts;
+
+  @override
+  State<ClearHistoryDialog> createState() => _ClearHistoryDialogState();
+}
+
+class _ClearHistoryDialogState extends State<ClearHistoryDialog> {
+  HistoryChoice _choice = HistoryChoice.everything;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return AppDialog(
+      title: 'Clear watch history?',
+      primaryLabel: 'Clear',
+      destructive: true,
+      onPrimary: () => Navigator.of(context).pop(_choice),
+      secondaryLabel: 'Keep',
+      onSecondary: () => Navigator.of(context).pop(),
+      // Not a ScrollPane: the choices are the stops, and a focused one is
+      // scrolled into view in the smallest window.
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final choice in HistoryChoice.values) ...[
+              ChoiceCard(
+                title: historyChoiceTitle(choice),
+                subtitle: historyChoiceLine(choice, widget.counts),
+                selected: choice == _choice,
+                // A kind with nothing in it can't be chosen: clearing it
+                // would say "cleared" of nothing.
+                onPressed: historyChoiceEmpty(choice, widget.counts)
+                    ? null
+                    : () => setState(() => _choice = choice),
+              ),
+              SizedBox(height: tokens.spacing.s8),
+            ],
+            Padding(
+              padding: EdgeInsets.only(
+                top: tokens.spacing.s4,
+                bottom: tokens.spacing.s4,
+              ),
+              child: Text(
+                clearHistoryKeeps,
+                style: tokens.text.body.copyWith(
+                  color: tokens.colors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
