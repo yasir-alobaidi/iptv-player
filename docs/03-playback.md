@@ -26,6 +26,8 @@ On Linux the app depends on our patched media_kit_video (ADR-003). Every unpatch
 
 On a TV (Android) `demuxer-max-bytes` is at most 32MiB, whatever the preset, and 16MiB is kept behind, a film's too (ADR-031): the Chromecast with Google TV had about 200 MB free with a film playing. The preset's seconds still apply below the cap; a seek further back than what is kept asks the server again.
 
+Android's direct output (`vo=mediacodec_embed`) sets `force-window=no` at every open (ADR-032): media_kit's `force-window=yes` kept the output alive with nothing to show, and its thread spun a core of the TV after every film. mpv drops the output when the video ends and makes it again for the next one (the `vo` option and `wid` stay set).
+
 Every option and property name in this doc was verified against the system libmpv 0.34.1 (Ubuntu 22.04) in ADR-003. media_kit also sets `subs-fallback`, which 0.34.1 doesn't have; it logs one harmless error.
 
 ### Hardware decoding check

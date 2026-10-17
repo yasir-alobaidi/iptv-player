@@ -1,120 +1,37 @@
-# Handoff — 2026-10-17, the fifteenth session: a lighter TV and CI fixed on `main`; the guide switch and history upkeep half done on two WIP branches (ADR-031); the TV items planned (start with "Start here")
+# Handoff — 2026-10-17, the sixteenth session: two TV faults fixed on the Bedroom TV (ADR-032), history upkeep on `main`, the guide switch further along on `wip/guide-switch`, Next episode decided (ADR-033); start with "Start here"
 
 ## Start here (the next session)
-**The user's request** (on the fourteenth session's recommendations): "do
-evrything that wont effect the experiance, and keep it smooth"; the guide
-"its not simething the users will really care … make the defualt disabled
-and hide it from the list" (a toggle, or disabled: "do what u think
-better"); "if there is anything that doesnt need a tv then do it now"
-(they were away from home; the TV waits for their word); then, mid-work,
-"stop on a clear point with proper hand off to continue on a new chat".
+**The user's words this session:** "I am home and the bedroom tv is free to use, continue the work"; "the ruko and the google tv settings are updated, continue" (Google TV now outputs 4K; the Roku's HDMI 3 mode set); the TV for "About 30 minutes", the user able to look at it when called; no soundbar ("No, TV speakers"); then "add a button for the next episode while watching one, so the user can skip the wait time and go to the next time or just skip it if he wants to, and make sure on the movies it wont show up"; "after u finish the safe otpions make a check point in case we wanna restore to it, and then continue"; "Stop one a clear point with proper hand off".
 
-**On `main` (committed, not pushed; 5 commits after 8472d88):**
-- 4b1b7b8 CI's one failure on 8472d88: `guide_settings_keyboard_test`
-  pressed ↓↓ in Keep's menu, which opens on the chosen 7 days now; ↑↑ is 3
-  days (passed under Xvfb).
-- bcd241b, 4ba2d1a A TV's mpv buffers: at most 32 MiB ahead and 16 MiB
-  behind, whatever the preset, a film's too (`mpvOptionsFor(lowMemory:)`,
-  on Android); a TV's picture folder 150 MB (`artworkDiskBytesOnTv`).
-- 6bf6696 A film's hidden OSD isn't rebuilt 4 times a second: it stays
-  built (a TV focuses its controls before they fade in) but listens to
-  nothing once faded out (`_osdFaded`, `_still` in `player_screen.dart`).
-- Docs (this commit): ADR-031, docs/03 and docs/07's TV caps,
-  docs/plans/tv-video-layer-and-frame-rate.md, progress.md.
+**On `main` (committed, not pushed; after cc510be, the user's last push), tagged `checkpoint-2026-10-17`:**
+- f5e5811 **TV: a clean process after Back, no idle video output** (ADR-032): `MainActivity.onDestroy` ends the process when the activity finishes (the next engine's first play crashed in libmpv); the direct output sets `force-window=no` (its thread spun a core after every film). Both reproduced on the Bedroom TV, then checked fixed there.
+- 396b88b, 7234b94 **History upkeep** (ADR-031 and its addendum): pruning at launch, Settings → Data's Clear watch history and Database · Compact; reviewed (the diff, the two goldens, 320 tests re-run), docs/02, 05, 07.
+- The docs commit: ADR-031's addendum, ADR-032, ADR-033, progress, this handoff.
 
-**1. Finish `wip/guide-switch` (5b68312, one commit on 8472d88).** The
-decision (ADR-031): the guide **off by default on the desktop and the
-TV**, a switch as Settings → Guide's first row. Off: the Guide leaves the
-rail/top bar, Ctrl+7, the shortcuts list and the channel menu's matching;
-/guide goes Home; Search's and reminders' guide actions do something
-sensible; no XMLTV import at all (`GuideScheduler` gated inside); the
-imported guide cleared at the switch and at launch (keeping matches,
-offsets, reminders); now/next from the provider's short EPG still. On: as
-before, plus on a TV 2 h behind / 3 days ahead and the scheduled import
-held while anything plays. **An agent built it and was stopped mid-way,
-while updating `test/app/router_test.dart`** ("switch on for every
-destination, plus a redirect test"); nothing in it is reviewed or run as a
-whole. Analyze: one lint (directives_ordering, router_test.dart:10).
-27 files: destinations, router, desktop_shell, shortcut_list,
-shortcut_table, shortcuts, guide_scheduler, composite_guide,
-db_guide_settings_store, guide_providers (+ .g), guide_settings (domain
-and presentation), guide_screen, live_tv_providers (+ .g), preview_pane,
-reminder_actions, search_actions; tests: router, shell, shortcuts,
-guide_scheduler, composite_guide, guide_settings_controller,
-guide_settings, and a new `test/features/guide/guide_switch.dart` helper.
-**Left to do / check:** read the whole diff (`git diff main...wip/guide-switch`);
-the router test; whether the channel menu (`channel_menu.dart`), the TV's
-keep window (`epg_importer.dart`'s `keepBehind`/`keepAhead` from
-`formFactorProvider`), the playback hold, and the clear-at-launch were
-done (those files aren't in the diff: `epg_importer.dart` and
-`channel_menu.dart` are untouched); the Settings → Guide widget tests for
-both states (desktop and TV); every test and golden the new default
-breaks (`grep -rln "Guide\|guide" test integration_test`: Guide screen,
-shell goldens, search, reminders, home; re-record the rail goldens and
-look at each); `integration_test/guide_settings_keyboard_test.dart`
-switching the guide on by keyboard first; other integration tests that
-need the guide (guide_scroll, search_typing) switching it on in setup.
-Then rebase or cherry-pick onto `main` (it is based on 8472d88; `main`'s
-only overlap is that same integration test's ↑↑ fix), run the touched
-files, commit in small steps.
+**1. Finish `wip/guide-switch` (0a2a660: one WIP commit on cc510be).** The decision is ADR-031's (the guide off by default on the desktop and the TV; a switch as Settings → Guide's first row; off: no Guide in the rail/top bar, Ctrl+7, the shortcuts list or the channel menu's matching, /guide goes Home, no XMLTV import, the imported guide cleared at the switch and at launch keeping matches/offsets/reminders, now/next from the provider's short EPG; on: as before plus on a TV 2 h behind / 3 days ahead and the scheduled import held while anything plays). The commit holds the first WIP (5b68312, now deleted, all of it in here) plus a second agent's work, stopped **while it wired the integration tests to switch the guide on** (it was about to add a support helper; `channel_list_scroll`, `guide_keyboard`, `guide_scroll`, `guide_settings_keyboard`, `guide_watch`, `hiding_walk`, `manual/real_reminder`, `reminder_walk`, `search_typing`, `soak` are touched, unchecked). **Left:** read the whole diff (`git diff main...wip/guide-switch`, 96 files); **look at the 42 re-recorded goldens** (casting, favorites, home, library, live TV, movies, settings, shell, shortcuts panel: the rail without Guide; nobody has looked at them); **not done at all:** the TV's keep window (`epg_importer.dart`'s keepBehind/keepAhead from `formFactorProvider`), the channel menu (`channel_menu.dart`), the hold while playing; check the clear-at-launch (bootstrap loads the switch before the first frame: `launchGuideSettingsProvider`); Settings → Guide's tests in both states on the desktop and the TV. **Rebase onto `main`:** `lib/app/bootstrap.dart` changed on both sides (main: the tidy-up's line at the end of `_syncAfterLaunch`; the branch: the switch's load near the top); expect a small conflict. Run every touched test, the integration tests that need the guide (one file per run under `xvfb-run -a`), then commit in steps.
 
-**2. Finish `wip/history-upkeep` (40220af, one commit on 8472d88).**
-Built by an agent that was stopped **just after re-recording the
-Settings → Data goldens** (`settings_data.png`, `settings_data_import.png`,
-new `settings_data_history.png`): **look at those three PNGs first.**
-Analyze clean. 24 files: `maintenance_dao.dart` (+ .g, registered in
-`app_database.dart` + .g), `watch_history_dao.dart`, `sync_runs_dao.dart`,
-`lib/features/settings/domain/data_upkeep.dart`,
-`lib/features/settings/data/db_data_upkeep.dart`, `data_providers` (+ .g),
-`data_section.dart`, `data_text.dart`, `bootstrap.dart` (the launch's
-tidy-up after the guide's scheduling; `main` also changed bootstrap.dart,
-the picture folder's cap, a different spot); tests:
-`upkeep_daos_test.dart`, `db_data_upkeep_test.dart`,
-`launch_tidy_up_test.dart`, `compaction_benchmark_test.dart`,
-`data_section_test.dart`, `data_text_test.dart`, `data_fakes.dart`,
-`settings_golden_test.dart`. What it should do: ADR-031 "History upkeep"
-(ages 90/120 days/12 months, a series' newest episode kept, sync_runs and
-epg_imports to 30 a source, VACUUM + WAL checkpoint only when idle and
-the file has lots of free space; Settings → Data's "Watch history →
-Clear…" and "Database … Compact"). **Left to do / check:** read the diff
-against that; run its tests and the goldens; the VACUUM timing from
-`compaction_benchmark_test.dart` (`--tags benchmark --run-skipped`) into
-Measurements; whether "idle" really excludes playback, syncs, imports and
-downloads; the TV's Settings → Data rows. Then onto `main`, commit.
+**2. The checkpoint the user asked for:** once the guide switch is on `main` and the full suite passes, tag it `checkpoint-before-video-layer` (the "safe options" done), then go on. `checkpoint-2026-10-17` already marks this session's `main`. To look at one: `git checkout <tag>`; to go back to one on `main`: `git reset --hard <tag>` (drops the later commits: only on the user's word, and never for commits already pushed — fix forward instead).
 
-**3. Then, with the TV (only on the user's word: they will say when they
-are home):** build and install, check the lighter buffers (a film's
-seeks back, PSS, `/proc/meminfo`), the picture folder's trim, the guide
-off (Bijou's data shrinking after the compaction), the hidden OSD's CPU;
-**Picture size** on a film (very likely does nothing on the TV: mpv's
-direct output never scales; known issue); then the plan in
-docs/plans/tv-video-layer-and-frame-rate.md: **T0** (a SurfaceView under a
-transparent Flutter layer, no mpv: does Impeller on the Mali-G31 keep
-Flutter transparent? the composition type; Home's idle cost), then **T1**
-(films on the layer: Flutter's frames a second about 0 while a film
-plays, the CPU, HDR samples), and **Match frame rate**
-(`preferredDisplayModeId`, off by default).
+**3. Build ADR-033, Next episode in the credits** (desktop first, tests on the desktop and the TV form factor): an offer from 60 s left with "Next episode" (focused) and "Hide", the count from 20 s as today, Hide = nothing plays by itself, the card floating on its own without pinning the OSD, never on a film. Files: `vod_player_controller.dart`, `vod_osd.dart` (`NextEpisodeCard`), `player_screen.dart` (`_vodFlags`, `_vodOsd`, `_onBack`, the key handler).
+
+**4. With the TV (ask first with a pop-up; the user names a window):** build and install from `main` (version code = the commit count, 235+ now; the TV has 231); then: the guide off and Bijou's data shrinking after the launch's compaction (the log's `[upkeep]` lines: its time; `dumpsys meminfo` during it); Next episode by remote on a fake-panel episode near its end; Picture size's Fill and Stretch on a film that isn't 16:9; then docs/plans/tv-video-layer-and-frame-rate.md: **T0**, **T1**, **Match frame rate** (the TV offers 3840×2160 at 23.976 and 24; it switches only "within groups" and every mode is its own group, so only `preferredDisplayModeId` will switch it).
 
 **Before you start the next session (user):**
-1. **Push `main`** (`git push origin main`): CI's fix and the lighter TV.
-   Not the `wip/*` branches (local work in progress).
-2. **Wireless debugging** on the Bedroom TV (it goes off when the TV
-   restarts), when you want the TV work to start.
-3. **Two settings to look at yourself** (from the fourteenth session):
-   Google TV → Settings → Display & Sound → resolution (1080p now, the TV
-   takes 4K); the Roku TV's HDMI 3 "HDMI mode" (Auto or 2.0).
-4. **A soundbar or AV receiver?** Decides whether Media3 is worth it
-   (Dolby Vision, passthrough; ADR-025).
-5. Still from before: on the Bedroom TV, hold Left/Right on a film's seek
-   bar and OK right after a step; your case once (a channel, then The Bad
-   Guys 2 from Continue watching); listen to Live TV (4950).
+1. **Push `main` and the tag:** `git push origin main` and `git push origin checkpoint-2026-10-17`. Not `wip/guide-switch` (local work in progress).
+2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317 again).
+3. Still from before, on the Bedroom TV (build 231 has both fixes): hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
 
-**The TV right now:** untouched this session: Bijou build 226 as the
-fourteenth session left it (browsing xvip.pro). The fake panel is stopped.
-Nothing played from the provider.
+**The TV right now:** Bijou build 231 installed (the code of f5e5811, built from the working tree just before that commit); Google TV's home on screen; Bijou not running. The display is 3840×2160 at 59.94 Hz (apps draw at 1920×1080). The fake panel is stopped. Nothing played from the provider.
 
-**CI:** 8472d88 (the user's last push) failed on one integration test,
-fixed on `main` (4b1b7b8); check CI on the next push.
+**CI:** cc510be (the user's last push) passed. Check CI after the next push.
+
+### The sixteenth session, short
+The user pasted the fifteenth session's report and wrote they were home with the TV free; they had set Google TV's resolution and the Roku's HDMI mode.
+- **Agents (worktrees, owned files, no commits):** the guide switch (stopped at the user's word; saved as 0a2a660), history upkeep (finished; reviewed, re-run, committed and merged), Next episode (briefed from ADR-033's decision, stopped before it changed anything).
+- **On the TV, 08:48–09:13 (the 30 minutes):** build 231; the fake panel's film only, from Continue watching ("The Silent Vector (2021)", checked to be the fake panel's before the first OK). Keys and screenshots went in one run (the controls hide 6 s after the last key; a slow look let three Rights seek the film instead of moving the focus — harmless on the fake film). Every OK was sent alone, after a screenshot showing the focus, or by a script that pressed OK only when the fresh screenshot's pixel at the expected ring was the ring's white (the scratchpad's `okif.sh`).
+- **Found there:** the crash after Back and a relaunch (reproduced twice, then fixed and checked), the spinning output thread (seen three times, then fixed and checked: none left after a close; a second play in the same process has its picture). Measured: CPU and memory while a film plays, the seek back, Picture size (16:9/4:3 work), the display's modes and HDR, the Match-content setting.
+- **Checks:** analyze and format clean on `main`; mpv options 12 (the new test shown failing first); history upkeep's tests 320 in its worktree; the full suite under `TZ=UTC` on `main` (7234b94): **5,076 passed, 26 skipped**.
+- **Left running:** nothing. Worktrees removed; branches: `main`, `wip/guide-switch`, `tv-focus-sweep` (merged long ago).
 
 ### The fifteenth session, short
 The user pasted the fourteenth session's report with their answer (above),
@@ -249,7 +166,7 @@ Right to the results), "use multi agents", "don't do the full suite", and
   analyze`): it rewrites Android's plugin list with the test plugin and
   the build fails (`dev.flutter.plugins.integration_test does not
   exist`). The version code is the commit count (ADR-028): build from a
-  newer commit than the installed one (222 now): an older one is refused
+  newer commit than the installed one (231 now): an older one is refused
   as a downgrade, and on the same one an icon change doesn't show.
 - **The fake panel on the LAN:** `dart run
   tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0`; the TV's
@@ -258,6 +175,9 @@ Right to the results), "use multi agents", "don't do the full suite", and
   watching (now Stranglehold first) and Recently watched rows, whatever
   source is browsed, and the first focus at launch is that first card
   (build 222; build 217 left it on the rail's Home).** Never OK on it.
+  On build 231 Home's Continue watching starts with the fake panel's
+  "The Silent Vector (2021)" (its card had the focus at launch): check a
+  card's title against the fake panel's `get_vod_streams` before an OK.
 - **The Roku TV may be on another input** (this session: Netflix): then
   Google TV asks "Are you still watching?" and sleeps, and the dialog
   takes the keys. Read the Roku's `query/active-app` (read-only) and ask
@@ -267,7 +187,15 @@ Right to the results), "use multi agents", "don't do the full suite", and
   `_BACK`, `_HOME`, digits). **Never send OK without a screenshot taken
   after the last move showing what has the focus, and never chain OK
   after moves in one command** (the tenth session's slip). A helper:
-  send keys, then crop a screenshot (`adb exec-out screencap -p`).
+  send keys, then crop a screenshot (`adb exec-out screencap -p`). In the
+  player the controls hide 6 s after the last key: moves, the screenshot
+  and the OK go in one script, the OK only if the fresh screenshot's pixel
+  on the expected ring is the ring's white (243, 245, 249). Back on a
+  film's hidden controls closes the film; Back on Home leaves Bijou, and
+  since f5e5811 its process ends with it (`pidof` empty is expected).
+- **Per-thread CPU:** `top -H -b -d 5 -n 2 -p <pid> -o TID,%CPU` and the
+  names from `/proc/<pid>/task/<tid>/comm`; a native thread attached to
+  Java is named `Thread-N` (mpv's core and its video output are).
 - **The log:** `adb pull /sdcard/Android/data/io.github.yasiralobaidi.bijou/files/logs`
   (from the eleventh session's build on; rotated 5 × 5 MB, redacted), or
   `adb logcat -d | grep ' flutter '` for the last few minutes only.
