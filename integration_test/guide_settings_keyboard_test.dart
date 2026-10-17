@@ -102,13 +102,13 @@ void main() {
         .valueOrNull!;
     expect(first.hasGuide, isTrue);
 
-    // ── Keep: Enter opens the menu on "1 day"; ↓↓ is 3 days; Enter saves
-    // and re-imports.
+    // ── Keep: Enter opens the menu on the chosen "7 days" (ADR-029's
+    // addendum); ↑↑ is 3 days; Enter saves and re-imports.
     await k.tabTo(find.text('7 days'));
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('14 days'));
-    await k.press(LogicalKeyboardKey.arrowDown);
-    await k.press(LogicalKeyboardKey.arrowDown);
+    await k.press(LogicalKeyboardKey.arrowUp);
+    await k.press(LogicalKeyboardKey.arrowUp);
     await k.press(LogicalKeyboardKey.enter);
     await k.waitFor(find.text('3 days'));
     await k.waitUntil(
