@@ -267,11 +267,40 @@ void main() {
         );
         expect(display.requests, [uhd23976.id]);
       });
-      playsAsItIs(
-        film1,
-        length: null,
-        why: "Display mode left as it is: the film's length isn't known",
-      );
+      // No length at all: a second for the player to say, then it plays.
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1, length: null);
+        expect(rig.state, isA<PlaybackOpening>());
+        async.elapse(const Duration(seconds: 1));
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(rig.engine.calls, isEmpty);
+        expect(display.requests, isEmpty);
+        expect(
+          rig.logLines,
+          logged("Display mode left as it is: the film's length isn't known"),
+        );
+      });
+    });
+
+    test("the player's length a moment after the first frame counts (the "
+        "Bedroom TV's order; a provider's film list has no length)", () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1, length: null);
+        async.elapse(const Duration(milliseconds: 300));
+        expect(display.requests, isEmpty);
+        expect(rig.state, isA<PlaybackOpening>());
+        rig.engine.duration(film);
+        async.flushMicrotasks();
+        expect(display.requests, [uhd23976.id]);
+        async.elapse(const Duration(seconds: 4));
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
     });
 
     test('never with the switch off', () {
