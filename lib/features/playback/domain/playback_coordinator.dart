@@ -5,6 +5,7 @@ import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/playback/domain/frame_rate_match.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -93,6 +94,7 @@ final class PlaybackCoordinator {
     required this._log,
     this._progress,
     this._decoders,
+    this._frameRate,
     PlaybackSettings Function()? settings,
     SourceConnections? connections,
     this.timings = const WatchdogTimings(),
@@ -114,6 +116,9 @@ final class PlaybackCoordinator {
   /// Null: a file's position isn't saved (tests that only play live).
   final WatchProgress? _progress;
   final DecoderNotes? _decoders;
+
+  /// A TV's Match frame rate; null on the desktop (and in most tests).
+  final FrameRateMatcher? _frameRate;
   final PlaybackSettings Function() _settings;
   final WatchdogTimings timings;
 
@@ -132,6 +137,10 @@ final class PlaybackCoordinator {
   /// The engine generation of the open this session is watching.
   int? _generation;
   int? _awaitingOpenFor;
+
+  /// The open whose first frame waits for a TV's display to switch: its
+  /// pause is the switch's, not the user's.
+  int? _matching;
 
   ResolvedStream? _stream;
 
@@ -374,6 +383,8 @@ final class PlaybackCoordinator {
   /// held while nobody watches, and [resumeAfterAway] plays it again.
   /// Only what was opening or playing; a failure stays as it was.
   Future<void> stopWhileAway() async {
+    // The TV's own display mode, whatever was playing (an end card too).
+    _frameRate?.away();
     final item = this.item;
     final playing = switch (_state) {
       PlaybackOpening() || PlaybackPlaying() || PlaybackReconnecting() => true,
@@ -580,15 +591,15 @@ final class PlaybackCoordinator {
       case PlayerFirstFrame(:final generation):
         if (generation != _generation || item == null) return;
         _openTimer?.cancel();
-        _attempts = 0;
-        _started = true;
-        _set(PlaybackPlaying(item));
-        _startTick(item, token);
-        unawaited(_noteDecoder(generation));
-        if (item case PlayableChannel(:final channel) when !_recorded) {
-          _recorded = true;
-          unawaited(_history.recordLive(channel));
+        // On a TV a film may first move the display to its frame rate,
+        // as part of its open: still "Preparing…", with neither the
+        // open's timeout nor the stall's running meanwhile.
+        if (_frameRate case final matcher?
+            when matcher.available && !item.live) {
+          unawaited(_matchFrameRate(matcher, item, token, generation));
+          return;
         }
+        _firstFrame(item, token, generation);
       case PlayerProgress(:final position, :final buffered):
         if (_seekTarget case final target?) {
           // A report from before the seek landed.
@@ -604,6 +615,8 @@ final class PlaybackCoordinator {
         _publish();
       case PlayerPaused(:final paused):
         if (_generation == null || item == null || item.live) return;
+        // The display's switch pauses the file: that pause isn't the user's.
+        if (_matching == _generation) return;
         if (paused == _paused) return;
         _paused = paused;
         _stillTicks = 0;
@@ -647,6 +660,45 @@ final class PlaybackCoordinator {
       case PlayerVideoChanged():
         break;
     }
+  }
+
+  /// The picture is out: [item] plays.
+  void _firstFrame(Playable item, int token, int generation) {
+    _attempts = 0;
+    _started = true;
+    _set(PlaybackPlaying(item));
+    _startTick(item, token);
+    unawaited(_noteDecoder(generation));
+    if (item case PlayableChannel(:final channel) when !_recorded) {
+      _recorded = true;
+      unawaited(_history.recordLive(channel));
+    }
+  }
+
+  /// A TV's Match frame rate at a file's first frame: the display moves
+  /// to the film's rate first, if it should, and then the file plays,
+  /// unless a stop or another play came meanwhile.
+  Future<void> _matchFrameRate(
+    FrameRateMatcher matcher,
+    Playable item,
+    int token,
+    int generation,
+  ) async {
+    bool still() => token == _token && generation == _generation;
+    _matching = generation;
+    final paused = await matcher.beforeFilePlays(
+      enabled: _settings().matchFrameRate,
+      length: _duration ?? _knownLength(item),
+      fps: () async => (await engine.streamInfo()).fps,
+      pause: () => engine.setPaused(paused: true),
+    );
+    try {
+      if (paused && still()) await engine.setPaused(paused: false);
+    } on Object catch (error) {
+      _log.warning(_tag, "Couldn't play on after the display's switch: $error");
+    }
+    if (_matching == generation) _matching = null;
+    if (still()) _firstFrame(item, token, generation);
   }
 
   /// The end of a file: finished, unless it came well before the file's
@@ -875,6 +927,7 @@ final class PlaybackCoordinator {
 
   void _set(PlaybackState state) {
     _state = state;
+    _frameRate?.playbackChanged(state);
     if (!_states.isClosed) _states.add(state);
   }
 

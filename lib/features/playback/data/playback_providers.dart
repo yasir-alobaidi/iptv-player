@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/display_modes.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -14,6 +15,7 @@ import 'package:iptv_player/features/playback/data/db_playback_history.dart';
 import 'package:iptv_player/features/playback/data/db_playback_settings_store.dart';
 import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
 import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
+import 'package:iptv_player/features/playback/domain/frame_rate_match.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -79,10 +81,16 @@ StreamResolver streamResolver(Ref ref) => DbStreamResolver(
 PlaybackHistory playbackHistory(Ref ref) =>
     DbPlaybackHistory(ref.watch(appDatabaseProvider));
 
-/// The app's one playback owner (docs/03).
+/// The app's one playback owner (docs/03), with a TV's Match frame rate
+/// (ADR-035) where there is a display to ask: none on the desktop.
 @Riverpod(keepAlive: true)
 PlaybackCoordinator playbackCoordinator(Ref ref) {
   final sources = ref.watch(sourceRepositoryProvider);
+  final log = ref.watch(appLogProvider);
+  final display = ref.watch(displayModesProvider);
+  final frameRate = display.available
+      ? FrameRateMatcher(display: display, log: log)
+      : null;
   final coordinator = PlaybackCoordinator(
     engine: ref.watch(playerEngineProvider),
     resolver: ref.watch(streamResolverProvider),
@@ -91,10 +99,13 @@ PlaybackCoordinator playbackCoordinator(Ref ref) {
     channels: ref.watch(channelRepositoryProvider),
     progress: ref.watch(watchProgressProvider),
     decoders: ref.watch(decoderNotesProvider),
-    log: ref.watch(appLogProvider),
+    frameRate: frameRate,
+    log: log,
     settings: () => ref.read(playbackSettingsControllerProvider),
   );
   ref.onDispose(coordinator.dispose);
+  // After the coordinator: the TV's own mode back as the app closes.
+  if (frameRate != null) ref.onDispose(frameRate.dispose);
   return coordinator;
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/platform/display_modes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/text/format.dart';
@@ -462,7 +463,8 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
   }
 }
 
-/// The stream-info overlay (I; approved sketch), read once a second.
+/// The stream-info overlay (I; approved sketch), read once a second. On
+/// a TV it names the display's mode too (Match frame rate, ADR-035).
 class StreamInfoOverlay extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -472,6 +474,9 @@ class StreamInfoOverlay extends ConsumerStatefulWidget {
 
 class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
   StreamInfo? _info;
+
+  /// The display's mode; null where there is none to read (the desktop).
+  DisplayMode? _display;
   Timer? _timer;
 
   @override
@@ -489,7 +494,14 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
 
   Future<void> _read() async {
     final info = await ref.read(playerEngineProvider).streamInfo();
-    if (mounted) setState(() => _info = info);
+    if (!mounted) return;
+    final display = ref.read(displayModesProvider);
+    final mode = display.available ? (await display.read())?.current : null;
+    if (!mounted) return;
+    setState(() {
+      _info = info;
+      _display = mode;
+    });
   }
 
   @override
@@ -497,8 +509,11 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final info = _info;
-    final url = ref.read(playbackCoordinatorProvider).redactedUrl;
-    String fps(double? v) => v == null ? '' : ' · ${v.toStringAsFixed(0)} fps';
+    final coordinator = ref.read(playbackCoordinatorProvider);
+    final url = coordinator.redactedUrl;
+    final display = _display;
+    // 23.976 as it is: a film's rate is never rounded to 24.
+    String fps(double? v) => v == null ? '' : ' · ${formatRate(v)} fps';
     final rows = <(String, String)>[
       (
         'Video',
@@ -530,6 +545,15 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
         ].join(' · '),
       ),
       if (info?.interlaced == true) ('Scan', 'interlaced'),
+      if (display != null)
+        (
+          'Display',
+          displayInfoText(
+            display,
+            fps: info?.fps,
+            film: coordinator.item?.live == false,
+          ),
+        ),
       ('Dropped', '${info?.droppedFrames ?? 0}'),
       ('Source', url ?? '—'),
     ];
