@@ -201,6 +201,7 @@ class RemoteKeyboard extends StatefulWidget {
     this.obscure = false,
     this.keyboardType,
     this.onChanged,
+    this.exits = const {},
     super.key,
   });
 
@@ -210,6 +211,10 @@ class RemoteKeyboard extends StatefulWidget {
   final bool obscure;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+
+  /// The edges the screen beside the keyboard takes: an arrow there goes
+  /// on to it (Search's results, to the right) where the others go round.
+  final Set<TraversalDirection> exits;
 
   /// The panel's width: a screen that shows results beside it (Search)
   /// starts them after this.
@@ -243,6 +248,13 @@ class RemoteKeyboard extends StatefulWidget {
 }
 
 class _RemoteKeyboardState extends State<RemoteKeyboard> {
+  /// Above the keys: their arrows reach it when nothing is that way.
+  final _panel = FocusNode(
+    debugLabel: 'RemoteKeyboard',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+
   bool _upper = false;
   bool _symbols = false;
   bool _revealed = false;
@@ -268,7 +280,72 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   @override
   void dispose() {
     widget.controller.removeListener(_onText);
+    _panel.dispose();
     super.dispose();
+  }
+
+  /// The arrows go round at the keyboard's edges, as Google TV's own
+  /// keyboard does (ADR-036): the next key that way, else the other end.
+  /// A held arrow stops at the edge and the next press goes round, so a
+  /// hold never spins past the key it was going for. An edge in
+  /// [RemoteKeyboard.exits] lets the key go on to the screen.
+  KeyEventResult _onKey(FocusNode panel, KeyEvent event) {
+    final direction = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowUp => TraversalDirection.up,
+      LogicalKeyboardKey.arrowDown => TraversalDirection.down,
+      LogicalKeyboardKey.arrowLeft => TraversalDirection.left,
+      LogicalKeyboardKey.arrowRight => TraversalDirection.right,
+      _ => null,
+    };
+    final from = FocusManager.instance.primaryFocus;
+    if (direction == null || event is KeyUpEvent || from == null) {
+      return KeyEventResult.ignored;
+    }
+    if (from.focusInDirection(direction)) return KeyEventResult.handled;
+    if (widget.exits.contains(direction)) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) {
+      final to = _roundFrom(from, direction);
+      if (to == null) return KeyEventResult.handled;
+      // Flutter's arrows retrace a vertical move when the next goes back
+      // the other way: after going round, that went back to before the
+      // edge (↑ from q to 1, round to Delete, ↓ gave q, not 1).
+      final scope = from.nearestScope;
+      if (from.context case final context? when scope != null) {
+        FocusTraversalGroup.maybeOf(context)?.invalidateScopeData(scope);
+      }
+      to.requestFocus();
+    }
+    return KeyEventResult.handled;
+  }
+
+  /// The key an arrow goes round to from [from], at the keyboard's edge:
+  /// the other end of its row for ← and →; for ↑ and ↓ the other end's
+  /// row, the key there nearest [from] across. Null with none.
+  FocusNode? _roundFrom(FocusNode from, TraversalDirection direction) {
+    final keys = [
+      for (final node in _panel.traversalDescendants)
+        if (node != from) node,
+    ];
+    if (keys.isEmpty) return null;
+    final at = from.rect.center;
+    Iterable<FocusNode> rowAt(double y) => keys.where(
+      (node) => (node.rect.center.dy - y).abs() < from.rect.height / 2,
+    );
+    FocusNode most(Iterable<FocusNode> nodes, double Function(Offset) by) =>
+        nodes.reduce((a, b) => by(a.rect.center) >= by(b.rect.center) ? a : b);
+    switch (direction) {
+      case TraversalDirection.left || TraversalDirection.right:
+        final row = rowAt(at.dy);
+        if (row.isEmpty) return null;
+        return direction == TraversalDirection.left
+            ? most(row, (c) => c.dx)
+            : most(row, (c) => -c.dx);
+      case TraversalDirection.up || TraversalDirection.down:
+        final end = direction == TraversalDirection.up
+            ? most(keys, (c) => c.dy)
+            : most(keys, (c) => -c.dy);
+        return most(rowAt(end.rect.center.dy), (c) => -(c.dx - at.dx).abs());
+    }
   }
 
   /// The box shows the field's words whoever changes them: Search puts a
@@ -336,7 +413,11 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
           ];
     final gap = tokens.spacing.s8 - 2;
 
-    Widget row(List<Widget> keys) => Padding(
+    // Each row keyed: Arabic has a row more, and the focus on the
+    // language key stayed in its place, a letter of the new row (OK on
+    // عربي by remote left it on أ).
+    Widget row(String name, List<Widget> keys) => Padding(
+      key: ValueKey(name),
       padding: EdgeInsets.only(top: gap),
       child: Row(children: keys),
     );
@@ -350,7 +431,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
       );
     }
 
-    return Container(
+    final panel = Container(
       width: RemoteKeyboard.width,
       height: double.infinity,
       padding: EdgeInsets.all(tokens.spacing.s20),
@@ -415,20 +496,20 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
           ),
           SizedBox(height: tokens.spacing.s8),
           if (_url && !_symbols)
-            row([
+            row('address', [
               for (final (piece, width) in RemoteKeyboard._addressRow)
                 _Key(label: piece, flex: width, onPressed: () => _type(piece)),
             ]),
-          row([
+          row('digits', [
             for (final (i, c) in RemoteKeyboard._digits.characters.indexed)
               char(c, autofocus: _number && i == 0),
           ]),
           for (final (r, keys) in letters.indexed)
-            row([
+            row('letters $r', [
               for (final (i, c) in keys.indexed)
                 char(c, autofocus: !_number && r == 0 && i == 0),
             ]),
-          row([
+          row('switches', [
             // Each language's key says it in its own words.
             _Key(
               label: _arabic ? 'English' : 'عربي',
@@ -455,7 +536,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
               onPressed: () => _type(' '),
             ),
           ]),
-          row([
+          row('actions', [
             _Key(label: 'Delete', flex: 3, onPressed: _delete),
             _Key(label: 'Clear', flex: 3, onPressed: () => _edit('')),
             _Key(
@@ -468,6 +549,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
         ],
       ),
     );
+    return Focus(focusNode: _panel, onKeyEvent: _onKey, child: panel);
   }
 }
 

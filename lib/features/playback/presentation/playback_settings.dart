@@ -175,6 +175,26 @@ class _PlaybackSettingsSectionState
                 ),
               ),
             ),
+          // A TV's display switches to a film's rate (ADR-035); the
+          // desktop never switches its display.
+          if (ref.watch(formFactorProvider) == FormFactor.tv)
+            _Setting(
+              title: 'Match frame rate',
+              description:
+                  'Films at 23.976 or 24 fps play at their own rate, so '
+                  'motion is smooth. The screen goes dark for a second or '
+                  "two when a film starts and ends. Follows the TV's own "
+                  'Match content frame rate setting.',
+              control: SegmentedControl<bool>(
+                options: const [
+                  SegmentOption(value: false, label: 'Off'),
+                  SegmentOption(value: true, label: 'On'),
+                ],
+                value: settings.matchFrameRate,
+                onChanged: (value) =>
+                    unawaited(_save(settings.copyWith(matchFrameRate: value))),
+              ),
+            ),
           _Setting(
             title: 'Preferred audio',
             description:

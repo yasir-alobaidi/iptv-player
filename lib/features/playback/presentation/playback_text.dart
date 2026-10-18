@@ -1,4 +1,6 @@
 import 'package:iptv_player/app/failure_message.dart';
+import 'package:iptv_player/core/platform/display_modes.dart';
+import 'package:iptv_player/features/playback/domain/frame_rate_match.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
@@ -86,3 +88,15 @@ String? resolutionLabel(int? height) => switch (height) {
   >= 1400 => '1440p',
   final h => '${h}p',
 };
+
+/// Stream info's Display row on a TV: the display's mode, and, for a
+/// [film] at 23.976 or 24 fps, whether the display is at its rate (Match
+/// frame rate, ADR-035): `3840×2160 · 23.976 Hz · matched`. Any other
+/// rate, or a channel, says nothing either way: none is matched.
+String displayInfoText(DisplayMode mode, {double? fps, bool film = false}) {
+  if (!film || fps == null || fps < filmRateLow || fps > filmRateHigh) {
+    return mode.label;
+  }
+  final matched = (mode.refreshRate - fps).abs() <= rateTolerance;
+  return '${mode.label} · ${matched ? 'matched' : 'not matched'}';
+}

@@ -92,6 +92,112 @@ void main() {
       expect(controller.selection, const TextSelection.collapsed(offset: 2));
     });
 
+    /// The key with the focus, by its label.
+    String? focusedKey() => FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<FocusableSurface>()
+        ?.semanticLabel;
+
+    Future<void> arrow(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pump();
+    }
+
+    testWidgets("the arrows go round at its edges, as the TV's own keyboard "
+        "does: a row's two ends, the top and the bottom rows", (tester) async {
+      await open(tester);
+      expect(focusedKey(), 'q');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'p');
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'q');
+      await arrow(tester, LogicalKeyboardKey.arrowUp);
+      expect(focusedKey(), '1');
+      // Up from the top row: the bottom row's key nearest below.
+      await arrow(tester, LogicalKeyboardKey.arrowUp);
+      expect(focusedKey(), 'Delete');
+      // Down from the bottom row: the top row's key nearest above
+      // (Delete is three keys wide; its middle is over 2).
+      await arrow(tester, LogicalKeyboardKey.arrowDown);
+      expect(focusedKey(), '2');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), '1');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), '0');
+      await arrow(tester, LogicalKeyboardKey.arrowUp);
+      expect(focusedKey(), 'Done');
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'Delete');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'Done');
+      await arrow(tester, LogicalKeyboardKey.arrowUp);
+      expect(focusedKey(), 'Space');
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'عربي');
+      // Arabic's rows go round too.
+      await ok(tester);
+      expect(focusedKey(), 'English');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'Space');
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'English');
+      expect(controller.text, isEmpty, reason: 'only arrows and the language');
+    });
+
+    testWidgets('a held arrow runs along a row and stops at its end; the '
+        'next press goes round', (tester) async {
+      await open(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      for (var i = 0; i < 12; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'p', reason: 'held, it stops at the end');
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'q');
+    });
+
+    testWidgets("an edge the screen takes (Search's results, to the right) is "
+        'left to it; the others still go round', (tester) async {
+      controller = TextEditingController();
+      addTearDown(controller.dispose);
+      final passed = <LogicalKeyboardKey>[];
+      await pumpDesign(
+        tester,
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) passed.add(event.logicalKey);
+            return KeyEventResult.handled;
+          },
+          child: FocusScope(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: RemoteKeyboard(
+                controller: controller,
+                onDone: () {},
+                exits: const {TraversalDirection.right},
+              ),
+            ),
+          ),
+        ),
+        tv: true,
+      );
+      tester.view.physicalSize = const Size(960, 540);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await settle(tester);
+      expect(focusedKey(), 'q');
+      await arrow(tester, LogicalKeyboardKey.arrowLeft);
+      expect(focusedKey(), 'p');
+      expect(passed, isEmpty);
+      await arrow(tester, LogicalKeyboardKey.arrowRight);
+      expect(focusedKey(), 'p');
+      expect(passed, [LogicalKeyboardKey.arrowRight]);
+    });
+
     testWidgets('ABC types capitals, #+= symbols; Delete, Space and Clear', (
       tester,
     ) async {

@@ -23,9 +23,12 @@ class MainActivity : FlutterActivity() {
     override fun getTransparencyMode(): TransparencyMode =
         if (BuildConfig.VIDEO_LAYER) TransparencyMode.transparent else super.getTransparencyMode()
 
-    // Runs inside super.onCreate, before the content view exists.
+    // Runs inside super.onCreate, before the content view exists. Match frame
+    // rate (ADR-035): the display's modes over `bijou/display`, its listener
+    // held while the activity is started.
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        lifecycle.addObserver(DisplayModes(this, flutterEngine.dartExecutor.binaryMessenger))
         if (BuildConfig.VIDEO_LAYER) {
             videoLayer = VideoLayer(this, flutterEngine.dartExecutor.binaryMessenger)
         }

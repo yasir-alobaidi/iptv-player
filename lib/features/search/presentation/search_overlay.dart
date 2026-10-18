@@ -762,6 +762,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
               label: searchHint,
               onChanged: _session.setText,
               onDone: _closeKeyboard,
+              // → at its right edge is the results' (_onKeysKey); the
+              // other edges go round.
+              exits: const {TraversalDirection.right},
             ),
           ),
         ),
