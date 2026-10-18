@@ -8,6 +8,7 @@ import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_version.dart';
+import 'package:iptv_player/data/player_mediakit/desktop_picture.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -83,13 +84,31 @@ const _mpvLog = String.fromEnvironment('BIJOU_MPV_LOG');
 /// frames and skips mpv's scaler: `keepaspect` and `panscan` do nothing
 /// there, so Fill and Stretch are the widget's (a 4:3 channel kept its
 /// bars on the Bedroom TV). The ratios are mpv's `video-aspect-override`,
-/// which the widget follows. Exposed for tests.
+/// which the widget follows. The desktop's too, whose texture has the
+/// video's own shape unless High sizes it ([DesktopPicture]). Exposed for
+/// tests.
 BoxFit directOutputFit(AspectMode mode) => switch (mode) {
   AspectMode.fill => BoxFit.cover,
   AspectMode.stretch => BoxFit.fill,
   AspectMode.fit ||
   AspectMode.ratio16x9 ||
   AspectMode.ratio4x3 => BoxFit.contain,
+};
+
+/// Settings → Playback → Picture quality's High, on the desktop: mpv
+/// 0.34's `gpu-hq` profile, option by option (the profile's name and what
+/// it holds differ between mpv versions, and Windows ships another mpv).
+/// Standard puts back what the running mpv had for each when the engine
+/// started.
+const highQualityPicture = {
+  'scale': 'spline36',
+  'cscale': 'spline36',
+  'dscale': 'mitchell',
+  'dither-depth': 'auto',
+  'correct-downscaling': 'yes',
+  'linear-downscaling': 'yes',
+  'sigmoid-upscaling': 'yes',
+  'deband': 'yes',
 };
 
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
@@ -100,11 +119,19 @@ BoxFit directOutputFit(AspectMode mode) => switch (mode) {
 /// still says no. [direct] is Android's direct output, which shows only
 /// what MediaCodec decodes: Off there waits for the next launch.
 /// [lowMemory] is a TV's smaller buffers.
+///
+/// [scaling] is the desktop's picture, which mpv scales itself for High:
+/// the quality mpv's filters are set for now, and the running mpv's own
+/// value of each of [highQualityPicture]'s options (Standard's). Another
+/// quality asked for sets High's, or puts those back. An option the
+/// running mpv had no value for is left alone: it couldn't be put back.
+/// Null where mpv never scales the picture (Android, no video output).
 Map<String, String> mpvOptionsFor(
   PlayRequest request, {
   bool picture = true,
   bool direct = false,
   bool lowMemory = false,
+  ({PictureQuality now, Map<String, String> standard})? scaling,
 }) {
   // mpv's list option parts paths at ':' (';' on Windows), so a path
   // holding one is left out.
@@ -141,6 +168,15 @@ Map<String, String> mpvOptionsFor(
     // one file named "", and every play then fails (0.34.1 cleared).
     if (subtitleFiles.isNotEmpty)
       'sub-files': subtitleFiles.join(_listSeparator),
+    if (scaling != null &&
+        picture &&
+        !direct &&
+        request.pictureQuality != scaling.now)
+      for (final MapEntry(:key, :value) in scaling.standard.entries)
+        key: switch (request.pictureQuality) {
+          PictureQuality.high => highQualityPicture[key] ?? value,
+          PictureQuality.standard => value,
+        },
   };
 }
 
@@ -156,6 +192,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     this._log,
     this._secrets, {
     required this._direct,
+    required this._desktop,
   });
 
   /// [video] false runs mpv with no video output (`vo=null`): decoding,
@@ -203,6 +240,15 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       log,
       secrets,
       direct: direct,
+      // media_kit's Android controller can't be sized (its setSize
+      // throws), and the direct output skips mpv's scaler.
+      desktop: controller == null || Platform.isAndroid
+          ? null
+          : DesktopPicture(
+              setSize: controller.setSize,
+              texture: controller.rect,
+              warn: (message) => log.warning(_tag, message),
+            ),
     );
     await engine._start();
     return engine;
@@ -213,6 +259,18 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   final AppLog _log;
   final SecretRegistry _secrets;
   final bool _direct;
+
+  /// The desktop's picture: its fit, and its size for High picture
+  /// quality. Null on Android and with no video output.
+  final DesktopPicture? _desktop;
+
+  /// What the running mpv had for each of [highQualityPicture]'s options
+  /// at the start (Standard's), the quality its filters are set for now,
+  /// and the options it didn't take.
+  final _standardPicture = <String, String>{};
+  PictureQuality _pictureNow = PictureQuality.standard;
+  final _refused = <String>{};
+  bool _pictureChecked = false;
 
   final _events = StreamController<PlayerEvent>.broadcast();
   final _subscriptions = <StreamSubscription<Object?>>[];
@@ -274,6 +332,25 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   Future<void> _start() async {
     for (final MapEntry(:key, :value) in _baseOptions.entries) {
       await _set(key, value);
+    }
+    // The running mpv's own, whatever its version: Standard's. One it
+    // doesn't have reads as "" and is left alone both ways.
+    if (_desktop != null) {
+      for (final name in highQualityPicture.keys) {
+        try {
+          final value = await _get(name);
+          if (value.isNotEmpty) {
+            _standardPicture[name] = value;
+          } else {
+            _log.info(
+              _tag,
+              'mpv has no $name: High picture quality goes without it',
+            );
+          }
+        } on Object catch (error) {
+          _log.debug(_tag, "Couldn't read mpv's $name: $error");
+        }
+      }
     }
     // media_kit leaves video decoding off until a VideoController turns it
     // on; with no picture wanted, decode anyway, so the watchdog and the
@@ -398,9 +475,23 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       picture: _controller != null,
       direct: _direct,
       lowMemory: Platform.isAndroid,
+      scaling: _desktop == null
+          ? null
+          : (now: _pictureNow, standard: _standardPicture),
     );
     for (final MapEntry(:key, :value) in options.entries) {
-      await _set(key, value);
+      if (highQualityPicture.containsKey(key)) {
+        await _setPicture(key, value);
+      } else {
+        await _set(key, value);
+      }
+    }
+    if (_desktop case final desktop?) {
+      if (request.pictureQuality != _pictureNow) {
+        _pictureNow = request.pictureQuality;
+        if (_pictureNow == PictureQuality.high) await _checkPicture();
+      }
+      desktop.quality = request.pictureQuality;
     }
     if (!options.containsKey('sub-files')) {
       await _native.command([
@@ -421,6 +512,45 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       generation,
       autoDeinterlace: request.deinterlace == null,
       resume: resume,
+    );
+  }
+
+  /// One of High's filters, or Standard's back: one mpv didn't take is
+  /// left alone from then on, with a line in the log, and the picture
+  /// plays on without it.
+  Future<void> _setPicture(String name, String value) async {
+    if (_refused.contains(name)) return;
+    try {
+      await _set(name, value);
+    } on Object catch (error) {
+      _refuse(name, '$error');
+    }
+  }
+
+  /// media_kit drops mpv's answer to a property set: High's are read back
+  /// the first time, to know which this mpv didn't take.
+  Future<void> _checkPicture() async {
+    if (_pictureChecked) return;
+    _pictureChecked = true;
+    try {
+      for (final MapEntry(:key, :value) in highQualityPicture.entries) {
+        if (_refused.contains(key) || !_standardPicture.containsKey(key)) {
+          continue;
+        }
+        final now = await _get(key);
+        if (now != value) _refuse(key, 'it kept "$now"');
+      }
+    } on Object catch (error) {
+      _log.debug(_tag, "Couldn't read back the picture's filters: $error");
+    }
+  }
+
+  void _refuse(String name, String why) {
+    if (!_refused.add(name)) return;
+    _log.warning(
+      _tag,
+      "mpv didn't take $name=${highQualityPicture[name]} for High picture "
+      'quality ($why); playing on without it',
     );
   }
 
@@ -514,6 +644,12 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   }
 
   void _onVideoParams(VideoParams params) {
+    // The size the picture is shown at, as media_kit's controller turns
+    // it for a rotation.
+    if ((params.dw, params.dh) case (final int dw, final int dh)) {
+      final turned = params.rotate == 90 || params.rotate == 270;
+      _desktop?.video(turned ? dh : dw, turned ? dw : dh);
+    }
     final width = params.w;
     final height = params.h;
     if (width == null || height == null || width == 0) return;
@@ -615,6 +751,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       AspectMode.ratio4x3 => ('yes', '4:3', '0'),
     };
     if (_direct) _directFit.value = directOutputFit(mode);
+    // The desktop's texture has the video's own shape (Standard), so Fill
+    // and Stretch are the widget's there too; for High it has the shape
+    // of where it goes, mpv crops or stretches into it, and the widget's
+    // fit keeps the picture right while a new size is on its way.
+    _desktop?.pictureFit = directOutputFit(mode);
     await _set('keepaspect', keep);
     await _set('video-aspect-override', override);
     await _set('panscan', panscan);
@@ -682,6 +823,18 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         ),
       );
     }
+    if (_desktop case final desktop?) {
+      return desktop.view(
+        key: key,
+        fit: fit,
+        picture: (pictureFit) => Video(
+          controller: controller,
+          fit: pictureFit,
+          controls: null,
+          fill: background,
+        ),
+      );
+    }
     return Video(
       key: key,
       controller: controller,
@@ -701,6 +854,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     }
     await _events.close();
     _directFit.dispose();
+    _desktop?.dispose();
     await _player.dispose();
   }
 }

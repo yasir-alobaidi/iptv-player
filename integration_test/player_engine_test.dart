@@ -1,6 +1,7 @@
 // The real player (media_kit + our patched media_kit_video, ADR-003)
 // against the fake provider's live streams: the first frame, a zap, the
-// connection let go on stop, and a channel that isn't there.
+// connection let go on stop, the desktop's picture (Picture size and
+// Picture quality), and a channel that isn't there.
 //
 // Needs the media samples (tools/media_samples/generate.sh), which CI
 // doesn't have: skipped without them. IPTV_PLAYER_VIDEO=0 runs mpv with no
@@ -15,7 +16,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
+import 'package:iptv_player/data/player_mediakit/desktop_picture.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import 'support/fake_panel.dart';
 import 'support/keyboard.dart';
@@ -53,10 +56,15 @@ void main() {
         ),
       );
 
-      Future<Duration> play(String url) async {
+      Future<Duration> play(
+        String url, {
+        PictureQuality quality = PictureQuality.standard,
+      }) async {
         events.clear();
         final watch = Stopwatch()..start();
-        await tester.runAsync(() => engine.open(PlayRequest(url: url)));
+        await tester.runAsync(
+          () => engine.open(PlayRequest(url: url, pictureQuality: quality)),
+        );
         await _until(
           tester,
           () => events.any((e) => e is PlayerFirstFrame || e is PlayerFailed),
@@ -121,6 +129,92 @@ void main() {
         );
       }
       await tester.runAsync(engine.stop);
+
+      // ── The desktop's picture (ADR-035), on the 4:3 channel (MPEG-2
+      // 576i, shown 768 × 576) in a 16:9 window.
+      if (video) {
+        Video picture() => tester.widget<Video>(find.byType(Video));
+        // The texture mpv draws into, as the picture widget lays it out.
+        Size texture() => tester.getSize(find.byType(Texture));
+        Future<String> mpv(String name) async =>
+            (await tester.runAsync(() => engine.mpvProperty(name)))!;
+        const sd = Size(768, 576);
+
+        // Standard: the texture has the video's own shape, so mpv's
+        // panscan and keepaspect have nothing to act on; Fill and Stretch
+        // are the picture widget's fit.
+        await play(panel.live(5));
+        await _until(
+          tester,
+          () => texture() == sd,
+          "the texture at the video's own size",
+        );
+        final standardScale = await mpv('scale');
+        final standardDeband = await mpv('deband');
+        for (final (mode, fit) in [
+          (AspectMode.fill, BoxFit.cover),
+          (AspectMode.stretch, BoxFit.fill),
+          (AspectMode.fit, BoxFit.contain),
+        ]) {
+          await tester.runAsync(() => engine.setAspect(mode));
+          await tester.pump();
+          expect(picture().fit, fit, reason: mode.name);
+          expect(texture(), sd, reason: mode.name);
+        }
+
+        // High: mpv's sharper filters, and the texture at the size the
+        // picture takes on screen; Fill's is the whole window (mpv crops
+        // into it).
+        await play(panel.live(5), quality: PictureQuality.high);
+        expect(await mpv('scale'), 'spline36');
+        expect(await mpv('deband'), 'yes');
+        Size drawn(BoxFit fit) {
+          final (width, height) = highQualityPictureSize(
+            video: sd,
+            box: tester.getSize(find.byType(Video)),
+            devicePixelRatio: tester.view.devicePixelRatio,
+            fit: fit,
+          )!;
+          return Size(width.toDouble(), height.toDouble());
+        }
+
+        await _until(
+          tester,
+          () => texture() == drawn(BoxFit.contain),
+          "High's texture at the picture's size (${drawn(BoxFit.contain)})",
+        );
+        await tester.runAsync(() => engine.setAspect(AspectMode.fill));
+        await _until(
+          tester,
+          () => texture() == drawn(BoxFit.cover),
+          "Fill's texture, the whole window (${drawn(BoxFit.cover)})",
+        );
+        expect(double.parse(await mpv('panscan')), 1);
+        await tester.runAsync(() => engine.setAspect(AspectMode.fit));
+        await _until(
+          tester,
+          () => texture() == drawn(BoxFit.contain),
+          "Fit's texture again (${drawn(BoxFit.contain)})",
+        );
+
+        // Standard again: the running mpv's own filters, and the video's
+        // own size.
+        await play(panel.live(5));
+        expect(await mpv('scale'), standardScale);
+        expect(await mpv('deband'), standardDeband);
+        await _until(
+          tester,
+          () => texture() == sd,
+          "the video's own size again",
+        );
+        // What was measured is part of this test's output.
+        // ignore: avoid_print
+        print(
+          'picture: window ${tester.getSize(find.byType(Video))}, High '
+          '${drawn(BoxFit.contain)}, scale $standardScale → spline36',
+        );
+        await tester.runAsync(engine.stop);
+      }
 
       // ── A channel that isn't there fails, with the reason behind it.
       events.clear();

@@ -12,7 +12,10 @@
 //       --target=integration_test/playback_cpu_test.dart
 //
 // (under xvfb the picture is drawn by the processor, which is the very
-// thing measured). PLAYBACK_CPU_SECONDS changes the minute.
+// thing measured). PLAYBACK_CPU_SECONDS changes the minute, and
+// IPTV_PICTURE_QUALITY=high measures Settings → Playback → Picture
+// quality's High (mpv drawing at the screen's size, with its sharper
+// filters) instead of Standard.
 
 import 'dart:async';
 import 'dart:io';
@@ -26,6 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:iptv_player/app/app.dart';
 import 'package:iptv_player/app/router.dart';
+import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
@@ -40,6 +44,9 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final seconds =
       int.tryParse(Platform.environment['PLAYBACK_CPU_SECONDS'] ?? '') ?? 60;
+  final quality = Platform.environment['IPTV_PICTURE_QUALITY'] == 'high'
+      ? PictureQuality.high
+      : PictureQuality.standard;
 
   testWidgets(
     "the player's processor use on H.264 1080p50",
@@ -80,6 +87,16 @@ void main() {
       await tester.pump();
       await waitReal(tester, 1500);
 
+      final settings = container.read(
+        playbackSettingsControllerProvider.notifier,
+      );
+      await tester.runAsync(
+        () => settings.update(
+          container
+              .read(playbackSettingsControllerProvider)
+              .copyWith(pictureQuality: quality),
+        ),
+      );
       final coordinator = container.read(playbackCoordinatorProvider);
       await tester.runAsync(() => coordinator.playLive(channel));
       unawaited(container.read(routerProvider).push<void>(playerRoutePath));
@@ -135,6 +152,7 @@ void main() {
       final dropped =
           (after?.droppedFrames ?? 0) - (before?.droppedFrames ?? 0);
       final report = {
+        'picture_quality': quality.name,
         'seconds': seconds,
         'cpu_pct_of_one_core': double.parse(oneCore.toStringAsFixed(1)),
         'cpu_pct_of_all_cores': double.parse(
@@ -146,7 +164,12 @@ void main() {
         'video_codec': after?.videoCodec,
         'dropped_frames': dropped,
         'dropped_per_10_s': drops,
+        // The texture mpv draws into: the video's own size for Standard,
+        // the screen's for High.
         'drawn_at': '${drawnAt.width.round()}×${drawnAt.height.round()}',
+        'screen':
+            '${tester.view.physicalSize.width.round()}×'
+            '${tester.view.physicalSize.height.round()}',
         'frames_the_app_built': frames.length,
       };
       binding.reportData = {'playback_cpu': report};

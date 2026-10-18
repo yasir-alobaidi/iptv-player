@@ -89,6 +89,7 @@ final class PlaybackSettings {
     this.deinterlace,
     this.hardwareDecoding = true,
     this.matchFrameRate = true,
+    this.pictureQuality = PictureQuality.standard,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -114,6 +115,9 @@ final class PlaybackSettings {
       },
       hardwareDecoding: json['hwdec'] != 'off',
       matchFrameRate: json['matchFps'] != 'off',
+      pictureQuality: json['quality'] == 'high'
+          ? PictureQuality.high
+          : PictureQuality.standard,
     );
   }
 
@@ -133,6 +137,9 @@ final class PlaybackSettings {
   /// switched off; the desktop never shows or uses it.
   final bool matchFrameRate;
 
+  /// The desktop's Picture quality; a TV ignores it.
+  final PictureQuality pictureQuality;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
@@ -140,6 +147,7 @@ final class PlaybackSettings {
     bool? Function()? deinterlace,
     bool? hardwareDecoding,
     bool? matchFrameRate,
+    PictureQuality? pictureQuality,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
@@ -147,6 +155,7 @@ final class PlaybackSettings {
     deinterlace: deinterlace == null ? this.deinterlace : deinterlace(),
     hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
     matchFrameRate: matchFrameRate ?? this.matchFrameRate,
+    pictureQuality: pictureQuality ?? this.pictureQuality,
   );
 
   /// As stored in the `settings` table.
@@ -161,6 +170,7 @@ final class PlaybackSettings {
     },
     'hwdec': hardwareDecoding ? 'auto' : 'off',
     'matchFps': matchFrameRate ? 'on' : 'off',
+    'quality': pictureQuality.name,
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -179,6 +189,7 @@ final class PlaybackSettings {
     start: start,
     subtitleFiles: stream.subtitleFiles,
     hardwareDecoding: hardwareDecoding,
+    pictureQuality: pictureQuality,
   );
 
   @override
@@ -189,7 +200,8 @@ final class PlaybackSettings {
       listEquals(other.subtitleLanguages, subtitleLanguages) &&
       other.deinterlace == deinterlace &&
       other.hardwareDecoding == hardwareDecoding &&
-      other.matchFrameRate == matchFrameRate;
+      other.matchFrameRate == matchFrameRate &&
+      other.pictureQuality == pictureQuality;
 
   @override
   int get hashCode => Object.hash(
@@ -199,5 +211,6 @@ final class PlaybackSettings {
     deinterlace,
     hardwareDecoding,
     matchFrameRate,
+    pictureQuality,
   );
 }

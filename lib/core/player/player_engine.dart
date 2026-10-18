@@ -70,6 +70,12 @@ enum BufferPreset {
 
 enum AspectMode { fit, fill, stretch, ratio16x9, ratio4x3 }
 
+/// Settings → Playback → Picture quality (the desktop's). High has the
+/// player scale the picture itself, to the size it takes on screen, with
+/// sharper filters and debanding; Standard leaves the scaling to the
+/// screen. A TV's picture never goes through the player's scaler.
+enum PictureQuality { standard, high }
+
 /// What to play and how.
 @immutable
 final class PlayRequest {
@@ -84,6 +90,7 @@ final class PlayRequest {
     this.start,
     this.subtitleFiles = const [],
     this.hardwareDecoding = true,
+    this.pictureQuality = PictureQuality.standard,
   });
 
   /// Carries credentials: never log it without `redact()`.
@@ -113,11 +120,16 @@ final class PlayRequest {
   /// decoding: Off), a way round a faulty graphics driver.
   final bool hardwareDecoding;
 
+  /// Ignored where the player doesn't scale the picture (a TV, no video
+  /// output).
+  final PictureQuality pictureQuality;
+
   @override
   String toString() =>
       'PlayRequest(live: $live, preset: ${preset.name}'
       '${start == null ? '' : ', start: $start'}'
-      '${hardwareDecoding ? '' : ', software decoding'})';
+      '${hardwareDecoding ? '' : ', software decoding'}'
+      '${pictureQuality == PictureQuality.high ? ', high quality' : ''})';
 }
 
 /// Something the player reports.

@@ -195,6 +195,28 @@ class _PlaybackSettingsSectionState
                     unawaited(_save(settings.copyWith(matchFrameRate: value))),
               ),
             ),
+          // The PC's own scaling of the picture; a TV's never goes through
+          // the player's scaler (ADR-025).
+          if (ref.watch(formFactorProvider) == FormFactor.desktop)
+            _Setting(
+              title: 'Picture quality',
+              description:
+                  'High scales the picture with sharper filters and smooths '
+                  'the banding of low-bitrate streams. Uses more of your '
+                  'graphics card. Applies to the next thing you play.',
+              control: SegmentedControl<PictureQuality>(
+                options: const [
+                  SegmentOption(
+                    value: PictureQuality.standard,
+                    label: 'Standard',
+                  ),
+                  SegmentOption(value: PictureQuality.high, label: 'High'),
+                ],
+                value: settings.pictureQuality,
+                onChanged: (value) =>
+                    unawaited(_save(settings.copyWith(pictureQuality: value))),
+              ),
+            ),
           _Setting(
             title: 'Preferred audio',
             description:

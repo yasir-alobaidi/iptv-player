@@ -13,6 +13,7 @@ void main() {
     deinterlace: false,
     hardwareDecoding: false,
     matchFrameRate: false,
+    pictureQuality: PictureQuality.high,
   );
 
   test('round-trips through JSON', () {
@@ -90,6 +91,34 @@ void main() {
     ]) {
       expect(PlaybackSettings.fromJson(stored).matchFrameRate, isTrue);
     }
+  });
+
+  test('Picture quality is Standard unless High was stored, and the '
+      'request carries it', () {
+    expect(const PlaybackSettings().pictureQuality, PictureQuality.standard);
+    expect(const PlaybackSettings().toJson()['quality'], 'standard');
+    expect(chosen.toJson()['quality'], 'high');
+    expect(
+      PlaybackSettings.fromJson(const {'quality': 'high'}).pictureQuality,
+      PictureQuality.high,
+    );
+    // Settings stored before it, or damaged: Standard.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'quality': 'ultra'},
+      const {'quality': 2},
+    ]) {
+      expect(
+        PlaybackSettings.fromJson(stored).pictureQuality,
+        PictureQuality.standard,
+      );
+    }
+    const stream = ResolvedStream(url: 'u', maxConnections: 1);
+    expect(chosen.request(stream).pictureQuality, PictureQuality.high);
+    expect(
+      const PlaybackSettings().request(stream).pictureQuality,
+      PictureQuality.standard,
+    );
   });
 
   test('the store keeps them in the settings table', () async {
