@@ -211,6 +211,41 @@ void main() {
       await done(tester, rig);
     });
 
+    // After Match frame rate's switch: whether sound and picture stay
+    // together, as mpv measures it (its `avsync`).
+    testWidgets('A/V sync as mpv measures it, in milliseconds; no row '
+        'without it', (tester) async {
+      var rig = await pumpOverlay(
+        tester,
+        display: const NoDisplayModes(),
+        info: const StreamInfo(
+          width: 1920,
+          height: 1080,
+          fps: 24,
+          avSync: Duration(microseconds: -12400),
+        ),
+      );
+      expect(find.text('A/V sync'), findsOneWidget);
+      expect(find.text('-12 ms'), findsOneWidget);
+      await done(tester, rig);
+
+      rig = await pumpOverlay(
+        tester,
+        display: const NoDisplayModes(),
+        info: const StreamInfo(avSync: Duration(microseconds: 3600)),
+      );
+      expect(find.text('+4 ms'), findsOneWidget);
+      await done(tester, rig);
+
+      rig = await pumpOverlay(
+        tester,
+        display: const NoDisplayModes(),
+        info: film,
+      );
+      expect(find.text('A/V sync'), findsNothing);
+      await done(tester, rig);
+    });
+
     testWidgets('the desktop: no Display row', (tester) async {
       final rig = await pumpOverlay(
         tester,

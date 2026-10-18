@@ -917,6 +917,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     final fps = _direct ? container ?? estimated : estimated ?? container;
     final cache = decimal(await read('demuxer-cache-duration'));
     final interlaced = await read('video-frame-info/interlaced');
+    final avSync = decimal(await read('avsync'));
     return StreamInfo(
       width: integer(await read('video-params/w')),
       height: integer(await read('video-params/h')),
@@ -933,6 +934,9 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       interlaced: interlaced.isEmpty ? null : interlaced == 'yes',
       transfer: _nonEmpty(await read('video-params/gamma')),
       primaries: _nonEmpty(await read('video-params/primaries')),
+      avSync: avSync == null
+          ? null
+          : Duration(microseconds: (avSync * 1e6).round()),
     );
   }
 

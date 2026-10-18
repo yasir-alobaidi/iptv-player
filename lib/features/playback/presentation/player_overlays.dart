@@ -463,6 +463,12 @@ class _ChannelPanelState extends ConsumerState<ChannelPanel> {
   }
 }
 
+/// mpv's A/V sync to the millisecond, signed: `+4 ms`, `-12 ms`, `0 ms`.
+String _syncText(Duration sync) {
+  final ms = (sync.inMicroseconds / 1000).round();
+  return '${ms > 0 ? '+' : ''}$ms ms';
+}
+
 /// The stream-info overlay (I; approved sketch), read once a second. On
 /// a TV it names the display's mode too (Match frame rate, ADR-035).
 class StreamInfoOverlay extends ConsumerStatefulWidget {
@@ -561,6 +567,7 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
           ),
         ),
       ('Dropped', '${info?.droppedFrames ?? 0}'),
+      if (info?.avSync case final sync?) ('A/V sync', _syncText(sync)),
       ('Source', url ?? '—'),
     ];
     return Container(

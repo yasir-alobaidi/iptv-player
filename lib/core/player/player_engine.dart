@@ -273,6 +273,7 @@ final class StreamInfo {
     this.interlaced,
     this.transfer,
     this.primaries,
+    this.avSync,
   });
 
   final int? width;
@@ -296,6 +297,10 @@ final class StreamInfo {
   /// space, `bt.709` HD's.
   final String? transfer;
   final String? primaries;
+
+  /// mpv's last measure of sound against picture (`avsync`): whether they
+  /// stay together, after Match frame rate's switch above all.
+  final Duration? avSync;
 
   /// HDR10 (PQ), HLG, or null for SDR or unknown.
   String? get hdr => switch (transfer) {
