@@ -22,6 +22,8 @@
 
 **2. The series page's background autofocus** (`lib/features/vod/presentation/title_details_screen.dart` ~915, the Play button; the favourite button shares its node when there's nothing to play): it fires while the player covers the page. The player takes the focus back now (af641e7), but the page shouldn't take it when it isn't the route on top.
 
+**The devices' settings for the quality work** were given to the user (docs/plans/tv-video-layer-and-frame-rate.md, "The devices' settings"): ask at the next TV window whether they're set (Match content frame rate Always, dynamic range matched, the Roku's Movie mode and smoothing off, Stay awake for the window).
+
 **3. With the TV (ask first with a pop-up; the user names a window):** stable build 244 is installed (`stable-244`). First Bijou Beta (0. above); then, on the beta: a film's Picture size menu (the OSD stays while it's open); Match frame rate (only 23.976/24 fps films can be matched: the TV has no 25/50 Hz mode); then T1.
 
 **Before you start the next session (user):**

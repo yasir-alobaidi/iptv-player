@@ -5,6 +5,11 @@ The user's list of recommendations (2026-10-16), items 4 and 5: a trial of the f
 
 Measured before (progress.md, Measurements, 2026-10-16): a 1080p H.264 film, controls hidden: ~50 % of one core of four; Flutter's raster thread 12–17 %, the main thread ~10 %, the hardware decoder ~19 %, SurfaceFlinger ~12 %; 151 MB PSS; ~200 MB free on the TV.
 
+## The devices' settings for this work (told to the user, 2026-10-17)
+- **Chromecast with Google TV** (Settings → Display & Sound → Advanced display settings): resolution 4K at 60 Hz (as set); **Match content dynamic range on** (not "Always HDR"); HDR formats Automatic (Dolby Vision, HDR10, HLG); **Match content frame rate: Always** (on "Seamless only" it never switches here: every mode is its own group); for test windows Developer options → **Stay awake on** (it slept twice during the seventeenth session's runs); Wireless debugging on.
+- **Hisense Roku TV, HDMI 3:** HDMI mode Auto or the highest (2.0/2.1), never 1.4; on that input ✱ → picture mode **Movie**, **motion/action smoothing off** (it hides judder, the thing Match frame rate fixes), noise reduction off, sharpness default; any Auto game mode / ALLM off for HDMI 3.
+- HDR can't be judged from `screencap` (SDR, and the video plane may be black): the user's eyes and the Roku's HDR10 / HLG / Dolby Vision badge decide.
+
 ## Item 1 — The full-screen video on its own SurfaceView
 
 ### (a) How the picture reaches mpv today [H]
