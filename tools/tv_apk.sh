@@ -46,6 +46,10 @@ build=$(git rev-list --count HEAD)
 mkdir -p build/tv
 out="build/tv/bijou-$channel${trial:+-$trial}-$build.apk"
 cp build/app/outputs/flutter-apk/app-release.apk "$out"
-(cd android && ./gradlew --stop >/dev/null 2>&1) || true
+# Gradle's --stop needs the JDK the build used (Flutter's jdk-dir); without
+# JAVA_HOME it fails, and the 3 GB daemon stayed after every build.
+jdk=$("$flutter" config --list 2>/dev/null | sed -n 's/^ *jdk-dir: //p')
+(cd android && JAVA_HOME=${JAVA_HOME:-$jdk} ./gradlew --stop >/dev/null 2>&1) ||
+  pkill -f '[G]radleDaemon' || true
 pkill -f '[K]otlinCompileDaemon' || true
 echo "$out"
