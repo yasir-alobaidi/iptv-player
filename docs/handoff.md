@@ -1,25 +1,31 @@
-# Handoff — 2026-10-18, the nineteenth session: the picture work done on `dev` and checked on the Bedroom TV (T1 the default, Match frame rate, High quality), the Chromecast's HDR setting corrected, the keyboard goes round; start with "Start here"
+# Handoff — 2026-10-18, the twentieth session: the picture work reviewed, fixed, checked on the Bedroom TV and merged into `main`; the stable Bijou is build 275; start with "Start here"
 
 ## Start here (the next session)
-**The user's words this session:** "continue", and when the session nears 93 % stop at a clear point with a proper handoff; "about the keyboard we made, I need the specs if it same as the system keyboard, like when I go to the last key to the left and then I click one more left it will take me to the right side as a circle and so on" (done: ADR-036); "get back all the agents to work and continue … the bedroom is available for u now to work on it and test, and I wont be there to help about the tv"; "Check the settings if they are wrong. If u can change it to the correct options then do it if u can't lead me through and I will do it. Last time I check the bedroom tv resolution is 4K" (done: ADR-035's addendum); "the tv turned off by mistake continue" (the Roku was put back on HDMI 3 by ECP, from its own idle home).
+**The user's words this session:** "continue the work, and also make sure of the new features are stable and working well as they should be to merge them to the main and make a new stable build with the new features"; "bedroom tv is free to use"; "The tv is on" (the TV was off at the start: the Chromecast saw no HDMI, the Roku didn't answer; switching it on from here by CEC or wake-on-LAN was refused by the permission check, so the user did it).
 
-**Answered, don't re-ask:** the devices' settings are right now (resolution Automatic = 4K 59.94, Match content frame rate Always, **Match content dynamic range on** since this session, HDR formats all allowed; the Chromecast sends HDR10 at 4K24 as 4:4:4 8-bit and Google TV 14 offers no colour-format setting). T1 is a go (measured, ADR-035's addendum).
+**Answered, don't re-ask:** the devices' settings (ADR-035's addendum); T1 a go. **Done, ADR-037:** `dev` into `main` with the user's word above (their yes from Beta wasn't waited for: they asked for the merge once it was checked).
 
-**Where everything is (the user pushed `main` and `dev` before this session; nothing pushed since):**
-- **`main`** = 73a7a1a: CI's failure on 54cb499 fixed (`library_cast_walk_test`: on CI's 2-minute sample the walk's short way ended ~40 s in, under `resumeAfter`, and the page rightly offered Play; reproduced with CI's sample and FFmpeg 4.4). Fast-forwarded from `dev` (no `lib/` or `test/` change since the last full suite). **Check CI after the push.**
-- **`dev`**: everything else, in order: the TV probe's fixes; **ADR-036** the keyboard goes round (1adcf26); **Match frame rate** (0baf3bd, + 4dce4f2 the length fix found on the TV); **the desktop's High quality and Fill/Stretch** (374ac23); stream info's labels (e3e3d53); the docs; **T1 merged** (`trial/video-layer-t1`, with 8c973f6 making the layer the default for films on a TV; `BIJOU_VIDEO_LAYER=off` / `tools/tv_apk.sh beta texture` builds the texture).
-- `trial/video-layer-t1` (on origin; merged into `dev`), `trial/video-layer-t0` (never merge), `wip/match-frame-rate` and `wip/desktop-picture-quality` (squashed into `dev`; delete), `tv-focus-sweep` (merged long ago). Worktrees: see "Left running" below.
+**Where everything is (nothing pushed this session; the user's last push was before the nineteenth):**
+- **`main` = `dev`** (the same commit, docs last), **tagged `stable-275`** at the build's commit (1aaf95c). On top of the nineteenth session's `dev`: the subtitle/track fix (79b958e), Match frame rate's review fixes (ba70670), the layer's (37d232b: keepAwake, black bars, the first box), stream info's A/V sync (e5e3431), the focus fix (5717b65), ADR-037.
+- Tags: `stable-244` (the last stable), `stable-275`, `checkpoint-2026-10-17`, `checkpoint-before-video-layer`. Branches: `trial/video-layer-t1` (merged), `trial/video-layer-t0` (never merge), `wip/match-frame-rate`, `wip/desktop-picture-quality` (squashed into `dev`; delete), `tv-focus-sweep` (merged long ago).
 
-**1. First:** CI after the user's push. Then, with the TV (the user said it's free while they're away, this session; **ask again next session**): Bijou Beta from `dev` (`tools/tv_apk.sh beta`; its source is the fake panel on the laptop, `dart run tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0 --picture-tests`, already set up in Beta): **subtitles on the layer** (a fake-panel film with subtitles), **the next-episode card and a film's end on the layer** (a fake-panel series), then the user's own checks (A/V sync after a switch, motion, the HDR badge).
-**2. Then `dev` → `main`:** the full suite under `TZ=UTC`, the touched walks under Xvfb (`vod_player`, `vod_walk`, `player_engine`), the user's yes from Beta, then merge, tag `stable-<build>`, `tools/tv_apk.sh stable` and install as Bijou (ask first).
+**1. First:** CI after the user's push (`main` and `dev` are one commit: one run each).
+**2. Then, with the user:** their ears on a 23.976/24 fps film after the switch (stream info shows mpv's A/V sync, 0 ms here), the Roku's HDR badge on a 4K HDR film; then the Google TV list below ("The Google TV list, from before"), Left from a title's Play reaching ‹ Back before the rail (the geometry; small), Phase 10.
 
 **Before you start the next session (user):**
-1. **Push:** `git push origin main dev` (and `trial/video-layer-t1` if you want it kept).
-2. **Bijou Beta is on the Bedroom TV** (build 268, from `dev`): its films need the laptop's fake panel running; or sign it in to your provider. Try a 23.976/24 fps film: the screen goes dark a second or two at the start and the end (Match frame rate); tell me if sound and picture drift apart after it.
-3. Still open from before, by your remote: an episode's last minute; hold Left/Right on a film's seek bar; your channel-then-The Bad Guys 2 case; listen to Live TV.
+1. **Push:** `git push origin main dev stable-275`.
+2. **The stable Bijou on the Bedroom TV is now 275** (your data and sign-in kept): the picture's own layer for films, Match frame rate (the screen dark a second at a 23.976/24 fps film's start and end), the keyboard going round, the subtitle fixes. Watch a film and tell me whether sound and picture stay together after the switch, and whether the Roku shows HDR on a 4K HDR film. Bijou Beta (274) needs the laptop's fake panel; you don't need it now.
+3. Still open from before, by your remote: hold Left/Right on a film's seek bar; your channel-then-The Bad Guys 2 case; listen to Live TV.
 4. Wireless debugging after a TV restart (port was 38317).
 
-**The TV right now:** Google TV's home, 59.94 Hz, SDR; Stay awake back off (set to 0; it was 0 before); Bijou (stable, build 244) untouched; **Bijou Beta 268 from `dev` (70367fa: the layer by default, Match frame rate, the keyboard, the labels)** installed with the fake panel as its source (not run after its install). Left running: nothing (the fake panel stopped, worktrees removed, Gradle stopped, adb disconnected).
+**The TV right now:** the stable Bijou 275 on its Home (xvip.pro; nothing played), under Google TV's "Are you still watching? … switched to a different input" (left alone: the Chromecast sleeps by itself); Bijou Beta 274 (from `dev` before the docs; the fake panel as its source); 59.94 Hz SDR. Left running: nothing (the fake panel stopped, adb disconnected, Gradle stopped).
+
+### The twentieth session, short
+The user pasted the nineteenth session's report and asked to continue, make sure the new features are stable, merge and build stable.
+- **In parallel:** the full suite (5,286 at the start), five walks, and a read-only review agent on `main..dev` (its six findings, each read in the code, fixed with tests shown failing first; ADR-037).
+- **On the TV (Beta 268 → 272 → 273 → 274, the fake panel only):** subtitles on the layer found two bugs (the tick, the stuck line; fixed in the engine, an integration test on real mpv); the review's fixes checked (`KEEP_SCREEN_ON` by `dumpsys window`, the bars' (0,0,0) at Picture size 4:3, the first rect); a film's end then ↓ in the rail threw (fixed in the router: a destination's screen never shown is out of the arrows' search); the first form of that fix put a series' first focus on ‹ Series (seen on 274, narrowed, test added); the next-episode card's count and E2 by itself on the layer; Match frame rate with the TV on; 4K HDR10 out as HDR10; A/V sync 0 ms.
+- **Learned:** `input text` doesn't reach Bijou's own keyboard (type with the arrows; the filter is at Movies' top); screencap reads the layer as (16,16,16) and the window's own background as (10,12,16), so a black backdrop shows as (0,0,0) beside the picture; `KEEP_SCREEN_ON` shows in `dumpsys window windows`' `fl=`; the Chromecast sleeps during a 20-minute walk run, and `am start` then leaves the app black until `KEYCODE_WAKEUP` (Home logged 117.9 s: the sleep, not the app); an amend keeps the build number (the commit count), so `tv_apk.sh` writes over the last APK and the TV takes it as the same version (`install -r` works); a `git stash` of a committed file stashes nothing (compare with `git show <commit>^:<file>`).
+- **Checks at the end (dev = main):** analyze and format clean; the full suite under `TZ=UTC` 5,295 passed, 21 skipped; 17 walks under Xvfb passed (app_launch, vod_player, vod_walk, home_continue, favorites_walk, hiding_walk, live_tv_keyboard, guide_keyboard, guide_settings_keyboard, sources_keyboard, search_keyboard, library_walk, library_playback, reminder_walk, player_engine, player_engine_vod (4), playback_faults).
 
 ### The nineteenth session, short
 The user pasted the eighteenth session's report, then the keyboard question, the TV, the settings.
@@ -509,12 +515,9 @@ Open Claude Code in this folder and paste:
 ```
 Continue the Bijou project (the repo is still iptv-player). Work on the dev
 branch (git checkout dev). Read docs/handoff.md ("Start here" first), CLAUDE.md,
-docs/progress.md, ADR-031 to ADR-036 (with their addenda) in docs/decisions.md
-and docs/plans/tv-video-layer-and-frame-rate.md. Check git (fetch) and CI on
-the last push. Then carry on with "Start here": the layer's last TV checks
-(subtitles, the next-episode card, a film's end) when I give you a TV window,
-then dev into main. Ask me before using the TV and before playing from my
-provider.
+docs/progress.md, ADR-031 to ADR-037 (with their addenda) in docs/decisions.md.
+Check git (fetch) and CI on the last push. Then carry on with "Start here".
+Ask me before using the TV and before playing from my provider.
 ```
 
 ## Where things stand
