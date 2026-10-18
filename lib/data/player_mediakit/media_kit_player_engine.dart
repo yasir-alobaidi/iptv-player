@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -8,6 +9,8 @@ import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_version.dart';
+import 'package:iptv_player/data/player_mediakit/video_layer.dart';
+import 'package:iptv_player/data/player_mediakit/video_layer_geometry.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -156,6 +159,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     this._log,
     this._secrets, {
     required this._direct,
+    this._layer,
   });
 
   /// [video] false runs mpv with no video output (`vo=null`): decoding,
@@ -203,6 +207,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       log,
       secrets,
       direct: direct,
+      layer: direct && videoLayerBuilt ? VideoLayer() : null,
     );
     await engine._start();
     return engine;
@@ -214,11 +219,26 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   final SecretRegistry _secrets;
   final bool _direct;
 
+  /// The picture's own layer (T1), in a TV build that has it.
+  final VideoLayer? _layer;
+
   final _events = StreamController<PlayerEvent>.broadcast();
   final _subscriptions = <StreamSubscription<Object?>>[];
 
   /// Picture size on the direct output ([directOutputFit]).
   final ValueNotifier<BoxFit> _directFit = ValueNotifier(BoxFit.contain);
+
+  /// On the layer: mpv draws into [_layerWid]; the picture widget reports
+  /// its place ([_layerBox], physical pixels), and the picture goes in it
+  /// as Picture size says ([videoLayerRect]).
+  final ValueNotifier<bool> _behind = ValueNotifier(false);
+  int? _layerWid;
+  bool _layerShown = false;
+  Rect? _layerBox;
+  Rect? _layerRect;
+
+  /// The picture's display size (its shape, any ratio override applied).
+  Size? _displaySize;
 
   NativePlayer get _native => _player.platform! as NativePlayer;
 
@@ -289,6 +309,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         }),
       );
     }
+    _layer?.onDestroyed = (wid) {
+      if (wid != _layerWid) return;
+      _log.info(_tag, 'The video layer went: the picture leaves it');
+      unawaited(_leaveLayer());
+    };
     _subscriptions
       ..add(_player.stream.position.listen(_onPosition))
       ..add(_player.stream.completed.listen(_onCompleted))
@@ -393,6 +418,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       ..reset()
       ..start();
     _emit(PlayerOpening(generation));
+    await _chooseOutput(request);
+    if (generation != _generation) return;
     final options = mpvOptionsFor(
       request,
       picture: _controller != null,
@@ -459,7 +486,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       _log.info(
         _tag,
         'First frame in $took ms '
-        '(${await _get('hwdec-current')}, ${await _get('current-vo')})',
+        '(${await _get('hwdec-current')}, ${await _get('current-vo')}'
+        '${_layerWid != null ? ', on its own layer' : ''})',
       );
       if (autoDeinterlace) await _autoDeinterlace(generation);
     });
@@ -514,10 +542,89 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   }
 
   void _onVideoParams(VideoParams params) {
+    final (dw, dh) = switch (params.rotate) {
+      90 || 270 => (params.dh, params.dw),
+      _ => (params.dw, params.dh),
+    };
+    if (dw != null && dh != null && dw > 0 && dh > 0) {
+      _displaySize = Size(dw.toDouble(), dh.toDouble());
+      unawaited(_placeLayer());
+    }
     final width = params.w;
     final height = params.h;
     if (width == null || height == null || width == 0) return;
     _emit(PlayerVideoChanged(width: width, height: height));
+  }
+
+  /// T1: a file on a TV goes on the picture's own layer, anything else on
+  /// the texture; with no surface from the layer within a second, the
+  /// texture. Before the file opens, with nothing playing.
+  Future<void> _chooseOutput(PlayRequest request) async {
+    final layer = _layer;
+    if (layer == null) return;
+    if (!playsOnLayer(built: true, direct: _direct, live: request.live)) {
+      await _leaveLayer();
+      return;
+    }
+    _layerShown = true;
+    final surface = await layer.show();
+    final android = await _androidController();
+    if (surface == null || android == null) {
+      _log.warning(_tag, 'No surface from the video layer: the texture');
+      await _leaveLayer();
+      return;
+    }
+    if (surface.wid != _layerWid) {
+      await android.setLayer(
+        surface.wid,
+        width: surface.width,
+        height: surface.height,
+      );
+      _layerWid = surface.wid;
+      _log.info(
+        _tag,
+        'On the video layer (${surface.width}x${surface.height})',
+      );
+    }
+    _behind.value = true;
+    await _placeLayer();
+  }
+
+  /// Back to the texture, and the layer hidden.
+  Future<void> _leaveLayer() async {
+    final layer = _layer;
+    if (layer == null) return;
+    if (_layerWid != null) {
+      _layerWid = null;
+      _behind.value = false;
+      await (await _androidController())?.setLayer(null);
+    }
+    if (_layerShown) {
+      _layerShown = false;
+      _layerRect = null;
+      await layer.hide();
+    }
+  }
+
+  /// Puts the picture where the widget is, as Picture size says.
+  Future<void> _placeLayer() async {
+    final layer = _layer;
+    final box = _layerBox;
+    final video = _displaySize;
+    if (layer == null || _layerWid == null || box == null || video == null) {
+      return;
+    }
+    final rect = videoLayerRect(box: box, video: video, fit: _directFit.value);
+    if (rect == null || rect == _layerRect) return;
+    _layerRect = rect;
+    await layer.setRect(rect);
+  }
+
+  Future<AndroidVideoController?> _androidController() async {
+    final controller = _controller;
+    if (controller == null) return null;
+    final platform = await controller.platform.future;
+    return platform is AndroidVideoController ? platform : null;
   }
 
   void _emitTracks() {
@@ -564,9 +671,10 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     await _player.stop();
     // The connection is closed once mpv is idle again.
     for (var i = 0; i < 50; i++) {
-      if ((await _get('idle-active')) == 'yes') return;
+      if ((await _get('idle-active')) == 'yes') break;
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
+    await _leaveLayer();
   }
 
   // Straight to mpv: media_kit's own play() and pause() wait for the
@@ -615,6 +723,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       AspectMode.ratio4x3 => ('yes', '4:3', '0'),
     };
     if (_direct) _directFit.value = directOutputFit(mode);
+    unawaited(_placeLayer());
     await _set('keepaspect', keep);
     await _set('video-aspect-override', override);
     await _set('panscan', panscan);
@@ -651,6 +760,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
           : Duration(milliseconds: (cache * 1000).round()),
       droppedFrames: integer(await read('frame-drop-count')),
       interlaced: interlaced.isEmpty ? null : interlaced == 'yes',
+      transfer: _nonEmpty(await read('video-params/gamma')),
+      primaries: _nonEmpty(await read('video-params/primaries')),
     );
   }
 
@@ -670,16 +781,25 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         child: const SizedBox.expand(),
       );
     }
-    if (_direct) {
+    if (_direct && _layer != null) {
       return ValueListenableBuilder(
         key: key,
-        valueListenable: _directFit,
-        builder: (context, directFit, _) => Video(
-          controller: controller,
-          fit: directFit == BoxFit.contain ? fit : directFit,
-          controls: null,
-          fill: background,
-        ),
+        valueListenable: _behind,
+        builder: (context, behind, _) => behind
+            ? _LayerPicture(
+                controller: controller,
+                onPlaced: (box) {
+                  _layerBox = box;
+                  unawaited(_placeLayer());
+                },
+              )
+            : _directVideo(controller, background: background, fit: fit),
+      );
+    }
+    if (_direct) {
+      return KeyedSubtree(
+        key: key,
+        child: _directVideo(controller, background: background, fit: fit),
       );
     }
     return Video(
@@ -691,6 +811,23 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     );
   }
 
+  Widget _directVideo(
+    VideoController controller, {
+    required Color background,
+    required BoxFit fit,
+  }) => ValueListenableBuilder(
+    valueListenable: _directFit,
+    builder: (context, directFit, _) => Video(
+      controller: controller,
+      fit: directFit == BoxFit.contain ? fit : directFit,
+      controls: null,
+      fill: background,
+    ),
+  );
+
+  @override
+  ValueListenable<bool> get pictureBehindApp => _behind;
+
   @override
   Future<void> dispose() async {
     _disposed = true;
@@ -701,6 +838,42 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     }
     await _events.close();
     _directFit.dispose();
+    await _layer?.hide();
+    _behind.dispose();
     await _player.dispose();
   }
+}
+
+/// The picture on its own layer: nothing painted, so the layer under the
+/// app shows, and the subtitles over it. It reports its place on screen
+/// in physical pixels after each layout, for the layer to follow; the
+/// layer keeps the screen awake while it shows (MainActivity's
+/// VideoLayer), as media_kit's `Video` does on the texture.
+class _LayerPicture extends StatelessWidget {
+  const new({required this.controller, required this.onPlaced});
+
+  final VideoController controller;
+  final ValueChanged<Rect> onPlaced;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        final box = context.findRenderObject();
+        if (box is! RenderBox || !box.hasSize) return;
+        final ratio = View.of(context).devicePixelRatio;
+        onPlaced(
+          Rect.fromPoints(
+            box.localToGlobal(Offset.zero) * ratio,
+            box.localToGlobal(box.size.bottomRight(Offset.zero)) * ratio,
+          ),
+        );
+      });
+      return SubtitleView(
+        controller: controller,
+        configuration: const SubtitleViewConfiguration(),
+      );
+    },
+  );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 
@@ -64,5 +65,22 @@ final class UnavailablePlayerEngine implements PlayerEngine {
   }) => ColoredBox(key: key, color: background, child: const SizedBox.expand());
 
   @override
+  ValueListenable<bool> get pictureBehindApp => const _Never();
+
+  @override
   Future<void> dispose() => _events.close();
+}
+
+/// A picture that is never behind the app.
+final class _Never implements ValueListenable<bool> {
+  const new();
+
+  @override
+  bool get value => false;
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }

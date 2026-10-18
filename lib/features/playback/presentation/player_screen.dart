@@ -170,7 +170,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void initState() {
     super.initState();
     _window = ref.read(windowControlsProvider);
-    _engine = ref.read(playerEngineProvider);
+    _engine = ref.read(playerEngineProvider)
+      ..pictureBehindApp.addListener(_onPictureBehind);
     _coordinator = ref.read(playbackCoordinatorProvider);
     _vod = VodPlayerController(
       coordinator: _coordinator,
@@ -241,6 +242,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void dispose() {
     // Before the stop below: it changes the state this listens to.
     _castWatch?.close();
+    _engine.pictureBehindApp.removeListener(_onPictureBehind);
     _osdTimer?.cancel();
     _zapTimer?.cancel();
     _bannerTimer?.cancel();
@@ -287,6 +289,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     countdown: _vod.countdown,
     hasNext: _vod.next != null,
   );
+
+  void _onPictureBehind() {
+    if (mounted) setState(() {});
+  }
 
   void _onVod() {
     final flags = _vodFlags();
@@ -1079,6 +1085,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final state = ref.watch(playbackStateProvider).value;
+    // A picture on its own layer behind the app shows where nothing is
+    // painted (the TV's video-layer trial).
+    final backdrop =
+        _engine.pictureBehindApp.value &&
+            pictureShows(state ?? const PlaybackIdle())
+        ? Colors.transparent
+        : tokens.colors.video;
     final item = state?.item;
     final playing = state?.channel;
     // The row may be stale (a favorite toggled since): read it fresh.
@@ -1107,7 +1120,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return BackButtonListener(
       onBackButtonPressed: _onBack,
       child: Material(
-        color: tokens.colors.video,
+        color: backdrop,
         child: Actions(
           actions: {
             if (_onTv)
@@ -1137,7 +1150,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   _sound.nudge(signal.scrollDelta.dy < 0 ? 1 : -1);
                 },
                 child: ColoredBox(
-                  color: tokens.colors.video,
+                  color: backdrop,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

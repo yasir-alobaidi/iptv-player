@@ -45,9 +45,64 @@ class AndroidVideoController extends PlatformVideoController {
     }
   }
 
+  /// Bijou's patch (docs/plans/tv-video-layer-and-frame-rate.md): the `wid`
+  /// of a surface the app owns (a SurfaceView under a transparent Flutter
+  /// view) that mpv draws into instead of the texture's. While it is set,
+  /// the texture is never asked for, and its surface changes are ignored.
+  int? _layerWid;
+
+  /// Draws into [layerWid], the app's own surface of [width] × [height]
+  /// physical pixels, from now on; null goes back to the texture.
+  ///
+  /// Call it with nothing playing, before a file is opened: it seeks
+  /// nothing. Back on the texture, the next picture asks for a texture of
+  /// its size again (the texture's surface may not have been made yet).
+  Future<void> setLayer(int? layerWid, {int width = 1, int height = 1}) {
+    return lock.synchronized(() async {
+      if (layerWid == _layerWid) return;
+      _layerWid = layerWid;
+      if (layerWid != null) {
+        await setProperty('vo', 'null');
+        await setProperties(
+          {
+            // ORDER IS IMPORTANT (as in [widListener]).
+            'android-surface-size': [width, height].join('x'),
+            'wid': layerWid.toString(),
+            'vo': configuration.vo!,
+            if (configuration.vo == 'mediacodec_embed') 'vid': 'auto',
+          },
+        );
+        return;
+      }
+      final textureSize = [
+        rect.value?.width.toInt() ?? 1,
+        rect.value?.height.toInt() ?? 1,
+      ].join('x');
+      rect.value = null;
+      final textureWid = wid.value ?? 0;
+      await setProperty('vo', 'null');
+      if (textureWid == 0) {
+        // As at creation: decode with no output until the first picture's
+        // size has made the texture's surface ([widListener] then).
+        await setProperties({'vid': 'auto'});
+        return;
+      }
+      await setProperties(
+        {
+          'android-surface-size': textureSize,
+          'wid': textureWid.toString(),
+          'vo': configuration.vo!,
+          if (configuration.vo == 'mediacodec_embed') 'vid': 'auto',
+        },
+      );
+    });
+  }
+
   /// Listener for updating the --wid property.
   Future<void> widListener() {
     return lock.synchronized(() async {
+      // On the app's own layer the texture's surface isn't mpv's.
+      if (_layerWid != null) return;
       final width = rect.value?.width.toInt() ?? 1;
       final height = rect.value?.height.toInt() ?? 1;
       final androidSurfaceSizeValue = [width, height].join('x');
@@ -101,6 +156,20 @@ class AndroidVideoController extends PlatformVideoController {
         final isSame = width == rect.value?.width.toInt() &&
             height == rect.value?.height.toInt();
         if (isZero || isSame) {
+          return;
+        }
+
+        // On the app's own layer: the picture's size, and no texture.
+        if (_layerWid != null) {
+          rect.value = Rect.fromLTWH(
+            0.0,
+            0.0,
+            width.toDouble(),
+            height.toDouble(),
+          );
+          if (!waitUntilFirstFrameRenderedCompleter.isCompleted) {
+            waitUntilFirstFrameRenderedCompleter.complete();
+          }
           return;
         }
 

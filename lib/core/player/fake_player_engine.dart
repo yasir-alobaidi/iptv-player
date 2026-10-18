@@ -128,6 +128,11 @@ final class FakePlayerEngine implements PlayerEngine {
     child: const SizedBox.expand(),
   );
 
+  /// Set by a test to put the picture "behind the app" (a TV's film on
+  /// its own layer).
+  @override
+  final ValueNotifier<bool> pictureBehindApp = ValueNotifier(false);
+
   @override
   Future<void> dispose() async {
     disposed = true;
