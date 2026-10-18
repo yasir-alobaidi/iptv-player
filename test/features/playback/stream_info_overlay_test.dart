@@ -2,6 +2,7 @@
 // ignore_for_file: unawaited_futures
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/platform/display_modes.dart';
@@ -61,6 +62,8 @@ void main() {
       required DisplayModes display,
       required StreamInfo info,
       bool film = true,
+      bool tv = false,
+      double textScale = 1,
     }) async {
       final rig = Rig();
       rig.engine.info = info;
@@ -79,6 +82,8 @@ void main() {
           ],
           child: const StreamInfoOverlay(),
         ),
+        tv: tv,
+        textScale: textScale,
       );
       await tester.pump();
       await tester.pump();
@@ -108,6 +113,56 @@ void main() {
       );
       expect(find.text('1920×1080 · 23.976 fps · hevc'), findsOneWidget);
       await done(tester, rig);
+    });
+
+    testWidgets("every value starts clear of its label, at a TV's size and "
+        'at 130 % (on the Bedroom TV, Bitrate and Display touched theirs)', (
+      tester,
+    ) async {
+      for (final (tv, scale) in [(false, 1.0), (true, 1.0), (true, 1.3)]) {
+        final rig = await pumpOverlay(
+          tester,
+          display: FakeDisplayModes(current: uhd23976),
+          info: const StreamInfo(
+            width: 1920,
+            height: 1080,
+            fps: 24,
+            videoBitrate: 3800000,
+            buffered: Duration(seconds: 8),
+            droppedFrames: 1,
+          ),
+          tv: tv,
+          textScale: scale,
+        );
+        for (final label in ['Video', 'Bitrate', 'Display', 'Dropped']) {
+          final labelText = find.text(label);
+          final labelBox = tester.getRect(labelText);
+          // The value: the text on the label's line, right of it.
+          final valueBox = tester
+              .widgetList<Text>(find.byType(Text))
+              .map((text) => tester.getRect(find.byWidget(text)))
+              .where(
+                (box) =>
+                    (box.top - labelBox.top).abs() < 1 &&
+                    box.left > labelBox.left,
+              )
+              .reduce((a, b) => a.left < b.left ? a : b);
+          expect(
+            valueBox.left - labelBox.right,
+            greaterThanOrEqualTo(8),
+            reason: '$label, tv: $tv, scale $scale',
+          );
+          final painted = tester.renderObject<RenderParagraph>(labelText);
+          expect(
+            painted.didExceedMaxLines ||
+                painted.size.width <
+                    painted.getMaxIntrinsicWidth(double.infinity) - 0.5,
+            isFalse,
+            reason: '$label cut, tv: $tv, scale $scale',
+          );
+        }
+        await done(tester, rig);
+      }
     });
 
     testWidgets('29.97 fps too', (tester) async {

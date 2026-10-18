@@ -565,35 +565,38 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
         borderRadius: tokens.radii.lgAll,
         border: Border.all(color: colors.border),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // The labels' column as wide as the longest of them, at any text
+      // size: a fixed 72 px had Bitrate and Display touching their values
+      // at a TV's 1.2× (the Bedroom TV).
+      child: Table(
+        columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
         children: [
           for (final (label, value) in rows)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4 - 2),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 72,
-                    child: Text(
-                      label,
-                      style: tokens.text.mono.copyWith(
-                        color: colors.textTertiary,
-                      ),
+            TableRow(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: tokens.spacing.s4 - 2,
+                    bottom: tokens.spacing.s4 - 2,
+                    right: tokens.spacing.s12,
+                  ),
+                  child: Text(
+                    label,
+                    style: tokens.text.mono.copyWith(
+                      color: colors.textTertiary,
                     ),
                   ),
-                  Expanded(
-                    child: Text(
-                      value.isEmpty ? '—' : value,
-                      style: tokens.text.mono.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: tokens.spacing.s4 - 2,
                   ),
-                ],
-              ),
+                  child: Text(
+                    value.isEmpty ? '—' : value,
+                    style: tokens.text.mono.copyWith(color: colors.textPrimary),
+                  ),
+                ),
+              ],
             ),
         ],
       ),
