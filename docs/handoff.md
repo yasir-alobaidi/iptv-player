@@ -1,29 +1,38 @@
-# Handoff — 2026-10-17, the sixteenth session: two TV faults fixed on the Bedroom TV (ADR-032), history upkeep on `main`, the guide switch further along on `wip/guide-switch`, Next episode decided (ADR-033); start with "Start here"
+# Handoff — 2026-10-17, the seventeenth session: the guide switch on `main` (off by default), Next episode in the credits done (counting, as you asked), Fill/Stretch and Search's Clear fixed on the Bedroom TV, T0 of the picture's own layer tried; start with "Start here"
 
 ## Start here (the next session)
-**The user's words this session:** "I am home and the bedroom tv is free to use, continue the work"; "the ruko and the google tv settings are updated, continue" (Google TV now outputs 4K; the Roku's HDMI 3 mode set); the TV for "About 30 minutes", the user able to look at it when called; no soundbar ("No, TV speakers"); then "add a button for the next episode while watching one, so the user can skip the wait time and go to the next time or just skip it if he wants to, and make sure on the movies it wont show up"; "after u finish the safe otpions make a check point in case we wanna restore to it, and then continue"; "Stop one a clear point with proper hand off".
+**The user's words this session:** "continue and the bedroom tv is free to use"; at the pop-up, the TV for "1–2 hours" and "No, work without me"; then, using the TV themselves: "One bug I found / The clear button on the search i couldn't reach it with the remote / Like it was not there the focus never goes there"; then, watching the Next episode card: "But it should show the count down if u won't click anything then u will go to the next"; "Handoff to continue on a new chat", then "Continue the work don't stop now" and "Make one hour max" (taken as up to one more hour, the TV included, from 21:17; done by about 21:40).
 
-**On `main` (committed, not pushed; after cc510be, the user's last push), tagged `checkpoint-2026-10-17`:**
-- f5e5811 **TV: a clean process after Back, no idle video output** (ADR-032): `MainActivity.onDestroy` ends the process when the activity finishes (the next engine's first play crashed in libmpv); the direct output sets `force-window=no` (its thread spun a core after every film). Both reproduced on the Bedroom TV, then checked fixed there.
-- 396b88b, 7234b94 **History upkeep** (ADR-031 and its addendum): pruning at launch, Settings → Data's Clear watch history and Database · Compact; reviewed (the diff, the two goldens, 320 tests re-run), docs/02, 05, 07.
-- The docs commit: ADR-031's addendum, ADR-032, ADR-033, progress, this handoff.
+**On `main` (committed, not pushed; after cc510be, the user's last push):**
+- 9e950dc **Player: Fill and Stretch on Android's direct output** are the picture widget's fit (`directOutputFit`); found on the fake panel's 4:3 channel, checked on build 236.
+- ee7b26e, ff50b67 **The guide switch** (ADR-031's second addendum): reviewed whole, the 42 goldens looked at, the touched tests (2,004) and the eight Guide walks run; tagged **`checkpoint-before-video-layer`** (ff50b67) after the full suite passed (5,151, 21 skipped, `TZ=UTC`).
+- 3ac6ac0 **Search on a TV: Clear by remote** (the user's bug), checked on build 239 (the ring on Clear; not pressed, the user's searches kept).
+- af641e7, 7343278 **Next episode in the credits** (ADR-033 and its addendum): "Next episode · N" from a minute left, off the episode's own time; Hide; the desktop never gives the card the focus, a TV does unless the remote is on the OSD; the OSD held while its menus are open (found on the TV); the player takes back a focus the series page under it grabbed. Checked on build 244: the count ran, the next episode started by itself.
+- Docs: T0's results and the TV's display modes (docs/plans/tv-video-layer-and-frame-rate.md), ADR-031's second, ADR-032's and ADR-033's addenda, docs/02, 03, 05, 07, progress, this handoff.
+- **Branches:** `trial/video-layer-t0` (4c104ba, the T0 trial; never merge it; build with `flutter build apk --profile --target-platform android-arm -t lib/main_layer_trial.dart --dart-define=BIJOU_VIDEO_LAYER=true`), `tv-focus-sweep` (merged long ago, can go).
 
-**1. Finish `wip/guide-switch` (0a2a660: one WIP commit on cc510be).** The decision is ADR-031's (the guide off by default on the desktop and the TV; a switch as Settings → Guide's first row; off: no Guide in the rail/top bar, Ctrl+7, the shortcuts list or the channel menu's matching, /guide goes Home, no XMLTV import, the imported guide cleared at the switch and at launch keeping matches/offsets/reminders, now/next from the provider's short EPG; on: as before plus on a TV 2 h behind / 3 days ahead and the scheduled import held while anything plays). The commit holds the first WIP (5b68312, now deleted, all of it in here) plus a second agent's work, stopped **while it wired the integration tests to switch the guide on** (it was about to add a support helper; `channel_list_scroll`, `guide_keyboard`, `guide_scroll`, `guide_settings_keyboard`, `guide_watch`, `hiding_walk`, `manual/real_reminder`, `reminder_walk`, `search_typing`, `soak` are touched, unchecked). **Left:** read the whole diff (`git diff main...wip/guide-switch`, 96 files); **look at the 42 re-recorded goldens** (casting, favorites, home, library, live TV, movies, settings, shell, shortcuts panel: the rail without Guide; nobody has looked at them); **not done at all:** the TV's keep window (`epg_importer.dart`'s keepBehind/keepAhead from `formFactorProvider`), the channel menu (`channel_menu.dart`), the hold while playing; check the clear-at-launch (bootstrap loads the switch before the first frame: `launchGuideSettingsProvider`); Settings → Guide's tests in both states on the desktop and the TV. **Rebase onto `main`:** `lib/app/bootstrap.dart` changed on both sides (main: the tidy-up's line at the end of `_syncAfterLaunch`; the branch: the switch's load near the top); expect a small conflict. Run every touched test, the integration tests that need the guide (one file per run under `xvfb-run -a`), then commit in steps.
+**1. T1 of the picture's own layer** (docs/plans/tv-video-layer-and-frame-rate.md, "T0 — done" then steps 2 on): films only, behind the debug define, on a branch. The one question: with MediaCodec's real output in the SurfaceView, is the video layer DEVICE (the Amlogic video plane) or CLIENT, and what is SurfaceFlinger's share against today's 19 % (texture, 4K output)? Try the window's background transparent too (T0 had the activity window as a third full-screen CLIENT layer). If the video layer is CLIENT, stop there: on this device the layer would cost more than it saves.
 
-**2. The checkpoint the user asked for:** once the guide switch is on `main` and the full suite passes, tag it `checkpoint-before-video-layer` (the "safe options" done), then go on. `checkpoint-2026-10-17` already marks this session's `main`. To look at one: `git checkout <tag>`; to go back to one on `main`: `git reset --hard <tag>` (drops the later commits: only on the user's word, and never for commits already pushed — fix forward instead).
+**2. The series page's background autofocus** (`lib/features/vod/presentation/title_details_screen.dart` ~915, the Play button; the favourite button shares its node when there's nothing to play): it fires while the player covers the page. The player takes the focus back now (af641e7), but the page shouldn't take it when it isn't the route on top.
 
-**3. Build ADR-033, Next episode in the credits** (desktop first, tests on the desktop and the TV form factor): an offer from 60 s left with "Next episode" (focused) and "Hide", the count from 20 s as today, Hide = nothing plays by itself, the card floating on its own without pinning the OSD, never on a film. Files: `vod_player_controller.dart`, `vod_osd.dart` (`NextEpisodeCard`), `player_screen.dart` (`_vodFlags`, `_vodOsd`, `_onBack`, the key handler).
-
-**4. With the TV (ask first with a pop-up; the user names a window):** build and install from `main` (version code = the commit count, 235+ now; the TV has 231); then: the guide off and Bijou's data shrinking after the launch's compaction (the log's `[upkeep]` lines: its time; `dumpsys meminfo` during it); Next episode by remote on a fake-panel episode near its end; Picture size's Fill and Stretch on a film that isn't 16:9; then docs/plans/tv-video-layer-and-frame-rate.md: **T0**, **T1**, **Match frame rate** (the TV offers 3840×2160 at 23.976 and 24; it switches only "within groups" and every mode is its own group, so only `preferredDisplayModeId` will switch it).
+**3. With the TV (ask first with a pop-up; the user names a window):** build 244 is installed (`main` at 7343278). Then: a film's Picture size menu (the OSD stays while it's open); Match frame rate (only 23.976/24 fps films can be matched: the TV has no 25/50 Hz mode); then T1.
 
 **Before you start the next session (user):**
-1. **Push `main` and the tag:** `git push origin main` and `git push origin checkpoint-2026-10-17`. Not `wip/guide-switch` (local work in progress).
-2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317 again).
-3. Still from before, on the Bedroom TV (build 231 has both fixes): hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
+1. **Push `main` and the tags:** `git push origin main`, then `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer`. Not `trial/video-layer-t0`.
+2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317).
+3. **On the Bedroom TV, by your remote (build 244):** an episode's last minute (the count, Hide, and doing nothing); hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
 
-**The TV right now:** Bijou build 231 installed (the code of f5e5811, built from the working tree just before that commit); Google TV's home on screen; Bijou not running. The display is 3840×2160 at 59.94 Hz (apps draw at 1920×1080). The fake panel is stopped. Nothing played from the provider.
+**The TV right now:** build 244 installed; Google TV's home on screen, Bijou closed. Bijou's source on the TV is the fake panel ("192.168.1.254"); the fake panel is stopped. Home's Continue watching shows the fake panel's "The Last Compass" first, then the provider's films (never OK on those). Nothing played from the provider.
 
 **CI:** cc510be (the user's last push) passed. Check CI after the next push.
+
+### The seventeenth session, short
+The user pasted the sixteenth session's report and wrote "continue and the bedroom tv is free to use".
+- **Agents (worktrees, owned files, no commits):** Next episode (rounds 1–2: ADR-033 as decided, then the desktop/TV focus split, the OSD held while its menus are open, the walks' waits, a focus bug the walks found; round 3 stopped at the user's handoff word with only its red tests written, finished by the main session), T0 (the trial, type-checked with kotlinc; built and run by the main session after a Gradle fix: `java.util` in a `.gradle.kts` resolves `java` as Gradle's extension).
+- **The main session:** the Fill/Stretch fix, the guide switch's review and merge, the checkpoint, Search's Clear, the count (a re-entrancy bug its tests found: the next episode asked from inside the coordinator's timeline event), the TV runs, the docs.
+- **On the TV (16:28–17:45 and 21:20–21:30, the fake panel only):** Fill/Stretch before and after; the guide off (both guides cleared, the database 74.2 → 38.4 MB in 6.2 s); T0 (transparency, composition, CPU, Home and back, a dialog); Search's Clear; the card (242) and its count (244). Every OK was sent after a screenshot showing the focus, or by the scratchpad's `okif.sh` (OK only when the ring's white is at the expected pixel). **One unexplained moment (build 242):** the next episode started while Hide had the focus and no key had been sent; the user was at the TV and may have pressed OK.
+- **Learned:** the Chromecast sleeps (Dreaming, then Asleep) during long runs and the Roku then goes back to its own home: `input keyevent KEYCODE_WAKEUP`, then ECP `keypress/InputHDMI3` (only when the Roku shows its own idle home). Integration walks need Flutter's bin on PATH. The session's scratchpad can be cleared by a restart (the helpers were recreated).
+- **Checks:** see "On `main`"; at the end (7343278): analyze and format clean, the full suite under `TZ=UTC` **5,173 passed, 21 skipped**; `vod_player` and `vod_walk` under Xvfb passed on the local 10-minute samples (CI runs them on 2-minute ones). Left running: nothing (the fake panel stopped, worktrees removed, adb disconnected).
 
 ### The sixteenth session, short
 The user pasted the fifteenth session's report and wrote they were home with the TV free; they had set Google TV's resolution and the Roku's HDMI mode.
@@ -481,41 +490,17 @@ ADR-018/019 and ADR-016 "The exit" are still the state of the name, the
 TV's bar and Phase 9.
 
 ## Before you start the next session (user)
-**Your list:**
-1. **Push** `main`: `git push origin main` (the CI fixes, the focus sweep
-   merged, Search by remote, the seek bar by remote; `git log
-   origin/main..main`). The branch
-   `tv-focus-sweep` is merged and can be deleted (`git branch -d
-   tv-focus-sweep`); it was never pushed.
-2. **The old Co-Authored-By line in bdab868** (2026-09-15) is still on
-   GitHub. Say if you want it gone (it rewrites every commit and needs a
-   force push from you); otherwise it stays.
-3. **On the Bedroom TV (build 226):** in a film, Down then Up to the seek
-   bar: press and **hold** Left/Right (the steps grow the longer you
-   hold), and OK right after a step (it plays from there). Search with the
-   real remote (OK on a result, holding OK, Back); your case once: a channel, then The Bad Guys
-   2 from Continue watching ("Preparing…" on black, then your place, no
-   channel picture, no "Reconnecting").
-4. **Listen to Live TV** (4950, silent before the tenth session's fix).
-5. **Wireless debugging** goes off when the TV restarts: switch it on
-   again before a session that uses the TV.
-6. **A soundbar or AV receiver, or HDR films?** (Media3 for the TV only if
-   yes; ADR-025.)
-7. **The Roku, later** (your call). Still from before: the one real
-   reminder; the night's soak; the matrix's rows 6 and 16; Phase 9's close;
-   the dock icon (`flutter build linux --release`, then
-   `tools/install_desktop_entry.sh`).
+See "Start here" above (push `main` and the two tags; Wireless debugging; the TV by your remote).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
 
 ```
 Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-025 to ADR-030
-(with ADR-029's 2026-10-16 addendum) in docs/decisions.md. Check git
-(fetch) and CI on the last push. Then carry on with the Google TV list
-in "Start here". Ask me before using the TV and before playing from my
-provider.
+("Start here" first), CLAUDE.md, docs/progress.md and ADR-031 to ADR-033 (with
+their addenda) in docs/decisions.md. Check git (fetch) and CI on the last push.
+Then carry on with "Start here". Ask me before using the TV and before playing
+from my provider.
 ```
 
 ## Where things stand
