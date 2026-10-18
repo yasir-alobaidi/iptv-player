@@ -380,6 +380,42 @@ class VodProbe {
 
 /// The VOD samples, as ffprobe reads them.
 const vodProbes = <String, VodProbe>{
+  'vod_h264_1080p2398_16min.mp4': VodProbe(
+    videoCodec: 'h264',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'aac',
+    channels: 2,
+    channelLayout: 'stereo',
+    bitrateKbps: 4128,
+  ),
+  'vod_h264_1080p24_16min.mp4': VodProbe(
+    videoCodec: 'h264',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'aac',
+    channels: 2,
+    channelLayout: 'stereo',
+    bitrateKbps: 4128,
+  ),
+  'vod_hevc_2160p2398_hdr10_16min.mkv': VodProbe(
+    videoCodec: 'hevc',
+    width: 3840,
+    height: 2160,
+    audioCodec: 'aac',
+    channels: 2,
+    channelLayout: 'stereo',
+    bitrateKbps: 12128,
+  ),
+  'vod_hevc_1080p2398_hlg_16min.mkv': VodProbe(
+    videoCodec: 'hevc',
+    width: 1920,
+    height: 1080,
+    audioCodec: 'aac',
+    channels: 2,
+    channelLayout: 'stereo',
+    bitrateKbps: 6128,
+  ),
   'vod_h264_aac_10min.mp4': VodProbe(
     videoCodec: 'h264',
     width: 1920,

@@ -13,8 +13,9 @@ class FakeServerState {
     required this.runDir,
     this.epgDays = 3,
     this.epgGzip = false,
+    bool pictureTests = false,
   }) : faults = profile.faults,
-       catalog = FakeCatalog(profile);
+       catalog = FakeCatalog(profile, pictureTests: pictureTests);
 
   final FakeProfile profile;
   final FakeCatalog catalog;

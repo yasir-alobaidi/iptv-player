@@ -2,9 +2,10 @@
 # Generates synthetic test media (docs/06-quality.md → Media samples).
 # Sources are lavfi test patterns and tones only (testsrc2, smptehdbars, sine) — no copyrighted content.
 #
-# Usage: tools/media_samples/generate.sh [--force] [name ...]
-#   name   one or more sample names without extension (default: all)
+# Usage: tools/media_samples/generate.sh [--force] [--picture] [name ...]
+#   name   one or more sample names without extension (default: all but the picture tests)
 #   --force  regenerate files that already exist
+#   --picture  also make the picture tests (23.976/24 fps films, HDR10, HLG; slow, for the TV)
 # Env:   FFMPEG   ffmpeg binary (default: third_party/ffmpeg/linux-x64/ffmpeg, from tools/fetch_ffmpeg.sh)
 #        OUT_DIR  output directory (default: tools/media_samples/out, gitignored)
 #        LIVE_SECONDS  length of live samples, 30–120 (default 60; 4K HEVC uses 30)
@@ -17,12 +18,14 @@ OUT_DIR="${OUT_DIR:-${REPO_ROOT}/tools/media_samples/out}"
 LIVE_SECONDS="${LIVE_SECONDS:-60}"
 VOD_SECONDS="${VOD_SECONDS:-600}"
 FORCE=0
+PICTURE=0
 
 ARGS=()
 for a in "$@"; do
   case "$a" in
     --force) FORCE=1 ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --picture) PICTURE=1 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) ARGS+=("$a") ;;
   esac
 done
@@ -46,8 +49,12 @@ hevc() { echo "-c:v libx265 -preset ultrafast -pix_fmt yuv420p -tag:v hvc1 -x265
 
 ts_out() { echo "-f mpegts -mpegts_flags +resend_headers -metadata service_name=$1 -metadata service_provider=FakeIPTV"; }
 
+# $3 = picture: only when named, or with --picture.
 want() {
   local name="$1" file="$2"
+  if [[ ${#ARGS[@]} -eq 0 && "${3:-}" == picture && $PICTURE -eq 0 ]]; then
+    return 1
+  fi
   if [[ ${#ARGS[@]} -gt 0 ]]; then
     local hit=0
     for a in "${ARGS[@]}"; do [[ "$a" == "$name" ]] && hit=1; done
@@ -173,6 +180,69 @@ if want vod_h264_ac3_10min vod_h264_ac3_10min.mkv; then
     "$OUT_DIR/vod_h264_ac3_10min.mkv"
   # External subtitle beside the video (docs/09 external subtitles).
   write_srt "$OUT_DIR/vod_h264_ac3_10min.en.srt" "$V" "External English"
+fi
+
+# ---------- Picture tests (only when named, or with --picture) ----------
+# Films for the TV's picture work (docs/plans/tv-video-layer-and-frame-rate.md):
+# 23.976 and 24 fps to match the display's rate (16 min: Match frame rate
+# leaves films under 15 min alone), HDR10 and HLG. A white bar crosses the
+# picture at a steady speed: at 59.94 Hz its steps are uneven (3:2 judder),
+# at a matched rate even.
+
+# One HDR conversion of the SDR pattern: BT.709 → linear (SDR white at 100 nits) → BT.2020 → $1.
+to_hdr() {
+  echo "format=yuv444p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt2020,zscale=t=$1:m=bt2020nc:r=tv,format=yuv420p10le"
+}
+moving_bar() { echo "drawbox=x='mod(t*$1\,iw)':y=0:w=$2:h=ih:color=white@1:t=fill"; }
+
+# A minute of 4K/HEVC is slow to encode (about 13 fps here), so the HDR films
+# are one minute (1440 frames, 30 whole GOPs) looped to 16 by stream copy.
+loop_to_16min() {
+  local one="$1" out="$2"
+  ff -stream_loop 15 -i "$one" -map 0 -c copy -t 960 "$out"
+}
+
+for rate in 2398 24; do
+  name="vod_h264_1080p${rate}_16min"
+  fps=$([[ $rate == 2398 ]] && echo 24000/1001 || echo 24)
+  if want "$name" "$name.mp4" picture; then
+    # shellcheck disable=SC2046
+    ff $(video_src 1920x1080 "$fps") $(audio_src 440) -t 960 \
+      -vf "$(moving_bar 480 16)" \
+      $(h264 48 4M 8M) -c:a aac -b:a 128k -ac 2 \
+      -metadata title="Picture test: 1080p at $fps fps" -movflags +faststart \
+      "$OUT_DIR/$name.mp4"
+  fi
+done
+
+if want vod_hevc_2160p2398_hdr10_16min vod_hevc_2160p2398_hdr10_16min.mkv picture; then
+  tmp="$(mktemp -d)"
+  # shellcheck disable=SC2046
+  ff $(video_src 3840x2160 24000/1001) $(audio_src 523) -frames:v 1440 -t 60.06 \
+    -vf "$(moving_bar 960 32),$(to_hdr smpte2084)" \
+    -c:v libx265 -preset ultrafast -pix_fmt yuv420p10le -tag:v hvc1 \
+    -x265-params "log-level=error:keyint=48:min-keyint=48:scenecut=0:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1):max-cll=1000,400:hdr10=1:hdr10-opt=1:repeat-headers=1" \
+    -b:v 12M -maxrate 12M -bufsize 24M \
+    -color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc \
+    -c:a aac -b:a 128k -ac 2 -metadata title="Picture test: 4K HDR10 at 23.976 fps" \
+    "$tmp/one.mkv"
+  loop_to_16min "$tmp/one.mkv" "$OUT_DIR/vod_hevc_2160p2398_hdr10_16min.mkv"
+  rm -rf "$tmp"
+fi
+
+if want vod_hevc_1080p2398_hlg_16min vod_hevc_1080p2398_hlg_16min.mkv picture; then
+  tmp="$(mktemp -d)"
+  # shellcheck disable=SC2046
+  ff $(video_src 1920x1080 24000/1001 smptehdbars) $(audio_src 587) -frames:v 1440 -t 60.06 \
+    -vf "$(moving_bar 480 16),$(to_hdr arib-std-b67)" \
+    -c:v libx265 -preset ultrafast -pix_fmt yuv420p10le -tag:v hvc1 \
+    -x265-params "log-level=error:keyint=48:min-keyint=48:scenecut=0:colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc:repeat-headers=1" \
+    -b:v 6M -maxrate 6M -bufsize 12M \
+    -color_primaries bt2020 -color_trc arib-std-b67 -colorspace bt2020nc \
+    -c:a aac -b:a 128k -ac 2 -metadata title="Picture test: 1080p HLG at 23.976 fps" \
+    "$tmp/one.mkv"
+  loop_to_16min "$tmp/one.mkv" "$OUT_DIR/vod_hevc_1080p2398_hlg_16min.mkv"
+  rm -rf "$tmp"
 fi
 
 echo "Samples in $OUT_DIR:"

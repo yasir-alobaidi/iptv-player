@@ -460,6 +460,55 @@ void main() {
       );
     });
   });
+
+  group('picture tests', () {
+    test('are off by default: the catalogue is as before', () {
+      final plain = FakeCatalog(defaults);
+      expect(plain.movies(), hasLength(defaults.movieCount));
+      expect(
+        plain.movieCategories.map((c) => c.id),
+        isNot(contains(pictureTestCategoryId)),
+      );
+      expect(plain.movieById(pictureTestIdBase), isNull);
+    });
+
+    test('come after every generated movie, in their own category', () {
+      final plain = FakeCatalog(defaults);
+      final tests = FakeCatalog(defaults, pictureTests: true);
+
+      expect(
+        tests.movies().take(defaults.movieCount).map((m) => m.toJson(shape)),
+        plain.movies().map((m) => m.toJson(shape)),
+      );
+      expect(
+        tests.movieCategories
+            .take(plain.movieCategories.length)
+            .map((c) => c.toJson(shape)),
+        plain.movieCategories.map((c) => c.toJson(shape)),
+      );
+      expect(tests.movieCategories.last.id, pictureTestCategoryId);
+      expect(tests.movieCategories.last.name, 'Movies | Picture tests');
+
+      final films = tests.movies(categoryId: pictureTestCategoryId).toList();
+      expect(films.map((m) => m.sample), pictureTestSamples.keys);
+      expect(films.map((m) => m.name), pictureTestSamples.values);
+      expect(films.map((m) => m.streamId), [
+        for (var i = 0; i < pictureTestSamples.length; i++)
+          pictureTestIdBase + i,
+      ]);
+      expect(films.map((m) => m.containerExtension), [
+        'mp4',
+        'mp4',
+        'mkv',
+        'mkv',
+      ]);
+      for (final film in films) {
+        expect(tests.movieById(film.streamId)?.sample, film.sample);
+        expect(vodProbes[film.sample], isNotNull, reason: film.sample);
+      }
+      expect(tests.movieById(pictureTestIdBase + films.length), isNull);
+    });
+  });
 }
 
 extension on Map<int, List<FakeEpisode>> {

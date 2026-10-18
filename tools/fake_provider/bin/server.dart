@@ -45,6 +45,13 @@ Future<void> main(List<String> args) async {
           'always comes with it). A request can ask for another number.',
     )
     ..addFlag('epg-gzip', negatable: false, help: 'Gzip xmltv.php by default.')
+    ..addFlag(
+      'picture-tests',
+      negatable: false,
+      help:
+          'Add the "Movies | Picture tests" films (23.976/24 fps, HDR10, '
+          'HLG; tools/media_samples/generate.sh --picture).',
+    )
     ..addFlag('verbose', abbr: 'v', help: 'Log requests and ffmpeg stderr.')
     ..addFlag(
       'exit-with-stdin',
@@ -110,6 +117,7 @@ Future<void> main(List<String> args) async {
     runDir: runDir,
     epgDays: count('epg-days') ?? 3,
     epgGzip: opts.flag('epg-gzip'),
+    pictureTests: opts.flag('picture-tests'),
   );
 
   final server = await FakeProviderServer.start(

@@ -42,11 +42,29 @@ const vodSamples = <String>[
   'vod_hevc_eac3_subs.mkv',
 ];
 
+/// The picture tests (`--picture-tests`): films for the TV's picture work
+/// (docs/plans/tv-video-layer-and-frame-rate.md), made by
+/// `tools/media_samples/generate.sh --picture`. They come after every
+/// generated movie, in a category of their own, so nothing else moves.
+const pictureTestSamples = <String, String>{
+  'vod_h264_1080p2398_16min.mp4': 'Picture test · 1080p 23.976 fps',
+  'vod_h264_1080p24_16min.mp4': 'Picture test · 1080p 24 fps',
+  'vod_hevc_2160p2398_hdr10_16min.mkv': 'Picture test · 4K HDR10 23.976 fps',
+  'vod_hevc_1080p2398_hlg_16min.mkv': 'Picture test · 1080p HLG 23.976 fps',
+};
+
+/// Past any profile's movies (the large one has 30,000), below the series.
+const pictureTestIdBase = 190000;
+const pictureTestCategoryId = '2999';
+
 /// The generated provider catalogue for one profile.
 class FakeCatalog {
-  new(this.profile);
+  new(this.profile, {this.pictureTests = false});
 
   final FakeProfile profile;
+
+  /// Adds the picture tests after the generated movies.
+  final bool pictureTests;
 
   /// Built on first use: the getters are hit once per request, the lists are
   /// at most a few hundred rows, and the ids must not move between calls.
@@ -69,6 +87,42 @@ class FakeCatalog {
         shelf.isEmpty ? 'Movies | $genre' : 'Movies | $genre $shelf',
   );
 
+  late final List<FakeCategory> _movieCategoriesShown = pictureTests
+      ? [
+          ..._movieCategories,
+          const FakeCategory(
+            id: pictureTestCategoryId,
+            name: 'Movies | Picture tests',
+          ),
+        ]
+      : _movieCategories;
+
+  late final List<FakeMovie> _pictureTests = pictureTests
+      ? [
+          for (final (i, MapEntry(key: sample, value: name))
+              in pictureTestSamples.entries.indexed)
+            FakeMovie(
+              streamId: pictureTestIdBase + i,
+              number: movieCount + i + 1,
+              name: name,
+              icon: null,
+              rating: null,
+              categoryId: pictureTestCategoryId,
+              added: DateTime.utc(2026, 10, 18),
+              containerExtension: _extensionOf(sample),
+              year: 2026,
+              plot:
+                  'A test pattern with a white bar crossing at a steady '
+                  'speed, for the picture: frame rate, HDR, scaling.',
+              cast: '',
+              director: '',
+              genre: 'Test',
+              durationSecs: 960,
+              sample: sample,
+            ),
+        ]
+      : const [];
+
   late final List<FakeCategory> _seriesCategories = _buildCategories(
     count: profile.seriesCategoryCount,
     idBase: _seriesCategoryIdBase,
@@ -81,7 +135,7 @@ class FakeCatalog {
 
   /// Categories are small and always fully materialized.
   List<FakeCategory> get liveCategories => _liveCategories;
-  List<FakeCategory> get movieCategories => _movieCategories;
+  List<FakeCategory> get movieCategories => _movieCategoriesShown;
   List<FakeCategory> get seriesCategories => _seriesCategories;
 
   int get liveCount => profile.liveCount;
@@ -105,13 +159,18 @@ class FakeCatalog {
   }
 
   Iterable<FakeMovie> movies({String? categoryId}) {
-    final all = Iterable<FakeMovie>.generate(movieCount, _movieAt);
+    final all = Iterable<FakeMovie>.generate(
+      movieCount,
+      _movieAt,
+    ).followedBy(_pictureTests);
     return categoryId == null
         ? all
         : all.where((m) => m.categoryId == categoryId);
   }
 
   FakeMovie? movieById(int streamId) {
+    final test = streamId - pictureTestIdBase;
+    if (test >= 0 && test < _pictureTests.length) return _pictureTests[test];
     final index = streamId - movieIdBase;
     if (index < 0 || index >= movieCount) return null;
     return _movieAt(index);
@@ -236,7 +295,7 @@ class FakeCatalog {
       ),
       icon: _iconOr('$artworkRoot/movie/$streamId.jpg', index),
       rating: _ratingFrom(mix),
-      categoryId: _categoryIdFor(movieCategories, index),
+      categoryId: _categoryIdFor(_movieCategories, index),
       added: _dateFrom(mix),
       containerExtension: _extensionOf(sample),
       year: year,
