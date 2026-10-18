@@ -334,6 +334,13 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   DateTime _lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
   bool _disposed = false;
 
+  /// The audio and subtitle tracks mpv plays, as it says (`aid`, `sid`;
+  /// null until it has): media_kit's `track` stays "auto" when mpv picks
+  /// one itself (a file's default, `alang`/`slang`), and the menus then
+  /// ticked Off.
+  String? _aid;
+  String? _sid;
+
   /// Buffering, as the watchdog and the picture's spinner hear it: mpv
   /// waiting for its cache, or a seek still waiting after [_slowSeek].
   bool _cacheWait = false;
@@ -405,6 +412,18 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       value,
     ) async {
       if (_open && _started) _emit(PlayerPaused(paused: value == 'yes'));
+    });
+    await _native.observeProperty('aid', waitForInitialization: false, (
+      value,
+    ) async {
+      _aid = value;
+      _emitTracks();
+    });
+    await _native.observeProperty('sid', waitForInitialization: false, (
+      value,
+    ) async {
+      _sid = value;
+      _emitTracks();
     });
     await _native.observeProperty(
       'paused-for-cache',
@@ -762,6 +781,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     final tracks = _player.state.tracks;
     final current = _player.state.track;
     bool real(String id) => id != 'auto' && id != 'no';
+    final aid = _aid ?? current.audio.id;
+    final sid = _sid ?? current.subtitle.id;
     _emit(
       PlayerTracks(
         audio: [
@@ -785,8 +806,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
                 codec: t.codec,
               ),
         ],
-        audioId: real(current.audio.id) ? current.audio.id : null,
-        subtitleId: real(current.subtitle.id) ? current.subtitle.id : null,
+        audioId: real(aid) ? aid : null,
+        subtitleId: real(sid) ? sid : null,
       ),
     );
   }
@@ -841,8 +862,12 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   @override
   Future<void> selectAudio(String? id) => _set('aid', id ?? 'auto');
 
+  // Through media_kit, which clears the line on screen: mpv says nothing
+  // more once its subtitles are off, so the last line stayed for good.
   @override
-  Future<void> selectSubtitle(String? id) => _set('sid', id ?? 'no');
+  Future<void> selectSubtitle(String? id) => _player.setSubtitleTrack(
+    id == null ? SubtitleTrack.no() : SubtitleTrack(id, null, null),
+  );
 
   @override
   Future<void> setAspect(AspectMode mode) async {

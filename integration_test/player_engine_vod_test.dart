@@ -144,6 +144,128 @@ void main() {
     timeout: const Timeout(Duration(minutes: 2)),
   );
 
+  // The Bedroom TV (2026-10-18): the Subtitles menu ticked Off while mpv
+  // showed the file's own pick, and still Off after a pick in it; then Off
+  // left the last line on screen for good (mpv says nothing more once its
+  // subtitles are off).
+  testWidgets(
+    'the subtitles ticked are the ones mpv shows, and Off clears the line',
+    (tester) async {
+      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+      final dir = Directory.systemTemp.createTempSync('engine_subtitles');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      // One line each, for the whole file.
+      File srt(String name, String line) =>
+          File('${dir.path}/$name')
+            ..writeAsStringSync('1\n00:00:00,000 --> 01:00:00,000\n$line\n');
+      final english = srt('film.en.srt', 'An English line');
+      final german = srt('film.de.srt', 'Eine deutsche Zeile');
+      final engine = (await tester.runAsync(
+        () => MediaKitPlayerEngine.create(
+          log: AppLog(output: SilentOutput(), secrets: SecretRegistry()),
+          secrets: SecretRegistry(),
+          video: video,
+        ),
+      ))!;
+      addTearDown(() => tester.runAsync(engine.dispose));
+      final events = <PlayerEvent>[];
+      final subscription = engine.events.listen(events.add);
+      addTearDown(subscription.cancel);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: engine.videoView(background: const Color(0xFF000000)),
+        ),
+      );
+      PlayerTracks? tracks() => events.whereType<PlayerTracks>().lastOrNull;
+      Future<String> sid() async =>
+          (await tester.runAsync(() => engine.mpvProperty('sid')))!;
+
+      await tester.runAsync(
+        () => engine.open(
+          PlayRequest(
+            url: File('${samplesDirectory.path}/vod_h264_aac_10min.mp4')
+                .absolute
+                .path,
+            live: false,
+            subtitleFiles: [english.path, german.path],
+            subtitleLanguages: const ['en'],
+          ),
+        ),
+      );
+      await _until(
+        tester,
+        () => events.any((e) => e is PlayerFirstFrame || e is PlayerFailed),
+        'the first frame',
+      );
+      expect(events.whereType<PlayerFailed>(), isEmpty, reason: '$events');
+      await _until(
+        tester,
+        () => (tracks()?.subtitles.length ?? 0) == 2,
+        'both subtitle files as tracks',
+      );
+
+      // ── mpv's own picks are the ones ticked: its sound, its subtitles.
+      final audio = (await tester.runAsync(() => engine.mpvProperty('aid')))!;
+      expect(audio, isNot('no'));
+      await _until(
+        tester,
+        () => tracks()?.audioId == audio,
+        "mpv's sound ticked (${tracks()?.audioId} for $audio)",
+      );
+      final picked = await sid();
+      expect(picked, isNot('no'));
+      await _until(
+        tester,
+        () => tracks()?.subtitleId == picked,
+        "mpv's pick ticked (${tracks()?.subtitleId} for $picked)",
+      );
+      if (video) {
+        await _until(
+          tester,
+          () => find.text('An English line').evaluate().isNotEmpty,
+          'the English line on screen',
+        );
+      }
+
+      // ── The other one, picked: ticked, and its line replaces the first.
+      final other = tracks()!.subtitles.firstWhere((t) => t.id != picked).id;
+      await tester.runAsync(() => engine.selectSubtitle(other));
+      await _until(
+        tester,
+        () => tracks()?.subtitleId == other,
+        'the pick ticked (${tracks()?.subtitleId} for $other)',
+      );
+      expect(await sid(), other);
+      if (video) {
+        await _until(
+          tester,
+          () =>
+              find.text('Eine deutsche Zeile').evaluate().isNotEmpty &&
+              find.text('An English line').evaluate().isEmpty,
+          'the German line in place of the English one',
+        );
+      }
+
+      // ── Off: nothing ticked, and no line left on screen.
+      await tester.runAsync(() => engine.selectSubtitle(null));
+      await _until(
+        tester,
+        () => tracks()?.subtitleId == null,
+        'Off ticked (${tracks()?.subtitleId})',
+      );
+      expect(await sid(), 'no');
+      if (video) {
+        await _until(
+          tester,
+          () => find.text('Eine deutsche Zeile').evaluate().isEmpty,
+          'the line gone',
+        );
+      }
+    },
+    skip: !vodAvailable,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
   // The Bedroom TV (ADR-027): a film resumed from a panel slow to let the
   // resume's range in was "playing" at its first decoded frame, before the
   // place; the 8-second stall check then reconnected it, twice, while
