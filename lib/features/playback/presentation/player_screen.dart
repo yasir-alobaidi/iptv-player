@@ -148,7 +148,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   _VodFlags _flags = _noFlags;
 
   /// A file's OSD stays up while it opens, while paused or seeking, and
-  /// at the end card. The next-episode card offering or counting stands
+  /// at the end card. The next-episode card counting stands
   /// on its own (ADR-033).
   bool get _pinned => _flags.pinned;
 
@@ -304,9 +304,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (!flags.pinned && !cardOnly) _showOsd();
   }
 
-  /// The next-episode card offers or counts: Esc or Back hides it.
+  /// The next-episode card counts: Esc or Back hides it.
   bool get _cardUp => switch (_vod.card) {
-    NextCardPhase.offer || NextCardPhase.count => true,
+    NextCardPhase.count => true,
     NextCardPhase.none || NextCardPhase.end => false,
   };
 
@@ -1313,6 +1313,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       next: next,
                       phase: phase,
                       countdown: _vod.countdown,
+                      countdownLength: _vod.countdownLength,
                       playFocusNode: _cardPlay,
                       // The desktop's picture keeps the focus (←/→ seek
                       // and Space pauses, as everywhere in the player;

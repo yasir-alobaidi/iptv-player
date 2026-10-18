@@ -65,9 +65,13 @@ bool _focusOnCard() =>
         ?.findAncestorWidgetOfExactType<NextEpisodeCard>() !=
     null;
 
+/// [text] on the card: a button's label starts with it ("Next episode ·
+/// 33").
 Finder _onCard(String text) => find.descendant(
   of: find.byType(NextEpisodeCard),
-  matching: find.text(text),
+  matching: find.byWidgetPredicate(
+    (widget) => widget is Text && (widget.data?.startsWith(text) ?? false),
+  ),
 );
 
 List<String> _seeks(_Vod t) => [
@@ -806,7 +810,7 @@ void main() {
         void nothing() {
           expect(find.byType(NextEpisodeCard), findsNothing);
           expect(find.text('NEXT EPISODE'), findsNothing);
-          expect(find.textContaining('Play now'), findsNothing);
+          expect(find.textContaining('Next episode ·'), findsNothing);
           expect(find.text('Next episode'), findsNothing);
           expect(findByLabel('Next episode'), findsNothing);
         }
@@ -882,19 +886,19 @@ void main() {
       expect(find.text('S1 · E1 · Low Water'), findsOneWidget);
     });
 
-    _vodTest('at 20 s left the card counts down; Tab reaches Play now, and '
-        'Enter plays the next now', (tester, t) async {
+    _vodTest('at 20 s left the card says 10, a second later 9; Tab reaches '
+        'Next episode, and Enter plays the next now', (tester, t) async {
       await playFirst(tester, t);
-      await credits(t, tester, 19);
+      await credits(t, tester, 20);
 
       expect(find.text('NEXT EPISODE'), findsOneWidget);
       expect(find.text('Ledger'), findsOneWidget);
-      expect(find.text('Play now · 10'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Play now · 9'), findsOneWidget);
+      expect(find.text('Next episode · 10'), findsOneWidget);
+      await playOn(t, tester, from: 20, seconds: 1);
+      expect(find.text('Next episode · 9'), findsOneWidget);
       expect(_focused(), 'player', reason: 'the desktop card never takes it');
 
-      await _tabTo(tester, 'Play now', onCard: true);
+      await _tabTo(tester, 'Next episode', onCard: true);
       await _key(tester, LogicalKeyboardKey.enter);
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
       expect(t.rig.state.item, isA<PlayableEpisode>());
@@ -909,7 +913,7 @@ void main() {
     ) async {
       await playFirst(tester, t);
       await credits(t, tester, 19);
-      await tester.pump(const Duration(seconds: 10));
+      await playOn(t, tester, from: 19, seconds: 9);
       await settle(tester);
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
     });
@@ -946,11 +950,11 @@ void main() {
       expect(t.rig.engine.calls.last, 'paused:true');
     });
 
-    _vodTest('Esc cancels; at the end the card is back without the count, '
+    _vodTest('Esc hides it; at the end the card is back without the count, '
         'and Back to series goes to its page', (tester, t) async {
       await playFirst(tester, t);
       await credits(t, tester, 15);
-      expect(find.text('Play now · 10'), findsOneWidget);
+      expect(find.text('Next episode · 5'), findsOneWidget);
 
       await _key(tester, LogicalKeyboardKey.escape);
       expect(find.text('NEXT EPISODE'), findsNothing);
@@ -980,12 +984,10 @@ void main() {
       expect(mark?.completed, isTrue);
     });
 
-    _vodTest('from a minute left the card offers the next episode with no '
-        'count; on the desktop the picture keeps the focus, so → seeks and '
-        'Space pauses; Tab reaches Next episode, which plays it at once', (
-      tester,
-      t,
-    ) async {
+    _vodTest('from a minute left the card counts: "Next episode · 50", its '
+        'bar out of 50 (the user: "it should show the count down"); on the '
+        'desktop the picture keeps the focus, so → seeks and Space pauses; '
+        'Tab reaches Next episode, which plays it at once', (tester, t) async {
       await playFirst(tester, t);
       await credits(t, tester, 61);
       expect(find.byType(NextEpisodeCard), findsNothing);
@@ -995,11 +997,11 @@ void main() {
       expect(find.text('Ledger'), findsOneWidget);
       expect(_onCard('Next episode'), findsOneWidget);
       expect(_onCard('Hide'), findsOneWidget);
-      expect(find.textContaining('Play now'), findsNothing);
+      expect(find.text('Next episode · 50'), findsOneWidget);
       expect(_focused(), 'player');
-      // No count before the last 20 s: nothing plays by itself.
+      // The count follows the episode, and plays nothing before its end.
       await playOn(t, tester, from: 60, seconds: 15);
-      expect(find.textContaining('Play now'), findsNothing);
+      expect(find.text('Next episode · 35'), findsOneWidget);
       expect(t.rig.engine.opened, hasLength(1));
       expect(_focused(), 'player');
 
@@ -1020,7 +1022,7 @@ void main() {
       expect(t.rig.engine.opened.last.url, contains('/7102.'));
     });
 
-    _vodTest('the card stands on its own: offering or counting, the OSD '
+    _vodTest('the card stands on its own: counting, the OSD '
         'hides and shows around it, and it stays where it is', (
       tester,
       t,
@@ -1051,11 +1053,11 @@ void main() {
       expect(_focused(), 'player');
 
       // The count doesn't hold the OSD up either, and runs while it hides.
-      await credits(t, tester, 19);
-      expect(find.text('Play now · 10'), findsOneWidget);
+      await credits(t, tester, 20);
+      expect(find.text('Next episode · 10'), findsOneWidget);
       expect(osd(), 0);
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Play now · 9'), findsOneWidget);
+      await playOn(t, tester, from: 20, seconds: 1);
+      expect(find.text('Next episode · 9'), findsOneWidget);
       expect(card(), at);
 
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -1081,7 +1083,11 @@ void main() {
       await _key(tester, LogicalKeyboardKey.arrowRight);
       await tester.pump(const Duration(milliseconds: 350));
       expect(_seeks(t), ['seek:${(45 * 60 - 35) * 1000}']);
-      expect(_control(), 'Next episode', reason: 'the arrow seeked');
+      expect(
+        _control(),
+        startsWith('Next episode'),
+        reason: 'the arrow seeked',
+      );
       t.rig.engine.progress(const Duration(minutes: 45, seconds: -35));
       await settle(tester);
 
@@ -1135,14 +1141,14 @@ void main() {
       await playFirst(tester, t, tv: true);
       await credits(t, tester, 50);
       expect(_focusOnCard(), isTrue);
-      expect(_control(), 'Next episode');
+      expect(_control(), startsWith('Next episode'));
 
       await _key(tester, LogicalKeyboardKey.arrowRight);
       expect(_control(), 'Hide');
       await _key(tester, LogicalKeyboardKey.arrowRight);
       expect(_control(), 'Hide');
       await _key(tester, LogicalKeyboardKey.arrowLeft);
-      expect(_control(), 'Next episode');
+      expect(_control(), startsWith('Next episode'));
       await tester.pump(const Duration(milliseconds: 350));
       expect(_seeks(t), isEmpty);
 
@@ -1186,7 +1192,7 @@ void main() {
       );
       expect(_osd(tester), 0);
       expect(_focusOnCard(), isTrue);
-      expect(_control(), 'Next episode');
+      expect(_control(), startsWith('Next episode'));
     });
 
     _vodTest('on a TV the end card takes the focus, even from one of the '

@@ -230,24 +230,24 @@ void main() {
       final e2Length = coordinator.timeline.duration!;
 
       // ── Its last 25 s: the card counts, then S1 · E3 plays on its own.
-      // A sample over 4 minutes (the local 10-minute ones) offers it first,
-      // with no count, until 20 s are left (ADR-033); CI's 2-minute ones
-      // only count.
+      // Over 4 minutes (the local 10-minute samples) the count is the
+      // episode's own time down to 10 s left; CI's 2-minute ones count from
+      // 10 at 20 s left (ADR-033). Either way "Next episode · N".
       await tester.runAsync(
         () => coordinator.seek(e2Length - const Duration(seconds: 25)),
       );
-      await k.waitFor(find.textContaining('Play now · '), seconds: 30);
+      await k.waitFor(find.textContaining('Next episode · '), seconds: 30);
       expect(find.text('NEXT EPISODE'), findsOneWidget);
       await playing(PlayableEpisode(series, e3), 'S1 · E3 after the count');
       expect(find.text('NEXT EPISODE'), findsNothing);
 
-      // ── S1 · E3's last seconds: Esc cancels the count; it plays to its
+      // ── S1 · E3's last seconds: Esc hides the count; it plays to its
       // end; the card is back without the count.
       final e3Length = coordinator.timeline.duration!;
       await tester.runAsync(
         () => coordinator.seek(e3Length - const Duration(seconds: 18)),
       );
-      await k.waitFor(find.textContaining('Play now · '), seconds: 30);
+      await k.waitFor(find.textContaining('Next episode · '), seconds: 30);
       await k.press(LogicalKeyboardKey.escape);
       expect(find.text('NEXT EPISODE'), findsNothing);
       expect(app.location, playerRoutePath);

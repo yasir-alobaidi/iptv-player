@@ -338,10 +338,10 @@ class VodOsdBottom extends StatelessWidget {
 /// bottom right above the seek bar. It stands on its own: the OSD shows
 /// and hides around it. Its first button takes the focus when it comes
 /// if [autofocus]; with [arrowsMove] (a TV remote's) ←/→ move between its
-/// two buttons and never seek from here. In the credits
-/// ([NextCardPhase.offer]): Next episode, which plays it at once, and
-/// Hide. Counting: Play now, its bar running down with the count, and
-/// Cancel. At the end after a Hide: Play next episode and Back to series.
+/// two buttons and never seek from here. Counting: "Next episode · N",
+/// which plays it at once, its bar running down with the count out of
+/// [countdownLength], and Hide. At the end after a Hide: Play next
+/// episode and Back to series.
 class NextEpisodeCard extends StatefulWidget {
   const new({
     required this.next,
@@ -349,6 +349,7 @@ class NextEpisodeCard extends StatefulWidget {
     required this.onPlay,
     required this.onSecondary,
     this.countdown,
+    this.countdownLength = VodPlayerController.countdownFrom,
     this.playFocusNode,
     this.autofocus = true,
     this.arrowsMove = true,
@@ -358,12 +359,14 @@ class NextEpisodeCard extends StatefulWidget {
   final NextEpisode next;
   final NextCardPhase phase;
 
-  /// 10 … 1 while counting.
+  /// The seconds until the next episode plays by itself, while counting.
   final int? countdown;
+
+  /// What [countdown] counts from (50, or 10 for a short episode).
+  final int countdownLength;
   final VoidCallback onPlay;
 
-  /// Hide in the credits, Cancel while counting, Back to series at the
-  /// end.
+  /// Hide while counting, Back to series at the end.
   final VoidCallback onSecondary;
 
   /// The first button's focus, for the player to hand it back; the card's
@@ -438,9 +441,11 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
     final episode = widget.next;
     final countdown = widget.countdown;
     final (play, secondary) = switch (widget.phase) {
-      NextCardPhase.count => ('Play now · ${countdown ?? ''}', 'Cancel'),
       NextCardPhase.end => ('Play next episode', 'Back to series'),
-      NextCardPhase.offer || NextCardPhase.none => ('Next episode', 'Hide'),
+      NextCardPhase.count || NextCardPhase.none => (
+        countdown == null ? 'Next episode' : 'Next episode · $countdown',
+        'Hide',
+      ),
     };
     const still = Size(144, 81);
     return Container(
@@ -538,16 +543,15 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
                         ),
                         if (widget.phase != NextCardPhase.end) ...[
                           SizedBox(height: tokens.spacing.s4),
-                          // The offer keeps the bar's room: the card does
-                          // not grow when the count starts.
+                          // The bar's room is kept: the card never changes
+                          // size.
                           Visibility.maintain(
                             visible: countdown != null,
                             child: TweenAnimationBuilder<double>(
                               tween: Tween(
                                 end:
-                                    (countdown ??
-                                        VodPlayerController.countdownFrom) /
-                                    VodPlayerController.countdownFrom,
+                                    (countdown ?? widget.countdownLength) /
+                                    widget.countdownLength,
                               ),
                               duration: const Duration(seconds: 1),
                               builder: (context, value, _) =>

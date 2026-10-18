@@ -259,35 +259,92 @@ void main() {
   });
 
   group('the next episode', () {
-    test('from a minute left the card offers the next one with no count; '
-        'at 20 s left the count runs as before', () {
+    test('from a minute left the card counts the seconds until the next '
+        'plays by itself, read off the timeline: 50 at a minute left, its '
+        'bar out of 50; at 10 s left the next plays from its own resume '
+        'point', () {
+      fakeAsync((async) {
+        start(
+          async,
+          PlayableEpisode(series, e1),
+          marks: {
+            e2.ref: WatchMark(
+              position: const Duration(minutes: 3),
+              updatedAt: DateTime.utc(2026),
+              duration: length,
+            ),
+          },
+        );
+        async.flushMicrotasks();
+        expect(vod.next?.item, PlayableEpisode(series, e2));
+        final end = length.inSeconds;
+        at(async, const Duration(seconds: 61));
+        expect(vod.card, NextCardPhase.none);
+        expect(vod.countdown, isNull);
+
+        rig.engine.progress(Duration(seconds: end - 60));
+        expect(vod.card, NextCardPhase.count);
+        expect(vod.countdown, 50);
+        expect(vod.countdownLength, 50);
+        // Part of a second past it: still 50 (the seconds round up).
+        rig.engine.progress(Duration(seconds: end - 60, milliseconds: 400));
+        expect(vod.countdown, 50);
+        play(async, from: end - 60, seconds: 29);
+        expect(vod.countdown, 21, reason: '31 s left');
+        play(async, from: end - 31, seconds: 20);
+        expect(vod.countdown, 1, reason: '11 s left');
+        expect(rig.state.item, PlayableEpisode(series, e1));
+
+        rig.engine.progress(Duration(seconds: end - 10));
+        async.elapse(const Duration(seconds: 1));
+        expect(rig.state.item, PlayableEpisode(series, e2));
+        expect(rig.engine.opened.last.start, const Duration(minutes: 3));
+        expect(vod.countdown, isNull);
+        expect(vod.item, PlayableEpisode(series, e2));
+      });
+    });
+
+    test('the count is the timeline: a pause holds it and a seek moves it; '
+        'the next plays once, whatever ticks follow', () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
         async.flushMicrotasks();
         final end = length.inSeconds;
-        at(async, const Duration(seconds: 61));
-        expect(vod.card, NextCardPhase.none);
+        at(async, const Duration(seconds: 40));
+        expect(vod.countdown, 30);
 
-        rig.engine.progress(Duration(seconds: end - 60));
-        expect(vod.card, NextCardPhase.offer);
-        expect(vod.countdown, isNull);
-        play(async, from: end - 60, seconds: 39);
-        expect(vod.card, NextCardPhase.offer, reason: '21 s left');
-        expect(vod.countdown, isNull);
+        vod.togglePause();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 30));
+        expect(vod.countdown, 30);
+        vod.togglePause();
+        async.flushMicrotasks();
 
-        rig.engine.progress(Duration(seconds: end - 20));
-        expect(vod.card, NextCardPhase.count);
-        expect(vod.countdown, 10);
-        expect(rig.state.item, PlayableEpisode(series, e1));
+        at(async, const Duration(seconds: 25));
+        expect(vod.countdown, 15);
+        at(async, const Duration(seconds: 55));
+        expect(vod.countdown, 45);
+
+        // Into the last 10 s at once: it plays now, and only once.
+        final opened = rig.engine.opened.length;
+        at(async, const Duration(seconds: 5));
+        for (var s = 4; s >= 0; s--) {
+          rig.engine.progress(Duration(seconds: end - s));
+        }
+        rig.engine.end();
+        async.elapse(const Duration(seconds: 1));
+        expect(rig.engine.opened, hasLength(opened + 1));
+        expect(rig.state.item, PlayableEpisode(series, e2));
       });
     });
 
-    test('Next episode in the offer plays it at once', () {
+    test('Next episode during the count plays it at once', () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
         async.flushMicrotasks();
         at(async, const Duration(seconds: 45));
-        expect(vod.card, NextCardPhase.offer);
+        expect(vod.card, NextCardPhase.count);
 
         vod.playNext();
         async.flushMicrotasks();
@@ -304,10 +361,11 @@ void main() {
         async.flushMicrotasks();
         final end = length.inSeconds;
         at(async, const Duration(seconds: 45));
-        expect(vod.card, NextCardPhase.offer);
+        expect(vod.card, NextCardPhase.count);
 
         vod.hideNext();
         expect(vod.card, NextCardPhase.none);
+        expect(vod.countdown, isNull);
         at(async, length - const Duration(minutes: 10));
         at(async, const Duration(seconds: 30));
         expect(vod.card, NextCardPhase.none);
@@ -325,22 +383,24 @@ void main() {
       });
     });
 
-    test('seeking back out of the last minute takes the offer away; the '
+    test('seeking back out of the last minute takes the card away; the '
         'last minute brings it back', () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
         async.flushMicrotasks();
         at(async, const Duration(seconds: 50));
-        expect(vod.card, NextCardPhase.offer);
+        expect(vod.card, NextCardPhase.count);
         at(async, const Duration(seconds: 90));
         expect(vod.card, NextCardPhase.none);
+        expect(vod.countdown, isNull);
         at(async, const Duration(seconds: 40));
-        expect(vod.card, NextCardPhase.offer);
+        expect(vod.card, NextCardPhase.count);
+        expect(vod.countdown, 30);
       });
     });
 
-    test('an episode of 4 minutes or less has no offer; its count still '
-        'runs at 20 s left', () {
+    test('an episode of 4 minutes or less counts from 10 at 20 s left, a '
+        'second at a time, its bar out of 10; a pause holds it', () {
       fakeAsync((async) {
         const short = Duration(minutes: 4);
         start(async, PlayableEpisode(series, e1), duration: short);
@@ -350,54 +410,33 @@ void main() {
         at(async, const Duration(seconds: 20), duration: short);
         expect(vod.card, NextCardPhase.count);
         expect(vod.countdown, 10);
+        expect(vod.countdownLength, 10);
+        async.elapse(const Duration(seconds: 1));
+        expect(vod.countdown, 9);
+
+        vod.togglePause();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+        expect(vod.countdown, 9);
+        vod.togglePause();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 9));
+        expect(rig.state.item, PlayableEpisode(series, e2));
       });
       fakeAsync((async) {
         const longer = Duration(minutes: 4, seconds: 1);
         start(async, PlayableEpisode(series, e1), duration: longer);
         async.flushMicrotasks();
         at(async, const Duration(seconds: 50), duration: longer);
-        expect(vod.card, NextCardPhase.offer);
+        expect(vod.card, NextCardPhase.count);
+        expect(vod.countdown, 40);
+        expect(vod.countdownLength, 50);
       });
     });
 
-    test('at 20 s left the card counts down from 10, then the next plays '
-        'from its own resume point', () {
-      fakeAsync((async) {
-        start(
-          async,
-          PlayableEpisode(series, e1),
-          marks: {
-            e2.ref: WatchMark(
-              position: const Duration(minutes: 3),
-              updatedAt: DateTime.utc(2026),
-              duration: length,
-            ),
-          },
-        );
-        async.flushMicrotasks();
-        expect(vod.next?.item, PlayableEpisode(series, e2));
-
-        final end = length.inSeconds;
-        rig.coordinator.seek(length - const Duration(seconds: 30));
-        async.flushMicrotasks();
-        play(async, from: end - 30, seconds: 9);
-        expect(vod.countdown, isNull);
-        rig.engine.progress(Duration(seconds: end - 20));
-        expect(vod.countdown, 10);
-        async.elapse(const Duration(seconds: 1));
-        expect(vod.countdown, 9);
-        play(async, from: end - 20, seconds: 3);
-        expect(vod.countdown, 6);
-        play(async, from: end - 17, seconds: 6);
-
-        expect(rig.state.item, PlayableEpisode(series, e2));
-        expect(rig.engine.opened.last.start, const Duration(minutes: 3));
-        expect(vod.countdown, isNull);
-        expect(vod.item, PlayableEpisode(series, e2));
-      });
-    });
-
-    test('Play now plays it at once', () {
+    test("Next episode before the card plays it at once (the row's)", () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
         async.flushMicrotasks();
@@ -424,7 +463,7 @@ void main() {
       });
     });
 
-    test('Play now in the credits saves the episode as watched too', () {
+    test('Next episode in the credits saves the episode as watched too', () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
         async.flushMicrotasks();
@@ -471,7 +510,7 @@ void main() {
       },
     );
 
-    test('Cancel during the count is Hide: the episode plays to its end, '
+    test('Hide during the count: the episode plays to its end, '
         'then the card again without the count', () {
       fakeAsync((async) {
         start(async, PlayableEpisode(series, e1));
@@ -479,7 +518,7 @@ void main() {
         final end = length.inSeconds;
         rig.coordinator.seek(length - const Duration(seconds: 15));
         async.flushMicrotasks();
-        expect(vod.countdown, 10);
+        expect(vod.countdown, 5);
 
         vod.hideNext();
         play(async, from: end - 14, seconds: 14);

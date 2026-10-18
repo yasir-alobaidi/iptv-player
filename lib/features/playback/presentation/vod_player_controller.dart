@@ -62,10 +62,9 @@ final class NextEpisode {
 }
 
 /// What an episode's next-episode card shows (ADR-033): nothing; the
-/// offer in the credits (Next episode, Hide), with no count; the count
-/// (Play now · N, Cancel); or, at the end after a Hide, Play next episode
-/// and Back to series.
-enum NextCardPhase { none, offer, count, end }
+/// count (Next episode · N, Hide); or, at the end after a Hide, Play next
+/// episode and Back to series.
+enum NextCardPhase { none, count, end }
 
 /// What the full-screen player does around a movie or an episode (Phase 5
 /// step 6), apart from the widgets: the seek bar that moves at once while
@@ -88,17 +87,21 @@ final class VodPlayerController extends ChangeNotifier {
   static const seekDebounce = Duration(milliseconds: 300);
   static const resumedFor = Duration(seconds: 5);
 
-  /// The card offers the next episode with this much of one left …
+  /// The card shows with this much of an episode left, counting …
   static const offerAt = Duration(minutes: 1);
 
-  /// … when it is longer than this: a short one's last minute is too much
-  /// of it.
+  /// … when it is longer than this (a short one's last minute is too much
+  /// of it) …
   static const offerLongerThan = Duration(minutes: 4);
 
-  /// The card counts down with this much left …
+  /// … down to this much left, when the next episode plays by itself: the
+  /// moment the count of a short one ends too.
+  static const playAt = Duration(seconds: 10);
+
+  /// A short episode's card counts with this much left …
   static const nextEpisodeAt = Duration(seconds: 20);
 
-  /// … from this.
+  /// … from this, a second at a time.
   static const countdownFrom = 10;
 
   final PlaybackCoordinator _coordinator;
@@ -121,8 +124,15 @@ final class VodPlayerController extends ChangeNotifier {
   Duration? _resumedFrom;
   Timer? _resumedTimer;
   NextEpisode? _next;
-  bool _offered = false;
+
+  /// A longer episode's count, read off its timeline.
+  int? _timelineCount;
+
+  /// A short episode's count, a timer's.
   int? _countdown;
+
+  /// The next episode has been asked for: nothing asks again.
+  bool _leaving = false;
   Timer? _countdownTimer;
   bool _hidden = false;
   bool _ended = false;
@@ -154,8 +164,13 @@ final class VodPlayerController extends ChangeNotifier {
   /// The episode after this one; null for a movie or the last episode.
   NextEpisode? get next => _next;
 
-  /// 10 … 1 while the card counts down.
-  int? get countdown => _countdown;
+  /// The seconds until the next episode plays by itself, while the card
+  /// counts (50 … 1, or 10 … 1 for a short episode).
+  int? get countdown => _timelineCount ?? _countdown;
+
+  /// What [countdown] counts from: the card's bar is out of it.
+  int get countdownLength =>
+      _timelineCount != null ? (offerAt - playAt).inSeconds : countdownFrom;
 
   /// The episode played to its end after its card was hidden: the card
   /// again, without the count.
@@ -165,8 +180,7 @@ final class VodPlayerController extends ChangeNotifier {
   NextCardPhase get card => switch (_next) {
     null => NextCardPhase.none,
     _ when _ended => NextCardPhase.end,
-    _ when _countdown != null => NextCardPhase.count,
-    _ when _offered => NextCardPhase.offer,
+    _ when countdown != null => NextCardPhase.count,
     _ => NextCardPhase.none,
   };
 
@@ -231,27 +245,30 @@ final class VodPlayerController extends ChangeNotifier {
   void togglePause() =>
       unawaited(_coordinator.setPaused(paused: !_coordinator.timeline.paused));
 
-  /// The card's Next episode or Play now, the end card's Play next
-  /// episode, or the row's Next episode. In the credits the episode left
-  /// counts as watched, however short it is (a 2-minute episode is left
-  /// at 92 %, under [completeAt]).
+  /// The card's Next episode, the end card's Play next episode, the row's
+  /// Next episode, or the count's end; once. In the credits the episode
+  /// left counts as watched, however short it is (a 2-minute episode is
+  /// left at 92 %, under [completeAt]).
   void playNext() {
     final next = _next;
-    if (next == null) return;
+    if (next == null || _leaving) return;
+    _leaving = true;
+    _playNow(next);
+  }
+
+  void _playNow(NextEpisode next) {
     _stopCountdown();
-    _offered = false;
     unawaited(
       _coordinator.playVod(next.item, from: next.from, finishedLeaving: true),
     );
     notifyListeners();
   }
 
-  /// The card's Hide, Cancel during its count, Esc or a remote's Back:
-  /// no card for the rest of this episode, which plays to its end, and
-  /// nothing after it plays by itself; the end card offers it.
+  /// The card's Hide, Esc or a remote's Back: no card for the rest of
+  /// this episode, which plays to its end, and nothing after it plays by
+  /// itself; the end card offers it.
   void hideNext() {
     _hidden = true;
-    _offered = false;
     _stopCountdown();
     notifyListeners();
   }
@@ -298,7 +315,7 @@ final class VodPlayerController extends ChangeNotifier {
     _seekTimer?.cancel();
     _pending = null;
     _stopCountdown();
-    _offered = false;
+    _leaving = false;
     _hidden = false;
     _ended = false;
     _next = null;
@@ -350,12 +367,37 @@ final class VodPlayerController extends ChangeNotifier {
         _next != null &&
         !_hidden &&
         !_ended &&
+        !_leaving &&
         _playing &&
         left != null &&
         length != null;
-    // Seeking back out of the last minute takes the offer away.
-    _offered = credits && length > offerLongerThan && left <= offerAt;
-    final due = credits && length > nextEpisodeAt && left <= nextEpisodeAt;
+    // A longer episode counts from a minute left, off its own time: a
+    // pause holds the count, a seek moves it, seeking back out of the last
+    // minute takes the card away (the user, on the TV: "it should show the
+    // count down if u won't click anything then u will go to the next").
+    if (credits && length > offerLongerThan && left <= offerAt) {
+      final seconds = ((left - playAt).inMilliseconds / 1000).ceil();
+      if (seconds <= 0) {
+        final next = _next!;
+        _leaving = true;
+        _timelineCount = null;
+        // After the coordinator's event, not inside it: the play publishes
+        // the next item on the same stream.
+        scheduleMicrotask(() {
+          if (!_disposed && _next == next) _playNow(next);
+        });
+        notifyListeners();
+        return;
+      }
+      _timelineCount = seconds;
+    } else {
+      _timelineCount = null;
+    }
+    final due =
+        credits &&
+        length > nextEpisodeAt &&
+        length <= offerLongerThan &&
+        left <= nextEpisodeAt;
     if (due && !counting) {
       _countdown = countdownFrom;
       _countdownTimer = Timer.periodic(const Duration(seconds: 1), _tick);
@@ -395,6 +437,7 @@ final class VodPlayerController extends ChangeNotifier {
     _countdownTimer?.cancel();
     _countdownTimer = null;
     _countdown = null;
+    _timelineCount = null;
   }
 
   void _hideResumed() {

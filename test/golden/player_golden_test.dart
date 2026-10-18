@@ -162,8 +162,8 @@ void main() {
     );
 
     sceneTest(
-      "an episode's last minute: the next episode offered, the OSD hidden "
-      '(ADR-033)',
+      "an episode's last minute: the card counting to the next episode, "
+      'the OSD hidden (ADR-033)',
       // A look of its own: the hidden OSD's controls are still there to
       // focus (a TV focuses them before they fade in).
       audit: false,
