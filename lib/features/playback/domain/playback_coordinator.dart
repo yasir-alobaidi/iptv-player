@@ -639,7 +639,8 @@ final class PlaybackCoordinator {
         }
       case PlayerEnded():
         if (_generation == null || item == null) return;
-        if (_state is! PlaybackPlaying) return;
+        // During the display's switch the file is still opening.
+        if (_state is! PlaybackPlaying && _matching != _generation) return;
         if (item.live) {
           _lost(
             item,
@@ -692,21 +693,42 @@ final class PlaybackCoordinator {
     bool still() => token == _token && generation == _generation;
     _matching = generation;
     final enabled = _settings().matchFrameRate;
+    var length = enabled ? _duration ?? _knownLength(item) : null;
+    // Held while its length comes: its sound shouldn't run on under
+    // "Preparing…", nor its place go by.
+    var held = false;
+    if (enabled && length == null) {
+      held = true;
+      await _pauseForSwitch();
+      length = await _lengthSoon();
+    }
+    // A stop or another play meanwhile: nothing to switch for, and the
+    // next file's length may have ended the wait.
+    if (!still()) {
+      if (_matching == generation) _matching = null;
+      return;
+    }
     final paused = await matcher.beforeFilePlays(
       enabled: enabled,
-      length: !enabled
-          ? null
-          : _duration ?? _knownLength(item) ?? await _lengthSoon(),
+      length: length,
       fps: () async => (await engine.streamInfo()).fps,
-      pause: () => engine.setPaused(paused: true),
+      pause: held ? () async {} : _pauseForSwitch,
     );
     try {
-      if (paused && still()) await engine.setPaused(paused: false);
+      if ((paused || held) && still()) await engine.setPaused(paused: false);
     } on Object catch (error) {
       _log.warning(_tag, "Couldn't play on after the display's switch: $error");
     }
     if (_matching == generation) _matching = null;
     if (still()) _firstFrame(item, token, generation);
+  }
+
+  Future<void> _pauseForSwitch() async {
+    try {
+      await engine.setPaused(paused: true);
+    } on Object catch (error) {
+      _log.warning(_tag, "Couldn't pause for the display's switch: $error");
+    }
   }
 
   /// The player's length, which can come a moment after the first frame

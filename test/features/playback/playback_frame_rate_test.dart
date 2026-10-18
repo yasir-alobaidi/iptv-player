@@ -217,6 +217,97 @@ void main() {
     });
   });
 
+  // From the review before dev went to main (2026-10-18).
+  group('the switch and the film around it', () {
+    test('a film whose length comes late is held from its first frame '
+        '(no sound under "Preparing…"), then switched and played', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1, length: null);
+        expect(rig.engine.calls, ['paused:true']);
+        expect(rig.state, isA<PlaybackOpening>());
+        async.elapse(const Duration(milliseconds: 300));
+        rig.engine.duration(film);
+        async.flushMicrotasks();
+        expect(display.requests, [uhd23976.id]);
+        expect(rig.engine.calls, [
+          'paused:true',
+        ], reason: 'held once, not paused again for the switch');
+        async.elapse(const Duration(seconds: 4));
+        expect(rig.engine.calls, ['paused:true', 'paused:false']);
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(rig.timelines.where((t) => t.paused), isEmpty);
+      });
+    });
+
+    test('a short film whose length comes late plays as soon as it does', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1, length: null);
+        async.elapse(const Duration(milliseconds: 200));
+        rig.engine.duration(const Duration(minutes: 10));
+        async.flushMicrotasks();
+        expect(rig.engine.calls, ['paused:true', 'paused:false']);
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(display.requests, isEmpty);
+      });
+    });
+
+    test('a film left while its length is awaited switches nothing for '
+        'it; the next film switches for itself', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1, length: null);
+        async.elapse(const Duration(milliseconds: 300));
+        rig.coordinator.playVod(film2);
+        async.flushMicrotasks();
+        // The next film's length, before its first frame.
+        rig.engine.duration(film);
+        async.flushMicrotasks();
+        expect(display.requests, isEmpty, reason: 'nothing for film 1');
+        expect(rig.engine.calls.where((c) => c.startsWith('paused')), [
+          'paused:true',
+        ], reason: "film 1's hold only");
+
+        rig.engine.firstFrame();
+        async.flushMicrotasks();
+        expect(display.requests, [uhd23976.id]);
+        async.elapse(const Duration(seconds: 4));
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(rig.state.item, film2);
+      });
+    });
+
+    test('a film that ends during the switch is lost at once: it '
+        'reconnects, and its next first frame plays at the mode', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes();
+        final rig = tv(async, display);
+
+        toFirstFrame(async, rig, film1);
+        async.elapse(const Duration(milliseconds: 500));
+        rig.engine.end();
+        async.flushMicrotasks();
+        expect(rig.state, isA<PlaybackReconnecting>());
+        async.elapse(const Duration(milliseconds: 1500));
+        expect(rig.engine.opened, hasLength(2));
+
+        rig.engine
+          ..duration(film)
+          ..firstFrame();
+        async.elapse(const Duration(seconds: 4));
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(display.current, uhd23976);
+      });
+    });
+  });
+
   group('when it switches (decisions 1 and 2)', () {
     /// [item]'s first frame plays at once, with no pause and no request.
     void playsAsItIs(
@@ -276,7 +367,10 @@ void main() {
         expect(rig.state, isA<PlaybackOpening>());
         async.elapse(const Duration(seconds: 1));
         expect(rig.state, isA<PlaybackPlaying>());
-        expect(rig.engine.calls, isEmpty);
+        expect(rig.engine.calls, [
+          'paused:true',
+          'paused:false',
+        ], reason: 'held while its length might come, then played');
         expect(display.requests, isEmpty);
         expect(
           rig.logLines,
