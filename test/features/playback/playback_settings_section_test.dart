@@ -1,10 +1,15 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playback.dart';
+import 'package:iptv_player/features/playback/presentation/playback_settings.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
@@ -16,6 +21,7 @@ void main() {
   Future<LiveTvFakes> open(
     WidgetTester tester, {
     FormFactor formFactor = FormFactor.desktop,
+    Size? size,
   }) async {
     final live = LiveTvFakes();
     addTearDown(() => tester.runAsync(live.db.close));
@@ -23,6 +29,7 @@ void main() {
     await pumpApp(
       tester,
       initialLocation: AppDestination.settings.path,
+      size: size ?? const Size(1440, 900),
       overrides: [
         ...live.overrides,
         formFactorProvider.overrideWithValue(formFactor),
@@ -92,6 +99,56 @@ void main() {
       () => live.db.settingsDao.read('playback.settings'),
     );
     expect(again, contains('"hwdec":"auto"'));
+  });
+
+  testWidgets("Picture quality (the PC's): Standard until High is chosen "
+      "from the keyboard, saved at once, and the next stream's request "
+      'carries it', (tester) async {
+    final live = await open(tester);
+    expect(find.text('Picture quality'), findsOneWidget);
+    expect(find.textContaining('sharper filters'), findsOneWidget);
+    PlaybackSettings settings() => ProviderScope.containerOf(
+      tester.element(find.byType(PlaybackSettingsSection)),
+    ).read(playbackSettingsControllerProvider);
+    expect(settings().pictureQuality, PictureQuality.standard);
+
+    Future<String?> stored() => tester.runAsync<String?>(
+      () => live.db.settingsDao.read('playback.settings'),
+    );
+    Future<void> tabTo(String label, {bool back = false}) async {
+      for (var i = 0; i < 40; i++) {
+        if (focusedLabelOf(tester) == label) return;
+        if (back) await tester.sendKeyDownEvent(LogicalKeyboardKey.shift);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        if (back) await tester.sendKeyUpEvent(LogicalKeyboardKey.shift);
+        await tester.pump();
+      }
+      fail('Tab never reached "$label" (on ${focusedLabelOf(tester)})');
+    }
+
+    Focus.of(tester.element(find.text('Automatic'))).requestFocus();
+    await tester.pump();
+    await tabTo('High');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await _settle(tester);
+
+    expect(await stored(), contains('"quality":"high"'));
+    const stream = ResolvedStream(url: 'u', maxConnections: 1);
+    expect(settings().request(stream).pictureQuality, PictureQuality.high);
+
+    await tabTo('Standard', back: true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await _settle(tester);
+    expect(await stored(), contains('"quality":"standard"'));
+    expect(settings().request(stream).pictureQuality, PictureQuality.standard);
+  });
+
+  testWidgets('a TV has no Picture quality: its picture never goes '
+      "through the player's scaler", (tester) async {
+    await open(tester, formFactor: FormFactor.tv, size: const Size(960, 540));
+    expect(find.text('Buffering'), findsOneWidget);
+    expect(find.text('Picture quality'), findsNothing);
+    expect(find.text('High'), findsNothing);
   });
 
   testWidgets("the source's live format is saved on the source", (

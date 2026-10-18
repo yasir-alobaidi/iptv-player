@@ -182,4 +182,116 @@ void main() {
       expect(directOutputFit(AspectMode.ratio4x3), BoxFit.contain);
     });
   });
+
+  group("picture quality (Settings → Playback, the desktop's)", () {
+    /// What the running mpv had at the start (0.34.1's own).
+    const standard = {
+      'scale': 'bilinear',
+      'cscale': 'bilinear',
+      'dscale': 'bilinear',
+      'dither-depth': 'no',
+      'correct-downscaling': 'no',
+      'linear-downscaling': 'no',
+      'sigmoid-upscaling': 'no',
+      'deband': 'no',
+    };
+    const high = PlayRequest(url: 'u', pictureQuality: PictureQuality.high);
+
+    /// The picture's filters among [options].
+    Map<String, String> filters(Map<String, String> options) => {
+      for (final MapEntry(:key, :value) in options.entries)
+        if (highQualityPicture.containsKey(key)) key: value,
+    };
+
+    test("High sets mpv 0.34's gpu-hq filters one by one, and only when "
+        'the filters are set for Standard', () {
+      expect(
+        filters(
+          mpvOptionsFor(
+            high,
+            scaling: (now: PictureQuality.standard, standard: standard),
+          ),
+        ),
+        {
+          'scale': 'spline36',
+          'cscale': 'spline36',
+          'dscale': 'mitchell',
+          'dither-depth': 'auto',
+          'correct-downscaling': 'yes',
+          'linear-downscaling': 'yes',
+          'sigmoid-upscaling': 'yes',
+          'deband': 'yes',
+        },
+      );
+      expect(
+        filters(
+          mpvOptionsFor(
+            high,
+            scaling: (now: PictureQuality.high, standard: standard),
+          ),
+        ),
+        isEmpty,
+      );
+    });
+
+    test("Standard puts back the running mpv's own value of each, and only "
+        'after High', () {
+      const request = PlayRequest(url: 'u');
+      expect(
+        filters(
+          mpvOptionsFor(
+            request,
+            scaling: (now: PictureQuality.high, standard: standard),
+          ),
+        ),
+        standard,
+      );
+      expect(
+        filters(
+          mpvOptionsFor(
+            request,
+            scaling: (now: PictureQuality.standard, standard: standard),
+          ),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('an option the running mpv had no value for at the start is left '
+        "alone: High couldn't be undone", () {
+      final known = {...standard}..remove('deband');
+      final options = filters(
+        mpvOptionsFor(
+          high,
+          scaling: (now: PictureQuality.standard, standard: known),
+        ),
+      );
+      expect(options.keys, unorderedEquals(known.keys));
+      expect(options['scale'], 'spline36');
+    });
+
+    test("nothing where mpv doesn't scale the picture: Android and no "
+        "video output (no scaling), no picture, Android's direct output", () {
+      const scaling = (now: PictureQuality.standard, standard: standard);
+      expect(filters(mpvOptionsFor(high)), isEmpty);
+      expect(
+        filters(mpvOptionsFor(high, picture: false, scaling: scaling)),
+        isEmpty,
+      );
+      expect(
+        filters(mpvOptionsFor(high, direct: true, scaling: scaling)),
+        isEmpty,
+      );
+    });
+
+    test('a request says it is High, without its URL', () {
+      const request = PlayRequest(
+        url: 'http://h/live/user/secret/1.ts',
+        pictureQuality: PictureQuality.high,
+      );
+      expect('$request', contains('high quality'));
+      expect('$request', isNot(contains('secret')));
+      expect('${const PlayRequest(url: 'u')}', isNot(contains('quality')));
+    });
+  });
 }

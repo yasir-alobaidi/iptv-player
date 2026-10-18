@@ -142,6 +142,9 @@ final class PlaybackCoordinator {
   /// pause is the switch's, not the user's.
   int? _matching;
 
+  /// The player's length, awaited by a switch that came before it.
+  Completer<Duration>? _lengthKnown;
+
   ResolvedStream? _stream;
 
   /// The source whose stream the engine holds open right now, as
@@ -612,6 +615,8 @@ final class PlaybackCoordinator {
       case PlayerDuration(:final duration):
         if (_generation == null || item == null || item.live) return;
         _duration = duration;
+        _lengthKnown?.complete(duration);
+        _lengthKnown = null;
         _publish();
       case PlayerPaused(:final paused):
         if (_generation == null || item == null || item.live) return;
@@ -686,9 +691,12 @@ final class PlaybackCoordinator {
   ) async {
     bool still() => token == _token && generation == _generation;
     _matching = generation;
+    final enabled = _settings().matchFrameRate;
     final paused = await matcher.beforeFilePlays(
-      enabled: _settings().matchFrameRate,
-      length: _duration ?? _knownLength(item),
+      enabled: enabled,
+      length: !enabled
+          ? null
+          : _duration ?? _knownLength(item) ?? await _lengthSoon(),
       fps: () async => (await engine.streamInfo()).fps,
       pause: () => engine.setPaused(paused: true),
     );
@@ -699,6 +707,19 @@ final class PlaybackCoordinator {
     }
     if (_matching == generation) _matching = null;
     if (still()) _firstFrame(item, token, generation);
+  }
+
+  /// The player's length, which can come a moment after the first frame
+  /// (it did on the Bedroom TV, and a provider's film list has none): a
+  /// second at most, still "Preparing…".
+  Future<Duration?> _lengthSoon() async {
+    final known = _lengthKnown ??= Completer<Duration>();
+    try {
+      return await known.future.timeout(const Duration(seconds: 1));
+    } on TimeoutException {
+      if (identical(_lengthKnown, known)) _lengthKnown = null;
+      return null;
+    }
   }
 
   /// The end of a file: finished, unless it came well before the file's
