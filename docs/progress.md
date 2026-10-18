@@ -251,13 +251,13 @@ _Update at the end of every session._
 
 ## Next
 **Your list** (docs/handoff.md "Before you start" has the details):
-1. **Push `main` and its checkpoints** (`git push origin main`, `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer`). Not `trial/video-layer-t0` (a throwaway trial). The `tv-focus-sweep` branch is merged and can be deleted.
+1. **Push `main`, `dev` and the tags** (`git push origin main dev`, `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer stable-244`). Not `trial/video-layer-t0` (a throwaway trial). The `tv-focus-sweep` branch is merged and can be deleted. **From now on work happens on `dev`; `main` is stable** (ADR-034).
 2. **bdab868's old Co-Authored-By line** is still on GitHub: gone only if you want all history rewritten (a force push).
 3. **On the Bedroom TV (build 244 is installed):** an episode's last minute ("Next episode · N" counting, Hide, and leaving it alone); in a film, hold Left/Right on the seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
 4. **Wireless debugging** on the TV goes off when it restarts: switch it on again before the next session.
 5. **The Roku, later.** Still from before: the one real reminder; the night's soak; the matrix's rows 6 and 16; Phase 9's close; the dock icon.
 
-**Then:** T1 of the picture's own layer (films only, a debug define) with a TV window; Match frame rate; the rest of the Google TV list in docs/handoff.md "Start here"; then Phase 10 (packaging).
+**Then:** Bijou Beta on the TV beside Bijou (ADR-034); T1 of the picture's own layer (films only, a debug define) with a TV window; Match frame rate; the rest of the Google TV list in docs/handoff.md "Start here"; then Phase 10 (packaging).
 
 ## ADR-008, ADR-009, ADR-010, ADR-011
 **Phase 1: docs/decisions.md ADR-008 (Accepted, 2026-09-16).** **Phase 2: ADR-009 (Accepted 2026-09-19).** **Phase 3: ADR-010 (Accepted 2026-09-19; the 1-hour soak run the same day — see "The soak run").** **Phase 4: ADR-011 (Accepted 2026-09-27 at the phase exit).** **Phase 5: ADR-012 (Accepted 2026-09-29 at the phase exit).** **Phase 6: ADR-013 (Accepted 2026-09-29 at the phase exit).** **Phase 7: ADR-014 and Phase 8: ADR-015 (both Accepted 2026-10-13 on your word, without the TV sitting; the matrix on the real TV stays an open check).** **Phase 9: ADR-016 (started 2026-10-13; steps 1–6 and the audit's first parts are in it).** Each is written straight into docs/decisions.md as its steps land, so there is one source of truth.

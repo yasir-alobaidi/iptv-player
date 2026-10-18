@@ -11,14 +11,21 @@
 - Docs: T0's results and the TV's display modes (docs/plans/tv-video-layer-and-frame-rate.md), ADR-031's second, ADR-032's and ADR-033's addenda, docs/02, 03, 05, 07, progress, this handoff.
 - **Branches:** `trial/video-layer-t0` (4c104ba, the T0 trial; never merge it; build with `flutter build apk --profile --target-platform android-arm -t lib/main_layer_trial.dart --dart-define=BIJOU_VIDEO_LAYER=true`), `tv-focus-sweep` (merged long ago, can go).
 
+**0. Branches from now on (ADR-034, the user's request at the end of this session):** work on **`dev`** (checked out at the end); `main` is stable and gets only tested work, merged from `dev` and tagged `stable-<build>` (`stable-244` = 7343278, the stable build on the TV). On the TV, test with **"Bijou Beta"** (`tools/tv_apk.sh beta`; its own app and data, so it needs a source once: the fake panel, or the user signs in to the provider) and update the stable "Bijou" (`tools/tv_apk.sh stable`, from `main`) only after the merge. **First TV job:** install Bijou Beta beside Bijou (both on Google TV's home, each opening its own data).
+
+**The user's questions at the end, answered (so nobody re-asks):**
+- *A Next episode button at any time?* Yes: an episode with a next one has **Next episode** (⏭) in the OSD's row, after the 10 s buttons, at any minute, on the desktop and the TV (Phase 5; seen in the TV's screenshots); a film has none.
+- *Hide, then the end?* Hide stops everything automatic: no card for the rest of the episode, nothing plays by itself, and at the end the video stops on the end card (Play next episode / Back to series), which waits for the user.
+- *Picture quality: done? the best possible?* Not yet the best on the TV. Today the TV decodes in hardware straight to the picture (no copy) and Fill/Stretch work, but Google TV draws apps at 1080p even at 4K output, so a 4K film shows at 1080p, and HDR shows as SDR (washed out), because the picture is a texture inside the app's layer. **More to do, in order:** (1) the picture on its own layer (T1 below): real 4K, HDR10/HLG, the TV chip's own scaler, less CPU; (2) Match frame rate for 23.976/24 fps films (smooth motion); (3) on the desktop, an optional "High quality" picture in Settings → Playback (mpv's sharper scalers and debanding, which removes the banding of low-bitrate streams; costs GPU, to measure against docs/06's budgets). None of these is built.
+
 **1. T1 of the picture's own layer** (docs/plans/tv-video-layer-and-frame-rate.md, "T0 — done" then steps 2 on): films only, behind the debug define, on a branch. The one question: with MediaCodec's real output in the SurfaceView, is the video layer DEVICE (the Amlogic video plane) or CLIENT, and what is SurfaceFlinger's share against today's 19 % (texture, 4K output)? Try the window's background transparent too (T0 had the activity window as a third full-screen CLIENT layer). If the video layer is CLIENT, stop there: on this device the layer would cost more than it saves.
 
 **2. The series page's background autofocus** (`lib/features/vod/presentation/title_details_screen.dart` ~915, the Play button; the favourite button shares its node when there's nothing to play): it fires while the player covers the page. The player takes the focus back now (af641e7), but the page shouldn't take it when it isn't the route on top.
 
-**3. With the TV (ask first with a pop-up; the user names a window):** build 244 is installed (`main` at 7343278). Then: a film's Picture size menu (the OSD stays while it's open); Match frame rate (only 23.976/24 fps films can be matched: the TV has no 25/50 Hz mode); then T1.
+**3. With the TV (ask first with a pop-up; the user names a window):** stable build 244 is installed (`stable-244`). First Bijou Beta (0. above); then, on the beta: a film's Picture size menu (the OSD stays while it's open); Match frame rate (only 23.976/24 fps films can be matched: the TV has no 25/50 Hz mode); then T1.
 
 **Before you start the next session (user):**
-1. **Push `main` and the tags:** `git push origin main`, then `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer`. Not `trial/video-layer-t0`.
+1. **Push `main`, `dev` and the tags:** `git push origin main dev`, then `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer stable-244`. Not `trial/video-layer-t0`.
 2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317).
 3. **On the Bedroom TV, by your remote (build 244):** an episode's last minute (the count, Hide, and doing nothing); hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
 
@@ -496,11 +503,11 @@ See "Start here" above (push `main` and the two tags; Wireless debugging; the TV
 Open Claude Code in this folder and paste:
 
 ```
-Continue the Bijou project (the repo is still iptv-player). Read docs/handoff.md
-("Start here" first), CLAUDE.md, docs/progress.md and ADR-031 to ADR-033 (with
-their addenda) in docs/decisions.md. Check git (fetch) and CI on the last push.
-Then carry on with "Start here". Ask me before using the TV and before playing
-from my provider.
+Continue the Bijou project (the repo is still iptv-player). Work on the dev
+branch (git checkout dev). Read docs/handoff.md ("Start here" first), CLAUDE.md,
+docs/progress.md and ADR-031 to ADR-034 (with their addenda) in
+docs/decisions.md. Check git (fetch) and CI on the last push. Then carry on with
+"Start here". Ask me before using the TV and before playing from my provider.
 ```
 
 ## Where things stand
