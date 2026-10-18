@@ -6,6 +6,9 @@
 
 export 'package:media_kit_video/src/video_controller/platform_video_controller.dart';
 export 'package:media_kit_video/src/video_controller/video_controller.dart';
+// Bijou's patch: the Android controller's own layer (setLayer).
+export 'package:media_kit_video/src/video_controller/android_video_controller/android_video_controller.dart'
+    show AndroidVideoController;
 export 'package:media_kit_video/src/video_view_parameters.dart';
 export 'package:media_kit_video/src/video/video.dart';
 

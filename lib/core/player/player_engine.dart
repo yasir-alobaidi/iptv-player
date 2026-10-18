@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// The one player the app owns (docs/03): opened again for every channel,
@@ -52,6 +53,12 @@ abstract interface class PlayerEngine {
     Key? key,
     BoxFit fit = BoxFit.contain,
   });
+
+  /// True while the picture is on a layer of its own behind the app (a
+  /// TV's film in the video-layer trial, docs/plans/tv-video-layer-and-
+  /// frame-rate.md): the screen must paint nothing where it shows, or it
+  /// covers it.
+  ValueListenable<bool> get pictureBehindApp;
 
   Future<void> dispose();
 }
@@ -264,6 +271,8 @@ final class StreamInfo {
     this.buffered,
     this.droppedFrames,
     this.interlaced,
+    this.transfer,
+    this.primaries,
   });
 
   final int? width;
@@ -281,4 +290,17 @@ final class StreamInfo {
   final Duration? buffered;
   final int? droppedFrames;
   final bool? interlaced;
+
+  /// The picture's transfer and primaries as mpv names them: `pq` and
+  /// `hlg` are HDR (`bt.1886`, `srgb` SDR); `bt.2020` is HDR's colour
+  /// space, `bt.709` HD's.
+  final String? transfer;
+  final String? primaries;
+
+  /// HDR10 (PQ), HLG, or null for SDR or unknown.
+  String? get hdr => switch (transfer) {
+    'pq' => 'HDR10',
+    'hlg' => 'HLG',
+    _ => null,
+  };
 }

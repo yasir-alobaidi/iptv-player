@@ -528,6 +528,12 @@ class _StreamInfoOverlayState extends ConsumerState<StreamInfoOverlay> {
             ? 'software'
             : '${info!.hardwareDecoder} (hardware)',
       ),
+      // HDR's check (the TV's picture layer): what the decoder reports.
+      if (info?.transfer != null || info?.primaries != null)
+        (
+          'Colour',
+          [info!.hdr ?? 'SDR', ?info.transfer, ?info.primaries].join(' · '),
+        ),
       (
         'Audio',
         [

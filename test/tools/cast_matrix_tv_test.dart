@@ -41,6 +41,7 @@ import 'package:fake_provider/profile.dart';
 import 'package:fake_provider/server.dart';
 import 'package:fake_provider/server_state.dart';
 import 'package:fake_receiver/fake_receiver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
@@ -1304,6 +1305,9 @@ final class _ReadingEngine implements PlayerEngine {
     Key? key,
     BoxFit fit = BoxFit.contain,
   }) => _fake.videoView(background: background, key: key, fit: fit);
+
+  @override
+  ValueListenable<bool> get pictureBehindApp => _fake.pictureBehindApp;
 
   @override
   Future<void> dispose() async {

@@ -66,13 +66,7 @@ class PlayerSurface extends ConsumerWidget {
     final state =
         ref.watch(playbackStateProvider).value ?? const PlaybackIdle();
     final size = ref.watch(videoSizeProvider).value;
-    // A stream reconnecting shows its own last picture, never the one
-    // before it (ADR-027).
-    final showPicture = switch (state) {
-      PlaybackPlaying() => true,
-      PlaybackReconnecting(:final hasPicture) => hasPicture,
-      _ => false,
-    };
+    final showPicture = pictureShows(state);
     final file =
         state is PlaybackFailed &&
             state.problem.kind == PlaybackProblemKind.fileUnreadable
@@ -127,8 +121,14 @@ class PlayerSurface extends ConsumerWidget {
         ),
     ];
 
-    return ColoredBox(
-      color: colors.video,
+    return ValueListenableBuilder(
+      valueListenable: engine.pictureBehindApp,
+      builder: (context, behind, child) => ColoredBox(
+        // A picture on its own layer behind the app shows where nothing
+        // is painted.
+        color: behind && showPicture ? Colors.transparent : colors.video,
+        child: child,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -400,3 +400,12 @@ class _PlaybackFailureCardState extends State<PlaybackFailureCard> {
     );
   }
 }
+
+/// Whether the picture shows in [state]: while playing, and while a
+/// stream reconnects with its own last picture, never the one before it
+/// (ADR-027).
+bool pictureShows(PlaybackState state) => switch (state) {
+  PlaybackPlaying() => true,
+  PlaybackReconnecting(:final hasPicture) => hasPicture,
+  _ => false,
+};

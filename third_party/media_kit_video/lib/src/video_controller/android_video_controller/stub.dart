@@ -25,4 +25,7 @@ class AndroidVideoController extends PlatformVideoController {
 
   @override
   Future<void> setSize({int? width, int? height}) => throw UnimplementedError();
+
+  Future<void> setLayer(int? layerWid, {int width = 1, int height = 1}) =>
+      throw UnimplementedError();
 }

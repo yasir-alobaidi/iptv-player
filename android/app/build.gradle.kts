@@ -17,13 +17,11 @@ val commitCount: Int =
             .standardOutput.asText.get().trim().toInt()
     }.getOrDefault(0)
 
-// The TV's beta (ADR-034): `--dart-define=BIJOU_CHANNEL=beta` builds
-// "Bijou Beta", its own app (id `….bijou.beta`, its own data and sign-in)
-// installed beside the stable Bijou. Flutter hands dart defines to Gradle
-// as `dart-defines`: each `KEY=value` base64-encoded, joined by commas.
-// (`java.util.Base64` written out here would resolve `java` as Gradle's
-// extension: hence the import.)
-val betaChannel: Boolean =
+// The build's dart defines. Flutter hands them to Gradle as `dart-defines`:
+// each `KEY=value` base64-encoded, joined by commas. (`java.util.Base64`
+// written out here would resolve `java` as Gradle's extension: hence the
+// import.)
+val dartDefines: Map<String, String> =
     providers.gradleProperty("dart-defines").orNull.orEmpty()
         .split(",")
         .filter { it.isNotBlank() }
@@ -32,7 +30,20 @@ val betaChannel: Boolean =
                 String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
             }.getOrNull()
         }
-        .any { it == "BIJOU_CHANNEL=beta" }
+        .mapNotNull { entry ->
+            entry.split("=", limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] }
+        }
+        .toMap()
+
+// The TV's beta (ADR-034): `--dart-define=BIJOU_CHANNEL=beta` builds
+// "Bijou Beta", its own app (id `….bijou.beta`, its own data and sign-in)
+// installed beside the stable Bijou.
+val betaChannel: Boolean = dartDefines["BIJOU_CHANNEL"] == "beta"
+
+// The picture's own layer (T1, ADR-035 §1): in every build since the
+// Bedroom TV's go; `--dart-define=BIJOU_VIDEO_LAYER=off` builds the texture
+// instead, `=clear` the layer with no window background. Dart reads the same.
+val videoLayer: String = dartDefines["BIJOU_VIDEO_LAYER"].orEmpty()
 
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
@@ -59,6 +70,16 @@ android {
         // About reads "Bijou 0.1.0-beta (build 245)" in the beta.
         versionNameSuffix = if (betaChannel) "-beta" else null
         manifestPlaceholders["appLabel"] = if (betaChannel) "Bijou Beta" else "Bijou"
+        buildConfigField(
+            "boolean",
+            "VIDEO_LAYER",
+            (videoLayer != "off").toString(),
+        )
+        buildConfigField("boolean", "VIDEO_LAYER_CLEAR_WINDOW", (videoLayer == "clear").toString())
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

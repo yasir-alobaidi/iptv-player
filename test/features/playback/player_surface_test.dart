@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -71,5 +72,61 @@ void main() {
 
     rig.coordinator.stop();
     await tester.pump();
+  });
+
+  group('a picture on its own layer behind the app (the TV trial)', () {
+    Color backdrop(WidgetTester tester) => tester
+        .widget<ColoredBox>(
+          find
+              .descendant(
+                of: find.byType(PlayerSurface),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        )
+        .color;
+
+    Color video(WidgetTester tester) =>
+        tester.element(find.byType(PlayerSurface)).tokens.colors.video;
+
+    testWidgets('paints nothing over it once the film plays, and the video '
+        'colour before, so no old frame shows', (tester) async {
+      final rig = Rig();
+      rig.engine.pictureBehindApp.value = true;
+      await pumpSurface(tester, rig);
+      rig.coordinator.playVod(PlayableMovie(movie(1)));
+      await tester.pump();
+      expect(rig.state, isA<PlaybackOpening>());
+      expect(backdrop(tester), video(tester));
+
+      rig.engine.firstFrame();
+      await tester.pump();
+      expect(rig.state, isA<PlaybackPlaying>());
+      expect(backdrop(tester), Colors.transparent);
+
+      // Back on the texture (a channel): the video colour again.
+      rig.engine.pictureBehindApp.value = false;
+      await tester.pump();
+      expect(backdrop(tester), video(tester));
+
+      rig.coordinator.stop();
+      await tester.pump();
+    });
+
+    testWidgets('a picture on the texture keeps the video colour behind it', (
+      tester,
+    ) async {
+      final rig = Rig();
+      await pumpSurface(tester, rig);
+      rig.coordinator.playVod(PlayableMovie(movie(1)));
+      await tester.pump();
+      rig.engine.firstFrame();
+      await tester.pump();
+      expect(rig.state, isA<PlaybackPlaying>());
+      expect(backdrop(tester), video(tester));
+
+      rig.coordinator.stop();
+      await tester.pump();
+    });
   });
 }

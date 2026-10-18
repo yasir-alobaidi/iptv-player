@@ -319,6 +319,43 @@ void main() {
     expect(find.text('1920×1080 · 50 fps · h264'), findsOneWidget);
     expect(find.text('vaapi (hardware)'), findsOneWidget);
     expect(find.textContaining('/live/***/***/'), findsOneWidget);
+    // Nothing said about the colour when the player knows none.
+    expect(find.text('Colour'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets("stream info names an HDR picture's transfer and primaries", (
+    tester,
+  ) async {
+    await open(tester);
+    live.rig.engine.info = const StreamInfo(
+      width: 3840,
+      height: 2160,
+      transfer: 'pq',
+      primaries: 'bt.2020',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyI);
+    await _settle(tester);
+
+    expect(find.text('Colour'), findsOneWidget);
+    expect(find.text('HDR10 · pq · bt.2020'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('stream info calls an ordinary picture SDR', (tester) async {
+    await open(tester);
+    live.rig.engine.info = const StreamInfo(
+      width: 1920,
+      height: 1080,
+      transfer: 'bt.1886',
+      primaries: 'bt.709',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyI);
+    await _settle(tester);
+
+    expect(find.text('SDR · bt.1886 · bt.709'), findsOneWidget);
     await finish(tester);
   });
 
