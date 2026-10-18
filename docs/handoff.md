@@ -15,11 +15,11 @@
 
 **Before you start the next session (user):**
 1. **Push:** `git push origin main dev` (and `trial/video-layer-t1` if you want it kept).
-2. **Bijou Beta is on the Bedroom TV** (build 262, the layer): its films need the laptop's fake panel running; or sign it in to your provider. Try a 23.976/24 fps film: the screen goes dark a second or two at the start and the end (Match frame rate); tell me if sound and picture drift apart after it.
+2. **Bijou Beta is on the Bedroom TV** (build 268, from `dev`): its films need the laptop's fake panel running; or sign it in to your provider. Try a 23.976/24 fps film: the screen goes dark a second or two at the start and the end (Match frame rate); tell me if sound and picture drift apart after it.
 3. Still open from before, by your remote: an episode's last minute; hold Left/Right on a film's seek bar; your channel-then-The Bad Guys 2 case; listen to Live TV.
 4. Wireless debugging after a TV restart (port was 38317).
 
-**The TV right now:** Google TV's home, 59.94 Hz, SDR; Stay awake back off (set to 0; it was 0 before); Bijou (stable, build 244) untouched; Bijou Beta (layer-262) installed with the fake panel as its source.
+**The TV right now:** Google TV's home, 59.94 Hz, SDR; Stay awake back off (set to 0; it was 0 before); Bijou (stable, build 244) untouched; **Bijou Beta 268 from `dev` (70367fa: the layer by default, Match frame rate, the keyboard, the labels)** installed with the fake panel as its source (not run after its install). Left running: nothing (the fake panel stopped, worktrees removed, Gradle stopped, adb disconnected).
 
 ### The nineteenth session, short
 The user pasted the eighteenth session's report, then the keyboard question, the TV, the settings.
