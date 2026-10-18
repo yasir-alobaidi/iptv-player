@@ -95,8 +95,16 @@ void main() {
       expect(playsOnLayer(built: false, direct: true, live: false), isFalse);
     });
 
-    test('no build of this test has it', () {
+    test('no build of this test has it: it is never off Android', () {
       expect(videoLayerBuilt, isFalse);
+    });
+
+    test('a TV build has it unless built with BIJOU_VIDEO_LAYER=off (the '
+        'Bedroom TV decided: ADR-035 §1)', () {
+      expect(videoLayerWanted(''), isTrue);
+      expect(videoLayerWanted('true'), isTrue);
+      expect(videoLayerWanted('clear'), isTrue);
+      expect(videoLayerWanted('off'), isFalse);
     });
   });
 }

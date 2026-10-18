@@ -40,9 +40,9 @@ val dartDefines: Map<String, String> =
 // installed beside the stable Bijou.
 val betaChannel: Boolean = dartDefines["BIJOU_CHANNEL"] == "beta"
 
-// The picture's own layer, the T1 trial (docs/plans/tv-video-layer-and-
-// frame-rate.md): `--dart-define=BIJOU_VIDEO_LAYER=true`, or `=clear` for the
-// same with no window background. Never in an ordinary build.
+// The picture's own layer (T1, ADR-035 §1): in every build since the
+// Bedroom TV's go; `--dart-define=BIJOU_VIDEO_LAYER=off` builds the texture
+// instead, `=clear` the layer with no window background. Dart reads the same.
 val videoLayer: String = dartDefines["BIJOU_VIDEO_LAYER"].orEmpty()
 
 android {
@@ -73,7 +73,7 @@ android {
         buildConfigField(
             "boolean",
             "VIDEO_LAYER",
-            (videoLayer == "true" || videoLayer == "clear").toString(),
+            (videoLayer != "off").toString(),
         )
         buildConfigField("boolean", "VIDEO_LAYER_CLEAR_WINDOW", (videoLayer == "clear").toString())
     }

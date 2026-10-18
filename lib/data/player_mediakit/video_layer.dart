@@ -3,17 +3,24 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// The trial of the picture's own layer on Google TV (T1,
-/// docs/plans/tv-video-layer-and-frame-rate.md): built only with
-/// `--dart-define=BIJOU_VIDEO_LAYER=true` (or `clear`, which also leaves
-/// the window without a background), which also turns on MainActivity's
+/// The picture's own layer on Google TV (T1, ADR-035 §1,
+/// docs/plans/tv-video-layer-and-frame-rate.md): in every TV build since
+/// the Bedroom TV's go (the composer draws it itself, a quarter of a core
+/// less than the texture, 4K and HDR as they are), with MainActivity's
 /// transparent Flutter view and its `VideoLayer`.
+/// `--dart-define=BIJOU_VIDEO_LAYER=off` builds the texture instead (to
+/// compare, or to fall back), `clear` also leaves the window without a
+/// background (Gradle reads the same define).
 const _videoLayerBuild = String.fromEnvironment('BIJOU_VIDEO_LAYER');
 
-/// Whether this build has the layer at all.
+/// Whether a build made with BIJOU_VIDEO_LAYER=[define] has the layer.
+/// Exposed for tests.
+bool videoLayerWanted(String define) => define != 'off';
+
+/// Whether this build has the layer at all: a TV build, unless it was
+/// built without it.
 bool get videoLayerBuilt =>
-    Platform.isAndroid &&
-    (_videoLayerBuild == 'true' || _videoLayerBuild == 'clear');
+    Platform.isAndroid && videoLayerWanted(_videoLayerBuild);
 
 /// Whether a play goes on the layer: in T1 a file (a film or an episode,
 /// which only ever plays full screen) on Android's direct output, in a

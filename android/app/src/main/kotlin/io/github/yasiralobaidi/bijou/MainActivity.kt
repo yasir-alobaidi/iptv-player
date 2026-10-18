@@ -9,8 +9,8 @@ import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
-    // The picture's own layer (VideoLayer, the T1 trial): only in a build made
-    // with --dart-define=BIJOU_VIDEO_LAYER=true or =clear (BuildConfig, from
+    // The picture's own layer (VideoLayer, T1, ADR-035 §1): in every build but
+    // one made with --dart-define=BIJOU_VIDEO_LAYER=off (BuildConfig, from
     // android/app/build.gradle.kts). Without it every override below does what
     // FlutterActivity does.
     private var videoLayer: VideoLayer? = null
