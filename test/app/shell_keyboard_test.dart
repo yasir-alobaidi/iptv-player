@@ -144,6 +144,38 @@ void main() {
     expect(_focusedLabel(tester), AppDestination.home.label);
   });
 
+  // The Bedroom TV (2026-10-18): a film played to its end from Home goes
+  // to its page under Movies, which builds the Movies grid beneath that
+  // page without ever laying it out; ↓ in the rail then threw (Flutter's
+  // directional search measured the grid's controls) and stayed put.
+  testWidgets('the rail moves on a page opened straight into another '
+      'destination, over a screen never shown', (tester) async {
+    final app = await pumpApp(tester);
+    app.router.go('/movies/src-1/501');
+    await settleApp(tester);
+    final movies = tester
+        .widgetList<FocusableSurface>(find.byType(FocusableSurface))
+        .firstWhere((s) => s.semanticLabel == AppDestination.movies.label);
+    tester
+        .widget<FocusableActionDetector>(
+          find
+              .descendant(
+                of: find.byWidget(movies),
+                matching: find.byType(FocusableActionDetector),
+              )
+              .first,
+        )
+        .focusNode!
+        .requestFocus();
+    await settleApp(tester);
+    expect(_focusedLabel(tester), AppDestination.movies.label);
+
+    await _arrow(tester, LogicalKeyboardKey.arrowDown);
+
+    expect(tester.takeException(), isNull);
+    expect(_focusedLabel(tester), AppDestination.series.label);
+  });
+
   testWidgets('Right leaves the rail for the screen, Left comes back', (
     tester,
   ) async {

@@ -97,7 +97,8 @@ GoRouter buildRouter({String initialLocation = '/'}) {
               routes: [
                 GoRoute(
                   path: destination.path,
-                  builder: (context, state) => _screenFor(destination),
+                  builder: (context, state) =>
+                      _OnTopOnly(_screenFor(destination)),
                   redirect: destination == AppDestination.guide
                       ? _guideRedirect
                       : null,
@@ -247,6 +248,40 @@ Widget _screenFor(AppDestination destination) => switch (destination) {
   AppDestination.library => const LibraryScreen(),
   AppDestination.settings => const SettingsScreen(),
 };
+
+/// A destination's screen stays out of the focus's search until it has
+/// been on top of its branch once. Flutter skips a covered page's own
+/// scope, not what is in it, and a screen built beneath a title's page
+/// opened straight from elsewhere (Home, Search, a film played to its end)
+/// has never been laid out: ↓ in the rail then threw and stayed put (the
+/// Bedroom TV). Its controls stay focusable; once shown, it is searched
+/// as before, covered or not (a title's page opened from it keeps its
+/// first focus as it was).
+class _OnTopOnly extends StatefulWidget {
+  const new(this.child);
+
+  final Widget child;
+
+  @override
+  State<_OnTopOnly> createState() => _OnTopOnlyState();
+}
+
+class _OnTopOnlyState extends State<_OnTopOnly> {
+  /// On top once, so laid out: a route on top is on stage.
+  bool _shown = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (ModalRoute.isCurrentOf(context) ?? true) _shown = true;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      descendantsAreTraversable: _shown,
+      child: widget.child,
+    );
+  }
+}
 
 /// The overlay keeps the shell visible behind its scrim, so it fades in
 /// rather than replacing the screen.

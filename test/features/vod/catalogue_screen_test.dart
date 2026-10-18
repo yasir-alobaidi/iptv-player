@@ -11,6 +11,7 @@ import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/data/providers/xtream/xtream_models.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/search/data/search_providers.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
@@ -366,6 +367,40 @@ void main() {
     );
     expect(find.byType(MovieDetailsScreen), findsOneWidget);
     expect(focusedLabel(), 'Play');
+  });
+
+  // The Bedroom TV (Beta 274): OK on a series' poster opened its page
+  // with ‹ Series focused, not its Play.
+  testWidgets("on a TV, OK on a series' poster opens its page on Play", (
+    tester,
+  ) async {
+    final (vod, _) = await pump(
+      tester,
+      at: AppDestination.series,
+      size: const Size(960, 540),
+      overrides: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    vod.details.seriesAnswer = const Ok(
+      XtreamSeriesInfo(
+        episodes: [
+          XtreamEpisode(
+            id: '7101',
+            season: 1,
+            episode: 1,
+            title: 'Low Water',
+            durationSeconds: 3120,
+          ),
+        ],
+      ),
+    );
+    tester.widget<PosterCard>(poster('Glass Tide')).focusNode!.requestFocus();
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settle(tester);
+
+    expect(find.byType(SeriesDetailsScreen), findsOneWidget);
+    expect(focusedLabel(), 'Play S1 · E1');
   });
 
   for (final at in [AppDestination.movies, AppDestination.series]) {
