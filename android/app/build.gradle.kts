@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -15,6 +17,23 @@ val commitCount: Int =
             .standardOutput.asText.get().trim().toInt()
     }.getOrDefault(0)
 
+// The TV's beta (ADR-034): `--dart-define=BIJOU_CHANNEL=beta` builds
+// "Bijou Beta", its own app (id `….bijou.beta`, its own data and sign-in)
+// installed beside the stable Bijou. Flutter hands dart defines to Gradle
+// as `dart-defines`: each `KEY=value` base64-encoded, joined by commas.
+// (`java.util.Base64` written out here would resolve `java` as Gradle's
+// extension: hence the import.)
+val betaChannel: Boolean =
+    providers.gradleProperty("dart-defines").orNull.orEmpty()
+        .split(",")
+        .filter { it.isNotBlank() }
+        .mapNotNull { encoded ->
+            runCatching {
+                String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            }.getOrNull()
+        }
+        .any { it == "BIJOU_CHANNEL=beta" }
+
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
     // `io.github.yasiralobaidi.iptvplayer` keeps its first name only
@@ -31,11 +50,15 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.yasiralobaidi.bijou"
+        applicationId =
+            "io.github.yasiralobaidi.bijou" + if (betaChannel) ".beta" else ""
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = maxOf(flutter.versionCode, commitCount)
         versionName = flutter.versionName
+        // About reads "Bijou 0.1.0-beta (build 245)" in the beta.
+        versionNameSuffix = if (betaChannel) "-beta" else null
+        manifestPlaceholders["appLabel"] = if (betaChannel) "Bijou Beta" else "Bijou"
     }
 
     buildTypes {

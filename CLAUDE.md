@@ -39,6 +39,7 @@ Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO /
 - `dart run build_runner build --delete-conflicting-outputs` (after changing freezed/drift/riverpod/json code)
 - `flutter analyze` · `dart format --set-exit-if-changed lib test integration_test tools` (never format `third_party/`)
 - `tools/vendor_media_kit_video.sh` (rebuilds the patched media_kit_video after its patch changes)
+- `tools/tv_apk.sh stable|beta` (the TV's "Bijou" from `main` or "Bijou Beta" from `dev`, to `build/tv/`; ADR-034)
 - `flutter test` (unit/widget/golden) · `flutter test integration_test/<file>_test.dart -d linux` (integration, one file per run: a multi-file run on Linux desktop never starts the second app; `xvfb-run -a` for a headless run)
 - `flutter run -d linux` · `flutter run -d windows`
 - `dart run tools/fake_provider/bin/server.dart --port 8899` (fake IPTV server, see docs/06-quality.md)
@@ -65,6 +66,7 @@ Exact packages and versions are in docs/decisions.md (ADR-002); the Phase 0 GO /
 - Repositories return sealed `Result<T>` types; no exceptions across layers.
 - Models are immutable (freezed). DB rows map to domain models inside repositories.
 - Files `snake_case.dart`, types `PascalCase`, members `camelCase`.
+- **Branches (ADR-034):** work on `dev` (or a branch from it); `main` is stable and gets only tested work, merged from `dev` and tagged `stable-<build>`. On the TV, test with "Bijou Beta" (`tools/tv_apk.sh beta`) and update the stable "Bijou" only after the merge.
 - Small steps. After each step: analyze + format + tests, then commit with a clear message.
 - If a spec is wrong or ambiguous, stop and ask; record the answer in docs/decisions.md.
 

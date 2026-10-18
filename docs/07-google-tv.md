@@ -16,7 +16,7 @@ Data layer (Xtream/M3U/XMLTV, sync, drift DB) · domain interfaces · Riverpod p
 | Performance | Low-end target: Chromecast with Google TV (2 GB RAM). Smaller image caches, shorter EPG retention (−2 h to +3 days), gradients instead of blurs, cheap list items |
 | Lifecycle | Stop playback when the app goes to background (Home); restore state on return; handle audio focus |
 | Manifest | LEANBACK_LAUNCHER intent category, an adaptive icon (Google TV's "Your apps" row shows it in a circle; the version code is the commit count, so an update's icon shows, ADR-028), 320×180 banner, `android.software.leanback` and `android.hardware.touchscreen` declared `required="false"` |
-| Distribution | Sideloaded APK via adb for personal use |
+| Distribution | Sideloaded APK via adb for personal use: **"Bijou"** (stable, from `main`) and **"Bijou Beta"** (`….bijou.beta`, from `dev`) side by side, each with its own data; `tools/tv_apk.sh stable\|beta` (ADR-034) |
 
 ## TV-0 — player engine spike (before any TV screens)
 **Status (2026-10-15, ADR-025): done on the Bedroom TV** (a Chromecast with Google TV 4K, 2 GB, a 32-bit system). **media_kit stays**, drawing straight into the surface (`vo=mediacodec_embed`, `hwdec=mediacodec`): 720p50 went from 904 dropped frames in 28 s (mpv's `gpu` output copying every frame back) to none, at a third less CPU. Media3 isn't built: on this TV it would win only on AC-3/E-AC-3 passthrough (media_kit's libmpv opens no audio output for it on Android), HDR and native 4K (a texture goes through Flutter's 1080p layer); frame-rate matching can't help, the TV takes no 50 Hz mode. Revisit with Media3 for those. (Before: ADR-020, the toolchain, the project and the emulator, where mpv draws no picture.)
