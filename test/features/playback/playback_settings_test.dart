@@ -12,6 +12,7 @@ void main() {
     subtitleLanguages: ['en'],
     deinterlace: false,
     hardwareDecoding: false,
+    matchFrameRate: false,
   );
 
   test('round-trips through JSON', () {
@@ -68,6 +69,27 @@ void main() {
           .hardwareDecoding,
       isTrue,
     );
+  });
+
+  test("a TV's Match frame rate is On unless Off was stored", () {
+    expect(const PlaybackSettings().matchFrameRate, isTrue);
+    expect(const PlaybackSettings().toJson()['matchFps'], 'on');
+    expect(
+      const PlaybackSettings(matchFrameRate: false).toJson()['matchFps'],
+      'off',
+    );
+    expect(
+      PlaybackSettings.fromJson(const {'matchFps': 'off'}).matchFrameRate,
+      isFalse,
+    );
+    // Settings stored before it, or damaged: On.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'matchFps': false},
+      const {'matchFps': 'sometimes'},
+    ]) {
+      expect(PlaybackSettings.fromJson(stored).matchFrameRate, isTrue);
+    }
   });
 
   test('the store keeps them in the settings table', () async {

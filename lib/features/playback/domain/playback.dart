@@ -88,6 +88,7 @@ final class PlaybackSettings {
     this.subtitleLanguages = const [],
     this.deinterlace,
     this.hardwareDecoding = true,
+    this.matchFrameRate = true,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -112,6 +113,7 @@ final class PlaybackSettings {
         _ => null,
       },
       hardwareDecoding: json['hwdec'] != 'off',
+      matchFrameRate: json['matchFps'] != 'off',
     );
   }
 
@@ -126,18 +128,25 @@ final class PlaybackSettings {
   /// decodes on the processor (Phase 9 decision 4).
   final bool hardwareDecoding;
 
+  /// A TV's Match frame rate: a film at 23.976 or 24 fps switches the
+  /// display to its rate, when the TV's own setting allows. On unless
+  /// switched off; the desktop never shows or uses it.
+  final bool matchFrameRate;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
     List<String>? subtitleLanguages,
     bool? Function()? deinterlace,
     bool? hardwareDecoding,
+    bool? matchFrameRate,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
     subtitleLanguages: subtitleLanguages ?? this.subtitleLanguages,
     deinterlace: deinterlace == null ? this.deinterlace : deinterlace(),
     hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
+    matchFrameRate: matchFrameRate ?? this.matchFrameRate,
   );
 
   /// As stored in the `settings` table.
@@ -151,6 +160,7 @@ final class PlaybackSettings {
       false => 'off',
     },
     'hwdec': hardwareDecoding ? 'auto' : 'off',
+    'matchFps': matchFrameRate ? 'on' : 'off',
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -178,7 +188,8 @@ final class PlaybackSettings {
       listEquals(other.audioLanguages, audioLanguages) &&
       listEquals(other.subtitleLanguages, subtitleLanguages) &&
       other.deinterlace == deinterlace &&
-      other.hardwareDecoding == hardwareDecoding;
+      other.hardwareDecoding == hardwareDecoding &&
+      other.matchFrameRate == matchFrameRate;
 
   @override
   int get hashCode => Object.hash(
@@ -187,5 +198,6 @@ final class PlaybackSettings {
     Object.hashAll(subtitleLanguages),
     deinterlace,
     hardwareDecoding,
+    matchFrameRate,
   );
 }

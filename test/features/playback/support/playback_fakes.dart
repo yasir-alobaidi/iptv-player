@@ -5,6 +5,7 @@ import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/playback/domain/frame_rate_match.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
@@ -269,11 +270,18 @@ final class FakeWatchProgress implements WatchProgress {
 final class Rig {
   /// [watchProgress] saves where files were left in place of [progress]
   /// (a real database's, for screens that read it back).
+  ///
+  /// [frameRate] is a TV's Match frame rate (none: the desktop's);
+  /// [settings] what Settings → Playback says.
   new({
     Duration stopDelay = Duration.zero,
     WatchProgress? watchProgress,
     DecoderNotes? decoders,
+    FrameRateMatcher Function(AppLog log)? frameRate,
+    PlaybackSettings Function()? settings,
+    WatchdogTimings timings = const WatchdogTimings(),
   }) : engine = FakePlayerEngine(stopDelay: stopDelay) {
+    final log = AppLog(output: logged, secrets: SecretRegistry());
     coordinator = PlaybackCoordinator(
       engine: engine,
       resolver: resolver,
@@ -282,7 +290,10 @@ final class Rig {
       channels: channels,
       progress: watchProgress ?? progress,
       decoders: decoders,
-      log: AppLog(output: logged, secrets: SecretRegistry()),
+      log: log,
+      frameRate: frameRate?.call(log),
+      settings: settings,
+      timings: timings,
     );
     coordinator.states.listen(states.add);
     coordinator.timelines.listen(timelines.add);

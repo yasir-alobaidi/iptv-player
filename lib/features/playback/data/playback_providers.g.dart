@@ -263,12 +263,14 @@ final class PlaybackHistoryProvider
 
 String _$playbackHistoryHash() => r'16119c2fb522f5fefb737e4a1398d2c954b41880';
 
-/// The app's one playback owner (docs/03).
+/// The app's one playback owner (docs/03), with a TV's Match frame rate
+/// (ADR-035) where there is a display to ask: none on the desktop.
 
 @ProviderFor(playbackCoordinator)
 final playbackCoordinatorProvider = PlaybackCoordinatorProvider._();
 
-/// The app's one playback owner (docs/03).
+/// The app's one playback owner (docs/03), with a TV's Match frame rate
+/// (ADR-035) where there is a display to ask: none on the desktop.
 
 final class PlaybackCoordinatorProvider
     extends
@@ -278,7 +280,8 @@ final class PlaybackCoordinatorProvider
           PlaybackCoordinator
         >
     with $Provider<PlaybackCoordinator> {
-  /// The app's one playback owner (docs/03).
+  /// The app's one playback owner (docs/03), with a TV's Match frame rate
+  /// (ADR-035) where there is a display to ask: none on the desktop.
   PlaybackCoordinatorProvider._()
     : super(
         from: null,
@@ -314,7 +317,7 @@ final class PlaybackCoordinatorProvider
 }
 
 String _$playbackCoordinatorHash() =>
-    r'2fbef403fc3ae294623ff05c4e6fcc548684852a';
+    r'7708b4968315c19bc3cc4e887906877f6826e1fa';
 
 /// What plays, as it changes.
 
