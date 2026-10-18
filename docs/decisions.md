@@ -2055,3 +2055,14 @@ The three items of docs/plans/tv-video-layer-and-frame-rate.md's answer to "is t
 - **To check:** whether Picture size → Fill and Stretch do anything on the desktop today (likely not, for the same reason the TV's didn't before 9e950dc); the CPU and dropped frames with High (`IPTV_PICTURE_QUALITY=high` on `playback_cpu_test`, the real display) against docs/06's 15 %.
 
 **4. The picture tests (on `dev`, b1d649a).** `tools/media_samples/generate.sh --picture` makes four 16-minute films (1080p 23.976 and 24 fps; 4K HDR10 and 1080p HLG at 23.976, HEVC Main10, BT.2020), a white bar crossing each at a steady speed so 3:2 judder shows; the fake provider's `--picture-tests` serves them as "Movies | Picture tests" after every generated movie (ids from 190000), leaving the catalogue unchanged without the flag. `tools/tv/picture_probe.sh` reads what the TV does with the picture (read-only; its dumpsys parsing unchecked until the TV).
+
+## ADR-036 · 2026-10-18 · Accepted, built (the user: "about the keyboard we made, I need the specs if it same as the system keyboard, like when I go to the last key to the left and then I click one more left it will take me to the right side as a circle and so on") — The remote keyboard's arrows go round
+**Decided (the best experience, decided here rather than asked):** `RemoteKeyboard`'s arrows move to the next key that way, as before, and **at the keyboard's edge go round**, as Google TV's own keyboard does:
+- ← on a row's first key goes to that row's last key, → on its last key to its first (every row: digits, letters, the address row, Arabic's rows, the language/ABC/#+=/Space row, Delete/Clear/Done).
+- ↑ from the top row goes to the bottom row, ↓ from the bottom row to the top row, on the key nearest across (Delete, three keys wide, is over 2; Done over 8–9). With a password's Show key, ↑ reaches it first.
+- **A held arrow stops at the edge** (Android repeats a held key); the next press goes round. A hold to "the end of the row" never spins past it.
+- **Search keeps → at the right edge for its results** (`RemoteKeyboard.exits`): it is the only way to them, as on YouTube's TV keyboard. ←, ↑ and ↓ go round there too. The dialog's keyboard (sources, onboarding, a grid's filter) goes round on all four edges.
+- Going round clears Flutter's memory of the last vertical move (it retraced ↑ when ↓ came next, jumping back to before the edge).
+- **Found while testing it:** OK on عربي/English by remote left the focus on another key (Arabic has a row more, and the unkeyed rows shifted: the focus landed on أ, so a second OK typed it). The rows are keyed now; the language key keeps the focus.
+- Tests: `remote_keyboard_test.dart` (the round on every edge, the hold, an edge left to the screen, the language key; each seen failing first); Search's 28 (6 fail without `exits`).
+
