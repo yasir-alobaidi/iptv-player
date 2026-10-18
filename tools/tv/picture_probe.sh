@@ -14,7 +14,9 @@
 #   package  io.github.yasiralobaidi.bijou.beta (default) or …bijou
 #   seconds  the CPU sample (default 5)
 # Read-only: it sends no keys and changes nothing on the TV.
-set -euo pipefail
+# No pipefail: each section's `head` closes its pipe early, and the reader's
+# SIGPIPE then ended the script after the dataspaces (seen on the TV).
+set -eu
 serial=${1:?usage: $0 <adb serial> [package] [seconds]}
 package=${2:-io.github.yasiralobaidi.bijou.beta}
 seconds=${3:-5}
@@ -73,7 +75,7 @@ else
 fi
 
 echo "== CPU over ${seconds} s (% of one core; the TV has four)"
-sh top -b -d "$seconds" -n 2 -m 12 -o PID,%CPU,RES,NAME | awk 'f; /PID/ && ++n == 2 { f = 1 }' | head -12 | sed 's/^/  /'
+sh top -b -d "$seconds" -n 2 -m 12 -s 2 -o PID,%CPU,RES,NAME | awk 'f; /PID/ && ++n == 2 { f = 1 }' | head -12 | sed 's/^/  /'
 if [[ -n $pid ]]; then
   echo "== $package's threads"
   sh top -H -b -d "$seconds" -n 2 -p "$pid" -o TID,%CPU,NAME | awk 'f; /TID/ && ++n == 2 { f = 1 }' | sort -k2 -rn | head -8 | sed 's/^/  /'
