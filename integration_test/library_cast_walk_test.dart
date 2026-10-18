@@ -11,10 +11,10 @@
 // WebVTT and showing → S: off → S: on again → → three times: the relay
 // starts again 30 s on → the MP4 made beside the relay is whole → → three
 // times: the TV loads the MP4 and the relay stops (a short film's MP4 is
-// whole before the first →: the TV loads it there) → →: the TV's own seek,
-// no new LOAD → Stop casting: the film's place kept, the TV gone home, no
-// FFmpeg and none of the cast's files left, the film's page offering
-// Resume.
+// whole before the first →: the TV loads it there) → → (more on that
+// short way, past a minute): the TV's own seek, no new LOAD → Stop
+// casting: the film's place kept, the TV gone home, no FFmpeg and none
+// of the cast's files left, the film's page offering Resume.
 //
 // The test reads state to check it; everything it does goes through the
 // keyboard. The library's row is written here (the scanner's run end to
@@ -46,6 +46,7 @@ import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
+import 'package:iptv_player/features/vod/domain/watch_progress.dart';
 import 'package:iptv_player/features/vod/presentation/title_grid.dart';
 import 'package:path/path.dart' as p;
 
@@ -320,9 +321,19 @@ void main() {
       );
       expect(tv.textTracks.single.firstCue, Duration.zero);
 
-      // ── →: the TV's own seek. No new LOAD, no FFmpeg.
+      // ── →: the TV's own seek. No new LOAD, no FFmpeg. A short film
+      // whose MP4 was whole at the first → is only half a minute in: as
+      // many presses (one seek) as take it well past a minute, so its page
+      // offers Resume at the end (CI's run 39109693995 stopped short of a
+      // minute there, and the page rightly offered Play).
       final loads = tv.requests('LOAD').length;
-      await forward(1);
+      final from = cast.timeline.position;
+      var presses = 1;
+      while (from + CastingView.seekStep * presses <
+          resumeAfter + const Duration(seconds: 15)) {
+        presses++;
+      }
+      await forward(presses);
       await k.waitUntil(
         () => tv.requests('SEEK').length == 1,
         "the TV's own seek",

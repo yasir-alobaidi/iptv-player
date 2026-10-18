@@ -1,39 +1,41 @@
-# Handoff — 2026-10-17, the seventeenth session: the guide switch on `main` (off by default), Next episode in the credits done (counting, as you asked), Fill/Stretch and Search's Clear fixed on the Bedroom TV, T0 of the picture's own layer tried; start with "Start here"
+# Handoff — 2026-10-18, the eighteenth session: the picture work started on every front (T1 built on a trial branch, Match frame rate and the desktop's High quality as WIP branches, the picture-test films on `dev`); start with "Start here"
 
 ## Start here (the next session)
-**The user's words this session:** "continue and the bedroom tv is free to use"; at the pop-up, the TV for "1–2 hours" and "No, work without me"; then, using the TV themselves: "One bug I found / The clear button on the search i couldn't reach it with the remote / Like it was not there the focus never goes there"; then, watching the Next episode card: "But it should show the count down if u won't click anything then u will go to the next"; "Handoff to continue on a new chat", then "Continue the work don't stop now" and "Make one hour max" (taken as up to one more hour, the TV included, from 21:17; done by about 21:40).
+**The user's words this session:** they had set the Chromecast and the Roku TV as the seventeenth session asked ("all the settings on the tv and the chromecast are done too"), then: "if there are points to work on to start enhancing the picture and get the player to show a better quality then lets work on it, I am not home now so no tv or bedroom tv to work on, if u got anything to do do it now without them and after few hours we can start testing and continue the work when I am home"; then, mid-session, "stop at a clear point with proper hand off to continue on a new chat". So **the devices' settings are done** (Match content frame rate Always, dynamic range matched, Movie mode, smoothing off): don't ask again. The TV wasn't used this session.
 
-**On `main` (committed, not pushed; after cc510be, the user's last push):**
-- 9e950dc **Player: Fill and Stretch on Android's direct output** are the picture widget's fit (`directOutputFit`); found on the fake panel's 4:3 channel, checked on build 236.
-- ee7b26e, ff50b67 **The guide switch** (ADR-031's second addendum): reviewed whole, the 42 goldens looked at, the touched tests (2,004) and the eight Guide walks run; tagged **`checkpoint-before-video-layer`** (ff50b67) after the full suite passed (5,151, 21 skipped, `TZ=UTC`).
-- 3ac6ac0 **Search on a TV: Clear by remote** (the user's bug), checked on build 239 (the ring on Clear; not pressed, the user's searches kept).
-- af641e7, 7343278 **Next episode in the credits** (ADR-033 and its addendum): "Next episode · N" from a minute left, off the episode's own time; Hide; the desktop never gives the card the focus, a TV does unless the remote is on the OSD; the OSD held while its menus are open (found on the TV); the player takes back a focus the series page under it grabbed. Checked on build 244: the count ran, the next episode started by itself.
-- Docs: T0's results and the TV's display modes (docs/plans/tv-video-layer-and-frame-rate.md), ADR-031's second, ADR-032's and ADR-033's addenda, docs/02, 03, 05, 07, progress, this handoff.
-- **Branches:** `trial/video-layer-t0` (4c104ba, the T0 trial; never merge it; build with `flutter build apk --profile --target-platform android-arm -t lib/main_layer_trial.dart --dart-define=BIJOU_VIDEO_LAYER=true`), `tv-focus-sweep` (merged long ago, can go).
+**Answered before, don't re-ask:** a Next episode button at any minute is already in an episode's OSD (⏭, after the 10 s buttons; films have none); Hide on the credits card stops everything automatic for that episode, and the end card waits (ADR-033); the picture isn't the best yet on the TV (1080p app layer, HDR as SDR): the three items in ADR-035 are the way there.
 
-**0. Branches from now on (ADR-034, the user's request at the end of this session):** work on **`dev`** (checked out at the end); `main` is stable and gets only tested work, merged from `dev` and tagged `stable-<build>` (`stable-244` = 7343278, the stable build on the TV). On the TV, test with **"Bijou Beta"** (`tools/tv_apk.sh beta`; its own app and data, so it needs a source once: the fake panel, or the user signs in to the provider) and update the stable "Bijou" (`tools/tv_apk.sh stable`, from `main`) only after the merge. **First TV job:** install Bijou Beta beside Bijou (both on Google TV's home, each opening its own data).
+**Where everything is (nothing pushed since cc510be; the user pushes):**
+- **`dev`** (checked out): b1d649a **the picture tests** (`generate.sh --picture`: four 16-minute films, 1080p 23.976 and 24 fps, 4K HDR10 and 1080p HLG at 23.976, a white bar crossing at a steady speed; the fake panel's `--picture-tests` adds them as "Movies | Picture tests", ids from 190000, nothing else moved; 149 fake-panel tests pass). Then this session's docs commit: ADR-035, the plan's T1 block, docs/06's picture tests, `tools/tv/picture_probe.sh` (read-only; its dumpsys parsing unchecked), and **`tools/tv_apk.sh` stopping Gradle for real** (`./gradlew --stop` needs `JAVA_HOME`, which only the build sets: the 3 GB daemon stayed after every build before; now Flutter's `jdk-dir`, or the daemon is ended). The films are made in `tools/media_samples/out` (gitignored, about 2.4 GB).
+- **`trial/video-layer-t1`** (from `dev` at b1d649a): 1c3815a **T1, the picture's own layer**, then 656fbc7 (the same `tv_apk.sh` fix). Built and compiles: **`build/tv/bijou-beta-layer-250.apk`** in the main checkout (Bijou Beta, `--dart-define=BIJOU_VIDEO_LAYER=true`). See ADR-035 §1 and the plan's "T1 — built, not yet run". Its tests (the geometry, the choice, the surface's backdrop, the overlay's Colour row; each seen failing first) and the playback/engine/player tests (247) pass; analyze and format clean.
+- **`wip/match-frame-rate`** (a896606) and **`wip/desktop-picture-quality`** (0075523): an agent's work each, stopped at the user's word and saved as one WIP commit. **Both were made from cc510be (origin's main), not `dev`**: the Agent tool's worktrees start from the remote's default branch. Rebase each onto `dev` first (`git rebase --onto dev cc510be <branch>`, conflicts likely in `playback_coordinator.dart`, `playback.dart` and `player_engine.dart`, since `dev` has 17 commits more: Next episode's count, the guide switch, the branches).
+  - Match frame rate: the logic (`frame_rate_match.dart`), `display_modes.dart`, the setting (`matchFps`, on by default), the coordinator's switch at the first frame; 32 tests pass (the agent was checking a guard by removing it when stopped: the main session put it back, `if (_matching == _generation) return;` in `PlayerPaused`, and re-ran them). **To write:** `DisplayModes.kt` (the `bijou/display` channel: modes, `request(id)` by `preferredDisplayModeId`, `getMatchContentFrameRateUserPreference`, a DisplayListener → `modeChanged`), `lib/data/platform/android_display_modes.dart` and its TV-only override in `bootstrap()`, the TV-only Settings row, stream info's display line (and its fps shown to 3 places when not whole: 23.976 reads "24 fps" now), the log lines (ADR-035 §2).
+  - The desktop's High quality: `desktop_picture.dart` (the on-screen size, mpv's filters), the engine, `PlayRequest`/`PlaybackSettings` (`quality`), the Settings row, `playback_cpu_test`'s `IPTV_PICTURE_QUALITY`; **nothing run yet** (the agent had just begun its tests). Finish its tests, check whether Fill/Stretch work on the desktop today (likely not), then measure on the real display with the profile build (ADR-035 §3).
+- `trial/video-layer-t0` (never merge), `tv-focus-sweep` (merged long ago): as before.
 
-**The user's questions at the end, answered (so nobody re-asks):**
-- *A Next episode button at any time?* Yes: an episode with a next one has **Next episode** (⏭) in the OSD's row, after the 10 s buttons, at any minute, on the desktop and the TV (Phase 5; seen in the TV's screenshots); a film has none.
-- *Hide, then the end?* Hide stops everything automatic: no card for the rest of the episode, nothing plays by itself, and at the end the video stops on the end card (Play next episode / Back to series), which waits for the user.
-- *Picture quality: done? the best possible?* Not yet the best on the TV. Today the TV decodes in hardware straight to the picture (no copy) and Fill/Stretch work, but Google TV draws apps at 1080p even at 4K output, so a 4K film shows at 1080p, and HDR shows as SDR (washed out), because the picture is a texture inside the app's layer. **More to do, in order:** (1) the picture on its own layer (T1 below): real 4K, HDR10/HLG, the TV chip's own scaler, less CPU; (2) Match frame rate for 23.976/24 fps films (smooth motion); (3) on the desktop, an optional "High quality" picture in Settings → Playback (mpv's sharper scalers and debanding, which removes the banding of low-bitrate streams; costs GPU, to measure against docs/06's budgets). None of these is built.
+**1. First, without the TV:** rebase the two WIP branches onto `dev` and finish them (Match frame rate's Android side; High quality's tests and measurement), each as small commits on `dev`; then merge `dev` into `trial/video-layer-t1` and build the TV's betas from it (`tools/tv_apk.sh beta layer`, `beta layer-clear`, and `beta` alone as the texture control) so one TV window tests everything. Agents are fine for the two WIPs (the user's standing wish), but **create their worktrees from `dev` yourself** or tell them to `git checkout` a branch from `dev` first, and remember the stop may leave a temporary edit (read the diff).
 
-**1. T1 of the picture's own layer** (docs/plans/tv-video-layer-and-frame-rate.md, "T0 — done" then steps 2 on): films only, behind the debug define, on a branch. The one question: with MediaCodec's real output in the SurfaceView, is the video layer DEVICE (the Amlogic video plane) or CLIENT, and what is SurfaceFlinger's share against today's 19 % (texture, 4K output)? Try the window's background transparent too (T0 had the activity window as a third full-screen CLIENT layer). If the video layer is CLIENT, stop there: on this device the layer would cost more than it saves.
-
-**2. The series page's background autofocus** (`lib/features/vod/presentation/title_details_screen.dart` ~915, the Play button; the favourite button shares its node when there's nothing to play): it fires while the player covers the page. The player takes the focus back now (af641e7), but the page shouldn't take it when it isn't the route on top.
-
-**The devices' settings for the quality work** were given to the user (docs/plans/tv-video-layer-and-frame-rate.md, "The devices' settings"): ask at the next TV window whether they're set (Match content frame rate Always, dynamic range matched, the Roku's Movie mode and smoothing off, Stay awake for the window).
-
-**3. With the TV (ask first with a pop-up; the user names a window):** stable build 244 is installed (`stable-244`). First Bijou Beta (0. above); then, on the beta: a film's Picture size menu (the OSD stays while it's open); Match frame rate (only 23.976/24 fps films can be matched: the TV has no 25/50 Hz mode); then T1.
+**2. With the TV (ask first with a pop-up; the user names a window):** stable build 244 is on it as "Bijou". In order:
+1. **Install Bijou Beta** (the layer build) beside Bijou; it needs a source once: the fake panel on the LAN with the films, `dart run tools/fake_provider/bin/server.dart --port 8899 --host 0.0.0.0 --picture-tests` (source "192.168.1.254:8899", test/test, typed on Bijou's keyboard by adb as before), or the user signs in to the provider.
+2. **T1's go / no-go** (the plan's T1 block): a picture-test film, 60 s in, OSD hidden, `tools/tv/picture_probe.sh <tv>` on each build (layer, layer-clear, texture); then Picture size, Home and back, film ↔ channel; then the 4K HDR10 and HLG films (the Roku's HDR badge: the user's eyes).
+3. **Match frame rate** once built: the 23.976 and 24 fps films (the display's mode in `dumpsys display`, the black's length, A/V sync after, back at Back and Home), a 25 fps film left alone.
+4. Then the user's own list below, and the seventeenth session's TV items (the series page's background autofocus, ~915 of `title_details_screen.dart`).
 
 **Before you start the next session (user):**
-1. **Push `main`, `dev` and the tags:** `git push origin main dev`, then `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer stable-244`. Not `trial/video-layer-t0`.
-2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317).
-3. **On the Bedroom TV, by your remote (build 244):** an episode's last minute (the count, Hide, and doing nothing); hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
+1. **Push `main`, `dev` and the tags:** `git push origin main dev`, then `git push origin checkpoint-2026-10-17 checkpoint-before-video-layer stable-244`. Not `trial/video-layer-t0`; `trial/video-layer-t1` and the two `wip/` branches only if you want them backed up on GitHub.
+2. **Wireless debugging** on the Bedroom TV if it restarted (the port was 38317), and **Stay awake** on for the TV window (the Chromecast slept twice during the seventeenth session's runs).
+3. **On the Bedroom TV, by your remote (build 244), still open from before:** an episode's last minute (the count, Hide, and doing nothing); hold Left/Right on a film's seek bar and OK right after a step; your case once (a channel, then The Bad Guys 2 from Continue watching); listen to Live TV (4950).
 
-**The TV right now:** build 244 installed; Google TV's home on screen, Bijou closed. Bijou's source on the TV is the fake panel ("192.168.1.254"); the fake panel is stopped. Home's Continue watching shows the fake panel's "The Last Compass" first, then the provider's films (never OK on those). Nothing played from the provider.
+**The TV right now:** as the seventeenth session left it (build 244, Bijou closed, its source the fake panel, which is stopped). Not touched this session.
 
 **CI:** cc510be (the user's last push) passed. Check CI after the next push.
+
+### The eighteenth session, short
+The user pasted the seventeenth session's report and the devices' settings (all done) and asked to start on the picture while away.
+- **Agents (worktrees, owned files, no commits):** Match frame rate, the desktop's High quality. Both stopped at the user's handoff word and saved as WIP branches (above). Their worktrees came from cc510be, not `dev`: found only at the stop.
+- **The main session:** the picture-test films and the fake panel's flag (on `dev`); T1 in its own worktree on `trial/video-layer-t1` (the Kotlin layer, media_kit_video's second patch, the engine, the interface, the screens, the overlay), built once (`bijou-beta-layer-250.apk`, 3 min); the TV probe; the `tv_apk.sh` Gradle fix; the docs.
+- **Learned:** the Agent tool's worktrees start from origin's default branch; `./gradlew --stop` fails silently without `JAVA_HOME`; 4K x265 10-bit encodes at ~13 fps here (loop a minute by stream copy); `applyBoxFit` crops the source for cover, so the layer's rect is computed directly; `adb shell` inside a `while read` loop eats its input (`</dev/null`).
+- **Checks:** analyze and format clean on `dev` and on the trial branch; the fake panel's tests (149); T1's touched tests and the playback/engine/player tests (247); Match frame rate's WIP tests (32). The full suite wasn't run (nothing on `main` changed). Left running: nothing (worktrees removed, Gradle stopped, no fake panel).
 
 ### The seventeenth session, short
 The user pasted the sixteenth session's report and wrote "continue and the bedroom tv is free to use".
@@ -499,7 +501,7 @@ ADR-018/019 and ADR-016 "The exit" are still the state of the name, the
 TV's bar and Phase 9.
 
 ## Before you start the next session (user)
-See "Start here" above (push `main` and the two tags; Wireless debugging; the TV by your remote).
+See "Start here" above (push `main`, `dev` and the tags; Wireless debugging and Stay awake; the TV by your remote).
 
 ## Start prompt
 Open Claude Code in this folder and paste:
@@ -507,9 +509,11 @@ Open Claude Code in this folder and paste:
 ```
 Continue the Bijou project (the repo is still iptv-player). Work on the dev
 branch (git checkout dev). Read docs/handoff.md ("Start here" first), CLAUDE.md,
-docs/progress.md and ADR-031 to ADR-034 (with their addenda) in
-docs/decisions.md. Check git (fetch) and CI on the last push. Then carry on with
-"Start here". Ask me before using the TV and before playing from my provider.
+docs/progress.md, ADR-031 to ADR-035 (with their addenda) in docs/decisions.md
+and docs/plans/tv-video-layer-and-frame-rate.md. Check git (fetch) and CI on
+the last push. Then carry on with "Start here": first the two wip/ branches
+(rebased onto dev), then the TV when I give you a window. Ask me before using
+the TV and before playing from my provider.
 ```
 
 ## Where things stand
