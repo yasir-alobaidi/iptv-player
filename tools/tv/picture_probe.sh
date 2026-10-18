@@ -52,8 +52,9 @@ echo "== Frames a second each of the app's surfaces draws now (over 2 s)"
 # Both the picture's layer and Flutter's are "SurfaceView[<package>/…]…(BLAST)";
 # on the texture only Flutter's exists. Its rate is the film's on the texture
 # and about 0 on the picture's own layer with the OSD hidden. Two reads of
-# each surface's present times 2 s apart, the frames between them halved: one
-# read alone counts a surface's last burst however old it is.
+# each surface's present times 2 s apart; the frames new in the second, over
+# the time they span: one read alone counts a surface's last burst however
+# old it is.
 presented() {
   sh dumpsys SurfaceFlinger --latency "'$1'" | tr -d '\r' |
     awk 'NR > 1 && $2 > 0 && $2 < 9e18 { print $2 }'
@@ -68,9 +69,12 @@ else
   done
   sleep 2
   for layer in "${layers[@]}"; do
-    presented "$layer" | awk -v since="${latest[$layer]:-0}" -v name="$layer" '
-      $1 > since { c++ }
-      END { printf "  %5.1f  %s\n", c / 2, name }'
+    # The rate from the new frames' own present times: the adb calls make
+    # the wait between the two reads longer than 2 s, and it differs by
+    # layer (29 counted for a 24 fps film at 24 Hz, before).
+    presented "$layer" | sort -n | awk -v since="${latest[$layer]:-0}" -v name="$layer" '
+      $1 > since { if (!c++) first = $1; last = $1 }
+      END { printf "  %5.1f  %s\n", (c > 1 ? (c - 1) / ((last - first) / 1e9) : 0), name }'
   done
 fi
 
