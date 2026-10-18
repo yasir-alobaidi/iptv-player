@@ -1,6 +1,7 @@
 package io.github.yasiralobaidi.bijou
 
 import android.app.Activity
+import android.graphics.Color
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -42,6 +43,17 @@ class VideoLayer(activity: Activity, messenger: BinaryMessenger) :
         }
     }
 
+    /**
+     * Black under the picture, where a film's bars are: the window's own
+     * background is the app's (#0A0C10), not the player's black.
+     */
+    private val backdrop = View(activity).apply {
+        setBackgroundColor(Color.BLACK)
+        visibility = View.GONE
+        isFocusable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
     /** mpv's `wid`: a JNI global reference to the surface; 0 while none. */
     private var wid = 0L
     private val waiting = mutableListOf<MethodChannel.Result>()
@@ -54,6 +66,7 @@ class VideoLayer(activity: Activity, messenger: BinaryMessenger) :
     /** Under everything else in [content], the FlutterView included. */
     fun attach(content: ViewGroup) {
         content.addView(view, 0, fullScreen())
+        content.addView(backdrop, 0, fullScreen())
     }
 
     fun release() {
@@ -65,6 +78,7 @@ class VideoLayer(activity: Activity, messenger: BinaryMessenger) :
         when (call.method) {
             "show" -> {
                 view.keepScreenOn = true
+                backdrop.visibility = View.VISIBLE
                 if (view.visibility != View.VISIBLE) {
                     view.visibility = View.VISIBLE
                     log("show")
@@ -77,6 +91,12 @@ class VideoLayer(activity: Activity, messenger: BinaryMessenger) :
             }
             "hide" -> {
                 hide()
+                result.success(null)
+            }
+            // While the film plays: paused, the TV may dim and dream, as
+            // media_kit's Video lets it on the texture.
+            "keepAwake" -> {
+                view.keepScreenOn = call.arguments == true
                 result.success(null)
             }
             "setRect" -> {
@@ -105,6 +125,7 @@ class VideoLayer(activity: Activity, messenger: BinaryMessenger) :
 
     private fun hide() {
         view.keepScreenOn = false
+        backdrop.visibility = View.GONE
         if (view.visibility != View.GONE) {
             view.visibility = View.GONE
             log("hide")

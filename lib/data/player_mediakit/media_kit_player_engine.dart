@@ -412,6 +412,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       value,
     ) async {
       if (_open && _started) _emit(PlayerPaused(paused: value == 'yes'));
+      if (_layerShown) unawaited(_layer?.keepAwake(awake: value != 'yes'));
     });
     await _native.observeProperty('aid', waitForInitialization: false, (
       value,
@@ -736,6 +737,15 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         'On the video layer (${surface.width}x${surface.height})',
       );
     }
+    // The first film after launch: the widget reports its place only once
+    // the film plays, and until then the whole window (the surface's size
+    // at its first show) places the picture, not stretched to it.
+    _layerBox ??= Rect.fromLTWH(
+      0,
+      0,
+      surface.width.toDouble(),
+      surface.height.toDouble(),
+    );
     _behind.value = true;
     await _placeLayer();
   }

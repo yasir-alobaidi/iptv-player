@@ -87,6 +87,17 @@ final class VideoLayer {
     }
   }
 
+  /// Whether the screen stays on: while the film plays, not while it is
+  /// paused (as media_kit's `Video` holds its wakelock on the texture).
+  /// `show` keeps it on.
+  Future<void> keepAwake({required bool awake}) async {
+    try {
+      await _channel.invokeMethod<void>('keepAwake', awake);
+    } on Object {
+      // The screen keeps what it had.
+    }
+  }
+
   /// Where the picture goes, in the window's physical pixels.
   Future<void> setRect(Rect rect) async {
     try {
