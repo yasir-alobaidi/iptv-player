@@ -303,12 +303,13 @@ Future<void> _quit(ProviderContainer container, AppLog log) async {
   log.info('bootstrap', 'Quit in ${clock.elapsedMilliseconds} ms');
 }
 
-/// Waits for the first frame and a moment after it, so starting up never
-/// competes with a sync, then gives channels synced before schema v7
-/// their cleaned names (once), records runs the last session left
-/// unfinished and refreshes sources older than their `refresh_hours`
-/// (docs/02), then imports the guides that are due. The fill, the sync
-/// and the import each run in a background isolate.
+/// Waits for Home's rows on screen ([LaunchMark.settled]; at most
+/// [_launchHomeCap] for a launch that opens elsewhere) and a moment
+/// after, so starting up never competes with a sync, then gives channels
+/// synced before schema v7 their cleaned names (once), records runs the
+/// last session left unfinished and refreshes sources older than their
+/// `refresh_hours` (docs/02), then imports the guides that are due. The
+/// fill, the sync and the import each run in a background isolate.
 ///
 /// A guide import the last session was killed during is recorded the
 /// same way, and the rows it staged go with it: they are the one thing
@@ -323,7 +324,11 @@ void _syncAfterLaunch(
 }) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
-      Future<void>.delayed(_launchSyncDelay, () async {
+      Future<void>(() async {
+        // Home's reads first: a sync's batches went before them on the
+        // Bedroom TV (Home 19.9 s after main()).
+        await container.read(launchMarkProvider).settled(cap: _launchHomeCap);
+        await Future<void>.delayed(_launchSyncDelay);
         // In its own isolate: the picture cache's size cap (docs/06).
         unawaited(artwork?.sweep());
         // Reminders that fell due while the app was closed show now, if
@@ -360,6 +365,7 @@ void _syncAfterLaunch(
 }
 
 const _launchSyncDelay = Duration(seconds: 2);
+const _launchHomeCap = Duration(seconds: 15);
 
 Future<void> _registerDownloadFolder(ProviderContainer container) async {
   final log = container.read(appLogProvider);
