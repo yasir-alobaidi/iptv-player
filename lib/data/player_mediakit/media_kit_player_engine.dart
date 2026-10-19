@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iptv_player/core/app_identity.dart';
+import 'package:iptv_player/core/cast/cast_planner.dart' show sameLanguage;
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_version.dart';
+import 'package:iptv_player/data/library/library_scan.dart' show subtitleBeside;
 import 'package:iptv_player/data/player_mediakit/desktop_picture.dart';
 import 'package:iptv_player/data/player_mediakit/subtitle_style.dart';
 import 'package:iptv_player/data/player_mediakit/video_layer.dart';
@@ -164,6 +167,16 @@ Map<String, String> mpvOptionsFor(
     'user-agent': request.userAgent ?? '',
     'alang': request.audioLanguages.join(','),
     'slang': request.subtitleLanguages.join(','),
+    // Each file starts from Settings: mpv keeps a track picked in the last
+    // one (a number this one may not have, or Off) for the next.
+    'aid': 'auto',
+    // Subtitles start only in a language asked for, none by default
+    // (ADR-041): mpv showed a file's default track, or one beside it,
+    // with none asked for. media_kit turns on a newer mpv's fallbacks to
+    // any track and to the system's language; 0.34 has neither option.
+    'sid': request.subtitleLanguages.isEmpty ? 'no' : 'auto',
+    'subs-fallback': 'no',
+    'subs-match-os-language': 'no',
     if (request.deinterlace != null)
       'deinterlace': request.deinterlace! ? 'yes' : 'no',
     // A library file's subtitle files (docs/09), as tracks. With none the
@@ -185,6 +198,24 @@ Map<String, String> mpvOptionsFor(
 }
 
 final _listSeparator = Platform.isWindows ? ';' : ':';
+
+/// The subtitle track a file plays with once it has started, as mpv's
+/// `sid`: a track in the first of [languages] that one of [tracks] has;
+/// `no` when none is asked for or none has one (ADR-041). mpv's own pick
+/// ([current]) stays when it is in that language: its default and forced
+/// flags chose among that language's tracks.
+String subtitleChoice(
+  List<String> languages,
+  List<({String id, String? language})> tracks, {
+  required String current,
+}) {
+  for (final wanted in languages) {
+    final those = tracks.where((t) => sameLanguage(t.language, wanted));
+    if (those.isEmpty) continue;
+    return those.any((t) => t.id == current) ? current : those.first.id;
+  }
+  return 'no';
+}
 
 /// [PlayerEngine] on media_kit (libmpv) with our patched media_kit_video
 /// (ADR-003). One instance for the app's lifetime; every channel is an
@@ -344,6 +375,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   /// ticked Off.
   String? _aid;
   String? _sid;
+
+  /// What the file opened last asked for its subtitles: Settings'
+  /// languages, and the video a subtitle file beside it is named after.
+  List<String> _subtitleLanguages = const [];
+  String _video = '';
 
   /// Buffering, as the watchdog and the picture's spinner hear it: mpv
   /// waiting for its cache, or a seek still waiting after [_slowSeek].
@@ -514,6 +550,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _lastError = null;
     _position = Duration.zero;
     _buffered = Duration.zero;
+    _subtitleLanguages = request.subtitleLanguages;
+    _video = request.url;
     _resetBuffering();
     _sinceOpen
       ..reset()
@@ -658,8 +696,46 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       final took = _sinceOpen.elapsedMilliseconds;
       _emit(PlayerFirstFrame(generation));
       unawaited(_logFirstFrame(took, generation));
+      unawaited(_settleSubtitles(generation));
       if (autoDeinterlace) await _autoDeinterlace(generation);
     });
+  }
+
+  /// Settings' subtitles, made sure of once the file plays (ADR-041): a
+  /// Linux desktop's mpv (0.34) shows a subtitle file beside the video
+  /// whatever its language, knows no language for one, and matches
+  /// `slang` by a code's exact spelling ("en" never picked "eng").
+  Future<void> _settleSubtitles(int generation) async {
+    try {
+      final list = jsonDecode(await _get('track-list'));
+      final current = await _get('sid');
+      if (generation != _generation || list is! List) return;
+      final tracks = [
+        for (final track in list)
+          if (track is Map && track['type'] == 'sub' && track['id'] is int)
+            (
+              id: '${track['id']}',
+              language: switch (track) {
+                {'lang': final String lang} => lang,
+                {'external-filename': final String file} => subtitleBeside(
+                  _video,
+                  file,
+                )?.language,
+                _ => null,
+              },
+            ),
+      ];
+      final wanted = subtitleChoice(
+        _subtitleLanguages,
+        tracks,
+        current: current,
+      );
+      if (wanted == current) return;
+      _log.info(_tag, 'Subtitles: $wanted, not $current as mpv picked');
+      await selectSubtitle(wanted == 'no' ? null : wanted);
+    } on Object catch (error) {
+      _log.debug(_tag, "Couldn't settle the subtitles: $error");
+    }
   }
 
   /// docs/03 "Auto": 0.34.1's `deinterlace` is only yes/no, so follow the

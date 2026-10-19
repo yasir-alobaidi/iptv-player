@@ -78,6 +78,67 @@ void main() {
     expect(options['deinterlace'], 'yes');
   });
 
+  group('the tracks a file starts with (ADR-041)', () {
+    test('no subtitle language asked for: subtitles off, whatever the file '
+        'marks as its default or has beside it', () {
+      expect(mpvOptionsFor(const PlayRequest(url: 'u'))['sid'], 'no');
+    });
+
+    test('languages asked for: mpv picks among them and nothing else (a '
+        "newer mpv's fallbacks to any track, or to the system's language, "
+        'off)', () {
+      final options = mpvOptionsFor(
+        const PlayRequest(url: 'u', subtitleLanguages: ['en']),
+      );
+      expect(options['sid'], 'auto');
+      expect(options['subs-fallback'], 'no');
+      expect(options['subs-match-os-language'], 'no');
+    });
+
+    test("each file starts from Settings: the last file's picks don't "
+        'carry over (mpv keeps a track number, or Off, for the next)', () {
+      final options = mpvOptionsFor(
+        const PlayRequest(url: 'u', subtitleLanguages: ['en']),
+      );
+      expect(options['aid'], 'auto');
+      expect(options['sid'], 'auto');
+    });
+  });
+
+  group('the subtitle a file settles on once it plays (ADR-041)', () {
+    const english = (id: '1', language: 'eng');
+    const german = (id: '2', language: 'ger');
+    const englishSdh = (id: '3', language: 'en');
+    const unnamed = (id: '4', language: null);
+
+    test('none asked for: off', () {
+      expect(subtitleChoice(const [], [english], current: '1'), 'no');
+      expect(subtitleChoice(const [], [english], current: 'no'), 'no');
+    });
+
+    test("the most wanted language a track has, whatever mpv's own pick "
+        "(0.34 shows a file beside the video first and matches only a code's "
+        'exact spelling)', () {
+      expect(subtitleChoice(['en'], [german, english], current: '2'), '1');
+      expect(subtitleChoice(['en'], [german, english], current: 'no'), '1');
+      expect(
+        subtitleChoice(['fr', 'de', 'en'], [english, german], current: '1'),
+        '2',
+      );
+    });
+
+    test("mpv's pick stays when it is in that language (its default and "
+        'forced flags chose among them)', () {
+      expect(subtitleChoice(['en'], [english, englishSdh], current: '3'), '3');
+    });
+
+    test('no track in a language asked for, or none named: off', () {
+      expect(subtitleChoice(['en'], [german], current: '2'), 'no');
+      expect(subtitleChoice(['en'], [unnamed], current: '4'), 'no');
+      expect(subtitleChoice(['en'], const [], current: 'no'), 'no');
+    });
+  });
+
   test('Auto deinterlace sets nothing up front (the engine follows the '
       'stream)', () {
     expect(

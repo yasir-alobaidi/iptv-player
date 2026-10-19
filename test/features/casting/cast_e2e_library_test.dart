@@ -236,6 +236,7 @@ void main() {
     () async {
       const mkv = 'vod_h264_ac3_10min.mkv';
       rig = await CastE2E.start();
+      rig.subtitleLanguages.add('en');
       final item = own(mkv);
       rig.resolver
         ..files[item.quickHash] = item.path!
@@ -326,12 +327,14 @@ void main() {
 
     test(
       'a subtitle file beside a Matroska film, through the relay: the TV '
-      'reads it as WebVTT and shows it from the start; the stream is on '
-      "the film's own clock, its whole length and its time the film's, so "
-      "after a seek the cues keep the film's times; S turns it off",
+      'reads it as WebVTT and shows it from the start (English asked '
+      "for); the stream is on the film's own clock, its whole length and "
+      "its time the film's, so after a seek the cues keep the film's "
+      'times; S turns it off',
       () async {
         const mkv = 'vod_h264_ac3_10min.mkv';
         rig = await CastE2E.start();
+        rig.subtitleLanguages.add('en');
         final item = own(mkv);
         rig.resolver
           ..files[item.quickHash] = item.path!
@@ -353,7 +356,7 @@ void main() {
         expect(whole.cues, cuesOf(srt));
         expect(whole.firstCue, Duration.zero);
         expect(whole.firstText, 'External English subtitle 1 at 0 s');
-        expect(rig.tv.activeTrackIds, [1], reason: 'a file beside the video');
+        expect(rig.tv.activeTrackIds, [1], reason: 'English is preferred');
         expect(rig.state.subtitle, 1);
         expect(rig.state.subtitles.single.beside, isTrue);
         // What the TV's own bar shows: the film's length from the first
@@ -479,7 +482,8 @@ void main() {
         expect(track.name, 'Subtitles 1');
         expect(track.firstCue, Duration.zero);
         expect(track.cues, cuesOf(srt));
-        expect(rig.tv.activeTrackIds, [1]);
+        // None asked for: listed, and off (ADR-041).
+        expect(rig.tv.activeTrackIds, isEmpty);
         expect(rig.running, isEmpty, reason: 'the WebVTT is made by then');
         await rig.coordinator.disconnect();
       },

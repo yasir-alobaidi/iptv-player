@@ -1362,8 +1362,11 @@ void main() {
             rig.tv.calls.where((call) => call.startsWith('textTrack:'));
 
         test('the LOAD names each as a WebVTT file the relay serves; a '
-            'file beside the video shows from the start', () async {
-          rig.subtitles.ready = [english, german];
+            'file beside the video in a language asked for shows from the '
+            'start', () async {
+          rig
+            ..subtitleLanguages = ['en']
+            ..subtitles.ready = [english, german];
           rig.playback.resolver.downloadSubtitles['m7'] = [srt];
           await castDownloaded();
           expect(rig.subtitles.last.video, file);
@@ -1397,6 +1400,16 @@ void main() {
           await castDownloaded();
           expect(rig.tv.loads.single.activeTextTrack, 2);
           expect(rig.state.subtitle, 2);
+        });
+
+        test('none preferred: listed, and off, a file beside the video '
+            'too (ADR-041: subtitles start off)', () async {
+          rig.subtitles.ready = [english, german];
+          await castDownloaded();
+          expect(rig.tv.loads.single.textTracks, hasLength(2));
+          expect(rig.tv.loads.single.activeTextTrack, isNull);
+          expect(rig.state.subtitles, [english, german]);
+          expect(rig.state.subtitle, isNull);
         });
 
         test("only the file's own tracks, none preferred: listed, and "
@@ -1445,7 +1458,9 @@ void main() {
 
         test('a TV that refuses the switch: what it shows is what is '
             'said', () async {
-          rig.subtitles.ready = [english, german];
+          rig
+            ..subtitleLanguages = ['en']
+            ..subtitles.ready = [english, german];
           await castDownloaded();
           rig.tv.playing();
           await rig.phase(CastPhase.playing);
@@ -1527,6 +1542,7 @@ void main() {
         test('through the relay: the stream begins at the key frame '
             "before its place, on the film's own clock, so the cues keep "
             "the film's times; and again after a seek", () async {
+          rig.subtitleLanguages = ['en'];
           rig.subtitles
             ..ready = [english]
             ..keyFrameBefore = const Duration(seconds: 4);
@@ -1683,6 +1699,7 @@ void main() {
 
         test('once it is whole, the next seek loads it there: the relay '
             "stops, and every seek after is the TV's own", () async {
+          rig.subtitleLanguages = ['en'];
           rig.subtitles
             ..ready = [const CastSubtitle(language: 'en', beside: true)]
             ..keyFrameBefore = const Duration(seconds: 4);

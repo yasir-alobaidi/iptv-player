@@ -158,8 +158,8 @@ void main() {
       File srt(String name, String line) =>
           File('${dir.path}/$name')
             ..writeAsStringSync('1\n00:00:00,000 --> 01:00:00,000\n$line\n');
-      final english = srt('film.en.srt', 'An English line');
-      final german = srt('film.de.srt', 'Eine deutsche Zeile');
+      final english = srt('vod_h264_aac_10min.en.srt', 'An English line');
+      final german = srt('vod_h264_aac_10min.de.srt', 'Eine deutsche Zeile');
       final engine = (await tester.runAsync(
         () => MediaKitPlayerEngine.create(
           log: AppLog(output: SilentOutput(), secrets: SecretRegistry()),
@@ -180,12 +180,13 @@ void main() {
       Future<String> sid() async =>
           (await tester.runAsync(() => engine.mpvProperty('sid')))!;
 
+      final film = File('${samplesDirectory.path}/vod_h264_aac_10min.mp4')
+          .absolute
+          .path;
       await tester.runAsync(
         () => engine.open(
           PlayRequest(
-            url: File('${samplesDirectory.path}/vod_h264_aac_10min.mp4')
-                .absolute
-                .path,
+            url: film,
             live: false,
             subtitleFiles: [english.path, german.path],
             subtitleLanguages: const ['en'],
@@ -204,7 +205,9 @@ void main() {
         'both subtitle files as tracks',
       );
 
-      // ── mpv's own picks are the ones ticked: its sound, its subtitles.
+      // ── mpv's own picks are the ones ticked: its sound, and the English
+      // file Preferred subtitles asked for (ADR-041: mpv 0.34 knows no
+      // language for a file beside the video; the engine reads its name).
       final audio = (await tester.runAsync(() => engine.mpvProperty('aid')))!;
       expect(audio, isNot('no'));
       await _until(
@@ -212,13 +215,17 @@ void main() {
         () => tracks()?.audioId == audio,
         "mpv's sound ticked (${tracks()?.audioId} for $audio)",
       );
-      final picked = await sid();
-      expect(picked, isNot('no'));
+      String? englishId() => tracks()?.subtitles
+          .where((t) => t.title?.contains('.en.') ?? false)
+          .firstOrNull
+          ?.id;
       await _until(
         tester,
-        () => tracks()?.subtitleId == picked,
-        "mpv's pick ticked (${tracks()?.subtitleId} for $picked)",
+        () => englishId() != null && tracks()?.subtitleId == englishId(),
+        'English ticked (${tracks()?.subtitleId} of ${tracks()?.subtitles})',
       );
+      final picked = await sid();
+      expect(picked, englishId());
       if (video) {
         await _until(
           tester,
@@ -261,6 +268,57 @@ void main() {
           'the line gone',
         );
       }
+
+      // ── The next file starts from Settings, not from the last pick: mpv
+      // kept the German track's number for it.
+      Future<void> reopen(List<String> languages) async {
+        events.clear();
+        await tester.runAsync(
+          () => engine.open(
+            PlayRequest(
+              url: film,
+              live: false,
+              subtitleFiles: [english.path, german.path],
+              subtitleLanguages: languages,
+            ),
+          ),
+        );
+        await _until(
+          tester,
+          () => events.any((e) => e is PlayerFirstFrame || e is PlayerFailed),
+          'the first frame again',
+        );
+        expect(events.whereType<PlayerFailed>(), isEmpty, reason: '$events');
+        await _until(
+          tester,
+          () => (tracks()?.subtitles.length ?? 0) == 2,
+          'both subtitle files again',
+        );
+      }
+
+      await tester.runAsync(() => engine.selectSubtitle(other));
+      await _until(
+        tester,
+        () => tracks()?.subtitleId == other,
+        'German ticked',
+      );
+      await reopen(const ['en']);
+      await _until(
+        tester,
+        () => tracks()?.subtitleId == englishId(),
+        'English again (${tracks()?.subtitleId})',
+      );
+
+      // ── None asked for: off, with files beside the video (ADR-041; mpv
+      // showed the first of them).
+      await reopen(const []);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 1)),
+      );
+      await tester.pump();
+      expect(await sid(), 'no');
+      expect(tracks()?.subtitleId, isNull);
+      if (video) expect(find.text('An English line'), findsNothing);
     },
     skip: !vodAvailable,
     timeout: const Timeout(Duration(minutes: 2)),

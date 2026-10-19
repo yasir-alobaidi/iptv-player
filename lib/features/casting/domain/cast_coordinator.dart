@@ -1145,8 +1145,8 @@ final class CastCoordinator implements RemotePlayback {
   /// Which subtitle shows from the start. Handed over from the laptop's
   /// player: the one in the language it showed, or none if it showed
   /// none. Otherwise as the player starts a file: the first in the most
-  /// wanted of Settings' "Preferred subtitles" that has one, else a
-  /// subtitle file the user put beside the video, else none.
+  /// wanted of Settings' "Preferred subtitles" that has one, else none
+  /// (ADR-041: a file beside the video showed with none asked for).
   int? _firstSubtitle(_Cast cast, List<CastSubtitle> subtitles) {
     int? first(bool Function(CastSubtitle subtitle) test) {
       final index = subtitles.indexWhere(test);
@@ -1168,7 +1168,7 @@ final class CastCoordinator implements RemotePlayback {
       );
       if (preferred != null) return preferred;
     }
-    return first((s) => s.beside && !s.forced);
+    return null;
   }
 
   /// The subtitles are all made: the view lists them. Those the TV
