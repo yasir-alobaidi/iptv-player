@@ -36,15 +36,7 @@ class VodOsdTop extends ConsumerWidget {
         .firstOrNull
         ?.channels;
     final badges = [?pictureBadge(size?.$2), ?soundBadge(channelCount(sound))];
-    final (title, line) = switch (item) {
-      PlayableMovie(:final movie) => (movie.name, null),
-      PlayableEpisode(:final series, :final episode) => (
-        series.name,
-        episodeLine(episode),
-      ),
-      PlayableLibraryItem(item: final file) => libraryTitleLines(file),
-      PlayableChannel(:final channel) => (channel.name, null),
-    };
+    final (title, line) = playableTitleLines(item);
     return OsdShade(
       top: true,
       child: Padding(
@@ -97,6 +89,18 @@ class VodOsdTop extends ConsumerWidget {
     );
   }
 }
+
+/// What the player calls [item]: a title, and for an episode "S2 · E4 ·
+/// Undertow" under its show's name (the OSD's top, the opening screen).
+(String, String?) playableTitleLines(Playable item) => switch (item) {
+  PlayableMovie(:final movie) => (movie.name, null),
+  PlayableEpisode(:final series, :final episode) => (
+    series.name,
+    episodeLine(episode),
+  ),
+  PlayableLibraryItem(item: final file) => libraryTitleLines(file),
+  PlayableChannel(:final channel) => (channel.name, null),
+};
 
 /// A library file's title and line: a show's name over "S2 · E4 ·
 /// Undertow", else its own title and year.
@@ -161,7 +165,9 @@ class VodOsdBottom extends StatelessWidget {
   final bool seeking;
   final Duration? resumedFrom;
 
-  /// No picture yet: "Preparing…" where "Resumed from" goes.
+  /// No picture yet: the opening screen under the OSD says how it goes
+  /// (player_opening.dart), so nothing is said here, and not "Resumed
+  /// from" before it has.
   final bool preparing;
   final VoidCallback onTogglePause;
   final void Function(Duration delta) onNudge;
@@ -234,16 +240,11 @@ class VodOsdBottom extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (preparing || resumedFrom != null)
+            if (resumedFrom case final from? when !preparing)
               Padding(
                 padding: EdgeInsets.only(bottom: tokens.spacing.s8),
                 child: Text(
-                  switch (resumedFrom) {
-                    _ when preparing => 'Preparing…',
-                    final from? =>
-                      'Resumed from ${formatPosition(from)} · Home starts over',
-                    null => '',
-                  },
+                  'Resumed from ${formatPosition(from)} · Home starts over',
                   style: tokens.text.body.copyWith(color: colors.textEmphasis),
                 ),
               ),

@@ -15,10 +15,13 @@ import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/failed_file.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
+import 'package:iptv_player/features/playback/presentation/player_opening.dart';
 
 /// The picture and what the playback state lays over it: a spinner while
 /// opening, the reconnecting pill, and the failure card. The preview pane
-/// shows it [compact]; the full-screen player at full size (step 6).
+/// shows it [compact]; the full-screen player at full size (step 6), where
+/// what is opening has its opening screen ([PlayerOpening]) instead of
+/// the bare spinner.
 class PlayerSurface extends ConsumerWidget {
   const new({
     this.compact = false,
@@ -68,13 +71,21 @@ class PlayerSurface extends ConsumerWidget {
         ref.watch(playbackStateProvider).value ?? const PlaybackIdle();
     final size = ref.watch(videoSizeProvider).value;
     final showPicture = pictureShows(state);
+    final tv = ref.watch(formFactorProvider) == FormFactor.tv;
+    // Full screen, until the item's own picture comes: its opening screen
+    // (a reconnect before it keeps it, under the pill). The preview has
+    // no room for one: the spinner alone.
+    final opening =
+        !compact &&
+        !showPicture &&
+        (state is PlaybackOpening || state is PlaybackReconnecting);
     // Settings → Playback → Subtitle size, on what plays at once: a change
     // builds the picture again with it (ADR-038).
     final subtitleScale = tokens.player.subtitleScale(
       ref.watch(
         playbackSettingsControllerProvider.select((s) => s.subtitleSize),
       ),
-      tv: ref.watch(formFactorProvider) == FormFactor.tv,
+      tv: tv,
     );
     final file =
         state is PlaybackFailed &&
@@ -83,9 +94,9 @@ class PlayerSurface extends ConsumerWidget {
         : null;
 
     final overlays = [
-      if (state is PlaybackOpening ||
+      if ((state is PlaybackOpening && !opening) ||
           (state is PlaybackPlaying && state.buffering))
-        Center(child: _Spinner(large: !compact)),
+        Center(child: PlayerSpinner(large: !compact)),
       if (badges && state is PlaybackPlaying)
         Positioned(
           top: tokens.spacing.s12,
@@ -146,6 +157,8 @@ class PlayerSurface extends ConsumerWidget {
               background: colors.video,
               subtitleScale: subtitleScale,
             ),
+          // Under the picture's clicks, which it never takes.
+          if (opening) PlayerOpening(state: state, tv: tv),
           if (onPictureTap != null || onPictureDoubleTap != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -196,25 +209,6 @@ class PlayerSurface extends ConsumerWidget {
       ),
     );
     onFileRemoved?.call();
-  }
-}
-
-class _Spinner extends StatelessWidget {
-  const new({this.large = false});
-
-  /// The full-screen player's.
-  final bool large;
-
-  @override
-  Widget build(BuildContext context) {
-    final player = context.tokens.player;
-    return SizedBox.square(
-      dimension: large ? player.spinnerSize : player.previewSpinnerSize,
-      child: CircularProgressIndicator(
-        strokeWidth: large ? player.spinnerStroke : player.previewSpinnerStroke,
-        color: context.tokens.colors.textPrimary,
-      ),
-    );
   }
 }
 
