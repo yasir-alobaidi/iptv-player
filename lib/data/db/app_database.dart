@@ -242,6 +242,13 @@ final OnUpgrade _upgradeStepByStep = stepByStep(
 /// can't see that isolate, and relays every sync write through a proxy
 /// on the UI isolate instead (ADR-009, step 5 spike).
 ///
+/// Reads go to [_readers] connections of their own, each on its own
+/// isolate (write-ahead logging lets them read beside a write): on the
+/// one connection, a screen's reads waited behind every batch of a sync
+/// or a guide's import, and Live TV's 50,000 channels showed placeholders
+/// for ~10 s during a sync. Writes, and reads inside a transaction, stay
+/// on the database's isolate, which the other isolates connect to.
+///
 /// [directory] is created when it does not exist yet; that is the one
 /// step that can throw here. A file SQLite can't open fails the first
 /// query instead.
@@ -250,8 +257,13 @@ Future<DatabaseConnection> openAppDatabase(Directory directory) async {
   return NativeDatabase.createBackgroundConnection(
     File(p.join(directory.path, appDatabaseFileName)),
     setup: configureAppDatabase,
+    readPool: _readers,
   );
 }
+
+/// Two: a screen's list and its details (Live TV's channels and the
+/// guide's now and next) read at once.
+const _readers = 2;
 
 /// How the app's database file is kept (ADR-013, alongside):
 /// - **write-ahead logging** with `synchronous = NORMAL`: a commit waits
@@ -260,10 +272,13 @@ Future<DatabaseConnection> openAppDatabase(Directory directory) async {
 ///   time). A crash of the app loses nothing committed; a power cut may
 ///   lose the last commits, never the file's consistency;
 /// - the log cut back to 64 MB after a checkpoint, as a guide's swap
-///   writes hundreds of MB in one transaction.
+///   writes hundreds of MB in one transaction;
+/// - foreign keys on every connection, the readers' too (`beforeOpen`
+///   sets them on the one it opens with).
 void configureAppDatabase(Database database) {
   database
     ..execute('PRAGMA journal_mode = WAL')
     ..execute('PRAGMA synchronous = NORMAL')
-    ..execute('PRAGMA journal_size_limit = ${64 * 1024 * 1024}');
+    ..execute('PRAGMA journal_size_limit = ${64 * 1024 * 1024}')
+    ..execute('PRAGMA foreign_keys = ON');
 }

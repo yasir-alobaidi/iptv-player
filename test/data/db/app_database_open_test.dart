@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -44,6 +45,31 @@ void main() {
     expect(await pragma('synchronous'), 1); // NORMAL
     expect(await pragma('journal_size_limit'), 64 * 1024 * 1024);
     expect(await pragma('foreign_keys'), 1);
+  });
+
+  test("a screen's read doesn't wait for a write under way: reads have "
+      "connections of their own (Live TV's list waited ~10 s behind a "
+      "50,000-channel sync's batches)", () async {
+    final release = Completer<void>();
+    final started = Completer<void>();
+    final writing = db.transaction(() async {
+      await db.channelsDao.upsertAll([
+        ChannelsCompanion.insert(sourceId: 's1', remoteKey: 'a', name: 'A'),
+      ]);
+      started.complete();
+      await release.future;
+    });
+    await started.future;
+
+    final count = await db.channelsDao
+        .countFor('s1')
+        .timeout(const Duration(seconds: 2));
+    // What was committed: the write under way isn't.
+    expect(count, 0);
+
+    release.complete();
+    await writing;
+    expect(await db.channelsDao.countFor('s1'), 1);
   });
 
   test('other isolates connect straight to the database isolate', () async {
