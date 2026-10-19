@@ -242,15 +242,17 @@ void main() {
     await pump(tester);
     ui.live.rig.resolver.downloads['m7'] = '/downloads/Film (2025).mp4';
     ui.cast.probe.next = const StreamProbed(mp4Facts);
-    ui.cast.subtitles.ready = const [
-      CastSubtitle(language: 'en', beside: true),
-      CastSubtitle(language: 'ger', title: 'SDH'),
-    ];
+    ui.cast
+      ..subtitleLanguages = ['en']
+      ..subtitles.ready = const [
+        CastSubtitle(language: 'en', beside: true),
+        CastSubtitle(language: 'ger', title: 'SDH'),
+      ];
     await cast(tester, PlayableMovie(movie(7)));
     Iterable<String> switches() =>
         ui.cast.tv.calls.where((call) => call.startsWith('textTrack:'));
 
-    // The file beside the video shows from the start.
+    // English, asked for, shows from the start.
     expect(find.text('Subtitles: English'), findsOneWidget);
     expect(findByLabel('Subtitles: English'), findsOneWidget);
 

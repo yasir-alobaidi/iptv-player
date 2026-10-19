@@ -152,10 +152,12 @@ void main() {
       await pump(tester, const Size(1280, 800));
       ui.live.rig.resolver.downloads['m7'] = '/downloads/Film (2025).mp4';
       ui.cast.probe.next = const StreamProbed(mkvFacts);
-      ui.cast.subtitles.ready = const [
-        CastSubtitle(language: 'en', beside: true),
-        CastSubtitle(language: 'ger', title: 'SDH'),
-      ];
+      ui.cast
+        ..subtitleLanguages = ['en']
+        ..subtitles.ready = const [
+          CastSubtitle(language: 'en', beside: true),
+          CastSubtitle(language: 'ger', title: 'SDH'),
+        ];
       await castTo(tester, PlayableMovie(movie(7, runtime: mkvFacts.duration)));
       ui.cast.tv.playing(position: const Duration(minutes: 42, seconds: 10));
       await settleCast(tester);
