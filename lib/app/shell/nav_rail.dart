@@ -216,6 +216,11 @@ class _RailItemState extends State<_RailItem> {
   void _onFocusChange(bool focused) {
     _stopResting();
     if (!focused || widget.onRest == null) return;
+    // Only a move the user made (an arrow pressed or held): the shell puts
+    // the focus on an item itself too (a page whose controls aren't there
+    // yet leaves it nothing else), and a rest there took a film's page
+    // just opened from Home back to Home (the Bedroom TV).
+    if (HardwareKeyboard.instance.logicalKeysPressed.isEmpty) return;
     _rest = Timer(NavRail.openAfter, () {
       _rest = null;
       // The screen shown already: nothing to open. OK on it goes back to

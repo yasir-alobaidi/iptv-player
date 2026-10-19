@@ -240,6 +240,42 @@ void main() {
     await settle(tester);
   });
 
+  // The Bedroom TV (Beta 285): OK on a Home poster opened its page, whose
+  // controls weren't there yet; the shell's focus keeper put the focus on
+  // the rail's Home, and a rest there took the screen back to Home.
+  testWidgets('the focus put on an item by the app, not a key, opens '
+      "nothing: only the user's moves rest", (tester) async {
+    await open(tester);
+    await intoTheRail(tester);
+    expect(focused(), AppDestination.home.label);
+
+    final movies = tester
+        .widgetList<FocusableSurface>(find.byType(FocusableSurface))
+        .firstWhere((s) => s.semanticLabel == AppDestination.movies.label);
+    tester
+        .widget<FocusableActionDetector>(
+          find
+              .descendant(
+                of: find.byWidget(movies),
+                matching: find.byType(FocusableActionDetector),
+              )
+              .first,
+        )
+        .focusNode!
+        .requestFocus();
+    await tester.pump();
+    expect(focused(), AppDestination.movies.label);
+    await rest(tester);
+    await tester.pump(const Duration(seconds: 1));
+    expect(app.location, AppDestination.home.path);
+    expect(visited, isEmpty);
+
+    // A key's move from there still does.
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await rest(tester);
+    expect(app.location, AppDestination.series.path);
+  });
+
   testWidgets('the desktop opens nothing on focus: Enter opens it', (
     tester,
   ) async {
