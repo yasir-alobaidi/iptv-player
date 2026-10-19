@@ -55,6 +55,18 @@ void main() {
     expect(recent.first.updatedAt, t0.add(_minute * 2));
   });
 
+  test('a channel touched twice at once, as a play and a cast can, is still '
+      'one row', () async {
+    final dao = db.watchHistoryDao;
+    await Future.wait([
+      dao.touch(UserItemType.live, 'src-1', '101', t0),
+      dao.touch(UserItemType.live, 'src-1', '101', t0.add(_minute)),
+    ]);
+
+    final rows = await db.select(db.watchHistory).get();
+    expect(rows.map((r) => r.remoteKey), ['101']);
+  });
+
   test('VOD history keeps the position a later touch leaves out', () async {
     final dao = db.watchHistoryDao;
     await dao.touch(

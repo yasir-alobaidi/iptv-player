@@ -1,5 +1,8 @@
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/user_tables.dart';
+import 'package:iptv_player/data/sync/channel_rows.dart';
 import 'package:iptv_player/features/home/data/db_home_repository.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/vod/data/db_movie_repository.dart';
@@ -118,6 +121,80 @@ void main() {
     // 201 is a favorite: the more specific choice.
     expect(seen.last, ['201']);
     await listening.cancel();
+  });
+
+  group('recently watched channels: each once', () {
+    Future<void> watched(String key, int minutesAgo) =>
+        home.db.watchHistoryDao.touch(
+          UserItemType.live,
+          'src-1',
+          key,
+          home.now.subtract(Duration(minutes: minutesAgo)),
+        );
+
+    /// Two streams of one channel, as panels list them, their names
+    /// cleaned as sync cleans them: both show as "beIN SP 1".
+    Future<void> seedTwoFeeds([String other = 'beIN SP 1 HD']) async {
+      final category = await (home.db.select(
+        home.db.categories,
+      )..where((c) => c.name.equals('Sports'))).getSingle();
+      ChannelsCompanion row(String key, String name) => withCleanName(
+        ChannelsCompanion.insert(
+          sourceId: 'src-1',
+          remoteKey: key,
+          name: name,
+          categoryId: Value(category.id),
+          position: Value(int.parse(key)),
+        ),
+      );
+      await home.db.channelsDao.upsertAll([
+        row('204', 'beIN SP 1 FHD'),
+        row('205', other),
+      ]);
+    }
+
+    test('two streams the tile shows alike are one tile, where the newest '
+        'watch of either puts it; the row still fills up', () async {
+      await seedTwoFeeds();
+      await watched('204', 10);
+      await watched('205', 20);
+      await watched('203', 30);
+      await watched('202', 40);
+
+      final recent = await rows.recentChannels('src-1', limit: 3).first;
+      expect([for (final c in recent) c.remoteKey], ['204', '203', '202']);
+      expect(
+        [for (final c in recent) c.name],
+        ['beIN SP 1', 'Velocity Motors', 'Arena Sports 2'],
+      );
+
+      // Watching the other stream again moves the tile, and it is that one.
+      await watched('205', 5);
+      final again = await rows.recentChannels('src-1').first;
+      expect([for (final c in again) c.remoteKey], ['205', '203', '202']);
+    });
+
+    test('a name in other capitals is the same; a rename tells two apart, '
+        'and a hidden one leaves the other in its own place', () async {
+      await seedTwoFeeds('BEIN SP 1');
+      await watched('204', 30);
+      await watched('203', 20);
+      await watched('205', 10);
+
+      Future<List<String>> keys() async => [
+        for (final c in await rows.recentChannels('src-1').first) c.remoteKey,
+      ];
+      expect(await keys(), ['205', '203']);
+
+      final fhd = await home.db.channelsDao.byRemoteKey('src-1', '204');
+      await home.db.channelsDao.rename(fhd!.id, 'beIN SP 1 (the good one)');
+      expect(await keys(), ['205', '203', '204']);
+
+      await home.db.channelsDao.rename(fhd.id, null);
+      final other = await home.db.channelsDao.byRemoteKey('src-1', '205');
+      await home.db.channelsDao.setHidden(other!.id, hidden: true);
+      expect(await keys(), ['203', '204']);
+    });
   });
 
   test('recently added movies and series come newest first', () async {

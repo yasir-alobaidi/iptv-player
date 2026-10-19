@@ -9,7 +9,9 @@ abstract interface class HomeRepository {
   /// The source's favorite channels, in the channel list's order.
   Stream<List<ChannelItem>> favoriteChannels(String sourceId, {int limit});
 
-  /// The source's channels, most recently watched first.
+  /// The source's channels, most recently watched first, each shown name
+  /// once: two streams the tiles would show alike are one channel to the
+  /// user.
   Stream<List<ChannelItem>> recentChannels(String sourceId, {int limit});
 
   /// The provider's date, else the order the app first saw them.
