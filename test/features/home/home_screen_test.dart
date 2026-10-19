@@ -212,7 +212,7 @@ void main() {
     testWidgets('a first sync still running says so over what has arrived', (
       tester,
     ) async {
-      await open(
+      final (home, _) = await open(
         tester,
         before: (home) async {
           await home.db.customStatement('DELETE FROM favorites');
@@ -225,8 +225,21 @@ void main() {
         },
       );
 
+      expect(find.byType(LoadingStage), findsOneWidget);
       expect(find.text('Getting your catalogue…'), findsOneWidget);
+      expect(find.text('Downloading the movie list'), findsOneWidget);
+      expect(find.textContaining('Tip · '), findsOneWidget);
       expect(find.text('Start watching'), findsOneWidget);
+
+      // The count grows in place as the sync writes.
+      home.vod.fakes.sync.emit(
+        'src-1',
+        const SyncRunning(
+          SyncProgress(stage: SyncStage.movies, movies: 412, stageTotal: 900),
+        ),
+      );
+      await settle(tester);
+      expect(find.text('412 of 900 movies'), findsOneWidget);
     });
   });
 

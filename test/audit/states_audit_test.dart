@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
@@ -12,6 +13,7 @@ import 'package:iptv_player/features/sources/presentation/source_shell_slots.dar
 
 import '../app/app_harness.dart';
 import '../features/casting/support/cast_ui_harness.dart';
+import '../features/home/home_fakes.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import '../features/onboarding/onboarding_fakes.dart';
 import '../features/vod/vod_fakes.dart';
@@ -261,6 +263,64 @@ void main() {
       (tester, look) =>
           sync(tester, look, SyncFailed(NetworkFailure('no route to host'))),
     ),
+  ]);
+
+  // ------------------------------------------------------- a first sync
+  // A source's first sync still filling the screens: the loading stage,
+  // in Live TV's channel list at its narrowest too.
+  const running = SyncRunning(
+    SyncProgress(stage: SyncStage.live, channels: 12340, stageTotal: 20000),
+  );
+  auditScreen('a first sync', [
+    AuditScene('Live TV', (tester, look) async {
+      final live = LiveTvFakes();
+      addTearDown(() => tester.runAsync(live.db.close));
+      await tester.runAsync(() async {
+        await live.seed();
+        await live.db.customStatement('DELETE FROM channels');
+      });
+      live.fakes.sync.emit('src-1', running);
+      await pumpApp(
+        tester,
+        size: look.size,
+        initialLocation: AppDestination.liveTv.path,
+        overrides: [...live.overrides, ...sourceShellOverrides],
+      );
+    }),
+    AuditScene('Movies', (tester, look) async {
+      final vod = VodFakes();
+      addTearDown(() => tester.runAsync(vod.db.close));
+      await tester.runAsync(() => vod.seed(movies: false));
+      vod.fakes.sync.emit('src-1', running);
+      await pumpApp(
+        tester,
+        size: look.size,
+        initialLocation: AppDestination.movies.path,
+        overrides: [...vod.overrides, ...sourceShellOverrides],
+      );
+    }),
+    for (final search in [false, true])
+      AuditScene(search ? 'Search' : 'Home', (tester, look) async {
+        final home = HomeFakes();
+        addTearDown(() => tester.runAsync(home.db.close));
+        await tester.runAsync(() async {
+          await home.seed();
+          await home.db.customStatement('DELETE FROM favorites');
+          await home.db.customStatement('DELETE FROM movies');
+          await home.db.customStatement('DELETE FROM series');
+        });
+        home.vod.fakes.sync.emit('src-1', running);
+        await pumpApp(
+          tester,
+          size: look.size,
+          overrides: [...home.overrides, ...sourceShellOverrides],
+        );
+        if (!search) return;
+        await auditSettle(tester);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      }),
   ]);
 
   // ---------------------------------------------------------- settings

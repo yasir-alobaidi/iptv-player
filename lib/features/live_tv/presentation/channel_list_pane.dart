@@ -18,6 +18,7 @@ import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
+import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 
 /// The channel list: a header (the category, its count, the filter, No. /
 /// A–Z) and a virtualized list of `ChannelRow`s that can hold 50,000
@@ -508,12 +509,13 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
       );
     }
     final syncing = ref.watch(syncStatusProvider(query.sourceId)).value;
-    if (syncing is SyncRunning) {
-      return const EmptyState(
-        compact: true,
-        icon: AppIcons.loading,
+    if (syncing case SyncRunning(:final progress)) {
+      // They show here as soon as the sync has them; meanwhile, how far
+      // it has come.
+      return SyncWaitStage(
         title: 'Getting your channels…',
-        message: 'They show here as soon as the sync has them.',
+        progress: progress,
+        waitFor: SyncWaitFor.channels,
       );
     }
     return switch (query.filter) {

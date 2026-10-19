@@ -13,6 +13,7 @@ import 'package:iptv_player/features/onboarding/presentation/onboarding_frame.da
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
+import 'package:iptv_player/features/sources/presentation/wait_tips.dart';
 
 /// Onboarding step 3 (canvas `Onboarding · Sync`): the first sync of the
 /// source just added, stage by stage with live counts.
@@ -116,6 +117,11 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               SizedBox(height: context.tokens.spacing.s12),
             ],
             ..._rows(context, type, status),
+            // Something to read while the lists come in.
+            if (status is SyncRunning || status is SyncIdle) ...[
+              SizedBox(height: context.tokens.spacing.s20 + 2),
+              RotatingTip(tips: waitTips(context), textAlign: TextAlign.start),
+            ],
           ],
         ),
       ),

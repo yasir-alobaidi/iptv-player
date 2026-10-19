@@ -420,16 +420,32 @@ void main() {
       expect(app.location, '/add-source');
     });
 
-    testWidgets('a first sync still running says the catalogue is arriving', (
-      tester,
-    ) async {
+    testWidgets('a first sync still running: the loading stage until '
+        'something is typed, then a line over the results', (tester) async {
+      // Home under the overlay waits too: only the overlay's own counts.
+      Finder inPanel(Finder finder) =>
+          find.descendant(of: find.byType(SearchOverlay), matching: finder);
       await open(tester);
+      expect(inPanel(find.byType(LoadingStage)), findsNothing);
       expect(find.textContaining('still arriving'), findsNothing);
       live.fakes.sync.emit(
         'src-1',
-        const SyncRunning(SyncProgress(stage: SyncStage.live)),
+        const SyncRunning(SyncProgress(stage: SyncStage.live, channels: 12340)),
       );
       await settle(tester);
+      expect(inPanel(find.byType(LoadingStage)), findsOneWidget);
+      expect(inPanel(find.text('Getting your catalogue…')), findsOneWidget);
+      expect(inPanel(find.text('12,340 channels so far')), findsOneWidget);
+      expect(inPanel(find.textContaining('Tip · ')), findsOneWidget);
+      expect(
+        find.textContaining('still arriving'),
+        findsNothing,
+        reason: 'the stage says it',
+      );
+
+      search.answers['arena'] = full('arena');
+      await type(tester, 'arena');
+      expect(inPanel(find.byType(LoadingStage)), findsNothing);
       expect(find.textContaining('still arriving'), findsOneWidget);
     });
   });

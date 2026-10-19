@@ -32,6 +32,7 @@ import 'package:iptv_player/features/search/presentation/search_text.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
+import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 
 /// The Ctrl+K / `/` search overlay (canvas `Search`, Phase 6 step 4): a
@@ -613,10 +614,16 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         );
       }
     }
-    final syncing =
-        source != null &&
-        source.lastSyncedAt == null &&
-        ref.watch(syncStatusProvider(source.id)).value is SyncRunning;
+    // A first sync still under way, and how far it has come.
+    final firstSync = source == null || source.lastSyncedAt != null
+        ? null
+        : switch (ref.watch(syncStatusProvider(source.id)).value) {
+            SyncRunning(:final progress) => progress,
+            _ => null,
+          };
+    // Nothing typed and nothing recent: the body is the loading stage,
+    // which says it; over results, a line does.
+    final staged = firstSync != null && view.idle && view.recent.isEmpty;
     // Words whose first results are still to come: the skeletons.
     final loading =
         source != null && !view.idle && results == null && view.failure == null;
@@ -702,10 +709,19 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                                     onActivated: _onFieldActivated,
                                   ),
                                 ),
-                                if (syncing) const _StillArriving(),
+                                if (firstSync != null && !staged)
+                                  const _StillArriving(),
                                 Flexible(
                                   child: _resultsFocus(
-                                    _hug(_body(context, view, results, source)),
+                                    _hug(
+                                      _body(
+                                        context,
+                                        view,
+                                        results,
+                                        source,
+                                        firstSync: firstSync,
+                                      ),
+                                    ),
                                     loading: loading,
                                   ),
                                 ),
@@ -813,8 +829,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     BuildContext context,
     SearchView view,
     SearchResults? results,
-    Object? source,
-  ) {
+    Object? source, {
+    SyncProgress? firstSync,
+  }) {
     final tokens = context.tokens;
     final padding = EdgeInsets.all(tokens.spacing.s8);
     if (source == null) {
@@ -838,6 +855,13 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         if (view.recent.isNotEmpty) const _HeadingEntry.recent(),
         for (final text in view.recent) _RecentEntry(text),
       ];
+      if (_entries.isEmpty && firstSync != null) {
+        return SyncWaitStage(
+          title: 'Getting your catalogue…',
+          progress: firstSync,
+          waitFor: SyncWaitFor.catalogue,
+        );
+      }
       if (_entries.isEmpty) {
         return Padding(
           padding: EdgeInsets.symmetric(

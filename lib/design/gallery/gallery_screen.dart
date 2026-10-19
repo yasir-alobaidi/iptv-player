@@ -433,6 +433,28 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                 ),
               ),
+              SizedBox(
+                width: 460,
+                height: 360,
+                child: Specimen(
+                  label: 'Loading stage (a long wait)',
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: tokens.colors.surface2,
+                      borderRadius: tokens.radii.mdAll,
+                    ),
+                    child: const LoadingStage(
+                      title: 'Getting your channels…',
+                      detail: '12,340 of 20,000 channels',
+                      progress: 0.62,
+                      tips: [
+                        'Press F on a channel to add it to Favorites.',
+                        'Press Ctrl+K or / to search from anywhere.',
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ],

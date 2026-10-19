@@ -30,6 +30,7 @@ import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
+import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
@@ -227,7 +228,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final movies = ref.watch(homeRecentMoviesProvider(id));
     final series = ref.watch(homeRecentSeriesProvider(id));
     final watched = ref.watch(watchedAnythingProvider);
-    final syncing = ref.watch(syncStatusProvider(id)).value is SyncRunning;
+    // How far a sync still running has come; null when none runs.
+    final syncing = switch (ref.watch(syncStatusProvider(id)).value) {
+      SyncRunning(:final progress) => progress,
+      _ => null,
+    };
     final all = <AsyncValue<Object>>[
       continuing,
       favorites,
@@ -312,7 +317,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required List<MovieItem> movies,
     required List<SeriesItem> series,
     required bool firstRun,
-    required bool syncing,
+    required SyncProgress? syncing,
   }) {
     final tokens = context.tokens;
     final nothingYet =
@@ -328,7 +333,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _handOffFromGoneRow(shown);
     _shown = shown;
     _handOffFromHero(firstRun: firstRun);
-    if (rows.isEmpty && !firstRun && !syncing) {
+    if (rows.isEmpty && !firstRun && syncing == null) {
       return EmptyState(
         icon: AppIcons.home,
         title: 'Nothing here yet',
@@ -382,11 +387,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: _Hero(source: source),
               ),
             ),
-          if (syncing && nothingYet)
+          if (syncing != null && nothingYet)
             Padding(
               key: const ValueKey('syncing'),
               padding: EdgeInsets.symmetric(horizontal: inset),
-              child: const _GettingCatalogue(),
+              child: _GettingCatalogue(progress: syncing),
             ),
           // Keyed, so a row appearing above another keeps its cards, and
           // the keyboard's focus in them.
@@ -855,16 +860,18 @@ String? heroLine({
   return '$joined from $source.';
 }
 
-/// A first sync still under way: what has arrived shows below.
+/// A first sync still under way, and how far it has come: channels,
+/// movies and series show here as they arrive.
 class _GettingCatalogue extends StatelessWidget {
-  const new();
+  const new({required this.progress});
+
+  final SyncProgress progress;
 
   @override
-  Widget build(BuildContext context) => const EmptyState(
-    compact: true,
-    icon: AppIcons.loading,
+  Widget build(BuildContext context) => SyncWaitStage(
     title: 'Getting your catalogue…',
-    message: 'Channels, movies and series show here as they arrive.',
+    progress: progress,
+    waitFor: SyncWaitFor.catalogue,
   );
 }
 

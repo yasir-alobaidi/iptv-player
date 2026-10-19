@@ -12,6 +12,7 @@ import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/categories.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
+import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_grid.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
@@ -148,12 +149,15 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
       );
     }
     final syncing = ref.watch(syncStatusProvider(query.sourceId)).value;
-    if (syncing is SyncRunning) {
-      return EmptyState(
-        compact: true,
-        icon: AppIcons.loading,
+    if (syncing case SyncRunning(:final progress)) {
+      // They show here as soon as the sync has them; meanwhile, how far
+      // it has come.
+      return SyncWaitStage(
         title: 'Getting your $word…',
-        message: 'They show here as soon as the sync has them.',
+        progress: progress,
+        waitFor: kind == CatalogueKind.series
+            ? SyncWaitFor.series
+            : SyncWaitFor.movies,
       );
     }
     final notifier = ref.read(catalogueControllerProvider(kind).notifier);

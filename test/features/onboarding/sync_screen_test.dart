@@ -88,6 +88,27 @@ void main() {
     );
   });
 
+  testWidgets('a tip under the rows while it runs, gone once it is done', (
+    tester,
+  ) async {
+    await pump(tester, status: movies);
+
+    final tip = find.byType(RotatingTip);
+    expect(tip, findsOneWidget);
+    expect(
+      tester.getTopLeft(tip).dy,
+      greaterThan(tester.getBottomLeft(find.text('Series')).dy),
+      reason: 'under the rows',
+    );
+    expect(find.textContaining('Tip · '), findsOneWidget);
+
+    await emit(
+      tester,
+      const SyncSucceeded(SyncReport(duration: Duration(seconds: 42))),
+    );
+    expect(tip, findsNothing);
+  });
+
   testWidgets('a list still downloading says so', (tester) async {
     await pump(
       tester,

@@ -11,6 +11,7 @@ import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
+import 'package:iptv_player/features/sources/domain/sync.dart';
 
 import '../../app/app_harness.dart';
 import 'live_tv_fakes.dart';
@@ -40,6 +41,42 @@ void main() {
 
     expect(find.text('No channels yet'), findsOneWidget);
     expect(find.text('Add a source'), findsOneWidget);
+    await _finish(tester);
+  });
+
+  testWidgets('the first sync still running: the loading stage, its count '
+      'growing as the channels come', (tester) async {
+    final live = LiveTvFakes();
+    addTearDown(() => tester.runAsync(live.db.close));
+    await tester.runAsync(() async {
+      await live.seed();
+      await live.db.customStatement('DELETE FROM channels');
+    });
+    live.fakes.sync.emit(
+      'src-1',
+      const SyncRunning(SyncProgress(stage: SyncStage.live)),
+    );
+    await pumpApp(
+      tester,
+      initialLocation: AppDestination.liveTv.path,
+      overrides: live.overrides,
+    );
+    _live = live;
+    await _settle(tester);
+
+    expect(find.byType(LoadingStage), findsOneWidget);
+    expect(find.text('Getting your channels…'), findsOneWidget);
+    expect(find.text('Downloading the channel list'), findsOneWidget);
+    expect(find.textContaining('Tip · '), findsOneWidget);
+
+    live.fakes.sync.emit(
+      'src-1',
+      const SyncRunning(
+        SyncProgress(stage: SyncStage.live, channels: 5000, stageTotal: 20000),
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('5,000 of 20,000 channels'), findsOneWidget);
     await _finish(tester);
   });
 
