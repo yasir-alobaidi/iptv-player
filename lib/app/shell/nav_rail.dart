@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/app/destinations.dart';
@@ -18,6 +20,7 @@ class NavRail extends StatelessWidget {
     required this.onToggleExpanded,
     this.paneController,
     this.onLeaveRight,
+    this.onRest,
     this.showToggle = true,
     this.destinations,
     super.key,
@@ -26,6 +29,11 @@ class NavRail extends StatelessWidget {
   static const collapsedWidth = 72.0;
   static const expandedWidth = 240.0;
   static const itemHeight = 48.0;
+
+  /// How long the focus rests on an item before [onRest] opens it: long
+  /// enough that a press passing over an item opens nothing (a remote's
+  /// held arrow moves about every 50 ms), short enough to feel at once.
+  static const openAfter = Duration(milliseconds: 300);
 
   final AppDestination current;
   final ValueChanged<AppDestination> onSelect;
@@ -38,6 +46,12 @@ class NavRail extends StatelessWidget {
 
   /// Right arrow at the rail's edge hands focus to the content.
   final VoidCallback? onLeaveRight;
+
+  /// The focus rested on an item for [openAfter]: open it, as OK does. A
+  /// TV's (the user: "when I move it will take me to the page"); null on
+  /// the desktop, where only Enter or a click opens one. Never called for
+  /// the destination shown, so a rest never takes it back to its root.
+  final ValueChanged<AppDestination>? onRest;
 
   /// The expand/collapse toggle; not on a TV, whose 960-wide screen is
   /// too narrow for the expanded rail (docs/05: under 1280 it collapses).
@@ -87,6 +101,7 @@ class NavRail extends StatelessWidget {
                     selected: destination == current,
                     expanded: expanded,
                     onPressed: () => onSelect(destination),
+                    onRest: _restOn(destination),
                   ),
                   SizedBox(height: tokens.spacing.s8),
                 ],
@@ -100,6 +115,7 @@ class NavRail extends StatelessWidget {
                   selected: current == AppDestination.settings,
                   expanded: expanded,
                   onPressed: () => onSelect(AppDestination.settings),
+                  onRest: _restOn(AppDestination.settings),
                 ),
               ],
             ),
@@ -107,6 +123,11 @@ class NavRail extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  VoidCallback? _restOn(AppDestination destination) {
+    final rest = onRest;
+    return rest == null ? null : () => rest(destination);
   }
 }
 
@@ -148,12 +169,13 @@ class _AppMark extends StatelessWidget {
 
 /// One destination. The active item gets the canvas's 3 px accent bar on
 /// the rail's outer edge and an accent icon on [AppColors.surface3].
-class _RailItem extends StatelessWidget {
+class _RailItem extends StatefulWidget {
   const new({
     required this.destination,
     required this.selected,
     required this.expanded,
     required this.onPressed,
+    this.onRest,
   });
 
   final AppDestination destination;
@@ -161,21 +183,72 @@ class _RailItem extends StatelessWidget {
   final bool expanded;
   final VoidCallback onPressed;
 
+  /// The focus rested here for [NavRail.openAfter]; null: a rest opens
+  /// nothing.
+  final VoidCallback? onRest;
+
+  @override
+  State<_RailItem> createState() => _RailItemState();
+}
+
+class _RailItemState extends State<_RailItem> {
+  Timer? _rest;
+
+  @override
+  void didUpdateWidget(_RailItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.onRest == null) _stopResting();
+  }
+
+  @override
+  void dispose() {
+    _stopResting();
+    super.dispose();
+  }
+
+  void _stopResting() {
+    _rest?.cancel();
+    _rest = null;
+  }
+
+  /// Each arrival starts the wait over and each departure ends it, so
+  /// quick presses or a held arrow open only the item the focus stops on.
+  void _onFocusChange(bool focused) {
+    _stopResting();
+    if (!focused || widget.onRest == null) return;
+    _rest = Timer(NavRail.openAfter, () {
+      _rest = null;
+      // The screen shown already: nothing to open. OK on it goes back to
+      // its root, which a rest must not do: the focus passes over Movies
+      // on its way up the rail from a film's page under it.
+      if (mounted && !widget.selected) widget.onRest?.call();
+    });
+  }
+
   // The rail's first stop when it is entered with nothing to return to:
   // the screen shown.
   @override
   Widget build(BuildContext context) => FocusLanding(
-    on: selected,
-    child: _RailSlot(
-      selected: selected,
-      child: _RailButton(
-        icon: destination.icon,
-        label: destination.label,
-        tooltip: destination.label,
-        shortcut: destination.shortcut,
-        selected: selected,
-        expanded: expanded,
-        onPressed: onPressed,
+    on: widget.selected,
+    // Always in the tree, the desktop's too: a wrapper only on a TV would
+    // change the item's place in the tree, and its focus node with it.
+    child: Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      // The button below says what it is and whether it has the focus.
+      includeSemantics: false,
+      onFocusChange: _onFocusChange,
+      child: _RailSlot(
+        selected: widget.selected,
+        child: _RailButton(
+          icon: widget.destination.icon,
+          label: widget.destination.label,
+          tooltip: widget.destination.label,
+          shortcut: widget.destination.shortcut,
+          selected: widget.selected,
+          expanded: widget.expanded,
+          onPressed: widget.onPressed,
+        ),
       ),
     ),
   );

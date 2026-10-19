@@ -219,17 +219,25 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
   /// * Arrowing to a rail item and pressing Enter is the opposite
   ///   gesture: the user is working *in* the rail and wants to keep
   ///   browsing it, so the item they pressed gets its focus back.
+  ///
+  /// On a TV the focus in the rail goes to the item of the screen shown:
+  /// the one pressed or rested on, or Home's after Back. A rest opens the
+  /// item the focus is on ([NavRail.onRest]), so left on the item Back
+  /// went from, it would open that screen again.
   void _followTheJump() {
     // Read before the frame ends, while the old focus is still in place.
     final railItem = _railPane.hasFocus
         ? FocusManager.instance.primaryFocus
         : null;
+    final onTv = ref.read(formFactorProvider) == FormFactor.tv;
 
     // The new branch is built in this frame and is only traversable once
     // it has been laid out, so the move waits for the frame to end.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (railItem != null) {
+        // The rail's landing is the item of the screen shown.
+        if (onTv && _railPane.focusFirst()) return;
         if (railItem.context != null) {
           railItem.requestFocus();
         } else {
@@ -312,6 +320,14 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                       // Left/Right between panes return to the item the user
                       // left from, or the pane's first (docs/05).
                       onLeaveRight: _contentPane.focusPane,
+                      // A remote opens a destination by resting on it, as
+                      // OK does, but never back to the root of the one
+                      // shown (the rail skips that one too).
+                      onRest: onTv
+                          ? (destination) => widget.navigationShell.goBranch(
+                              destination.index,
+                            )
+                          : null,
                       showToggle: !onTv,
                       destinations: AppDestination.primaryOn(
                         ref.watch(formFactorProvider),

@@ -567,7 +567,8 @@ void main() {
             .first,
       ),
     ).requestFocus();
-    await settle(tester);
+    // On before a rest there opens Settings (NavRail.openAfter).
+    await tester.pump();
     expect(_focused(), AppDestination.settings.label);
     _node(tester, 'The Quiet Harbor').requestFocus();
     await settle(tester);
@@ -646,14 +647,19 @@ void main() {
       tester,
     ) async {
       final rows = await launch(tester);
+      // Down and back up before a rest on Live TV opens it
+      // (NavRail.openAfter): the rail's Home, where the user put it.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await settle(tester);
+      await tester.pump();
       expect(_focused(), AppDestination.liveTv.label);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await settle(tester);
+      expect(_focused(), AppDestination.home.label);
 
       rows.arrive();
       await settle(tester);
       expect(find.text('Continue watching'), findsOneWidget);
-      expect(_focused(), AppDestination.liveTv.label);
+      expect(_focused(), AppDestination.home.label);
     });
   });
 
