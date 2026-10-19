@@ -983,6 +983,25 @@ void main() {
       expect(sameLanguage(null, 'en'), isFalse);
       expect(sameLanguage('', ''), isFalse);
     });
+
+    test('a region or script after the language is the same language '
+        "(the TV's mpv names tracks es-419, pt-BR, en-US; the review of "
+        'main..dev)', () {
+      expect(sameLanguage('es-419', 'es'), isTrue);
+      expect(sameLanguage('pt-BR', 'por'), isTrue);
+      expect(sameLanguage('en_US', 'eng'), isTrue);
+      expect(sameLanguage('zh-Hant', 'chi'), isTrue);
+      expect(sameLanguage('en-US', 'es'), isFalse);
+      expect(sameLanguage('-', 'en'), isFalse);
+    });
+
+    test('codes the providers write beyond the most common', () {
+      expect(sameLanguage('sl', 'slv'), isTrue);
+      expect(sameLanguage('ca', 'cat'), isTrue);
+      expect(sameLanguage('mk', 'mac'), isTrue);
+      expect(sameLanguage('hy', 'arm'), isTrue);
+      expect(sameLanguage('ka', 'geo'), isTrue);
+    });
   });
 
   group('missing facts', () {

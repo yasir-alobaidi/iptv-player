@@ -425,10 +425,13 @@ AudioFacts? pickAudioTrack(List<AudioFacts> tracks, CastAudioChoice choice) {
 
 /// Whether two ISO 639 codes name one language: `en` and `eng`, `de`,
 /// `ger` and `deu`. Streams write the three-letter codes, Settings
-/// whichever the user typed.
+/// whichever the user typed. A region or script after it is the same
+/// language (`es-419`, `pt-BR`, `zh-Hant`: the TV's mpv names tracks so).
 bool sameLanguage(String? a, String? b) {
-  final x = a?.trim().toLowerCase();
-  final y = b?.trim().toLowerCase();
+  String? primary(String? code) =>
+      code?.trim().toLowerCase().split(RegExp('[-_]')).first;
+  final x = primary(a);
+  final y = primary(b);
   if (x == null || y == null || x.isEmpty || y.isEmpty) return false;
   if (x == y) return true;
   final xs = _languageCodes[x] ?? {x};
@@ -480,6 +483,22 @@ final Map<String, Set<String>> _languageCodes = () {
     {'th', 'tha'},
     {'id', 'ind'},
     {'ms', 'may', 'msa'},
+    {'sl', 'slv'},
+    {'ca', 'cat'},
+    {'mk', 'mac', 'mkd'},
+    {'bs', 'bos'},
+    {'hy', 'arm', 'hye'},
+    {'ka', 'geo', 'kat'},
+    {'az', 'aze'},
+    {'et', 'est'},
+    {'lv', 'lav'},
+    {'lt', 'lit'},
+    {'is', 'ice', 'isl'},
+    {'af', 'afr'},
+    {'sw', 'swa'},
+    {'so', 'som'},
+    {'am', 'amh'},
+    {'tl', 'tgl'},
   ];
   return {
     for (final group in groups)

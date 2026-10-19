@@ -203,16 +203,18 @@ final _listSeparator = Platform.isWindows ? ';' : ':';
 /// `sid`: a track in the first of [languages] that one of [tracks] has;
 /// `no` when none is asked for or none has one (ADR-041). mpv's own pick
 /// ([current]) stays when it is in that language: its default and forced
-/// flags chose among that language's tracks.
+/// flags chose among that language's tracks. In its place, a whole track
+/// before a forced one (only the lines in another language).
 String subtitleChoice(
   List<String> languages,
-  List<({String id, String? language})> tracks, {
+  List<({String id, String? language, bool forced})> tracks, {
   required String current,
 }) {
   for (final wanted in languages) {
     final those = tracks.where((t) => sameLanguage(t.language, wanted));
     if (those.isEmpty) continue;
-    return those.any((t) => t.id == current) ? current : those.first.id;
+    if (those.any((t) => t.id == current)) return current;
+    return (those.where((t) => !t.forced).firstOrNull ?? those.first).id;
   }
   return 'no';
 }
@@ -723,6 +725,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
                 )?.language,
                 _ => null,
               },
+              forced: track['forced'] == true,
             ),
       ];
       final wanted = subtitleChoice(

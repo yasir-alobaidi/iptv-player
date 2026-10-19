@@ -106,10 +106,10 @@ void main() {
   });
 
   group('the subtitle a file settles on once it plays (ADR-041)', () {
-    const english = (id: '1', language: 'eng');
-    const german = (id: '2', language: 'ger');
-    const englishSdh = (id: '3', language: 'en');
-    const unnamed = (id: '4', language: null);
+    const english = (id: '1', language: 'eng', forced: false);
+    const german = (id: '2', language: 'ger', forced: false);
+    const englishSdh = (id: '3', language: 'en', forced: false);
+    const unnamed = (id: '4', language: null, forced: false);
 
     test('none asked for: off', () {
       expect(subtitleChoice(const [], [english], current: '1'), 'no');
@@ -130,6 +130,22 @@ void main() {
     test("mpv's pick stays when it is in that language (its default and "
         'forced flags chose among them)', () {
       expect(subtitleChoice(['en'], [english, englishSdh], current: '3'), '3');
+    });
+
+    test("mpv's pick in a language with a region stays: 'es' asked, "
+        "'es-419' picked (the review of main..dev)", () {
+      const latin = (id: '3', language: 'es-419', forced: false);
+      expect(subtitleChoice(['es'], [german, latin], current: '3'), '3');
+      expect(subtitleChoice(['es'], [german, latin], current: '2'), '3');
+    });
+
+    test("in place of mpv's pick, a whole track before a forced one (the "
+        'foreign lines only), whichever comes first', () {
+      const forced = (id: '2', language: 'eng', forced: true);
+      const full = (id: '3', language: 'eng', forced: false);
+      expect(subtitleChoice(['en'], [german, forced, full], current: '1'), '3');
+      // A forced track alone is still that language's.
+      expect(subtitleChoice(['en'], [german, forced], current: 'no'), '2');
     });
 
     test('no track in a language asked for, or none named: off', () {
