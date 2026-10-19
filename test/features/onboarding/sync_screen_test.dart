@@ -182,6 +182,10 @@ void main() {
         reason: 'the row of the stage running shows',
       );
       expect(inView(tester, find.byType(RotatingTip)), isTrue);
+      // The bar stays above the rows, in view.
+      final bar = tester.getRect(find.text('Saving series'));
+      expect(bar.top, greaterThanOrEqualTo(0));
+      expect(bar.bottom, lessThanOrEqualTo(shown(tester).top));
     });
 
     testWidgets('the row running wins over the tip when both cannot show', (

@@ -170,35 +170,43 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
           'This takes about a minute the first time. After that, updates '
           'run quietly in the background.',
       maxWidth: 640,
-      body: SingleChildScrollView(
-        controller: _scroll,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Progress(status: status, last: _last),
-            SizedBox(height: context.tokens.spacing.s20 + 2),
-            if (stopped) ...[
-              AppBanner(
-                message: switch (status) {
-                  SyncFailed(:final failure) => _failureText(failure),
-                  _ => 'The sync stopped before it finished.',
-                },
-                tone: BannerTone.error,
+      // The bar stays put; the rows under it scroll.
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Progress(status: status, last: _last),
+          SizedBox(height: context.tokens.spacing.s20 + 2),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scroll,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (stopped) ...[
+                    AppBanner(
+                      message: switch (status) {
+                        SyncFailed(:final failure) => _failureText(failure),
+                        _ => 'The sync stopped before it finished.',
+                      },
+                      tone: BannerTone.error,
+                    ),
+                    SizedBox(height: context.tokens.spacing.s12),
+                  ],
+                  ...rows,
+                  // Something to read while the lists come in.
+                  if (tip) ...[
+                    SizedBox(height: context.tokens.spacing.s20 + 2),
+                    RotatingTip(
+                      key: _tip,
+                      tips: waitTips(context),
+                      textAlign: TextAlign.start,
+                    ),
+                  ],
+                ],
               ),
-              SizedBox(height: context.tokens.spacing.s12),
-            ],
-            ...rows,
-            // Something to read while the lists come in.
-            if (tip) ...[
-              SizedBox(height: context.tokens.spacing.s20 + 2),
-              RotatingTip(
-                key: _tip,
-                tips: waitTips(context),
-                textAlign: TextAlign.start,
-              ),
-            ],
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
       footer: OnboardingFooter(
         leading: done
