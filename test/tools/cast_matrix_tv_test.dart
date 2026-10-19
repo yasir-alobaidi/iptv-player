@@ -1304,7 +1304,13 @@ final class _ReadingEngine implements PlayerEngine {
     required Color background,
     Key? key,
     BoxFit fit = BoxFit.contain,
-  }) => _fake.videoView(background: background, key: key, fit: fit);
+    double subtitleScale = 1,
+  }) => _fake.videoView(
+    background: background,
+    key: key,
+    fit: fit,
+    subtitleScale: subtitleScale,
+  );
 
   @override
   ValueListenable<bool> get pictureBehindApp => _fake.pictureBehindApp;

@@ -122,10 +122,11 @@ final class FakePlayerEngine implements PlayerEngine {
     required Color background,
     Key? key,
     BoxFit fit = BoxFit.contain,
-  }) => ColoredBox(
+    double subtitleScale = 1,
+  }) => FakeVideoView(
     key: key ?? const ValueKey('fake-video'),
-    color: background,
-    child: const SizedBox.expand(),
+    background: background,
+    subtitleScale: subtitleScale,
   );
 
   /// Set by a test to put the picture "behind the app" (a TV's film on
@@ -138,4 +139,19 @@ final class FakePlayerEngine implements PlayerEngine {
     disposed = true;
     await _events.close();
   }
+}
+
+/// [FakePlayerEngine]'s picture: the background, and what the real view
+/// was asked for, for a test to read.
+class FakeVideoView extends StatelessWidget {
+  const new({required this.background, required this.subtitleScale, super.key});
+
+  final Color background;
+
+  /// The subtitles' size against the player's own ([PlayerEngine.videoView]).
+  final double subtitleScale;
+
+  @override
+  Widget build(BuildContext context) =>
+      ColoredBox(color: background, child: const SizedBox.expand());
 }

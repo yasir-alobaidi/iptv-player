@@ -62,6 +62,7 @@ final class UnavailablePlayerEngine implements PlayerEngine {
     required Color background,
     Key? key,
     BoxFit fit = BoxFit.contain,
+    double subtitleScale = 1,
   }) => ColoredBox(key: key, color: background, child: const SizedBox.expand());
 
   @override

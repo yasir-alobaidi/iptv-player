@@ -10,6 +10,7 @@ import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_version.dart';
 import 'package:iptv_player/data/player_mediakit/desktop_picture.dart';
+import 'package:iptv_player/data/player_mediakit/subtitle_style.dart';
 import 'package:iptv_player/data/player_mediakit/video_layer.dart';
 import 'package:iptv_player/data/player_mediakit/video_layer_geometry.dart';
 import 'package:media_kit/media_kit.dart';
@@ -297,6 +298,9 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
 
   /// The picture's display size (its shape, any ratio override applied).
   Size? _displaySize;
+
+  /// The subtitles' configuration for each size asked for (ADR-038).
+  final _subtitles = SubtitleStyles();
 
   NativePlayer get _native => _player.platform! as NativePlayer;
 
@@ -962,6 +966,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     required Color background,
     Key? key,
     BoxFit fit = BoxFit.contain,
+    double subtitleScale = 1,
   }) {
     final controller = _controller;
     if (controller == null) {
@@ -971,6 +976,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         child: const SizedBox.expand(),
       );
     }
+    final subtitles = _subtitles.at(subtitleScale);
     if (_direct && _layer != null) {
       return ValueListenableBuilder(
         key: key,
@@ -978,18 +984,29 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         builder: (context, behind, _) => behind
             ? _LayerPicture(
                 controller: controller,
+                subtitles: subtitles,
                 onPlaced: (box) {
                   _layerBox = box;
                   unawaited(_placeLayer());
                 },
               )
-            : _directVideo(controller, background: background, fit: fit),
+            : _directVideo(
+                controller,
+                background: background,
+                fit: fit,
+                subtitles: subtitles,
+              ),
       );
     }
     if (_direct) {
       return KeyedSubtree(
         key: key,
-        child: _directVideo(controller, background: background, fit: fit),
+        child: _directVideo(
+          controller,
+          background: background,
+          fit: fit,
+          subtitles: subtitles,
+        ),
       );
     }
     if (_desktop case final desktop?) {
@@ -1001,6 +1018,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
           fit: pictureFit,
           controls: null,
           fill: background,
+          subtitleViewConfiguration: subtitles,
         ),
       );
     }
@@ -1010,6 +1028,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       fit: fit,
       controls: null,
       fill: background,
+      subtitleViewConfiguration: subtitles,
     );
   }
 
@@ -1017,6 +1036,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     VideoController controller, {
     required Color background,
     required BoxFit fit,
+    required SubtitleViewConfiguration subtitles,
   }) => ValueListenableBuilder(
     valueListenable: _directFit,
     builder: (context, directFit, _) => Video(
@@ -1024,6 +1044,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       fit: directFit == BoxFit.contain ? fit : directFit,
       controls: null,
       fill: background,
+      subtitleViewConfiguration: subtitles,
     ),
   );
 
@@ -1053,9 +1074,16 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
 /// layer keeps the screen awake while it shows (MainActivity's
 /// VideoLayer), as media_kit's `Video` does on the texture.
 class _LayerPicture extends StatelessWidget {
-  const new({required this.controller, required this.onPlaced});
+  const new({
+    required this.controller,
+    required this.subtitles,
+    required this.onPlaced,
+  });
 
   final VideoController controller;
+
+  /// As the texture's `Video` draws them (ADR-038).
+  final SubtitleViewConfiguration subtitles;
   final ValueChanged<Rect> onPlaced;
 
   @override
@@ -1073,10 +1101,7 @@ class _LayerPicture extends StatelessWidget {
           ),
         );
       });
-      return SubtitleView(
-        controller: controller,
-        configuration: const SubtitleViewConfiguration(),
-      );
+      return SubtitleView(controller: controller, configuration: subtitles);
     },
   );
 }

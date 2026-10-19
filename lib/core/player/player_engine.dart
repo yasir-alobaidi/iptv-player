@@ -48,10 +48,16 @@ abstract interface class PlayerEngine {
   /// The picture. Build it wherever the video should show (the preview
   /// pane, full screen); there is one picture, whichever widget shows it.
   /// [background] fills the letterbox (a design token, hard rule 9).
+  ///
+  /// [subtitleScale] sizes the subtitles drawn over it: 1 is the player's
+  /// own size, which grows with the picture's box (Settings → Playback →
+  /// Subtitle size, ADR-038). A view built again with another scale shows
+  /// it at the next frame, on what is playing.
   Widget videoView({
     required Color background,
     Key? key,
     BoxFit fit = BoxFit.contain,
+    double subtitleScale = 1,
   });
 
   /// True while the picture is on a layer of its own behind the app (a
@@ -82,6 +88,12 @@ enum AspectMode { fit, fill, stretch, ratio16x9, ratio4x3 }
 /// sharper filters and debanding; Standard leaves the scaling to the
 /// screen. A TV's picture never goes through the player's scaler.
 enum PictureQuality { standard, high }
+
+/// Settings → Playback → Subtitle size (ADR-038), on a TV and a desktop
+/// alike. What each is against the player's own size is the design's
+/// (`AppPlayerTokens.subtitleScale`): a TV's Medium is larger, read from
+/// a sofa.
+enum SubtitleSize { small, medium, large }
 
 /// What to play and how.
 @immutable

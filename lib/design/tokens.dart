@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/text/format.dart';
 
 /// User-selectable accent (docs/05). Blue is the default and the only one
@@ -773,6 +774,26 @@ class AppPlayerTokens {
   double get centerPlaySize => 104;
   double get centerPlayIconSize => 52;
   double get centerPlayOpacity => 0.55;
+
+  /// Subtitles' size (Settings → Playback, ADR-038), against the player's
+  /// own: 32 px for a 1920×1080 picture, less in a smaller box. A desktop's
+  /// Medium is that size; a TV's is [subtitleTvMedium] times it (about
+  /// 45 px of a 1080-line screen, 4 % of its height, as TV apps draw
+  /// them), since the TV's 1280×720 canvas leaves the player's own at
+  /// 3 %, small from a sofa. Small and Large are of the platform's Medium.
+  double get subtitleTvMedium => 1.4;
+  double get subtitleSmall => 0.8;
+  double get subtitleLarge => 1.3;
+
+  /// The player's subtitle scale for [size] on a TV ([tv]) or a desktop.
+  double subtitleScale(SubtitleSize size, {required bool tv}) {
+    final medium = tv ? subtitleTvMedium : 1.0;
+    return switch (size) {
+      SubtitleSize.small => medium * subtitleSmall,
+      SubtitleSize.medium => medium,
+      SubtitleSize.large => medium * subtitleLarge,
+    };
+  }
 }
 
 /// The Library's measures (canvas `Library`, `Library · Downloads`,

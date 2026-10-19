@@ -14,6 +14,7 @@ void main() {
     hardwareDecoding: false,
     matchFrameRate: false,
     pictureQuality: PictureQuality.high,
+    subtitleSize: SubtitleSize.large,
   );
 
   test('round-trips through JSON', () {
@@ -118,6 +119,45 @@ void main() {
     expect(
       const PlaybackSettings().request(stream).pictureQuality,
       PictureQuality.standard,
+    );
+  });
+
+  test('Subtitle size is Medium unless Small or Large was stored '
+      '(ADR-038)', () {
+    expect(const PlaybackSettings().subtitleSize, SubtitleSize.medium);
+    expect(const PlaybackSettings().toJson()['subtitleSize'], 'medium');
+    expect(chosen.toJson()['subtitleSize'], 'large');
+    for (final size in SubtitleSize.values) {
+      final settings = PlaybackSettings(subtitleSize: size);
+      expect(PlaybackSettings.fromJson(settings.toJson()), settings);
+    }
+    expect(
+      PlaybackSettings.fromJson(const {'subtitleSize': 'small'}).subtitleSize,
+      SubtitleSize.small,
+    );
+    // Settings stored before it, or damaged: Medium, and the rest kept.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'subtitleSize': 'huge'},
+      const {'subtitleSize': 'Large'},
+      const {'subtitleSize': 2},
+      const {'subtitleSize': null},
+      const {
+        'subtitleSize': ['large'],
+      },
+    ]) {
+      expect(
+        PlaybackSettings.fromJson(stored).subtitleSize,
+        SubtitleSize.medium,
+      );
+    }
+    expect(
+      PlaybackSettings.fromJson({...chosen.toJson(), 'subtitleSize': 'giant'}),
+      chosen.copyWith(subtitleSize: SubtitleSize.medium),
+    );
+    expect(
+      const PlaybackSettings(subtitleSize: SubtitleSize.small),
+      isNot(const PlaybackSettings()),
     );
   });
 

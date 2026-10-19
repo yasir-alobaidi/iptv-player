@@ -277,6 +277,113 @@ void main() {
       expect(find.text('Hardware decoding'), findsNothing);
     });
   });
+
+  group('Subtitle size (ADR-038), on a TV and a desktop', () {
+    /// The row: its name and line, and its three sizes.
+    Finder subtitleSize() => find
+        .ancestor(of: find.text('Subtitle size'), matching: find.byType(Row))
+        .first;
+
+    SegmentedControl<SubtitleSize> control(WidgetTester tester) =>
+        tester.widget<SegmentedControl<SubtitleSize>>(
+          find.descendant(
+            of: subtitleSize(),
+            matching: find.byType(SegmentedControl<SubtitleSize>),
+          ),
+        );
+
+    PlaybackSettings settings(WidgetTester tester) => ProviderScope.containerOf(
+      tester.element(find.byType(PlaybackSettingsSection)),
+    ).read(playbackSettingsControllerProvider);
+
+    Future<String?> stored(WidgetTester tester, LiveTvFakes live) => tester
+        .runAsync<String?>(() => live.db.settingsDao.read('playback.settings'));
+
+    /// The focused segment's label, when it is one of the row's.
+    String? onRow(WidgetTester tester) {
+      final context = FocusManager.instance.primaryFocus?.context;
+      if (context == null) return null;
+      if (!identical(
+        context.findAncestorWidgetOfExactType<SegmentedControl<SubtitleSize>>(),
+        control(tester),
+      )) {
+        return null;
+      }
+      return focusedLabelOf(tester);
+    }
+
+    testWidgets('the desktop: Medium until another is chosen, each saved at '
+        'once; its line says it shows at once', (tester) async {
+      final live = await open(tester);
+      expect(find.text('Subtitle size'), findsOneWidget);
+      expect(
+        find.textContaining('Changes show at once, on what is playing too.'),
+        findsOneWidget,
+      );
+      expect(control(tester).value, SubtitleSize.medium);
+      expect(settings(tester).subtitleSize, SubtitleSize.medium);
+
+      await tester.tap(
+        find.descendant(of: subtitleSize(), matching: find.text('Large')),
+      );
+      await _settle(tester);
+      expect(settings(tester).subtitleSize, SubtitleSize.large);
+      expect(control(tester).value, SubtitleSize.large);
+      expect(await stored(tester, live), contains('"subtitleSize":"large"'));
+
+      await tester.tap(
+        find.descendant(of: subtitleSize(), matching: find.text('Small')),
+      );
+      await _settle(tester);
+      expect(await stored(tester, live), contains('"subtitleSize":"small"'));
+    });
+
+    testWidgets('the keyboard reaches it: Tab along the page to Large, '
+        'Enter', (tester) async {
+      final live = await open(tester);
+      Focus.of(tester.element(find.text('Automatic'))).requestFocus();
+      await tester.pump();
+      for (var i = 0; i < 40 && onRow(tester) != 'Large'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(onRow(tester), 'Large', reason: 'Tab reaches the row');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await _settle(tester);
+      expect(settings(tester).subtitleSize, SubtitleSize.large);
+      expect(await stored(tester, live), contains('"subtitleSize":"large"'));
+    });
+
+    testWidgets('a TV has it too: the remote reaches it, Down from '
+        'Buffering, Right to Large, OK', (tester) async {
+      final live = await open(tester, formFactor: FormFactor.tv);
+      expect(find.text('Subtitle size'), findsOneWidget);
+      expect(control(tester).value, SubtitleSize.medium);
+
+      // Into the page, on Buffering's Low latency.
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(focusedLabelOf(tester), 'Stable');
+      for (var i = 0; i < 8 && onRow(tester) == null; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await _settle(tester);
+      }
+      expect(onRow(tester), isNotNull, reason: 'Down reaches the row');
+      for (var i = 0; i < 3 && onRow(tester) != 'Large'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(onRow(tester), 'Large');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(settings(tester).subtitleSize, SubtitleSize.large);
+      expect(await stored(tester, live), contains('"subtitleSize":"large"'));
+    });
+  });
 }
 
 Future<void> _settle(WidgetTester tester) async {

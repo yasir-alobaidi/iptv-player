@@ -6,6 +6,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/file_reveal.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -67,6 +68,14 @@ class PlayerSurface extends ConsumerWidget {
         ref.watch(playbackStateProvider).value ?? const PlaybackIdle();
     final size = ref.watch(videoSizeProvider).value;
     final showPicture = pictureShows(state);
+    // Settings → Playback → Subtitle size, on what plays at once: a change
+    // builds the picture again with it (ADR-038).
+    final subtitleScale = tokens.player.subtitleScale(
+      ref.watch(
+        playbackSettingsControllerProvider.select((s) => s.subtitleSize),
+      ),
+      tv: ref.watch(formFactorProvider) == FormFactor.tv,
+    );
     final file =
         state is PlaybackFailed &&
             state.problem.kind == PlaybackProblemKind.fileUnreadable
@@ -132,7 +141,11 @@ class PlayerSurface extends ConsumerWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (showPicture) engine.videoView(background: colors.video),
+          if (showPicture)
+            engine.videoView(
+              background: colors.video,
+              subtitleScale: subtitleScale,
+            ),
           if (onPictureTap != null || onPictureDoubleTap != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,

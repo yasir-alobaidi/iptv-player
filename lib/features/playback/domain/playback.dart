@@ -90,6 +90,7 @@ final class PlaybackSettings {
     this.hardwareDecoding = true,
     this.matchFrameRate = true,
     this.pictureQuality = PictureQuality.standard,
+    this.subtitleSize = SubtitleSize.medium,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -118,6 +119,11 @@ final class PlaybackSettings {
       pictureQuality: json['quality'] == 'high'
           ? PictureQuality.high
           : PictureQuality.standard,
+      subtitleSize:
+          SubtitleSize.values
+              .where((s) => s.name == json['subtitleSize'])
+              .firstOrNull ??
+          SubtitleSize.medium,
     );
   }
 
@@ -140,6 +146,10 @@ final class PlaybackSettings {
   /// The desktop's Picture quality; a TV ignores it.
   final PictureQuality pictureQuality;
 
+  /// How large subtitles are over the picture (ADR-038). Unlike the rest,
+  /// it shows at once on what is playing: the picture's view reads it.
+  final SubtitleSize subtitleSize;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
@@ -148,6 +158,7 @@ final class PlaybackSettings {
     bool? hardwareDecoding,
     bool? matchFrameRate,
     PictureQuality? pictureQuality,
+    SubtitleSize? subtitleSize,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
@@ -156,6 +167,7 @@ final class PlaybackSettings {
     hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
     matchFrameRate: matchFrameRate ?? this.matchFrameRate,
     pictureQuality: pictureQuality ?? this.pictureQuality,
+    subtitleSize: subtitleSize ?? this.subtitleSize,
   );
 
   /// As stored in the `settings` table.
@@ -171,6 +183,7 @@ final class PlaybackSettings {
     'hwdec': hardwareDecoding ? 'auto' : 'off',
     'matchFps': matchFrameRate ? 'on' : 'off',
     'quality': pictureQuality.name,
+    'subtitleSize': subtitleSize.name,
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -201,7 +214,8 @@ final class PlaybackSettings {
       other.deinterlace == deinterlace &&
       other.hardwareDecoding == hardwareDecoding &&
       other.matchFrameRate == matchFrameRate &&
-      other.pictureQuality == pictureQuality;
+      other.pictureQuality == pictureQuality &&
+      other.subtitleSize == subtitleSize;
 
   @override
   int get hashCode => Object.hash(
@@ -212,5 +226,6 @@ final class PlaybackSettings {
     hardwareDecoding,
     matchFrameRate,
     pictureQuality,
+    subtitleSize,
   );
 }

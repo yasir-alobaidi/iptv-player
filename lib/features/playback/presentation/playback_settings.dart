@@ -19,9 +19,10 @@ import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
 
 /// Settings → Playback (ADR-010 decision 5): the buffer preset,
-/// deinterlacing, preferred languages, and, for the source being browsed,
-/// its live format. Every change is saved at once and applies to the next
-/// stream opened.
+/// deinterlacing, preferred languages, the subtitles' size, and, for the
+/// source being browsed, its live format. Every change is saved at once
+/// and applies to the next stream opened; the subtitles' size to what
+/// plays too (ADR-038).
 class PlaybackSettingsSection extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -247,6 +248,24 @@ class _PlaybackSettingsSectionState
                   _save(settings.copyWith(subtitleLanguages: _languages(text))),
                 ),
               ),
+            ),
+          ),
+          // Read from across a room on a TV, so its Medium is larger there
+          // (ADR-038); the only row here that changes what is playing.
+          _Setting(
+            title: 'Subtitle size',
+            description:
+                'How large subtitles are over the picture. Changes show at '
+                'once, on what is playing too.',
+            control: SegmentedControl<SubtitleSize>(
+              options: const [
+                SegmentOption(value: SubtitleSize.small, label: 'Small'),
+                SegmentOption(value: SubtitleSize.medium, label: 'Medium'),
+                SegmentOption(value: SubtitleSize.large, label: 'Large'),
+              ],
+              value: settings.subtitleSize,
+              onChanged: (value) =>
+                  unawaited(_save(settings.copyWith(subtitleSize: value))),
             ),
           ),
           if (source != null && source.type == SourceType.xtream)
