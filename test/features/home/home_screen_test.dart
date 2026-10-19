@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +31,7 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/domain/sync.dart';
+import 'package:iptv_player/features/vod/data/db_watch_progress.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/title_cards.dart';
@@ -54,6 +56,45 @@ String? _focused() {
   return surface?.semanticLabel;
 }
 
+/// A row's cards, in its order, by the row's heading: the ones built.
+List<FocusableSurface> _cards(WidgetTester tester, String heading) => tester
+    .widgetList<FocusableSurface>(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text(heading),
+          matching: find.byType(HomeRow),
+        ),
+        matching: find.byWidgetPredicate(
+          (w) => w is FocusableSurface && w.focusNode != null,
+        ),
+      ),
+    )
+    .toList();
+
+List<String?> _titles(WidgetTester tester, String heading) => [
+  for (final card in _cards(tester, heading)) card.semanticLabel,
+];
+
+/// [title] is the first card of the row under [heading], has the focus,
+/// and is on screen whole.
+void _expectFirstOf(WidgetTester tester, String heading, String title) {
+  final first = _cards(tester, heading).first;
+  expect(first.semanticLabel, title);
+  expect(
+    FocusManager.instance.primaryFocus,
+    same(first.focusNode),
+    reason: 'the focus is on ${_focused()}',
+  );
+  final rect = tester.getRect(find.byWidget(first));
+  final screen = Offset.zero & tester.view.physicalSize;
+  expect(screen.contains(rect.topLeft), isTrue, reason: '$rect');
+  expect(
+    screen.contains(rect.bottomRight - const Offset(1, 1)),
+    isTrue,
+    reason: '$rect',
+  );
+}
+
 void main() {
   Future<(HomeFakes, AppUnderTest)> open(
     WidgetTester tester, {
@@ -61,8 +102,9 @@ void main() {
     List<Override> extra = const [],
     FutureOr<void> Function(HomeFakes home)? before,
     Size size = const Size(1440, 900),
+    bool plays = false,
   }) async {
-    final home = HomeFakes();
+    final home = HomeFakes(plays: plays);
     addTearDown(() => tester.runAsync(home.db.close));
     await tester.runAsync(() async {
       await home.seed();
@@ -669,6 +711,317 @@ void main() {
     await open(tester);
     expect(findByLabel('See all'), findsNothing);
     expect(findByLabel('See all Recently added movies'), findsOneWidget);
+  });
+
+  group('back on Home, the focus is on what was played, wherever it is '
+      'now (ADR-039)', () {
+    /// Continue watching, newest first: Copper Hollow, The Quiet Harbor,
+    /// Ember Road.
+    Future<void> threeToContinue(HomeFakes home) async {
+      await home.db.watchHistoryDao.touch(
+        UserItemType.movie,
+        'src-1',
+        '502',
+        home.now.subtract(const Duration(minutes: 30)),
+        positionMs: 30 * 60000,
+        durationMs: 100 * 60000,
+        completed: false,
+      );
+      await home.db.watchHistoryDao.touch(
+        UserItemType.movie,
+        'src-1',
+        '504',
+        home.now.subtract(const Duration(hours: 2)),
+        positionMs: 30 * 60000,
+        durationMs: 100 * 60000,
+        completed: false,
+      );
+    }
+
+    Future<AppUnderTest> openTv(
+      WidgetTester tester,
+      FutureOr<void> Function(HomeFakes home) before, {
+      required void Function(HomeFakes home) got,
+      FormFactor formFactor = FormFactor.tv,
+    }) async {
+      final (home, app) = await open(
+        tester,
+        history: true,
+        plays: true,
+        size: formFactor == FormFactor.tv
+            ? const Size(960, 540)
+            : const Size(1440, 900),
+        extra: [formFactorProvider.overrideWithValue(formFactor)],
+        before: before,
+      );
+      got(home);
+      return app;
+    }
+
+    Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await settle(tester);
+    }
+
+    /// Back from the player, as the remote's Back leaves it.
+    Future<void> back(WidgetTester tester, AppUnderTest app) async {
+      if (app.location == playerRoutePath) {
+        await tester.binding.handlePopRoute();
+      }
+      await settle(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      await settle(tester);
+      expect(app.location, AppDestination.home.path);
+    }
+
+    testWidgets('a Continue card played from the third place is first now, '
+        'and has the focus (the Bedroom TV: it stayed on the third place, '
+        'another title)', (tester) async {
+      late HomeFakes home;
+      final app = await openTv(tester, threeToContinue, got: (h) => home = h);
+      expect(_titles(tester, 'Continue watching'), [
+        'Copper Hollow',
+        'The Quiet Harbor',
+        'Ember Road',
+      ]);
+      expect(_focused(), 'Copper Hollow', reason: "Home's first, at launch");
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(_focused(), 'Ember Road');
+
+      await press(tester, LogicalKeyboardKey.select);
+      home.rig.engine.firstFrame();
+      await settle(tester);
+      expect(app.location, playerRoutePath);
+      await back(tester, app);
+
+      expect(_titles(tester, 'Continue watching'), [
+        'Ember Road',
+        'Copper Hollow',
+        'The Quiet Harbor',
+      ]);
+      _expectFirstOf(tester, 'Continue watching', 'Ember Road');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets('the desktop too: Esc from the player, the focus on the '
+        'card played', (tester) async {
+      late HomeFakes home;
+      final app = await openTv(
+        tester,
+        threeToContinue,
+        got: (h) => home = h,
+        formFactor: FormFactor.desktop,
+      );
+      _node(tester, 'Ember Road').requestFocus();
+      await settle(tester);
+
+      await press(tester, LogicalKeyboardKey.enter);
+      home.rig.engine.firstFrame();
+      await settle(tester);
+      expect(app.location, playerRoutePath);
+      await press(tester, LogicalKeyboardKey.escape);
+      await back(tester, app);
+
+      expect(_titles(tester, 'Continue watching').first, 'Ember Road');
+      _expectFirstOf(tester, 'Continue watching', 'Ember Road');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets('far along the row: the seventh card played comes back '
+        'first, with the focus, the row scrolled back to show it', (
+      tester,
+    ) async {
+      late HomeFakes home;
+      final app = await openTv(tester, (home) async {
+        await home.vod.seedMany(8);
+        for (var i = 1; i <= 8; i++) {
+          await home.db.watchHistoryDao.touch(
+            UserItemType.movie,
+            'src-1',
+            'm$i',
+            home.now.subtract(Duration(minutes: i)),
+            positionMs: 30 * 60000,
+            durationMs: 100 * 60000,
+            completed: false,
+          );
+        }
+      }, got: (h) => home = h);
+      expect(_focused(), 'Movie 001');
+      for (var i = 0; i < 6; i++) {
+        await press(tester, LogicalKeyboardKey.arrowRight);
+      }
+      expect(_focused(), 'Movie 007');
+
+      await press(tester, LogicalKeyboardKey.select);
+      home.rig.engine.firstFrame();
+      await settle(tester);
+      await back(tester, app);
+
+      _expectFirstOf(tester, 'Continue watching', 'Movie 007');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets('a channel played from the fourth card of Recently watched '
+        'channels is first now, and has the focus', (tester) async {
+      late HomeFakes home;
+      final app = await openTv(tester, (home) async {
+        final sports = await (home.db.select(
+          home.db.categories,
+        )..where((c) => c.name.equals('Sports'))).getSingle();
+        ChannelsCompanion row(String key, String name, int number) =>
+            ChannelsCompanion.insert(
+              sourceId: 'src-1',
+              remoteKey: key,
+              name: name,
+              number: Value(number),
+              categoryId: Value(sports.id),
+              position: Value(number),
+            );
+        await home.db.channelsDao.upsertAll([
+          row('204', 'Northline News', 204),
+          row('205', 'Cinema Classics', 205),
+        ]);
+        // After Velocity Motors (two hours ago): Arena Sports 1 and 2,
+        // then Northline News.
+        for (final (key, hours) in [('201', 3), ('202', 4), ('204', 5)]) {
+          await home.db.watchHistoryDao.touch(
+            UserItemType.live,
+            'src-1',
+            key,
+            home.now.subtract(Duration(hours: hours)),
+          );
+        }
+      }, got: (h) => home = h);
+      const recent = 'Recently watched channels';
+      expect(_titles(tester, recent), [
+        'Velocity Motors',
+        'Arena Sports 1',
+        'Arena Sports 2',
+        'Northline News',
+      ]);
+      _cards(tester, recent).first.focusNode!.requestFocus();
+      await settle(tester);
+      for (var i = 0; i < 3; i++) {
+        await press(tester, LogicalKeyboardKey.arrowRight);
+      }
+      expect(_focused(), 'Northline News');
+
+      await press(tester, LogicalKeyboardKey.select);
+      home.rig.engine.firstFrame();
+      await settle(tester);
+      expect(app.location, playerRoutePath);
+      // What the app's history keeps of a channel played.
+      await tester.runAsync(
+        () => home.db.watchHistoryDao.touch(
+          UserItemType.live,
+          'src-1',
+          '204',
+          home.now,
+        ),
+      );
+      await back(tester, app);
+
+      expect(_titles(tester, recent), [
+        'Northline News',
+        'Velocity Motors',
+        'Arena Sports 1',
+        'Arena Sports 2',
+      ]);
+      _expectFirstOf(tester, recent, 'Northline News');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    // Saved every 10 s as it plays (the database changes under the
+    // player; Home, which rests there, once it shows again), or saved as
+    // it is left.
+    for (final whilePlaying in [true, false]) {
+      final saved = whilePlaying ? 'as it plays' : 'as it is left';
+
+      /// Into the credits, past 95 %: watched; then Back.
+      Future<void> watchToCredits(
+        WidgetTester tester,
+        HomeFakes home,
+        AppUnderTest app, {
+        required Duration length,
+        required int left,
+      }) async {
+        await press(tester, LogicalKeyboardKey.select);
+        home.rig.engine
+          ..firstFrame()
+          ..duration(length)
+          ..progress(length - const Duration(minutes: 3));
+        await settle(tester);
+        if (whilePlaying) {
+          // Playing on: the position moves each second.
+          for (var second = 1; second <= 11; second++) {
+            home.rig.engine.progress(
+              length - const Duration(minutes: 3) + Duration(seconds: second),
+            );
+            await tester.pump(const Duration(seconds: 1));
+          }
+          await settle(tester);
+          final continuing = await tester.runAsync(
+            () => DbWatchProgress(
+              home.db,
+              clock: () => home.now,
+            ).continueWatching().first,
+          );
+          expect(continuing, hasLength(left), reason: 'saved as it plays');
+        }
+        await back(tester, app);
+      }
+
+      testWidgets('watched, so out of Continue watching (saved $saved): the '
+          "focus is on the row's first card, not the card before it", (
+        tester,
+      ) async {
+        late HomeFakes home;
+        final app = await openTv(tester, threeToContinue, got: (h) => home = h);
+        await press(tester, LogicalKeyboardKey.arrowRight);
+        await press(tester, LogicalKeyboardKey.arrowRight);
+        expect(_focused(), 'Ember Road');
+
+        await watchToCredits(
+          tester,
+          home,
+          app,
+          length: const Duration(minutes: 100),
+          left: 2,
+        );
+
+        expect(_titles(tester, 'Continue watching'), [
+          'Copper Hollow',
+          'The Quiet Harbor',
+        ]);
+        _expectFirstOf(tester, 'Continue watching', 'Copper Hollow');
+        await tester.pump(const Duration(seconds: 4));
+      });
+
+      testWidgets('the last of Continue watching watched (saved $saved): the '
+          "row goes, and the focus is on Home's first card", (tester) async {
+        late HomeFakes home;
+        final app = await openTv(tester, (_) {}, got: (h) => home = h);
+        expect(_titles(tester, 'Continue watching'), ['The Quiet Harbor']);
+        // Through another row first: the page remembers it too.
+        _node(tester, 'Velocity Motors').requestFocus();
+        await settle(tester);
+        _node(tester, 'The Quiet Harbor').requestFocus();
+        await settle(tester);
+
+        await watchToCredits(
+          tester,
+          home,
+          app,
+          length: const Duration(minutes: 118),
+          left: 0,
+        );
+
+        expect(find.text('Continue watching'), findsNothing);
+        _expectFirstOf(tester, 'Favorite channels', 'Arena Sports 1');
+        await tester.pump(const Duration(seconds: 4));
+      });
+    }
   });
 
   group('states', () {

@@ -294,6 +294,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  /// A row gone with the focused card (the last film of Continue watching,
+  /// watched into its credits): Home's first card takes the focus, as a
+  /// row's first does for a card gone from the row.
+  void _handOffFromGoneRow(List<HomeRowController> shown) {
+    if (!_shown.any((row) => !shown.contains(row) && row.hasFocus)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _shown.isNotEmpty) _shown.first.focus(0);
+    });
+  }
+
   Widget _content(
     Source source, {
     required List<ContinueItem> continuing,
@@ -314,7 +324,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (movies.isNotEmpty) _Row.movies,
       if (series.isNotEmpty) _Row.series,
     ];
-    _shown = [for (final row in rows) _rows[row]!];
+    final shown = [for (final row in rows) _rows[row]!];
+    _handOffFromGoneRow(shown);
+    _shown = shown;
     _handOffFromHero(firstRun: firstRun);
     if (rows.isEmpty && !firstRun && !syncing) {
       return EmptyState(
@@ -385,7 +397,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _Row.continueWatching => HomeRow(
                   title: 'Continue watching',
                   controller: _rows[row]!,
-                  count: continuing.length,
+                  ids: [for (final item in continuing) _continueId(item)],
                   cardWidth: continueWidth,
                   cardHeight:
                       continueWidth * 9 / 16 + cardCaptionHeight(context),
@@ -428,7 +440,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _Row.movies => HomeRow(
                   title: 'Recently added movies',
                   controller: _rows[row]!,
-                  count: movies.length,
+                  ids: [for (final m in movies) (m.sourceId, m.remoteKey)],
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   inset: inset,
@@ -451,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _Row.series => HomeRow(
                   title: 'Recently added series',
                   controller: _rows[row]!,
-                  count: series.length,
+                  ids: [for (final s in series) (s.sourceId, s.remoteKey)],
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   inset: inset,
@@ -589,6 +601,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// A Continue card's item, for its row ([HomeRow.ids]). A series' card is
+/// the series', whichever episode it continues: back from an episode
+/// watched into its credits, the card offers the next one, and the focus
+/// is on it.
+Object _continueId(ContinueItem item) => switch (item) {
+  ContinueMovie(:final movie) => ('movie', movie.sourceId, movie.remoteKey),
+  ContinueEpisode(:final series) => (
+    'series',
+    series.sourceId,
+    series.remoteKey,
+  ),
+  ContinueLibraryFile(:final item) => ('file', item.quickHash),
+};
+
 /// A card's keys: F toggles its favorite, and D downloads a movie or an
 /// episode ([download]; docs/05's shortcut table).
 Widget _cardKeys(
@@ -658,7 +684,7 @@ class _ChannelRowState extends ConsumerState<_ChannelRow> {
     builder: (context) => HomeRow(
       title: widget.title,
       controller: widget.controller,
-      count: widget.channels.length,
+      ids: [for (final c in widget.channels) (c.sourceId, c.remoteKey)],
       cardWidth: widget.width,
       cardHeight: ChannelTile.heightOf(context),
       inset: widget.inset,

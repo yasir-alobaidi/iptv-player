@@ -356,5 +356,59 @@ void main() {
 
       expect(find.byType(ExcludeFocus), findsNWidgets(2));
     });
+
+    testWidgets('a card keyed by what it shows keeps its state (its focus) '
+        'when the row re-sorts, not its place (ADR-039)', (tester) async {
+      Widget rail(List<String> names) => SizedBox(
+        width: 400,
+        child: HorizontalRail(
+          height: 120,
+          itemCount: names.length,
+          findItemIndexCallback: (key) => switch (key) {
+            ValueKey<String>(:final value) when names.contains(value) =>
+              names.indexOf(value),
+            _ => null,
+          },
+          itemBuilder: (context, index) => _Card(key: ValueKey(names[index])),
+        ),
+      );
+      await pumpDesign(tester, rail(['a', 'b', 'c']));
+      final c = tester.state<_CardState>(find.byKey(const ValueKey('c')));
+      c.focus.requestFocus();
+      await tester.pump();
+
+      await pumpDesign(tester, rail(['c', 'a', 'b']));
+      expect(
+        tester.state(find.byKey(const ValueKey('c'))),
+        same(c),
+        reason: 'the same card, first now',
+      );
+      expect(c.focus.hasPrimaryFocus, isTrue);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('c'))).dx,
+        tester.getTopLeft(find.byType(HorizontalRail)).dx,
+      );
+    });
   });
+}
+
+class _Card extends StatefulWidget {
+  const new({super.key});
+
+  @override
+  State<_Card> createState() => _CardState();
+}
+
+class _CardState extends State<_Card> {
+  final focus = FocusNode();
+
+  @override
+  void dispose() {
+    focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Focus(focusNode: focus, child: const SizedBox(width: 120, height: 120));
 }

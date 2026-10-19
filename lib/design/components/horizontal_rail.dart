@@ -13,11 +13,18 @@ class HorizontalRail extends StatefulWidget {
     this.controller,
     this.spacing,
     this.padding,
+    this.findItemIndexCallback,
     super.key,
   });
 
   final int itemCount;
   final Widget Function(BuildContext context, int index) itemBuilder;
+
+  /// Where the card keyed `key` is now, for cards keyed by what they
+  /// show: a row that re-sorts moves each card's state (its focus) with
+  /// it, instead of leaving it at the place it had (ADR-039). Null for a
+  /// key no card has now.
+  final int? Function(Key key)? findItemIndexCallback;
 
   /// The rail's height; cards size themselves inside it.
   final double height;
@@ -88,6 +95,7 @@ class _HorizontalRailState extends State<HorizontalRail> {
               itemCount: widget.itemCount,
               separatorBuilder: (_, _) => SizedBox(width: spacing),
               itemBuilder: widget.itemBuilder,
+              findItemIndexCallback: widget.findItemIndexCallback,
             ),
             _EdgeArrow(
               alignment: Alignment.centerLeft,

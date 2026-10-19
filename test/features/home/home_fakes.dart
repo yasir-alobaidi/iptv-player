@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/misc.dart';
+import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/catalogue_kind.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
@@ -41,11 +42,16 @@ final class RecordingLauncher implements VodLauncher {
 
 /// Home on one database: [VodFakes]' movies and series, three channels
 /// (Arena Sports 1 a favorite), a guide for them, the fake player.
+///
+/// [plays] has a Continue card played as the app plays it: the fake
+/// player opens it full screen, and leaving saves where it was. Without
+/// it, what Home was asked to play is only recorded ([launcher]).
 final class HomeFakes {
-  new() : vod = VodFakes() {
+  new({this.plays = false}) : vod = VodFakes() {
     rig = Rig(watchProgress: DbWatchProgress(vod.db, clock: () => vod.now));
   }
 
+  final bool plays;
   final VodFakes vod;
   late final Rig rig;
   final guide = FakeGuide();
@@ -121,6 +127,12 @@ final class HomeFakes {
     playerEngineProvider.overrideWithValue(rig.engine),
     playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
     windowControlsProvider.overrideWithValue(window),
-    vodLauncherProvider.overrideWithValue(launcher),
+    if (plays)
+      vodLauncherProvider.overrideWith(
+        (ref) =>
+            PlayerVodLauncher(rig.coordinator, () => ref.read(routerProvider)),
+      )
+    else
+      vodLauncherProvider.overrideWithValue(launcher),
   ];
 }

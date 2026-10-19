@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/design/components.dart';
@@ -9,6 +10,10 @@ import 'package:iptv_player/design/tokens.dart';
 /// One of Home's rows as the keyboard sees it: its cards' focus nodes by
 /// index and the rail's scroll position, so ←/→ move by card within it and
 /// ↑/↓ land on the nearest card of the row above or below.
+///
+/// A card's node is its item's, wherever the row puts it ([HomeRow.ids]):
+/// back from playing the third card, which is first now, the focus is on
+/// it, not on the third place (ADR-039).
 final class HomeRowController {
   final scroll = ScrollController();
   final _nodes = <int, FocusNode>{};
@@ -26,6 +31,52 @@ final class HomeRowController {
       if (identical(value, node)) return key;
     }
     return null;
+  }
+
+  /// The card the keyboard is on, or comes back to: the one with the
+  /// focus, or the one its page gives the focus back to (from the rail, a
+  /// menu, the player). Null when that is no card of this row.
+  int? get held {
+    for (final MapEntry(:key, :value) in _nodes.entries) {
+      if (value.hasFocus || value.enclosingScope?.focusedChild == value) {
+        return key;
+      }
+    }
+    return null;
+  }
+
+  /// Whether one of the row's cards has the focus.
+  bool get hasFocus => _nodes.values.any((node) => node.hasFocus);
+
+  /// The held card moved from [from] to [to] (its row re-sorted): the
+  /// rail scrolls with it, so the card stays where it was on screen. Its
+  /// node lives only while the rail builds it: moved far out of view, it
+  /// went with the focus (the seventh card played, now first, the rail
+  /// still scrolled to the seventh place). Played from the third place it
+  /// is first now, and the rail is back at its start.
+  ///
+  /// Called while the row is built, before the rail is laid out with the
+  /// cards in their new places, as TabBarView moves its pages.
+  void follow(int from, int to) {
+    if (!scroll.hasClients) return;
+    final position = scroll.position;
+    final offset = (position.pixels + (to - from) * stride).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (offset != position.pixels) scroll.jumpTo(offset);
+  }
+
+  /// The focused card's item left the row (a film watched into its
+  /// credits: out of Continue watching): the row's first card takes the
+  /// focus, not the card it had before, as the focus would go back to (in
+  /// another row, maybe). Home's rows change only once it shows again —
+  /// its providers rest under the player — so this is after Back.
+  void leftRow() {
+    if (!hasFocus) return;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => focus(0))
+      ..scheduleFrame();
   }
 
   void register(int index, FocusNode node, {required bool add}) {
@@ -141,7 +192,7 @@ class HomeRow extends StatefulWidget {
   const new({
     required this.title,
     required this.controller,
-    required this.count,
+    required this.ids,
     required this.cardWidth,
     required this.cardHeight,
     required this.gap,
@@ -153,7 +204,12 @@ class HomeRow extends StatefulWidget {
 
   final String title;
   final HomeRowController controller;
-  final int count;
+
+  /// The cards' items, in the row's order, each by an id of its own (a
+  /// channel's or a title's source and key): a card keeps its focus node
+  /// by it, so when the row re-sorts — what was just played comes first —
+  /// the focus is on the same item, not on the place it had (ADR-039).
+  final List<Object> ids;
   final double cardWidth;
 
   /// The card with what is under it.
@@ -179,12 +235,52 @@ class HomeRow extends StatefulWidget {
 }
 
 class _HomeRowState extends State<HomeRow> {
+  /// The cards' keys: their ids, one repeated told apart by its place (a
+  /// key twice in a list loses a card).
+  late List<Object> _keys = _keysOf(widget.ids);
+
+  /// Where each key is.
+  late Map<Object, int> _places = _placesOf(_keys);
+
+  static List<Object> _keysOf(List<Object> ids) {
+    final seen = <Object>{};
+    return [
+      for (final (i, id) in ids.indexed)
+        if (seen.add(id)) id else _Repeated(id, i),
+    ];
+  }
+
+  static Map<Object, int> _placesOf(List<Object> keys) => {
+    for (final (i, key) in keys.indexed) key: i,
+  };
+
+  @override
+  void didUpdateWidget(HomeRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (listEquals(oldWidget.ids, widget.ids)) return;
+    final before = _keys;
+    _keys = _keysOf(widget.ids);
+    _places = _placesOf(_keys);
+    // The card the keyboard is on, or comes back to, goes where its item
+    // went; the cards are still at their old places here.
+    final controller = widget.controller;
+    final held = controller.held;
+    if (held == null || held >= before.length) return;
+    final to = _places[before[held]];
+    if (to == null) {
+      controller.leftRow();
+    } else if (to != held) {
+      controller.follow(held, to);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final inset = widget.inset;
     final onSeeAll = widget.onSeeAll;
     final seeAllCard = TvMode.of(context) && onSeeAll != null;
-    final count = widget.count + (seeAllCard ? 1 : 0);
+    final items = _keys.length;
+    final count = items + (seeAllCard ? 1 : 0);
     widget.controller
       ..count = count
       ..stride = widget.cardWidth + widget.gap;
@@ -210,11 +306,16 @@ class _HomeRowState extends State<HomeRow> {
               spacing: widget.gap,
               padding: EdgeInsets.all(inset),
               itemCount: count,
+              findItemIndexCallback: (key) => switch (key) {
+                ValueKey<Object>(value: _seeAll) => seeAllCard ? items : null,
+                ValueKey<Object>(:final value) => _places[value],
+                _ => null,
+              },
               itemBuilder: (context, index) => _RowCard(
-                key: ValueKey(index),
+                key: ValueKey<Object>(index < items ? _keys[index] : _seeAll),
                 index: index,
                 controller: widget.controller,
-                builder: (context, focus) => index == widget.count
+                builder: (context, focus) => index == items
                     ? _SeeAllCard(
                         focus: focus,
                         width: widget.cardWidth,
@@ -229,6 +330,25 @@ class _HomeRowState extends State<HomeRow> {
       ),
     );
   }
+}
+
+/// The See all card's key, beside the items' ids.
+const _seeAll = #seeAll;
+
+/// A key a row has twice, the second time by its place.
+@immutable
+final class _Repeated {
+  const new(this.id, this.index);
+
+  final Object id;
+  final int index;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Repeated && other.id == id && other.index == index;
+
+  @override
+  int get hashCode => Object.hash(id, index);
 }
 
 /// See all as a row's last card (a TV).
