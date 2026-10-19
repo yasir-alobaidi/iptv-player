@@ -770,6 +770,29 @@ class AppPlayerTokens {
   double get previewCardWidth => 420;
   double get previewCardIconSize => 20;
 
+  /// The opening screen, until the picture comes (full screen only). A
+  /// channel's logo and name wait [openingNameAfter], so a quick zap is
+  /// the spinner alone; past [openingStillAfter], and again past
+  /// [openingSlowAfter], a line under the spinner says it goes on.
+  Duration get openingNameAfter => const Duration(milliseconds: 600);
+  Duration get openingStillAfter => const Duration(seconds: 4);
+  Duration get openingSlowAfter => const Duration(seconds: 12);
+
+  /// A film's artwork behind it, black at [openingDim] over it. A poster
+  /// or a frame is drawn soft: decoded at [openingSoftDecode] of the
+  /// window's width and blurred by [openingBlur], or on a TV (no blur on
+  /// its small GPU) decoded [openingTvSoftWidth] px wide and stretched.
+  /// It fades in over [openingFadeIn], when motion is allowed.
+  double get openingDim => 0.7;
+  double get openingSoftDecode => 0.25;
+  double get openingBlur => 40;
+  double get openingTvSoftWidth => 24;
+  Duration get openingFadeIn => const Duration(milliseconds: 400);
+
+  /// A channel's logo there, and the widest its words get.
+  double get openingLogoSize => 88;
+  double get openingTextWidth => 720;
+
   /// Play, in the middle of a paused picture.
   double get centerPlaySize => 104;
   double get centerPlayIconSize => 52;

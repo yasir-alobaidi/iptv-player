@@ -151,15 +151,32 @@ void main() {
       expect(findByLabel('Pause'), findsOneWidget);
     });
 
-    _vodTest('until the picture comes the OSD stays up and says Preparing', (
-      tester,
-      t,
-    ) async {
-      await t.open(tester, '/movies/src-1/501');
+    _vodTest('until the picture comes the OSD stays up over the opening '
+        'screen, which alone says how it goes', (tester, t) async {
+      // A resume: "Resumed from" waits for the picture at its place.
+      await t.open(
+        tester,
+        '/movies/src-1/501',
+        before: () => t.progress.save(
+          const MovieRef('src-1', '501'),
+          position: const Duration(minutes: 24, seconds: 10),
+          duration: _hour,
+        ),
+      );
       await _key(tester, LogicalKeyboardKey.enter);
-      await tester.pump(const Duration(seconds: 5));
 
       expect(find.text('Preparing…'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(VodOsdBottom),
+          matching: find.text('Preparing…'),
+        ),
+        findsNothing,
+      );
+      expect(find.textContaining('Resumed from'), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.text('Still connecting…'), findsOneWidget);
+      expect(find.text('Preparing…'), findsNothing);
       final osd = tester.widget<AnimatedOpacity>(
         find.ancestor(
           of: find.byType(VodOsdTop),
@@ -169,6 +186,7 @@ void main() {
       expect(osd.opacity, 1);
 
       await t.firstFrame(tester);
+      expect(find.text('Still connecting…'), findsNothing);
       expect(find.text('Preparing…'), findsNothing);
     });
 

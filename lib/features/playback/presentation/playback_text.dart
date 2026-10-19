@@ -81,6 +81,27 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 String reconnectingText(PlaybackReconnecting state) =>
     'Reconnecting… attempt ${state.attempt} of ${state.maxAttempts}';
 
+/// How long an open has gone on without a picture, as the opening screen
+/// tells it (`AppPlayerTokens.openingStillAfter`, `openingSlowAfter`).
+enum OpeningWait { start, still, slow }
+
+/// The line under the opening screen's spinner, [wait] into [item]'s
+/// open: none for a channel's first seconds (a zap says nothing). The
+/// watchdog keeps at it on its own (docs/03: a channel's open is given
+/// the preset's 8 to 20 s, a file's 30, then it reconnects), so "still
+/// trying" is what happens; a video of the library has no provider.
+String? openingText(Playable item, OpeningWait wait) {
+  final file = item is PlayableLibraryItem;
+  return switch (wait) {
+    OpeningWait.start => item is PlayableChannel ? null : 'Preparing…',
+    OpeningWait.still => file ? 'Still opening…' : 'Still connecting…',
+    OpeningWait.slow =>
+      file
+          ? 'This file is slow to open. Still trying…'
+          : 'Your provider is slow to answer. Still trying…',
+  };
+}
+
 /// "1080p", "4K", "576p" from a picture height.
 String? resolutionLabel(int? height) => switch (height) {
   null || <= 0 => null,

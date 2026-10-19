@@ -122,6 +122,26 @@ void main() {
       return t;
     }
 
+    sceneTest(
+      'a movie slow to open: its opening screen under the OSD',
+      allow: _playerIsOneStop,
+      (tester) async {
+        hideDebugBanner();
+        final t = VodPlayerRig();
+        t.vod.fakes.now = goldenNow();
+        await t.open(tester, '/movies/src-1/501', size: const Size(1280, 800));
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await settle(tester);
+        // No picture 12 s on (a file has 30): the provider is slow. The
+        // poster can't load in a test: the app's own dark surface.
+        await tester.pump(const Duration(seconds: 12));
+        await settle(tester);
+
+        await golden(tester, 'images/player_movie_opening.png');
+        await t.finish(tester);
+      },
+    );
+
     sceneTest('a movie, paused', allow: _playerIsOneStop, (tester) async {
       final t = await play(
         tester,
