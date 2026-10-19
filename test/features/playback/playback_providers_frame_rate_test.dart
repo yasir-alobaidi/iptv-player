@@ -33,7 +33,7 @@ void main() {
   /// Settings → Playback saying [settings].
   (ProviderContainer, FakePlayerEngine) app(
     DisplayModes display, {
-    PlaybackSettings settings = const PlaybackSettings(),
+    PlaybackSettings settings = const PlaybackSettings(matchFrameRate: true),
   }) {
     final fakes = Rig();
     final engine = FakePlayerEngine();
@@ -103,7 +103,7 @@ void main() {
       final display = FakeDisplayModes();
       final (container, engine) = app(
         display,
-        settings: const PlaybackSettings(matchFrameRate: false),
+        settings: const PlaybackSettings(),
       );
 
       filmToFirstFrame(async, container, engine);

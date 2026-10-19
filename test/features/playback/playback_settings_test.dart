@@ -12,7 +12,7 @@ void main() {
     subtitleLanguages: ['en'],
     deinterlace: false,
     hardwareDecoding: false,
-    matchFrameRate: false,
+    matchFrameRate: true,
     pictureQuality: PictureQuality.high,
     subtitleSize: SubtitleSize.large,
   );
@@ -73,24 +73,27 @@ void main() {
     );
   });
 
-  test("a TV's Match frame rate is On unless Off was stored", () {
-    expect(const PlaybackSettings().matchFrameRate, isTrue);
-    expect(const PlaybackSettings().toJson()['matchFps'], 'on');
+  test("a TV's Match frame rate is Off unless On was chosen (ADR-042)", () {
+    expect(const PlaybackSettings().matchFrameRate, isFalse);
+    expect(const PlaybackSettings().toJson()['matchRate'], 'off');
     expect(
-      const PlaybackSettings(matchFrameRate: false).toJson()['matchFps'],
-      'off',
+      const PlaybackSettings(matchFrameRate: true).toJson()['matchRate'],
+      'on',
     );
     expect(
-      PlaybackSettings.fromJson(const {'matchFps': 'off'}).matchFrameRate,
-      isFalse,
+      PlaybackSettings.fromJson(const {'matchRate': 'on'}).matchFrameRate,
+      isTrue,
     );
-    // Settings stored before it, or damaged: On.
+    // The old key was written "on" for everyone who saved any playback
+    // setting while On was the default: not a choice, so not read.
+    expect(const PlaybackSettings().toJson(), isNot(contains('matchFps')));
     for (final stored in [
       const <String, Object?>{},
-      const {'matchFps': false},
-      const {'matchFps': 'sometimes'},
+      const {'matchFps': 'on'},
+      const {'matchRate': true},
+      const {'matchRate': 'sometimes'},
     ]) {
-      expect(PlaybackSettings.fromJson(stored).matchFrameRate, isTrue);
+      expect(PlaybackSettings.fromJson(stored).matchFrameRate, isFalse);
     }
   });
 

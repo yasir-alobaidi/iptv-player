@@ -25,7 +25,7 @@ void main() {
   Rig tv(
     FakeAsync async,
     FakeDisplayModes display, {
-    PlaybackSettings settings = const PlaybackSettings(),
+    PlaybackSettings settings = const PlaybackSettings(matchFrameRate: true),
     WatchdogTimings timings = const WatchdogTimings(),
     Duration settle = const Duration(milliseconds: 1500),
   }) => Rig(
@@ -134,7 +134,10 @@ void main() {
           async,
           display,
           // The open's timeout 8 s, a stall 8 s; the switch takes 14 s.
-          settings: const PlaybackSettings(preset: BufferPreset.lowLatency),
+          settings: const PlaybackSettings(
+            preset: BufferPreset.lowLatency,
+            matchFrameRate: true,
+          ),
           timings: const WatchdogTimings(fileOpen: Duration(seconds: 3)),
           settle: const Duration(seconds: 10),
         );
@@ -313,7 +316,7 @@ void main() {
     void playsAsItIs(
       Playable item, {
       FakeDisplayModes? display,
-      PlaybackSettings settings = const PlaybackSettings(),
+      PlaybackSettings settings = const PlaybackSettings(matchFrameRate: true),
       double? fps = 23.976,
       Duration? length = film,
       String? why,
@@ -397,10 +400,10 @@ void main() {
       });
     });
 
-    test('never with the switch off', () {
+    test('never with the switch off, as it is by default (ADR-042)', () {
       playsAsItIs(
         film1,
-        settings: const PlaybackSettings(matchFrameRate: false),
+        settings: const PlaybackSettings(),
         why: 'Display mode left as it is: Match frame rate is off',
       );
     });

@@ -88,7 +88,7 @@ final class PlaybackSettings {
     this.subtitleLanguages = const [],
     this.deinterlace,
     this.hardwareDecoding = true,
-    this.matchFrameRate = true,
+    this.matchFrameRate = false,
     this.pictureQuality = PictureQuality.standard,
     this.subtitleSize = SubtitleSize.medium,
   });
@@ -115,7 +115,9 @@ final class PlaybackSettings {
         _ => null,
       },
       hardwareDecoding: json['hwdec'] != 'off',
-      matchFrameRate: json['matchFps'] != 'off',
+      // Not the old `matchFps`: it was written "on" for everyone who saved
+      // any playback setting while On was the default (ADR-042).
+      matchFrameRate: json['matchRate'] == 'on',
       pictureQuality: json['quality'] == 'high'
           ? PictureQuality.high
           : PictureQuality.standard,
@@ -139,8 +141,9 @@ final class PlaybackSettings {
   final bool hardwareDecoding;
 
   /// A TV's Match frame rate: a film at 23.976 or 24 fps switches the
-  /// display to its rate, when the TV's own setting allows. On unless
-  /// switched off; the desktop never shows or uses it.
+  /// display to its rate, when the TV's own setting allows. Off unless
+  /// switched on: each switch darkens the screen for a second or two
+  /// (ADR-042); the desktop never shows or uses it.
   final bool matchFrameRate;
 
   /// The desktop's Picture quality; a TV ignores it.
@@ -181,7 +184,7 @@ final class PlaybackSettings {
       false => 'off',
     },
     'hwdec': hardwareDecoding ? 'auto' : 'off',
-    'matchFps': matchFrameRate ? 'on' : 'off',
+    'matchRate': matchFrameRate ? 'on' : 'off',
     'quality': pictureQuality.name,
     'subtitleSize': subtitleSize.name,
   };

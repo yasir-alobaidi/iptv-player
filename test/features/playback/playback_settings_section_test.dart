@@ -172,15 +172,15 @@ void main() {
         .ancestor(of: find.text('Match frame rate'), matching: find.byType(Row))
         .first;
 
-    testWidgets('on a TV: On until Off is chosen, saved at once; its line '
+    testWidgets('on a TV: Off until On is chosen, saved at once; its line '
         "says the screen goes dark, and that it follows the TV's own "
-        'setting', (tester) async {
+        'setting (ADR-042)', (tester) async {
       final live = await open(tester, formFactor: FormFactor.tv);
       expect(find.text('Match frame rate'), findsOneWidget);
       expect(
         find.textContaining(
-          'The screen goes dark for a second or two when a film starts '
-          'and ends.',
+          'The screen goes dark for a second or two when such a film '
+          'starts and ends.',
         ),
         findsOneWidget,
       );
@@ -199,26 +199,26 @@ void main() {
               ),
             )
             .value,
-        isTrue,
+        isFalse,
       );
 
-      await tester.tap(find.descendant(of: row, matching: find.text('Off')));
+      await tester.tap(find.descendant(of: row, matching: find.text('On')));
       await _settle(tester);
       final stored = await tester.runAsync(
         () => live.db.settingsDao.read('playback.settings'),
       );
-      expect(stored, contains('"matchFps":"off"'));
+      expect(stored, contains('"matchRate":"on"'));
 
-      await tester.tap(find.descendant(of: row, matching: find.text('On')));
+      await tester.tap(find.descendant(of: row, matching: find.text('Off')));
       await _settle(tester);
       final again = await tester.runAsync(
         () => live.db.settingsDao.read('playback.settings'),
       );
-      expect(again, contains('"matchFps":"on"'));
+      expect(again, contains('"matchRate":"off"'));
     });
 
     testWidgets('the remote reaches it: Right into the page and along '
-        'Buffering, Down to the row, Left to Off, OK', (tester) async {
+        'Buffering, Down to the row, Right to On, OK', (tester) async {
       final live = await open(tester, formFactor: FormFactor.tv);
       final control = tester.widget<SegmentedControl<bool>>(
         find.descendant(
@@ -251,18 +251,18 @@ void main() {
         await _settle(tester);
       }
       expect(onRow(), isNotNull, reason: 'Down reaches the row');
-      if (onRow() != 'Off') {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      if (onRow() != 'On') {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await _settle(tester);
       }
-      expect(onRow(), 'Off');
+      expect(onRow(), 'On');
 
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await _settle(tester);
       final stored = await tester.runAsync(
         () => live.db.settingsDao.read('playback.settings'),
       );
-      expect(stored, contains('"matchFps":"off"'));
+      expect(stored, contains('"matchRate":"on"'));
     });
 
     testWidgets('the desktop has no such row: its display is never '
