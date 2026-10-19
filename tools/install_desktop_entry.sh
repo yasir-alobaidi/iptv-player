@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Bijou's desktop entry and icons in ~/.local/share (linux/packaging), so
 # that the dock, the app grid and notifications show its name and icon for
-# the build in build/linux/x64/<mode>/bundle (release by default). Phase
+# the build in build/linux/x64/<mode>/bundle (release by default), or for
+# the binary BIJOU_BINARY names (tools/install_stable_linux.sh's). Phase
 # 10's AppImage carries the same files. The icons are made by
 # tools/brand/make_icons.py.
 #
@@ -22,7 +23,7 @@ if [[ "${1:-}" == "--remove" ]]; then
 fi
 
 mode="${1:-release}"
-binary="$root/build/linux/x64/$mode/bundle/iptv_player"
+binary="${BIJOU_BINARY:-$root/build/linux/x64/$mode/bundle/iptv_player}"
 if [[ ! -x "$binary" ]]; then
   echo "No $mode build at $binary: run 'flutter build linux --$mode' first." >&2
   exit 1
@@ -31,6 +32,9 @@ fi
 mkdir -p "$data/applications"
 sed "s|^Exec=.*|Exec=\"$binary\"|" \
   "$root/linux/packaging/$id.desktop" > "$entry"
+# The last icons out first: an icon no longer made (the jewel's scalable
+# one, before the cover) would still win.
+find "$data/icons/hicolor" -name "$id.*" -delete 2>/dev/null || true
 (cd "$root/linux/packaging/icons" && find hicolor -type f) | while read -r icon; do
   mkdir -p "$data/icons/$(dirname "$icon")"
   cp "$root/linux/packaging/icons/$icon" "$data/icons/$icon"

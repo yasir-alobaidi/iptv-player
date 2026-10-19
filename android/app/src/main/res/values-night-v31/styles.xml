@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12 and up: the launch splash shows Bijou's jewel on the
+         accent's circle, not the launcher's icon (the cover photo is for
+         the outside only, ADR-041), on the app's dark background. The
+         OS's Dark Mode is on. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_mark_background</item>
+    </style>
+</resources>

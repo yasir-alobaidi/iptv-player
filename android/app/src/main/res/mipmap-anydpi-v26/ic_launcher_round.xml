@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Written by tools/brand/make_icons.py: Bijou's icon, masked by the
+<!-- Written by tools/brand/make_icons.py: the cover, masked by the
      launcher (round on Google TV). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background" />

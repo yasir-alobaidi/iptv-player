@@ -3,4 +3,6 @@
     <!-- The dark look's background (lib/design/tokens.dart, bg), so a
          TV never flashes white before the first frame. -->
     <color name="launch_background">#FF0A0C10</color>
+    <!-- The default accent (AppAccent.blue), the jewel's tile. -->
+    <color name="splash_mark_background">#FF5B8CFF</color>
 </resources>

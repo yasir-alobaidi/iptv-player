@@ -70,6 +70,12 @@ android {
         // About reads "Bijou 0.1.0-beta (build 245)" in the beta.
         versionNameSuffix = if (betaChannel) "-beta" else null
         manifestPlaceholders["appLabel"] = if (betaChannel) "Bijou Beta" else "Bijou"
+        // The cover with a BETA pill, so the two apps' circles differ on
+        // the TV (tools/brand/make_icons.py, ADR-041).
+        val icons = if (betaChannel) "ic_launcher_beta" else "ic_launcher"
+        manifestPlaceholders["appIcon"] = "@mipmap/$icons"
+        manifestPlaceholders["appRoundIcon"] = "@mipmap/${icons}_round"
+        manifestPlaceholders["appBanner"] = if (betaChannel) "@drawable/banner_beta" else "@drawable/banner"
         buildConfigField(
             "boolean",
             "VIDEO_LAYER",
