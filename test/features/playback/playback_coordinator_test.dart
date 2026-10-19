@@ -175,6 +175,43 @@ void main() {
       });
     });
 
+    // The Bedroom TV (2026-10-18): a channel on the texture named no
+    // decoder at its first frame, and Diagnostics would have said
+    // "software" for MediaCodec.
+    test('a decoder the player names a moment after the first frame is the '
+        'one noted; one it never names is software, noted once', () {
+      fakeAsync((async) {
+        final notes = _Notes();
+        final rig = Rig(decoders: notes);
+        rig.engine.info = const StreamInfo(height: 1080, videoCodec: 'h264');
+
+        rig.coordinator.playLive(channel(1));
+        async.flushMicrotasks();
+        rig.engine.firstFrame();
+        async.flushMicrotasks();
+        expect(notes.noted, isEmpty, reason: 'not named yet');
+        async.elapse(const Duration(milliseconds: 600));
+        rig.engine.info = const StreamInfo(
+          height: 1080,
+          videoCodec: 'h264',
+          hardwareDecoder: 'mediacodec',
+        );
+        async.elapse(const Duration(seconds: 2));
+        expect(notes.noted.single.hardwareDecoder, 'mediacodec');
+      });
+      fakeAsync((async) {
+        final notes = _Notes();
+        final rig = Rig(decoders: notes);
+        rig.engine.info = const StreamInfo(height: 1080, videoCodec: 'h264');
+
+        rig.coordinator.playLive(channel(1));
+        async.flushMicrotasks();
+        rig.engine.firstFrame();
+        async.elapse(const Duration(seconds: 5));
+        expect(notes.noted.single.hardwareDecoder, isNull);
+      });
+    });
+
     test('a store that fails is no playback problem', () {
       fakeAsync((async) {
         final rig = Rig(decoders: _Notes(fail: true));

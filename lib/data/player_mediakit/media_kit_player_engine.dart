@@ -601,6 +601,26 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     );
   }
 
+  /// The first frame's line, with what decodes and draws it. A TV's
+  /// channel (the texture) has its output, and so its decoder, a moment
+  /// after its first frame: the line said "(no, null)" (the Bedroom TV).
+  Future<void> _logFirstFrame(int took, int generation) async {
+    try {
+      for (var i = 0; i < 15 && (await _get('current-vo')).isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        if (generation != _generation) return;
+      }
+      _log.info(
+        _tag,
+        'First frame in $took ms '
+        '(${await _get('hwdec-current')}, ${await _get('current-vo')}'
+        '${_layerWid != null ? ', on its own layer' : ''})',
+      );
+    } on Object catch (error) {
+      _log.debug(_tag, "Couldn't read what decodes the picture: $error");
+    }
+  }
+
   /// The spike's proven test (ADR-003): the new file is playing and its
   /// video size is known, or it has no video at all.
   ///
@@ -633,12 +653,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       _started = true;
       final took = _sinceOpen.elapsedMilliseconds;
       _emit(PlayerFirstFrame(generation));
-      _log.info(
-        _tag,
-        'First frame in $took ms '
-        '(${await _get('hwdec-current')}, ${await _get('current-vo')}'
-        '${_layerWid != null ? ', on its own layer' : ''})',
-      );
+      unawaited(_logFirstFrame(took, generation));
       if (autoDeinterlace) await _autoDeinterlace(generation);
     });
   }

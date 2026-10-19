@@ -573,7 +573,15 @@ final class PlaybackCoordinator {
     final notes = _decoders;
     if (notes == null) return;
     try {
-      final info = await engine.streamInfo();
+      var info = await engine.streamInfo();
+      // A TV's channel names its decoder a moment after its first frame
+      // (the output comes up after it): a second and a half for it, or
+      // it is software.
+      for (var i = 0; i < 3 && info.hardwareDecoder == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (generation != _generation) return;
+        info = await engine.streamInfo();
+      }
       if (generation != _generation) return;
       await notes.note(info);
     } on Object catch (error) {
