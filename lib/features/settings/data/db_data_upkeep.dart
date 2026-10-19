@@ -11,8 +11,9 @@ import 'package:iptv_player/features/vod/domain/watch_progress.dart'
 ///
 /// Every statement runs on the database's own isolate (`openAppDatabase`),
 /// a compaction too: the UI isolate only waits for its answer (hard
-/// rule 2). Other queries wait behind a compaction meanwhile, which is
-/// why it runs only when nothing else is at work.
+/// rule 2). Writes wait behind a compaction meanwhile (reads go on, on
+/// connections of their own), which is why it runs only when nothing
+/// else is at work.
 final class DbDataUpkeep implements DataUpkeep {
   new(this._db);
 

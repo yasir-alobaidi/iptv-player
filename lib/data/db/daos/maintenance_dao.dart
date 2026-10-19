@@ -66,16 +66,21 @@ class MaintenanceDao extends DatabaseAccessor<AppDatabase>
     return row.read<bool>('has_guide');
   }
 
-  /// Rewrites the file without its free pages. Every other statement
-  /// waits meanwhile (one connection, on the database's isolate), so the
-  /// caller runs it only when nothing else is at work.
+  /// Rewrites the file without its free pages, on the writing connection:
+  /// every write waits meanwhile, so the caller runs it only when nothing
+  /// else is at work.
   Future<void> vacuum() => customStatement('VACUUM');
 
   /// Copies the write-ahead log into the file and cuts it to nothing.
   /// False when something kept it from finishing.
-  Future<bool> truncateLog() async {
+  ///
+  /// On the writing connection, queued behind the writes under way: as a
+  /// select it would go to a reader (the read pool), and there it gave
+  /// up at once beside a write, or held the log's lock while a write
+  /// failed with "database is locked".
+  Future<bool> truncateLog() => attachedDatabase.exclusively(() async {
     final row = await customSelect('PRAGMA wal_checkpoint(TRUNCATE)')
         .getSingle();
     return row.read<int>('busy') == 0;
-  }
+  });
 }

@@ -274,11 +274,15 @@ const _readers = 2;
 /// - the log cut back to 64 MB after a checkpoint, as a guide's swap
 ///   writes hundreds of MB in one transaction;
 /// - foreign keys on every connection, the readers' too (`beforeOpen`
-///   sets them on the one it opens with).
+///   sets them on the one it opens with);
+/// - a lock held elsewhere (a checkpoint, a second copy of the app on the
+///   same file) waited for up to 5 s rather than failing at once with
+///   "database is locked".
 void configureAppDatabase(Database database) {
   database
     ..execute('PRAGMA journal_mode = WAL')
     ..execute('PRAGMA synchronous = NORMAL')
     ..execute('PRAGMA journal_size_limit = ${64 * 1024 * 1024}')
-    ..execute('PRAGMA foreign_keys = ON');
+    ..execute('PRAGMA foreign_keys = ON')
+    ..execute('PRAGMA busy_timeout = 5000');
 }

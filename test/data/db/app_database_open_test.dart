@@ -9,6 +9,7 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart';
 import 'package:iptv_player/data/db/daos/channels_dao.dart';
 import 'package:iptv_player/data/db/tables.dart';
+import 'package:path/path.dart' as p;
 
 /// How the app opens its database decides whether the sync isolate can
 /// reach it directly (ADR-009, step 5 spike): behind a `LazyDatabase`,
@@ -70,6 +71,51 @@ void main() {
     release.complete();
     await writing;
     expect(await db.channelsDao.countFor('s1'), 1);
+  });
+
+  test(
+    "the log's checkpoint runs where the writes are: a write under way "
+    'makes it wait rather than give up (the review of the read pool)',
+    () async {
+      final release = Completer<void>();
+      final started = Completer<void>();
+      final writing = db.transaction(() async {
+        await db.channelsDao.upsertAll([
+          ChannelsCompanion.insert(sourceId: 's1', remoteKey: 'a', name: 'A'),
+        ]);
+        started.complete();
+        await release.future;
+      });
+      await started.future;
+
+      var done = false;
+      final truncating = db.maintenanceDao.truncateLog().whenComplete(
+        () => done = true,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(done, isFalse, reason: 'it waits for the write under way');
+
+      release.complete();
+      await writing;
+      expect(await truncating, isTrue, reason: 'and then cuts the log');
+      expect(
+        File(p.join(directory.path, '$appDatabaseFileName-wal')).lengthSync(),
+        0,
+      );
+    },
+  );
+
+  test('every connection waits a while for a lock rather than failing at '
+      'once ("database is locked")', () async {
+    Future<Object?> busyTimeout() async =>
+        (await db.customSelect('PRAGMA busy_timeout').getSingle())
+            .data
+            .values
+            .single;
+
+    // A reader's, and the writer's.
+    expect(await busyTimeout(), 5000);
+    expect(await db.exclusively(busyTimeout), 5000);
   });
 
   test('other isolates connect straight to the database isolate', () async {
