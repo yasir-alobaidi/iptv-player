@@ -67,16 +67,47 @@ final class HomeRowController {
     if (offset != position.pixels) scroll.jumpTo(offset);
   }
 
-  /// The focused card's item left the row (a film watched into its
-  /// credits: out of Continue watching): the row's first card takes the
-  /// focus, not the card it had before, as the focus would go back to (in
-  /// another row, maybe). Home's rows change only once it shows again —
-  /// its providers rest under the player — so this is after Back.
-  void leftRow() {
-    if (!hasFocus) return;
+  /// The row's first card takes the focus, not the card it had or would
+  /// go back to: the held card's item left the row (a film watched into
+  /// its credits: out of Continue watching), or something new came first
+  /// (played here, or elsewhere: vod_walk left the focus on a card, went
+  /// to Series by Ctrl+4 and played an episode, and back by Ctrl+1 the
+  /// focus followed the card it had left, now second). Home's rows change
+  /// only once it shows again (its providers rest while it is hidden): with
+  /// the focus in the row, at once; else when a card of it takes the focus
+  /// back, within [_toFirstFor], not a row returned to much later.
+  void toFirst() {
+    if (hasFocus) {
+      _toFirst();
+      return;
+    }
+    _toFirstAsked
+      ..reset()
+      ..start();
+  }
+
+  static const _toFirstFor = Duration(seconds: 2);
+  final _toFirstAsked = Stopwatch();
+
+  void _toFirst() {
+    _toFirstAsked
+      ..stop()
+      ..reset();
     WidgetsBinding.instance
       ..addPostFrameCallback((_) => focus(0))
       ..scheduleFrame();
+  }
+
+  /// One of the row's cards took the focus.
+  void _cardFocused() {
+    if (!_toFirstAsked.isRunning) return;
+    if (_toFirstAsked.elapsed <= _toFirstFor) {
+      _toFirst();
+    } else {
+      _toFirstAsked
+        ..stop()
+        ..reset();
+    }
   }
 
   void register(int index, FocusNode node, {required bool add}) {
@@ -267,8 +298,12 @@ class _HomeRowState extends State<HomeRow> {
     final held = controller.held;
     if (held == null || held >= before.length) return;
     final to = _places[before[held]];
-    if (to == null) {
-      controller.leftRow();
+    // Something new first: the focus on it, the newest. The held card
+    // itself first (played from further along): it follows (ADR-039).
+    final newFirst =
+        before.isNotEmpty && _keys.isNotEmpty && _keys.first != before.first;
+    if (to == null || (newFirst && to != 0)) {
+      controller.toFirst();
     } else if (to != held) {
       controller.follow(held, to);
     }
@@ -426,6 +461,11 @@ class _RowCardState extends State<_RowCard> {
   void initState() {
     super.initState();
     widget.controller.register(widget.index, _focus, add: true);
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() {
+    if (_focus.hasFocus) widget.controller._cardFocused();
   }
 
   @override

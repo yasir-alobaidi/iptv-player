@@ -828,6 +828,54 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    // vod_walk: the focus on a Continue card, then away (Ctrl+4) to play
+    // something else, which came first; back (Ctrl+1) the focus followed
+    // the card left, now second, not what is new and first.
+    testWidgets('something new first in its row while away: back on Home, '
+        'the focus is on it, not on the card left', (tester) async {
+      late HomeFakes home;
+      final app = await openTv(
+        tester,
+        threeToContinue,
+        got: (h) => home = h,
+        formFactor: FormFactor.desktop,
+      );
+      _node(tester, 'The Quiet Harbor').requestFocus();
+      await settle(tester);
+      expect(_focused(), 'The Quiet Harbor');
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await settle(tester);
+      expect(app.location, AppDestination.movies.path);
+      await tester.runAsync(
+        () => home.db.watchHistoryDao.touch(
+          UserItemType.movie,
+          'src-1',
+          '504',
+          home.now,
+          positionMs: 40 * 60000,
+          durationMs: 100 * 60000,
+          completed: false,
+        ),
+      );
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await settle(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      await settle(tester);
+
+      expect(_titles(tester, 'Continue watching'), [
+        'Ember Road',
+        'Copper Hollow',
+        'The Quiet Harbor',
+      ]);
+      _expectFirstOf(tester, 'Continue watching', 'Ember Road');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
     testWidgets('far along the row: the seventh card played comes back '
         'first, with the focus, the row scrolled back to show it', (
       tester,
