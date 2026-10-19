@@ -101,6 +101,17 @@ void main() {
       addTearDown(() => tester.runAsync(app.close));
       // As `bootstrap()` does: the cast's notices as toasts.
       final container = app.container..read(castNoticeToastsProvider);
+      // Settings → Playback → Preferred subtitles: English. Nothing starts
+      // by itself since ADR-041, a file beside the video neither.
+      await tester.runAsync(
+        () => container
+            .read(playbackSettingsControllerProvider.notifier)
+            .update(
+              container
+                  .read(playbackSettingsControllerProvider)
+                  .copyWith(subtitleLanguages: ['en']),
+            ),
+      );
 
       // The film of the user's own, with its subtitle file beside it.
       final hdd = p.join(folder.path, 'Movies HDD');
@@ -234,7 +245,7 @@ void main() {
       expect(playback.state, isA<PlaybackCasting>());
 
       // Its subtitle file, read by the TV as WebVTT, showing from the
-      // start: a file beside the video.
+      // start: English, asked for.
       await k.waitUntil(
         () => tv.textTracks.length == 1,
         'the subtitle read by the TV (${tv.textTracks})',
