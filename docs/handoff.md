@@ -521,7 +521,7 @@ Open Claude Code in this folder and paste:
 ```
 Continue the Bijou project (the repo is still iptv-player). Work on the dev
 branch (git checkout dev). Read docs/handoff.md ("Start here" first), CLAUDE.md,
-docs/progress.md, ADR-031 to ADR-037 (with their addenda) in docs/decisions.md.
+docs/progress.md, ADR-031 to ADR-040 (with their addenda) in docs/decisions.md.
 Check git (fetch) and CI on the last push. Then carry on with "Start here".
 Ask me before using the TV and before playing from my provider.
 ```
