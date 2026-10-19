@@ -889,6 +889,44 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    // The review of main..dev: a launch's sync adds a newer movie to
+    // Recently added while the user is on its fifth card.
+    testWidgets('something new first while the user is at work in the row '
+        '(a sync): the focus stays on its card, wherever it went', (
+      tester,
+    ) async {
+      late HomeFakes home;
+      await openTv(
+        tester,
+        threeToContinue,
+        got: (h) => home = h,
+        formFactor: FormFactor.desktop,
+      );
+      _node(tester, 'The Quiet Harbor').requestFocus();
+      await settle(tester);
+      await tester.pump(const Duration(seconds: 3));
+      expect(_focused(), 'The Quiet Harbor');
+
+      await tester.runAsync(
+        () => home.db.watchHistoryDao.touch(
+          UserItemType.movie,
+          'src-1',
+          '504',
+          home.now,
+          positionMs: 40 * 60000,
+          durationMs: 100 * 60000,
+          completed: false,
+        ),
+      );
+      await settle(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      await settle(tester);
+
+      expect(_titles(tester, 'Continue watching').first, 'Ember Road');
+      expect(_focused(), 'The Quiet Harbor');
+      await tester.pump(const Duration(seconds: 4));
+    });
+
     testWidgets('far along the row: the seventh card played comes back '
         'first, with the focus, the row scrolled back to show it', (
       tester,

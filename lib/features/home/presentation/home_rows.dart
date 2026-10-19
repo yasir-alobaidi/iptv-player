@@ -48,6 +48,17 @@ final class HomeRowController {
   /// Whether one of the row's cards has the focus.
   bool get hasFocus => _nodes.values.any((node) => node.hasFocus);
 
+  /// The focus has been in the row a while ([_toFirstFor]): the user is
+  /// at work there, so a change that didn't come from them (a sync adding
+  /// a newer movie to Recently added) doesn't take the focus away. Coming
+  /// back to Home, or into the row, starts the clock again.
+  bool get settled => hasFocus && _settled;
+  var _settled = false;
+
+  /// Runs while the focus is in the row and not yet [settled]: a timer,
+  /// which a test's clock moves (a stopwatch it doesn't).
+  Timer? _settling;
+
   /// The held card moved from [from] to [to] (its row re-sorted): the
   /// rail scrolls with it, so the card stays where it was on screen. Its
   /// node lives only while the rail builds it: moved far out of view, it
@@ -100,6 +111,12 @@ final class HomeRowController {
 
   /// One of the row's cards took the focus.
   void _cardFocused() {
+    if (!_settled && _settling == null) {
+      _settling = Timer(_toFirstFor, () {
+        _settling = null;
+        _settled = true;
+      });
+    }
     if (!_toFirstAsked.isRunning) return;
     if (_toFirstAsked.elapsed <= _toFirstFor) {
       _toFirst();
@@ -108,6 +125,15 @@ final class HomeRowController {
         ..stop()
         ..reset();
     }
+  }
+
+  /// One of the row's cards let the focus go: out of the row, unless
+  /// another card of it has it now (focus changes are told once made).
+  void _cardLeft() {
+    if (hasFocus) return;
+    _settling?.cancel();
+    _settling = null;
+    _settled = false;
   }
 
   void register(int index, FocusNode node, {required bool add}) {
@@ -164,7 +190,10 @@ final class HomeRowController {
     return best;
   }
 
-  void dispose() => scroll.dispose();
+  void dispose() {
+    _settling?.cancel();
+    scroll.dispose();
+  }
 }
 
 /// Moves the keyboard's focus between Home's [rows], top to bottom:
@@ -299,10 +328,11 @@ class _HomeRowState extends State<HomeRow> {
     if (held == null || held >= before.length) return;
     final to = _places[before[held]];
     // Something new first: the focus on it, the newest. The held card
-    // itself first (played from further along): it follows (ADR-039).
+    // itself first (played from further along): it follows (ADR-039). Not
+    // while the user is at work in the row: what came first wasn't theirs.
     final newFirst =
         before.isNotEmpty && _keys.isNotEmpty && _keys.first != before.first;
-    if (to == null || (newFirst && to != 0)) {
+    if (to == null || (newFirst && to != 0 && !controller.settled)) {
       controller.toFirst();
     } else if (to != held) {
       controller.follow(held, to);
@@ -465,7 +495,11 @@ class _RowCardState extends State<_RowCard> {
   }
 
   void _onFocus() {
-    if (_focus.hasFocus) widget.controller._cardFocused();
+    if (_focus.hasFocus) {
+      widget.controller._cardFocused();
+    } else {
+      widget.controller._cardLeft();
+    }
   }
 
   @override
