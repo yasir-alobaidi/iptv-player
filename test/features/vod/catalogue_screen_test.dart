@@ -369,6 +369,38 @@ void main() {
     expect(focusedLabel(), 'Play');
   });
 
+  // The Bedroom TV (2026-10-18): Left from a film's Play went up to
+  // ‹ Movies, far above its row, before a second Left reached the menu.
+  testWidgets("on a TV, Left from a title's Play goes to the menu; Up "
+      'reaches ‹ Movies; Left from ★ comes back to Play', (tester) async {
+    await pump(
+      tester,
+      location: '/movies/src-1/501',
+      size: const Size(960, 540),
+      overrides: [formFactorProvider.overrideWithValue(FormFactor.tv)],
+    );
+    expect(focusedLabel(), 'Play');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await settle(tester);
+    final star = focusedLabel();
+    expect(star, isNot('Play'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle(tester);
+    expect(focusedLabel(), 'Play', reason: 'beside it in its row');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle(tester);
+    expect(focusedLabel(), AppDestination.movies.label);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await settle(tester);
+    expect(focusedLabel(), 'Play');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await settle(tester);
+    expect(focusedLabel(), 'Back to Movies');
+  });
+
   // The Bedroom TV (Beta 274): OK on a series' poster opened its page
   // with ‹ Series focused, not its Play.
   testWidgets("on a TV, OK on a series' poster opens its page on Play", (

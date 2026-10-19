@@ -384,6 +384,10 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                                   ? _upToTopBar
                                   : null,
                               textFieldsKeepArrows: !onTv,
+                              // A title's page on a TV: Left from Play
+                              // went up to ‹ Back, far above its row,
+                              // before the menu (the Bedroom TV).
+                              leftStaysInRow: onTv && widget.immersive,
                               child: overlay == null
                                   ? widget.navigationShell
                                   : Stack(
@@ -567,6 +571,7 @@ class _ContentPane extends StatelessWidget {
     required this.child,
     this.onLeaveUp,
     this.textFieldsKeepArrows = true,
+    this.leftStaysInRow = false,
   });
 
   final FocusPaneController controller;
@@ -577,6 +582,11 @@ class _ContentPane extends StatelessWidget {
 
   /// A keyboard's arrows move the caret in a text field (the desktop).
   final bool textFieldsKeepArrows;
+
+  /// Left moves within the screen only to a control beside the focused
+  /// one (its height overlapping), and otherwise to the rail: on a page
+  /// whose controls left of a row sit far above it (a title's ‹ Back).
+  final bool leftStaysInRow;
   final Widget child;
 
   @override
@@ -596,6 +606,7 @@ class _ContentPane extends StatelessWidget {
             _ => onLeaveLeft(),
           },
           textFieldsKeepArrows: textFieldsKeepArrows,
+          leftStaysInRow: leftStaysInRow,
         ),
       },
       child: FocusPane(
@@ -614,10 +625,15 @@ class _LeaveContentIntent extends Intent {
 }
 
 class _LeaveContentAction extends Action<_LeaveContentIntent> {
-  new({required this.onLeave, required this.textFieldsKeepArrows});
+  new({
+    required this.onLeave,
+    required this.textFieldsKeepArrows,
+    required this.leftStaysInRow,
+  });
 
   final void Function(TraversalDirection direction) onLeave;
   final bool textFieldsKeepArrows;
+  final bool leftStaysInRow;
 
   @override
   bool isEnabled(_LeaveContentIntent intent, [BuildContext? context]) =>
@@ -631,12 +647,35 @@ class _LeaveContentAction extends Action<_LeaveContentIntent> {
   Object? invoke(_LeaveContentIntent intent) {
     final focused = FocusManager.instance.primaryFocus;
     // Within the screen first; only at its edge to the chrome.
+    final rowOnly =
+        leftStaysInRow && intent.direction == TraversalDirection.left;
     if (focused != null &&
         focused is! FocusScopeNode &&
+        (!rowOnly || _besideOnLeft(focused)) &&
         focused.focusInDirection(intent.direction)) {
       return null;
     }
     onLeave(intent.direction);
     return null;
+  }
+
+  /// A control left of [focused] in its row: one whose height overlaps
+  /// its own. Only laid-out controls count.
+  static bool _besideOnLeft(FocusNode focused) {
+    final scope = focused.nearestScope;
+    if (scope == null) return false;
+    final from = focused.rect;
+    for (final node in scope.traversalDescendants) {
+      if (identical(node, focused) || node is FocusScopeNode) continue;
+      final box = node.context?.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      final rect = node.rect;
+      if (rect.right <= from.left + 1 &&
+          rect.bottom > from.top &&
+          rect.top < from.bottom) {
+        return true;
+      }
+    }
+    return false;
   }
 }
