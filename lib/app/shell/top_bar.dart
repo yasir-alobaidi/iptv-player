@@ -246,14 +246,8 @@ class _SyncStatus extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (status.busy) ...[
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: colors.accentBase,
-            ),
-          ),
+          // Still with reduce motion on, as every spinner.
+          const AppSpinner(size: 14),
           SizedBox(width: tokens.spacing.s8),
         ],
         Text(

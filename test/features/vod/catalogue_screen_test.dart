@@ -534,15 +534,49 @@ void main() {
     expect(find.text("Your provider doesn't offer movies"), findsOneWidget);
   });
 
-  testWidgets('while the first sync runs: getting your movies', (tester) async {
+  testWidgets('while the first sync runs: the loading stage, saying how far '
+      'it has come as it goes', (tester) async {
     final (vod, _) = await pump(tester, movies: false);
     vod.fakes.sync.emit(
       'src-1',
-      const SyncRunning(SyncProgress(stage: SyncStage.movies)),
+      const SyncRunning(SyncProgress(stage: SyncStage.live, channels: 12340)),
     );
     await settle(tester);
 
+    expect(find.byType(LoadingStage), findsOneWidget);
     expect(find.text('Getting your movies…'), findsOneWidget);
+    expect(find.text('Channels first · 12,340 so far'), findsOneWidget);
+    expect(find.textContaining('Tip · '), findsOneWidget);
+
+    vod.fakes.sync.emit(
+      'src-1',
+      const SyncRunning(
+        SyncProgress(stage: SyncStage.movies, movies: 8021, stageTotal: 13800),
+      ),
+    );
+    await settle(tester);
+    expect(find.text('8,021 of 13,800 movies'), findsOneWidget);
+    final bar = find.descendant(
+      of: find.byType(LoadingStage),
+      matching: find.byType(ProgressBar),
+    );
+    expect(tester.widget<ProgressBar>(bar).value, isNotNull);
+  });
+
+  testWidgets('Series waits in its own words', (tester) async {
+    final (vod, _) = await pump(
+      tester,
+      movies: false,
+      at: AppDestination.series,
+    );
+    vod.fakes.sync.emit(
+      'src-1',
+      const SyncRunning(SyncProgress(stage: SyncStage.series)),
+    );
+    await settle(tester);
+
+    expect(find.text('Getting your series…'), findsOneWidget);
+    expect(find.text('Downloading the series list'), findsOneWidget);
   });
 
   testWidgets('skeletons until the count comes; an error with Retry', (

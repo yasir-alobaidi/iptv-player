@@ -838,6 +838,48 @@ class AppLibraryTokens {
   double get folderIconSize => 36;
 }
 
+/// The loading stage's measures and timings (`LoadingStage`): a wait
+/// that is long by nature, a source's first sync filling a screen. Its
+/// colors are [AppColors] tokens.
+@immutable
+class AppLoadingTokens {
+  const new();
+
+  /// The jewel's tile (its full cut shows from 56 px), and the ring its
+  /// arc goes round, clear of the tile's corners.
+  double get markSize => 56;
+  double get orbitSize => 84;
+  double get orbitStroke => 2;
+
+  /// How much of the ring the arc covers, as a share of a turn.
+  double get orbitSweep => 0.24;
+
+  /// One breath of the tile's glow, in which the arc goes round
+  /// [orbitTurns] times: slow, so the wait reads as calm, not urgent.
+  Duration get cycle => const Duration(milliseconds: 3200);
+  int get orbitTurns => 2;
+
+  /// The glow round the tile, at the bottom and the top of a breath, and
+  /// where it stays with reduce motion on.
+  double get glowBlurLow => 10;
+  double get glowBlurHigh => 26;
+  double get glowOpacityLow => 0.16;
+  double get glowOpacityHigh => 0.42;
+  double get glowStill => 0.5;
+
+  /// The words' widest, and the bar's.
+  double get textMaxWidth => 400;
+  double get barWidth => 220;
+
+  /// A tip stays this long, then fades into the next in [tipFade] (at
+  /// once with reduce motion on).
+  Duration get tipInterval => const Duration(seconds: 7);
+  Duration get tipFade => const Duration(milliseconds: 480);
+
+  /// The bar's fill glides to a new value in this.
+  Duration get barGlide => const Duration(milliseconds: 320);
+}
+
 /// Shadows. Only floating surfaces get one (docs/05).
 @immutable
 class AppElevation {
@@ -881,6 +923,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     this.library = const AppLibraryTokens(),
     this.player = const AppPlayerTokens(),
     this.layout = const AppLayoutTokens(),
+    this.loading = const AppLoadingTokens(),
     this.timeStyle = TimeStyle.h12,
   });
 
@@ -914,6 +957,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final AppLibraryTokens library;
   final AppPlayerTokens player;
   final AppLayoutTokens layout;
+  final AppLoadingTokens loading;
 
   /// How a time of day is written (Settings → Appearance → Clock). Not a
   /// measure, but it changes with the user's choice as the accent does,
@@ -937,6 +981,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     AppLibraryTokens? library,
     AppPlayerTokens? player,
     AppLayoutTokens? layout,
+    AppLoadingTokens? loading,
     TimeStyle? timeStyle,
   }) => AppTokens(
     colors: colors ?? this.colors,
@@ -954,6 +999,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     library: library ?? this.library,
     player: player ?? this.player,
     layout: layout ?? this.layout,
+    loading: loading ?? this.loading,
     timeStyle: timeStyle ?? this.timeStyle,
   );
 
