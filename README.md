@@ -10,4 +10,6 @@ The name, the icon and how the app describes itself: docs/05-design-system.md, "
 3. Paste the **Phase 0** prompt from `docs/08-phases-and-prompts.md`.
 4. When Claude asks, tell it your Google TV / Chromecast model and whether you have a real Windows PC.
 
+To install the stable app (Linux, Windows) and keep the code pushed: `docs/install.md`.
+
 Specs live in `docs/`. Rules for Claude Code live in `CLAUDE.md`.

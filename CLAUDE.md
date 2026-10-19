@@ -22,6 +22,7 @@ Before any work, read:
 | Google TV version | docs/07-google-tv.md |
 | Downloads, local library, offline playback | docs/09-downloads-and-library.md |
 | Environment setup | docs/setup.md |
+| Installing the stable build (Linux, Windows), pushing, other platforms | docs/install.md |
 | Decision log (ADRs) | docs/decisions.md |
 
 Visual reference: the Claude Design canvas linked at the top of docs/05-design-system.md.
