@@ -109,6 +109,100 @@ void main() {
     expect(tip, findsNothing);
   });
 
+  group('a screen too short for every row (a TV)', () {
+    /// The rows' scroll view and what of it shows.
+    Rect shown(WidgetTester tester) => tester.getRect(
+      find
+          .ancestor(
+            of: find.text('Series'),
+            matching: find.byType(SingleChildScrollView),
+          )
+          .first,
+    );
+
+    bool inView(WidgetTester tester, Finder finder) {
+      final view = shown(tester);
+      final rect = tester.getRect(finder);
+      return rect.top >= view.top - 0.5 && rect.bottom <= view.bottom + 0.5;
+    }
+
+    SyncRunning at(SyncStage stage) => SyncRunning(
+      SyncProgress(
+        stage: stage,
+        account: const ProviderAccount(status: 'Active'),
+        categories: 311,
+        channels: 50000,
+        movies: stage == SyncStage.series ? 30004 : 120,
+        stageTotal: 3000,
+      ),
+    );
+
+    Future<void> pumpShort(WidgetTester tester, SyncStatus status) async {
+      fakes.sources.seed();
+      fakes.sync.emit(id, status);
+      await pumpApp(
+        tester,
+        initialLocation: sourceSyncPath(id),
+        overrides: fakes.overrides,
+        size: const Size(1024, 520),
+      );
+    }
+
+    testWidgets('the list follows the stage running down to the last, and '
+        'the tip stays in view', (tester) async {
+      await pumpShort(tester, at(SyncStage.live));
+      final scroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find
+                      .ancestor(
+                        of: find.text('Series'),
+                        matching: find.byType(SingleChildScrollView),
+                      )
+                      .first,
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      expect(
+        scroll.maxScrollExtent,
+        greaterThan(0),
+        reason: 'the rows are taller than the window',
+      );
+      expect(inView(tester, find.text('Channels')), isTrue);
+
+      await emit(tester, at(SyncStage.series));
+      // The list glides there.
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        inView(tester, find.text('Series')),
+        isTrue,
+        reason: 'the row of the stage running shows',
+      );
+      expect(inView(tester, find.byType(RotatingTip)), isTrue);
+    });
+
+    testWidgets('the row running wins over the tip when both cannot show', (
+      tester,
+    ) async {
+      fakes.sources.seed();
+      fakes.sync.emit(id, at(SyncStage.live));
+      await pumpApp(
+        tester,
+        initialLocation: sourceSyncPath(id),
+        overrides: fakes.overrides,
+        size: const Size(1024, 380),
+      );
+      expect(
+        tester.getRect(find.text('Channels')).top,
+        greaterThanOrEqualTo(shown(tester).top - 0.5),
+        reason: "the running row's top is never scrolled away",
+      );
+    });
+  });
+
   testWidgets('a list still downloading says so', (tester) async {
     await pump(
       tester,

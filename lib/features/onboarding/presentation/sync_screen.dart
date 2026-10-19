@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
@@ -39,6 +40,20 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   final _nextNode = FocusNode(debugLabel: 'sync next');
   final _retryNode = FocusNode(debugLabel: 'sync retry');
 
+  /// The rows don't all fit a TV's screen, and nothing in them takes the
+  /// focus to scroll them: the list follows the row running, and keeps
+  /// the tip under it in view when there is room for both.
+  final ScrollController _scroll = ScrollController();
+  final GlobalKey _runningRow = GlobalKey(debugLabel: 'sync running row');
+  final GlobalKey _tip = GlobalKey(debugLabel: 'sync tip');
+
+  /// What the list last followed: the row running, and whether a tip was
+  /// there.
+  (String?, bool)? _followed;
+
+  /// The row running (or stopped) in the last build, by its label.
+  String? _runningLabel;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +67,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   void dispose() {
     _nextNode.dispose();
     _retryNode.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -62,6 +78,57 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     await ref.read(syncServiceProvider).removeSource(widget.sourceId);
     if (!mounted) return;
     context.go(addSourceRoutePath);
+  }
+
+  /// After a frame in which the row running changed (or the tip came),
+  /// the least scroll that shows the tip without the running row's top
+  /// going out of view: the row wins when both can't show.
+  void _follow(String? running, bool tip) {
+    final followed = (running, tip);
+    if (followed == _followed) return;
+    _followed = followed;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      // Offstage under another route, nothing is laid out: the next build
+      // tries again.
+      if (!position.hasContentDimensions || !position.hasPixels) {
+        if (_followed == followed) _followed = null;
+        return;
+      }
+      double? reveal(GlobalKey key, double alignment) {
+        final object = key.currentContext?.findRenderObject();
+        // Offstage under another route, it isn't laid out.
+        if (object is! RenderBox || !object.attached || !object.hasSize) {
+          return null;
+        }
+        return RenderAbstractViewport.maybeOf(object)
+            ?.getOffsetToReveal(object, alignment)
+            .offset;
+      }
+
+      var target = position.pixels;
+      final tipEnd = reveal(_tip, 1);
+      if (tipEnd != null && tipEnd > target) target = tipEnd;
+      final rowEnd = reveal(_runningRow, 1);
+      if (rowEnd != null && rowEnd > target) target = rowEnd;
+      final rowStart = reveal(_runningRow, 0);
+      if (rowStart != null && rowStart < target) target = rowStart;
+      target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
+      if ((target - position.pixels).abs() < 0.5) return;
+      final motion = context.tokens.motion;
+      if (motion.reduceMotion) {
+        position.jumpTo(target);
+      } else {
+        unawaited(
+          position.animateTo(
+            target,
+            duration: motion.slow,
+            curve: motion.slowCurve,
+          ),
+        );
+      }
+    });
   }
 
   void _retry() =>
@@ -92,6 +159,9 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
 
     final done = status is SyncSucceeded;
     final stopped = status is SyncFailed || status is SyncCancelled;
+    final tip = status is SyncRunning || status is SyncIdle;
+    final rows = _rows(context, type, status);
+    _follow(_runningLabel, tip);
 
     return OnboardingFrame(
       step: 2,
@@ -101,6 +171,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
           'run quietly in the background.',
       maxWidth: 640,
       body: SingleChildScrollView(
+        controller: _scroll,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -116,11 +187,15 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               ),
               SizedBox(height: context.tokens.spacing.s12),
             ],
-            ..._rows(context, type, status),
+            ...rows,
             // Something to read while the lists come in.
-            if (status is SyncRunning || status is SyncIdle) ...[
+            if (tip) ...[
               SizedBox(height: context.tokens.spacing.s20 + 2),
-              RotatingTip(tips: waitTips(context), textAlign: TextAlign.start),
+              RotatingTip(
+                key: _tip,
+                tips: waitTips(context),
+                textAlign: TextAlign.start,
+              ),
             ],
           ],
         ),
@@ -286,10 +361,22 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
         ),
       ]);
     }
+    final running = rows
+        .where(
+          (row) => switch (row.state) {
+            _RowState.active || _RowState.counting || _RowState.failed => true,
+            _ => false,
+          },
+        )
+        .firstOrNull;
+    _runningLabel = running?.label;
     return [
       for (final (index, row) in rows.indexed) ...[
         if (index > 0) SizedBox(height: spacing.s8),
-        row,
+        if (identical(row, running))
+          KeyedSubtree(key: _runningRow, child: row)
+        else
+          row,
       ],
     ];
   }
