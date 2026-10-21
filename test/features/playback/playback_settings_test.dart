@@ -15,6 +15,7 @@ void main() {
     matchFrameRate: true,
     pictureQuality: PictureQuality.high,
     subtitleSize: SubtitleSize.large,
+    timeOnScreen: TimeOnScreen.controls,
   );
 
   test('round-trips through JSON', () {
@@ -160,6 +161,43 @@ void main() {
     );
     expect(
       const PlaybackSettings(subtitleSize: SubtitleSize.small),
+      isNot(const PlaybackSettings()),
+    );
+  });
+
+  test('Time on screen is Always unless With the controls was stored', () {
+    expect(const PlaybackSettings().timeOnScreen, TimeOnScreen.always);
+    expect(const PlaybackSettings().toJson()['timeOnScreen'], 'always');
+    expect(chosen.toJson()['timeOnScreen'], 'controls');
+    for (final choice in TimeOnScreen.values) {
+      final settings = PlaybackSettings(timeOnScreen: choice);
+      expect(PlaybackSettings.fromJson(settings.toJson()), settings);
+    }
+    expect(
+      PlaybackSettings.fromJson(const {'timeOnScreen': 'controls'})
+          .timeOnScreen,
+      TimeOnScreen.controls,
+    );
+    // Settings stored before it, or damaged: Always, and the rest kept.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'timeOnScreen': 'never'},
+      const {'timeOnScreen': 'Controls'},
+      const {'timeOnScreen': 0},
+      const {'timeOnScreen': null},
+      const {'timeOnScreen': false},
+    ]) {
+      expect(
+        PlaybackSettings.fromJson(stored).timeOnScreen,
+        TimeOnScreen.always,
+      );
+    }
+    expect(
+      PlaybackSettings.fromJson({...chosen.toJson(), 'timeOnScreen': 'off'}),
+      chosen.copyWith(timeOnScreen: TimeOnScreen.always),
+    );
+    expect(
+      const PlaybackSettings(timeOnScreen: TimeOnScreen.controls),
       isNot(const PlaybackSettings()),
     );
   });

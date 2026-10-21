@@ -23,11 +23,13 @@ import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
+import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
 import 'package:iptv_player/features/playback/presentation/player_sound.dart';
 import 'package:iptv_player/features/playback/presentation/player_surface.dart';
+import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
 import 'package:iptv_player/features/playback/presentation/vod_player_controller.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
@@ -43,7 +45,9 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 /// audio and subtitles, I shows the stream info, F or a double-click
 /// toggles the window's full screen, Esc goes back. Every key has a
 /// control on the OSD, large enough to read from across a room, and the
-/// OSD is drawn larger in a larger window.
+/// OSD is drawn larger in a larger window. While it is hidden the clock
+/// and the time left stay top right ([PlayerTimeCorner]), unless Settings
+/// → Playback → Time on screen keeps them with the controls.
 ///
 /// A movie or an episode (Phase 5 step 6) has its own face and keys:
 /// Space or a click on the picture plays and pauses, ←/→ seek 10 s and
@@ -1103,6 +1107,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final sound = ref.watch(playerSoundControllerProvider);
     final showOsd =
         _osd || _panel || _pinned || _menu || state is PlaybackFailed;
+    // Read as it changes: a choice in Settings shows on what plays.
+    final timeOnScreen = ref.watch(
+      playbackSettingsControllerProvider.select((s) => s.timeOnScreen),
+    );
 
     Widget osd(Widget child) => AnimatedOpacity(
       opacity: showOsd ? 1 : 0,
@@ -1217,6 +1225,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                                       ],
                                     ),
                                   ],
+                                ),
+                              ),
+                            // The clock and the time left while the OSD is
+                            // hidden and the picture plays (not while it
+                            // opens, has failed, or anything holds the OSD
+                            // up): its clock where the OSD's is, the shade's
+                            // inset taken off the top bar's.
+                            if (timeOnScreen == TimeOnScreen.always)
+                              Positioned(
+                                top: tokens.spacing.s24 + tokens.spacing.s4,
+                                right: tokens.spacing.s32 - tokens.spacing.s12,
+                                child: PlayerTimeCorner(
+                                  shown: !showOsd && state is PlaybackPlaying,
+                                  vod: vod ? _vod : null,
+                                  channel: channel,
                                 ),
                               ),
                             if (_banner case final banner? when !_panel)

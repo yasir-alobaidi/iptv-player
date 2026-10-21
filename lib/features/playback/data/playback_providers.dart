@@ -31,7 +31,8 @@ PlaybackSettingsStore playbackSettingsStore(Ref ref) =>
 
 /// Settings → Playback: the defaults at once, the stored choices as soon
 /// as they are read; a change is saved and applies to the next stream
-/// opened (the subtitles' size at once: the picture watches it).
+/// opened (the subtitles' size and the time on screen at once: the
+/// picture and the player watch them).
 @Riverpod(keepAlive: true)
 class PlaybackSettingsController extends _$PlaybackSettingsController {
   @override

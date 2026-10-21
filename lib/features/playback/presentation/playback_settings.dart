@@ -19,10 +19,10 @@ import 'package:iptv_player/features/sources/domain/source.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
 
 /// Settings → Playback (ADR-010 decision 5): the buffer preset,
-/// deinterlacing, preferred languages, the subtitles' size, and, for the
-/// source being browsed, its live format. Every change is saved at once
-/// and applies to the next stream opened; the subtitles' size to what
-/// plays too (ADR-038).
+/// deinterlacing, preferred languages, the subtitles' size, the time on
+/// screen, and, for the source being browsed, its live format. Every
+/// change is saved at once and applies to the next stream opened; the
+/// subtitles' size (ADR-038) and the time on screen to what plays too.
 class PlaybackSettingsSection extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -266,6 +266,26 @@ class _PlaybackSettingsSectionState
               value: settings.subtitleSize,
               onChanged: (value) =>
                   unawaited(_save(settings.copyWith(subtitleSize: value))),
+            ),
+          ),
+          // The full-screen player's corner (docs/03), on a TV and a
+          // desktop; it changes what is playing too.
+          _Setting(
+            title: 'Time on screen',
+            description:
+                'The clock and the time left stay in a corner while you '
+                'watch, or come and go with the controls.',
+            control: SegmentedControl<TimeOnScreen>(
+              options: const [
+                SegmentOption(value: TimeOnScreen.always, label: 'Always'),
+                SegmentOption(
+                  value: TimeOnScreen.controls,
+                  label: 'With the controls',
+                ),
+              ],
+              value: settings.timeOnScreen,
+              onChanged: (value) =>
+                  unawaited(_save(settings.copyWith(timeOnScreen: value))),
             ),
           ),
           if (source != null && source.type == SourceType.xtream)
