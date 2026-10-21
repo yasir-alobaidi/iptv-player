@@ -7,10 +7,19 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 const _tag = 'display';
 
 /// The frame rates matched: a film's 23.976 and 24 fps (docs/plans/
-/// tv-video-layer-and-frame-rate.md, item 2). The Bedroom TV has no 25 or
-/// 50 Hz mode, and 29.97, 30, 59.94 and 60 already divide its 59.94/60.
+/// tv-video-layer-and-frame-rate.md, item 2), and a channel's 25 and 50
+/// (ADR-044); 29.97, 30, 59.94 and 60 already divide a TV's 59.94/60.
 const filmRateLow = 23.9;
 const filmRateHigh = 24.1;
+
+/// A channel at 25 or 50 fps (nearly every channel outside the Americas)
+/// shows unevenly at 59.94 Hz: one frame in five stays up twice as long,
+/// or every other one half as long again, and motion stutters. Both play
+/// evenly at 50 Hz, which a TV like the Living Room's Samsung has (the
+/// Bedroom's Hisense has none).
+const channelRates = [25.0, 50.0];
+const channelRateTolerance = 0.1;
+const channelDisplayRate = 50.0;
 
 /// How near a mode's rate has to be to the film's: 23.976 and 24 are
 /// different modes, 0.024 Hz apart.
@@ -75,34 +84,53 @@ DisplayModePick pickDisplayMode(DisplayFacts display, double? fps) {
   return SwitchDisplayMode(best);
 }
 
-/// Why the TV's own Match content frame rate setting refuses a switch to
-/// [target], or null when it allows it: Never never does, Seamless only
-/// only to a rate the current mode reaches without the screen going dark
-/// (on the Bedroom TV, none: every mode is its own group).
-String? tvRefuses(DisplayFacts display, DisplayMode target) {
-  switch (display.matchContentFrameRate) {
-    case MatchContentFrameRate.never:
-      return "the TV's Match content frame rate is Never";
-    case MatchContentFrameRate.seamlessOnly:
-      final seamless = display.alternativeRefreshRates.any(
-        (rate) => (rate - target.refreshRate).abs() <= rateTolerance,
-      );
-      if (seamless) return null;
-      final from = display.current?.refreshRate;
-      return "the TV's Match content frame rate is Seamless only, and "
-          "${formatRate(target.refreshRate)} Hz isn't seamless"
-          '${from == null ? '' : ' from ${formatRate(from)} Hz'}';
-    case MatchContentFrameRate.always || MatchContentFrameRate.unknown:
-      return null;
+/// The mode a channel at [fps] plays on (ADR-044): at 25 or 50 fps, the
+/// display's 50 Hz mode at its current size. Any other rate plays on the
+/// TV's own mode, which [NoDisplayMode] says.
+DisplayModePick pickChannelMode(DisplayFacts display, double? fps) {
+  if (fps == null || fps.isNaN || fps <= 0) {
+    return const NoDisplayMode("the channel's frame rate isn't known");
   }
+  if (!channelRates.any((rate) => (fps - rate).abs() <= channelRateTolerance)) {
+    return NoDisplayMode('${formatRate(fps)} fps is not 25 or 50');
+  }
+  final current = display.current;
+  if (current == null) {
+    return const NoDisplayMode("the display's mode isn't known");
+  }
+  double off(DisplayMode mode) => (mode.refreshRate - channelDisplayRate).abs();
+  if (off(current) <= rateTolerance) return DisplayModeMatches(current);
+  for (final mode in display.modes) {
+    if (mode.sameSize(current) && off(mode) <= rateTolerance) {
+      return SwitchDisplayMode(mode);
+    }
+  }
+  return NoDisplayMode('no 50 Hz mode at ${current.width}x${current.height}');
 }
 
+/// Why the TV's own Match content frame rate setting refuses a switch to
+/// [target], or null when it allows it: only Never refuses (ADR-044).
+/// Seamless only is Google TV's own default, never chosen on the Living
+/// Room TV: it would have kept a TV with no seamless switch (both of
+/// ours: every mode is its own group) from ever taking the rate Bijou's
+/// own setting asks for, and Always would switch every other app too.
+String? tvRefuses(DisplayFacts display, DisplayMode target) =>
+    switch (display.matchContentFrameRate) {
+      MatchContentFrameRate.never =>
+        "the TV's Match content frame rate is Never",
+      MatchContentFrameRate.seamlessOnly ||
+      MatchContentFrameRate.always ||
+      MatchContentFrameRate.unknown => null,
+    };
+
 /// A TV's Match frame rate: a film at 23.976 or 24 fps moves the display
-/// to its rate as part of its open, and the display goes back to the
-/// TV's own mode when nothing needs it.
+/// to its rate as part of its open, a channel at 25 or 50 fps to 50 Hz
+/// as it plays, and the display goes back to the TV's own mode when
+/// nothing needs it.
 ///
 /// The coordinator tells it of every state ([playbackChanged]) and asks
-/// it at a file's first frame ([beforeFilePlays]). A switch pauses the
+/// it at a file's first frame ([beforeFilePlays]) and a channel's
+/// ([channelPlays]). A switch pauses the
 /// player, asks the window for the mode, waits for the display to say it
 /// changed ([changeTimeout] at most), then [settle]s; anything that fails
 /// or takes too long ends it, and the film plays on at the mode the
@@ -142,6 +170,21 @@ final class FrameRateMatcher {
 
   /// The mode asked for; null when none is (the TV's own).
   int? _requested;
+
+  /// [_requested] is a channel's 50 Hz: kept while channels play.
+  bool _forChannel = false;
+
+  /// A channel's mode asked for and not yet shown: logged when it is,
+  /// or warned of after [changeTimeout].
+  ({DisplayMode to, DateTime asked, Timer timeout})? _channelAsk;
+
+  /// Counts [channelPlays]: one still reading when the next channel
+  /// plays decides nothing.
+  int _channelTurn = 0;
+
+  /// What the last channel's decision said, so a zap through channels
+  /// at the same rate logs it once.
+  String? _channelNote;
 
   /// The display's mode before the first request: what going back
   /// returns to.
@@ -269,6 +312,124 @@ final class FrameRateMatcher {
     }
   }
 
+  /// A channel's first frame (ADR-044): at 25 or 50 fps the display is
+  /// asked for its 50 Hz mode, if it has one, and kept there for the next
+  /// channel; at any other rate it goes back to the TV's own. Nothing
+  /// waits for it: the channel plays on while the TV switches. [enabled]
+  /// is Settings → Playback → Match frame rate for channels; [fps] reads
+  /// the channel's rate.
+  Future<void> channelPlays({
+    required bool enabled,
+    required Future<double?> Function() fps,
+  }) async {
+    if (!available) return;
+    final turn = ++_channelTurn;
+    _cancelRelease();
+    try {
+      if (!enabled) {
+        _noteChannel(
+          'Display mode left as it is: Match frame rate for '
+          'channels is off',
+        );
+        if (_requested != null) {
+          _backToOwn('Match frame rate for channels is off');
+        }
+        return;
+      }
+      final display = await _bounded(_display.read);
+      if (turn != _channelTurn || _disposed) return;
+      if (display == null) {
+        _noteChannel(
+          "Display mode left as it is: the display's modes couldn't be read",
+        );
+        return;
+      }
+      if (display.current case final current?) _shown = current;
+      final rate = await _bounded(fps);
+      if (turn != _channelTurn || _disposed) return;
+      final channel = rate == null
+          ? ''
+          : ' for a ${formatRate(rate)} fps channel';
+      switch (pickChannelMode(display, rate)) {
+        case DisplayModeMatches(:final mode):
+          final kept = _requested == null ? 'already' : 'kept at';
+          _noteChannel('Display mode $kept ${mode.logLabel}$channel');
+        case NoDisplayMode(:final reason):
+          _noteChannel(
+            'Display mode left at ${display.current?.logLabel ?? 'its mode'}: '
+            '$reason',
+          );
+          if (_requested != null) _backToOwn(reason);
+        case SwitchDisplayMode(:final mode):
+          if (tvRefuses(display, mode) case final refusal?) {
+            _noteChannel(
+              'Display mode left at ${display.current?.logLabel}: $refusal',
+            );
+            if (_requested != null) _backToOwn(refusal);
+            return;
+          }
+          if (mode.id == _requested) return;
+          if (mode.id == _unanswered) {
+            _noteChannel(
+              'Display mode left at ${display.current?.logLabel}: the '
+              "display didn't switch to it before",
+            );
+            return;
+          }
+          final from = display.current!;
+          if (_requested == null) _own = from;
+          _requested = mode.id;
+          _forChannel = true;
+          _returning = null;
+          _channelNote = null;
+          final asked = _clock();
+          _channelAsk?.timeout.cancel();
+          _channelAsk = (
+            to: mode,
+            asked: asked,
+            timeout: Timer(changeTimeout, () => _channelUnanswered(mode)),
+          );
+          _log.info(
+            _tag,
+            'Display mode asked: ${from.logLabel} → '
+            "${formatRate(mode.refreshRate)} Hz$channel; the TV's Match "
+            'content frame rate: ${display.matchContentFrameRate.label}'
+            '${display.apiLevel == null ? '' : ' (API ${display.apiLevel})'}',
+          );
+          final ok = await _bounded(() => _display.request(mode.id)) ?? false;
+          if (!ok && _requested == mode.id) {
+            _channelAsk?.timeout.cancel();
+            _channelAsk = null;
+            _log.warning(
+              _tag,
+              "Display mode ${mode.logLabel}$channel: couldn't be asked for",
+            );
+          }
+      }
+    } on Object catch (error) {
+      _log.warning(_tag, 'Match frame rate failed, playing on: $error');
+    }
+  }
+
+  /// A zap through channels at one rate says its decision once.
+  void _noteChannel(String line) {
+    if (line == _channelNote) return;
+    _channelNote = line;
+    _log.info(_tag, line);
+  }
+
+  void _channelUnanswered(DisplayMode mode) {
+    final ask = _channelAsk;
+    if (ask == null || ask.to.id != mode.id) return;
+    _channelAsk = null;
+    if (_requested == mode.id) _unanswered = mode.id;
+    _log.warning(
+      _tag,
+      'Display mode ${mode.logLabel}: no change within '
+      '${changeTimeout.inSeconds} s, the channel plays on as it is',
+    );
+  }
+
   void _left(DisplayFacts display, String reason) => _log.info(
     _tag,
     'Display mode left at ${display.current?.logLabel ?? 'its mode'}: '
@@ -338,6 +499,8 @@ final class FrameRateMatcher {
     // Before the request goes: a stop while it is on its way still
     // clears it.
     _requested = ask == 0 ? null : ask;
+    _forChannel = false;
+    _channelNote = null;
     _returning = ask == 0 ? (own: to, asked: started) : null;
     _log.info(_tag, 'Display mode asked: $fromTo$why');
     final asked = await _bounded(() => _display.request(ask)) ?? false;
@@ -374,12 +537,14 @@ final class FrameRateMatcher {
   }
 
   /// Every state the coordinator goes through: the player closing lets
-  /// the mode go after the [grace], a channel at once; a stop during a
-  /// switch ends it and clears the request.
+  /// the mode go after the [grace]; a channel opening lets a film's go at
+  /// once, and keeps a channel's for its first frame to decide; a stop
+  /// during a switch ends it and clears the request.
   void playbackChanged(PlaybackState state) {
     if (!available) return;
     switch (state) {
       case PlaybackIdle():
+        _channelTurn++;
         if (_attempt case final attempt?) {
           attempt.end();
           _attempt = null;
@@ -393,7 +558,10 @@ final class FrameRateMatcher {
         _attempt?.end();
         _attempt = null;
         _cancelRelease();
-        if (item.live) _backToOwn('a channel plays');
+        if (item.live) {
+          _channelTurn++;
+          if (!_forChannel) _backToOwn('a channel plays');
+        }
       case _:
         break;
     }
@@ -426,8 +594,12 @@ final class FrameRateMatcher {
   /// wait (nothing of a film plays).
   void _backToOwn(String why) {
     _cancelRelease();
+    _channelAsk?.timeout.cancel();
+    _channelAsk = null;
     if (_requested == null) return;
     _requested = null;
+    _forChannel = false;
+    _channelNote = null;
     final own = _own;
     _own = null;
     final shown = _shown;
@@ -451,6 +623,16 @@ final class FrameRateMatcher {
       _log.info(
         _tag,
         "Display mode back to the TV's own, ${mode.logLabel}, "
+        '${_seconds(_clock().difference(asked))} after asking',
+      );
+    }
+    if (_channelAsk case (:final to, :final asked, :final timeout)
+        when _isMode(mode, to)) {
+      timeout.cancel();
+      _channelAsk = null;
+      _log.info(
+        _tag,
+        'Display mode now ${to.logLabel}, '
         '${_seconds(_clock().difference(asked))} after asking',
       );
     }

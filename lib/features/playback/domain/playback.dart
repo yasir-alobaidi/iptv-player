@@ -89,6 +89,7 @@ final class PlaybackSettings {
     this.deinterlace,
     this.hardwareDecoding = true,
     this.matchFrameRate = false,
+    this.matchChannelRate = true,
     this.pictureQuality = PictureQuality.standard,
     this.subtitleSize = SubtitleSize.medium,
   });
@@ -118,6 +119,7 @@ final class PlaybackSettings {
       // Not the old `matchFps`: it was written "on" for everyone who saved
       // any playback setting while On was the default (ADR-042).
       matchFrameRate: json['matchRate'] == 'on',
+      matchChannelRate: json['matchChannels'] != 'off',
       pictureQuality: json['quality'] == 'high'
           ? PictureQuality.high
           : PictureQuality.standard,
@@ -146,6 +148,12 @@ final class PlaybackSettings {
   /// (ADR-042); the desktop never shows or uses it.
   final bool matchFrameRate;
 
+  /// A TV's Match frame rate for channels (ADR-044): a channel at 25 or
+  /// 50 fps switches the display to 50 Hz when it has such a mode, and
+  /// the next channel keeps it. On unless switched off: the screen goes
+  /// dark only as Live TV starts and ends, never between channels.
+  final bool matchChannelRate;
+
   /// The desktop's Picture quality; a TV ignores it.
   final PictureQuality pictureQuality;
 
@@ -160,6 +168,7 @@ final class PlaybackSettings {
     bool? Function()? deinterlace,
     bool? hardwareDecoding,
     bool? matchFrameRate,
+    bool? matchChannelRate,
     PictureQuality? pictureQuality,
     SubtitleSize? subtitleSize,
   }) => PlaybackSettings(
@@ -169,6 +178,7 @@ final class PlaybackSettings {
     deinterlace: deinterlace == null ? this.deinterlace : deinterlace(),
     hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
     matchFrameRate: matchFrameRate ?? this.matchFrameRate,
+    matchChannelRate: matchChannelRate ?? this.matchChannelRate,
     pictureQuality: pictureQuality ?? this.pictureQuality,
     subtitleSize: subtitleSize ?? this.subtitleSize,
   );
@@ -185,6 +195,7 @@ final class PlaybackSettings {
     },
     'hwdec': hardwareDecoding ? 'auto' : 'off',
     'matchRate': matchFrameRate ? 'on' : 'off',
+    'matchChannels': matchChannelRate ? 'on' : 'off',
     'quality': pictureQuality.name,
     'subtitleSize': subtitleSize.name,
   };
@@ -217,6 +228,7 @@ final class PlaybackSettings {
       other.deinterlace == deinterlace &&
       other.hardwareDecoding == hardwareDecoding &&
       other.matchFrameRate == matchFrameRate &&
+      other.matchChannelRate == matchChannelRate &&
       other.pictureQuality == pictureQuality &&
       other.subtitleSize == subtitleSize;
 
@@ -228,6 +240,7 @@ final class PlaybackSettings {
     deinterlace,
     hardwareDecoding,
     matchFrameRate,
+    matchChannelRate,
     pictureQuality,
     subtitleSize,
   );

@@ -20,10 +20,10 @@ import 'support/playback_fakes.dart';
 /// Stream info (I): the video's frame rate as it is (23.976 is not 24),
 /// and on a TV the display's mode, and whether it is the film's rate.
 void main() {
-  group('the Display row (ADR-035)', () {
+  group('the Display row (ADR-035, ADR-044)', () {
     test("the display's size and rate", () {
       expect(displayInfoText(uhd5994), '3840×2160 · 59.94 Hz');
-      expect(displayInfoText(uhd24, fps: 50), '3840×2160 · 24 Hz');
+      expect(displayInfoText(uhd24, fps: 29.97), '3840×2160 · 24 Hz');
     });
 
     test('a film at 23.976 or 24 fps: whether the display is at its rate', () {
@@ -46,13 +46,30 @@ void main() {
       );
     });
 
-    test('nothing said of any other rate, or of a channel', () {
+    test('a channel at 25 or 50 fps: whether the display is at 50 Hz', () {
+      expect(
+        displayInfoText(samsung50, fps: 25),
+        '3840×2160 · 50 Hz · matched',
+      );
+      expect(
+        displayInfoText(samsung50, fps: 50),
+        '3840×2160 · 50 Hz · matched',
+      );
+      expect(
+        displayInfoText(uhd5994, fps: 50),
+        '3840×2160 · 59.94 Hz · not matched',
+      );
+    });
+
+    test("nothing said of any other rate, a film's at 25, or a channel's "
+        'at 23.976', () {
       expect(
         displayInfoText(uhd5994, fps: 25, film: true),
         '3840×2160 · 59.94 Hz',
       );
       expect(displayInfoText(uhd5994, film: true), '3840×2160 · 59.94 Hz');
       expect(displayInfoText(uhd5994, fps: 23.976), '3840×2160 · 59.94 Hz');
+      expect(displayInfoText(uhd5994, fps: 59.94), '3840×2160 · 59.94 Hz');
     });
   });
 
@@ -200,14 +217,24 @@ void main() {
       await done(tester, rig);
     });
 
-    testWidgets("on a TV, a channel: the display's mode alone", (tester) async {
-      final rig = await pumpOverlay(
+    testWidgets('on a TV, a 50 fps channel: whether the display is at 50 Hz '
+        '(ADR-044)', (tester) async {
+      var rig = await pumpOverlay(
         tester,
         display: FakeDisplayModes(),
         info: const StreamInfo(width: 1920, height: 1080, fps: 50),
         film: false,
       );
-      expect(find.text('3840×2160 · 59.94 Hz'), findsOneWidget);
+      expect(find.text('3840×2160 · 59.94 Hz · not matched'), findsOneWidget);
+      await done(tester, rig);
+
+      rig = await pumpOverlay(
+        tester,
+        display: FakeDisplayModes(current: samsung50, modes: samsungModes),
+        info: const StreamInfo(width: 1920, height: 1080, fps: 50),
+        film: false,
+      );
+      expect(find.text('3840×2160 · 50 Hz · matched'), findsOneWidget);
       await done(tester, rig);
     });
 

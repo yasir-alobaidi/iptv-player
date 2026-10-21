@@ -97,6 +97,33 @@ void main() {
     }
   });
 
+  test("a TV's Match frame rate for channels is On unless Off was chosen "
+      '(ADR-044)', () {
+    expect(const PlaybackSettings().matchChannelRate, isTrue);
+    expect(const PlaybackSettings().toJson()['matchChannels'], 'on');
+    expect(
+      const PlaybackSettings(matchChannelRate: false).toJson()['matchChannels'],
+      'off',
+    );
+    expect(
+      PlaybackSettings.fromJson(const {'matchChannels': 'off'})
+          .matchChannelRate,
+      isFalse,
+    );
+    for (final stored in [
+      const <String, Object?>{},
+      const {'matchChannels': 'on'},
+      const {'matchChannels': false},
+      const {'matchRate': 'off'},
+    ]) {
+      expect(PlaybackSettings.fromJson(stored).matchChannelRate, isTrue);
+    }
+    expect(
+      const PlaybackSettings(matchChannelRate: false),
+      isNot(const PlaybackSettings()),
+    );
+  });
+
   test('Picture quality is Standard unless High was stored, and the '
       'request carries it', () {
     expect(const PlaybackSettings().pictureQuality, PictureQuality.standard);

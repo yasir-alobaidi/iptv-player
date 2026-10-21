@@ -683,6 +683,16 @@ final class PlaybackCoordinator {
     _set(PlaybackPlaying(item));
     _startTick(item, token);
     unawaited(_noteDecoder(generation));
+    // A channel at 25 or 50 fps moves a TV that has 50 Hz there as it
+    // plays: nothing waits for it (ADR-044).
+    if (_frameRate case final matcher? when matcher.available && item.live) {
+      unawaited(
+        matcher.channelPlays(
+          enabled: _settings().matchChannelRate,
+          fps: () => _channelFps(generation),
+        ),
+      );
+    }
     if (item case PlayableChannel(:final channel) when !_recorded) {
       _recorded = true;
       unawaited(_history.recordLive(channel));
@@ -729,6 +739,16 @@ final class PlaybackCoordinator {
     }
     if (_matching == generation) _matching = null;
     if (still()) _firstFrame(item, token, generation);
+  }
+
+  /// A channel's frame rate, which mpv may know only a moment after its
+  /// first frame: up to a second more.
+  Future<double?> _channelFps(int generation) async {
+    for (var i = 0; ; i++) {
+      final fps = (await engine.streamInfo()).fps;
+      if (fps != null || i == 4 || generation != _generation) return fps;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
   }
 
   Future<void> _pauseForSwitch() async {

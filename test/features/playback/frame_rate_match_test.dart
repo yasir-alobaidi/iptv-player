@@ -99,24 +99,71 @@ void main() {
       );
     });
 
-    test('Seamless only allows only a rate the current mode reaches '
-        'seamlessly: on this TV, none', () {
-      final seamless = tvFacts(preference: MatchContentFrameRate.seamlessOnly);
+    test("Seamless only, Google TV's own default, allows it too: only "
+        'Never refuses (ADR-044)', () {
       expect(
-        tvRefuses(seamless, uhd23976),
-        "the TV's Match content frame rate is Seamless only, and 23.976 Hz "
-        "isn't seamless from 59.94 Hz",
+        tvRefuses(
+          tvFacts(preference: MatchContentFrameRate.seamlessOnly),
+          uhd23976,
+        ),
+        isNull,
       );
       expect(
         tvRefuses(
           tvFacts(
             preference: MatchContentFrameRate.seamlessOnly,
-            alternatives: [23.976025, 29.97003],
+            modes: samsungModes,
+            current: samsung5994,
           ),
-          uhd23976,
+          samsung50,
         ),
         isNull,
       );
+    });
+  });
+
+  group('pickChannelMode (ADR-044)', () {
+    DisplayFacts samsung({DisplayMode? current}) =>
+        tvFacts(current: current ?? samsung5994, modes: samsungModes);
+
+    test('25 and 50 fps take the 50 Hz mode at the current size', () {
+      for (final fps in [25.0, 50.0, 24.95, 50.05]) {
+        final pick = pickChannelMode(samsung(), fps);
+        expect(pick, isA<SwitchDisplayMode>(), reason: '$fps fps');
+        expect((pick as SwitchDisplayMode).mode, samsung50);
+      }
+      final hd = pickChannelMode(samsung(current: samsungMode(1821)), 25);
+      expect(
+        (hd as SwitchDisplayMode).mode,
+        samsungMode(1831),
+        reason: '1080p stays 1080p, and 25 fps goes to 50 Hz, not 25',
+      );
+    });
+
+    test('nothing when the display is at 50 Hz already', () {
+      final pick = pickChannelMode(samsung(current: samsung50), 25);
+      expect(pick, isA<DisplayModeMatches>());
+      expect((pick as DisplayModeMatches).mode, samsung50);
+    });
+
+    test("any other rate plays on the TV's own mode", () {
+      for (final fps in [23.976, 24.0, 29.97, 30.0, 59.94, 60.0, 48.0]) {
+        final pick = pickChannelMode(samsung(), fps);
+        expect(pick, isA<NoDisplayMode>(), reason: '$fps fps');
+        expect((pick as NoDisplayMode).reason, contains('is not 25 or 50'));
+      }
+      for (final fps in [null, 0.0, double.nan]) {
+        expect(
+          (pickChannelMode(samsung(), fps) as NoDisplayMode).reason,
+          "the channel's frame rate isn't known",
+        );
+      }
+    });
+
+    test('nothing on a TV with no 50 Hz mode (the Bedroom TV)', () {
+      final pick = pickChannelMode(tvFacts(), 50);
+      expect(pick, isA<NoDisplayMode>());
+      expect((pick as NoDisplayMode).reason, 'no 50 Hz mode at 3840x2160');
     });
   });
 

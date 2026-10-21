@@ -111,13 +111,21 @@ String? resolutionLabel(int? height) => switch (height) {
 };
 
 /// Stream info's Display row on a TV: the display's mode, and, for a
-/// [film] at 23.976 or 24 fps, whether the display is at its rate (Match
-/// frame rate, ADR-035): `3840×2160 · 23.976 Hz · matched`. Any other
-/// rate, or a channel, says nothing either way: none is matched.
+/// [film] at 23.976 or 24 fps or a channel at 25 or 50, whether the
+/// display is at a rate that shows it evenly (Match frame rate, ADR-035,
+/// ADR-044): `3840×2160 · 23.976 Hz · matched`, `3840×2160 · 50 Hz ·
+/// matched`. Any other rate says nothing either way: none is matched.
 String displayInfoText(DisplayMode mode, {double? fps, bool film = false}) {
-  if (!film || fps == null || fps < filmRateLow || fps > filmRateHigh) {
+  if (fps == null) return mode.label;
+  final double target;
+  if (film && fps >= filmRateLow && fps <= filmRateHigh) {
+    target = fps;
+  } else if (!film &&
+      channelRates.any((rate) => (fps - rate).abs() <= channelRateTolerance)) {
+    target = channelDisplayRate;
+  } else {
     return mode.label;
   }
-  final matched = (mode.refreshRate - fps).abs() <= rateTolerance;
+  final matched = (mode.refreshRate - target).abs() <= rateTolerance;
   return '${mode.label} · ${matched ? 'matched' : 'not matched'}';
 }

@@ -176,16 +176,35 @@ class _PlaybackSettingsSectionState
                 ),
               ),
             ),
-          // A TV's display switches to a film's rate (ADR-035); the
-          // desktop never switches its display.
+          // A TV's display switches to a channel's 50 Hz (ADR-044) and a
+          // film's rate (ADR-035); the desktop never switches its display.
           if (ref.watch(formFactorProvider) == FormFactor.tv)
             _Setting(
-              title: 'Match frame rate',
+              title: 'Match frame rate for channels',
+              description:
+                  'Channels at 25 or 50 fps play at 50 Hz on a TV that has '
+                  'it, so motion is even. The screen goes dark for a second '
+                  'or two when Live TV starts and ends, not between '
+                  'channels.',
+              control: SegmentedControl<bool>(
+                options: const [
+                  SegmentOption(value: false, label: 'Off'),
+                  SegmentOption(value: true, label: 'On'),
+                ],
+                value: settings.matchChannelRate,
+                onChanged: (value) => unawaited(
+                  _save(settings.copyWith(matchChannelRate: value)),
+                ),
+              ),
+            ),
+          if (ref.watch(formFactorProvider) == FormFactor.tv)
+            _Setting(
+              title: 'Match frame rate for films',
               description:
                   'Films at 23.976 or 24 fps play at their own rate, so '
-                  'motion is smoother. The screen goes dark for a second or '
-                  'two when such a film starts and ends. When on, it '
-                  "follows the TV's own Match content frame rate setting.",
+                  'slow pans are smoother. The screen goes dark for a second '
+                  "or two when such a film starts and ends. The TV's own "
+                  'Match content frame rate set to Never turns both off.',
               control: SegmentedControl<bool>(
                 options: const [
                   SegmentOption(value: false, label: 'Off'),

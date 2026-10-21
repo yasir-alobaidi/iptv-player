@@ -336,8 +336,12 @@ void main() {
       });
     }
 
-    test('never a live channel', () {
-      playsAsItIs(PlayableChannel(channel(1)), fps: 24);
+    test("never a live channel at a film's rate", () {
+      playsAsItIs(
+        PlayableChannel(channel(1)),
+        fps: 24,
+        why: '24 fps is not 25 or 50',
+      );
     });
 
     test('never a file under 15 minutes', () {
@@ -415,24 +419,16 @@ void main() {
       playsAsItIs(film1, fps: null, why: "frame rate isn't known");
     });
 
-    test("never when the TV's own setting is Never, or Seamless only "
-        'with no seamless way there', () {
+    test("never when the TV's own setting is Never; Seamless only, "
+        "Google TV's own default, doesn't stop it (ADR-044)", () {
       playsAsItIs(
         film1,
         display: FakeDisplayModes(preference: MatchContentFrameRate.never),
         why: 'Match content frame rate is Never',
       );
-      playsAsItIs(
-        film1,
-        display: FakeDisplayModes(
-          preference: MatchContentFrameRate.seamlessOnly,
-        ),
-        why: 'Seamless only',
-      );
       fakeAsync((async) {
         final display = FakeDisplayModes(
           preference: MatchContentFrameRate.seamlessOnly,
-          alternatives: [23.976025],
         );
         final rig = tv(async, display);
         toFirstFrame(async, rig, film1);
@@ -741,6 +737,214 @@ void main() {
 
       expect(rig.state, isA<PlaybackPlaying>());
       expect(rig.logLines, isNot(logged('no change within')));
+    });
+  });
+
+  group('a channel at 25 or 50 fps (ADR-044)', () {
+    final one = PlayableChannel(channel(1));
+    final two = PlayableChannel(channel(2));
+    final three = PlayableChannel(channel(3));
+
+    test('plays at once, and the display is asked for 50 Hz meanwhile, '
+        'with no pause', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+
+        toFirstFrame(async, rig, one, fps: 50);
+        expect(rig.state, isA<PlaybackPlaying>(), reason: 'nothing waits');
+        expect(rig.engine.calls, isEmpty, reason: 'no pause');
+        expect(display.requests, [samsung50.id]);
+        expect(
+          rig.logLines,
+          logged(
+            'Display mode asked: 3840x2160 59.94 Hz → 50 Hz for a 50 fps '
+            "channel; the TV's Match content frame rate: Seamless only",
+          ),
+        );
+
+        async.elapse(const Duration(milliseconds: 1800));
+        expect(display.current, samsung50);
+        expect(
+          rig.logLines,
+          logged('Display mode now 3840x2160 50 Hz, 1.8 s after asking'),
+        );
+      });
+    });
+
+    test('the next channel at 25 or 50 keeps it: no request, no dark '
+        'screen between channels', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 3));
+
+        toFirstFrame(async, rig, two, fps: 25);
+        async.elapse(const Duration(seconds: 3));
+        // A stop between two channels, as a one-connection source has.
+        rig.coordinator.stop();
+        async.elapse(const Duration(milliseconds: 500));
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 10));
+
+        expect(display.requests, [samsung50.id]);
+        expect(display.current, samsung50);
+        final kept = rig.logLines
+            .where((l) => l.contains('Display mode kept at'))
+            .map((l) => l.substring(l.indexOf('Display')))
+            .toList();
+        expect(kept, [
+          'Display mode kept at 3840x2160 50 Hz for a 25 fps channel',
+          'Display mode kept at 3840x2160 50 Hz for a 50 fps channel',
+        ], reason: 'a zap through channels at one rate logs it once');
+      });
+    });
+
+    test("a channel at another rate takes the TV's own back", () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 3));
+
+        toFirstFrame(async, rig, three, fps: 29.97);
+        expect(rig.state, isA<PlaybackPlaying>());
+        expect(display.requests, [samsung50.id, 0]);
+        async.elapse(const Duration(seconds: 3));
+        expect(display.current, samsung5994);
+        expect(rig.logLines, logged('29.97 fps is not 25 or 50'));
+      });
+    });
+
+    test("Live TV closing lets it go after the grace, as a film's", () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 25);
+        async.elapse(const Duration(seconds: 3));
+
+        rig.coordinator.stop();
+        async.elapse(const Duration(milliseconds: 1900));
+        expect(display.requests, [samsung50.id]);
+        async.elapse(const Duration(milliseconds: 200));
+        expect(display.requests, [samsung50.id, 0]);
+        expect(rig.logLines, logged('the player closed'));
+      });
+    });
+
+    test("a film after it goes back to the TV's own as part of its open "
+        '(films unmatched by default)', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 3));
+
+        toFirstFrame(async, rig, film1);
+        expect(rig.state, isA<PlaybackOpening>(), reason: 'Preparing…');
+        expect(display.requests, [samsung50.id, 0]);
+        async.elapse(const Duration(seconds: 4));
+        expect(display.current, samsung5994);
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
+    });
+
+    test('a film matched after it moves from 50 Hz to its own rate, and '
+        "back to the TV's own after", () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display);
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 3));
+
+        toFirstFrame(async, rig, film1);
+        async.elapse(const Duration(seconds: 4));
+        expect(display.current, samsung23976);
+        rig.coordinator.stop();
+        async.elapse(const Duration(seconds: 5));
+        expect(display.requests, [samsung50.id, samsung23976.id, 0]);
+        expect(display.current, samsung5994);
+      });
+    });
+
+    test("never with the switch off, on a TV with no 50 Hz, or the TV's "
+        'own set to Never', () {
+      void plainly(
+        FakeDisplayModes display,
+        PlaybackSettings settings,
+        String why,
+      ) {
+        fakeAsync((async) {
+          final rig = tv(async, display, settings: settings);
+          toFirstFrame(async, rig, one, fps: 50);
+          expect(rig.state, isA<PlaybackPlaying>());
+          async.elapse(const Duration(seconds: 6));
+          expect(display.requests, isEmpty, reason: why);
+          expect(rig.logLines, logged(why));
+        });
+      }
+
+      plainly(
+        FakeDisplayModes.samsung(),
+        const PlaybackSettings(matchChannelRate: false),
+        'Match frame rate for channels is off',
+      );
+      plainly(
+        FakeDisplayModes(),
+        const PlaybackSettings(),
+        'no 50 Hz mode at 3840x2160',
+      );
+      plainly(
+        FakeDisplayModes.samsung(preference: MatchContentFrameRate.never),
+        const PlaybackSettings(),
+        "the TV's Match content frame rate is Never",
+      );
+    });
+
+    test('a rate mpv knows only a moment after the first frame', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: null);
+        async.elapse(const Duration(milliseconds: 300));
+        rig.engine.info = const StreamInfo(width: 1920, height: 1080, fps: 25);
+        async.elapse(const Duration(milliseconds: 500));
+        expect(display.requests, [samsung50.id]);
+      });
+    });
+
+    test("a display that doesn't switch is warned of once and not asked "
+        'again', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung()..switches = false;
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 6));
+        expect(
+          rig.logLines,
+          logged(
+            'Display mode 3840x2160 50 Hz: no change within 5 s, the '
+            'channel plays on as it is',
+          ),
+        );
+        toFirstFrame(async, rig, two, fps: 50);
+        async.elapse(const Duration(seconds: 6));
+        expect(display.requests, [samsung50.id]);
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
+    });
+
+    test('the app leaving the screen takes it back at once', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display, settings: const PlaybackSettings());
+        toFirstFrame(async, rig, one, fps: 50);
+        async.elapse(const Duration(seconds: 3));
+        rig.coordinator.stopWhileAway();
+        async.flushMicrotasks();
+        expect(display.requests, [samsung50.id, 0]);
+      });
     });
   });
 }

@@ -166,17 +166,27 @@ void main() {
     expect(draft.password, isNull, reason: 'the stored one is kept');
   });
 
-  group("Match frame rate: a TV's (ADR-035)", () {
+  group("Match frame rate: a TV's (ADR-035, ADR-044)", () {
     /// The row: its name and line, and its Off and On.
     Finder matchFrameRate() => find
-        .ancestor(of: find.text('Match frame rate'), matching: find.byType(Row))
+        .ancestor(
+          of: find.text('Match frame rate for films'),
+          matching: find.byType(Row),
+        )
+        .first;
+
+    Finder matchChannels() => find
+        .ancestor(
+          of: find.text('Match frame rate for channels'),
+          matching: find.byType(Row),
+        )
         .first;
 
     testWidgets('on a TV: Off until On is chosen, saved at once; its line '
         "says the screen goes dark, and that it follows the TV's own "
         'setting (ADR-042)', (tester) async {
       final live = await open(tester, formFactor: FormFactor.tv);
-      expect(find.text('Match frame rate'), findsOneWidget);
+      expect(find.text('Match frame rate for films'), findsOneWidget);
       expect(
         find.textContaining(
           'The screen goes dark for a second or two when such a film '
@@ -185,7 +195,9 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining("the TV's own Match content frame rate setting"),
+        find.textContaining(
+          "The TV's own Match content frame rate set to Never turns both off.",
+        ),
         findsOneWidget,
       );
       final row = matchFrameRate();
@@ -217,6 +229,37 @@ void main() {
       expect(again, contains('"matchRate":"off"'));
     });
 
+    testWidgets('channels: On until Off is chosen, saved at once; its line '
+        'says when the screen goes dark (ADR-044)', (tester) async {
+      final live = await open(tester, formFactor: FormFactor.tv);
+      expect(
+        find.textContaining(
+          'The screen goes dark for a second or two when Live TV starts '
+          'and ends, not between channels.',
+        ),
+        findsOneWidget,
+      );
+      final row = matchChannels();
+      bool value() => tester
+          .widget<SegmentedControl<bool>>(
+            find.descendant(
+              of: row,
+              matching: find.byType(SegmentedControl<bool>),
+            ),
+          )
+          .value;
+      expect(value(), isTrue);
+
+      await tester.tap(find.descendant(of: row, matching: find.text('Off')));
+      await _settle(tester);
+      expect(value(), isFalse);
+      final stored = await tester.runAsync(
+        () => live.db.settingsDao.read('playback.settings'),
+      );
+      expect(stored, contains('"matchChannels":"off"'));
+      expect(stored, contains('"matchRate":"off"'), reason: 'films untouched');
+    });
+
     testWidgets('the remote reaches it: Right into the page and along '
         'Buffering, Down to the row, Right to On, OK', (tester) async {
       final live = await open(tester, formFactor: FormFactor.tv);
@@ -246,7 +289,7 @@ void main() {
         await _settle(tester);
       }
       expect(focusedLabelOf(tester), 'Stable');
-      for (var i = 0; i < 4 && onRow() == null; i++) {
+      for (var i = 0; i < 6 && onRow() == null; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await _settle(tester);
       }
@@ -268,7 +311,8 @@ void main() {
     testWidgets('the desktop has no such row: its display is never '
         'switched', (tester) async {
       await open(tester);
-      expect(find.text('Match frame rate'), findsNothing);
+      expect(find.text('Match frame rate for films'), findsNothing);
+      expect(find.text('Match frame rate for channels'), findsNothing);
       expect(find.text('Hardware decoding'), findsOneWidget);
     });
 
