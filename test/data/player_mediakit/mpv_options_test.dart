@@ -28,6 +28,27 @@ void main() {
     }
   });
 
+  test('a file reads 60 s ahead whatever the preset, so a 10 s jump lands '
+      "in what is buffered (ADR-046); a channel keeps the preset's", () {
+    for (final preset in BufferPreset.values) {
+      for (final lowMemory in [false, true]) {
+        final file = mpvOptionsFor(
+          PlayRequest(url: 'u', preset: preset, live: false),
+          lowMemory: lowMemory,
+        );
+        expect(file['cache-secs'], '60', reason: preset.name);
+        expect(file['demuxer-readahead-secs'], '60', reason: preset.name);
+      }
+    }
+    expect(mpvOptionsFor(const PlayRequest(url: 'u'))['cache-secs'], '8');
+    expect(
+      mpvOptionsFor(
+        const PlayRequest(url: 'u', preset: BufferPreset.lowLatency),
+      )['demuxer-readahead-secs'],
+      '2',
+    );
+  });
+
   test('live keeps little behind the live edge; VOD keeps more', () {
     expect(
       mpvOptionsFor(const PlayRequest(url: 'u'))['demuxer-max-back-bytes'],
@@ -42,7 +63,7 @@ void main() {
   });
 
   test('a TV (low memory) reads at most 32 MiB ahead and keeps 16 MiB '
-      "behind, a film too; the seconds asked for stay the preset's", () {
+      "behind, a film too; the seconds asked for are the desktop's", () {
     for (final preset in BufferPreset.values) {
       for (final live in [true, false]) {
         final options = mpvOptionsFor(
@@ -54,7 +75,9 @@ void main() {
         expect(options['demuxer-max-back-bytes'], '16MiB', reason: reason);
         expect(
           options['cache-secs'],
-          mpvOptionsFor(PlayRequest(url: 'u', preset: preset))['cache-secs'],
+          mpvOptionsFor(
+            PlayRequest(url: 'u', preset: preset, live: live),
+          )['cache-secs'],
           reason: reason,
         );
       }

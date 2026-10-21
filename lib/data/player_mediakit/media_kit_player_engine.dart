@@ -56,6 +56,13 @@ const Map<BufferPreset, Map<String, String>> _presetOptions = {
   },
 };
 
+/// A file reads this many seconds ahead whatever the preset, within its
+/// bytes (ADR-046): Balanced's 8 s put every 10 s jump outside what was
+/// buffered, and each went back to the provider (0.5 to 1.4 s for its
+/// answer alone); 60 s holds the jumps in reach. A channel keeps the
+/// preset's: there, reading ahead only waits behind the live edge.
+const _fileAheadSeconds = '60';
+
 /// "Bound memory" behind the live edge; VOD keeps more to seek back into.
 const _liveBackBytes = '16MiB';
 const _vodBackBytes = '64MiB';
@@ -150,6 +157,10 @@ Map<String, String> mpvOptionsFor(
   );
   return {
     ..._presetOptions[request.preset]!,
+    if (!request.live) ...{
+      'cache-secs': _fileAheadSeconds,
+      'demuxer-readahead-secs': _fileAheadSeconds,
+    },
     // Read when the file's decoder starts, so a change in Settings applies
     // to the next thing played.
     // media_kit keeps the output while nothing plays (`force-window`); the
