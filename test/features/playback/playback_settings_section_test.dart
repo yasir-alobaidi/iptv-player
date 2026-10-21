@@ -58,6 +58,61 @@ void main() {
     expect(stored, contains('"preset":"stable"'));
   });
 
+  testWidgets('on a TV, Down from where the page starts (Low latency) goes '
+      'row by row, onto each narrow switch on the right, and Up comes back '
+      'the same way (ADR-050)', (tester) async {
+    await open(tester, formFactor: FormFactor.tv);
+
+    /// The setting whose row holds the focused control.
+    String? row() {
+      final focused = FocusManager.instance.primaryFocus?.rect.center;
+      if (focused == null) return null;
+      for (final title in [
+        'Buffering',
+        'Deinterlacing',
+        'Match frame rate for channels',
+        'Match frame rate for films',
+        'Preferred audio',
+      ]) {
+        final box = tester.getRect(
+          find
+              .ancestor(of: find.text(title), matching: find.byType(Container))
+              .first,
+        );
+        if (box.contains(focused)) return title;
+      }
+      return null;
+    }
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await _settle(tester);
+    expect(focusedLabelOf(tester), 'Low latency');
+    final down = <String?>[];
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await _settle(tester);
+      down.add(row());
+    }
+    expect(down, [
+      'Deinterlacing',
+      'Match frame rate for channels',
+      'Match frame rate for films',
+      'Preferred audio',
+    ]);
+    final up = <String?>[];
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await _settle(tester);
+      up.add(row());
+    }
+    expect(up, [
+      'Match frame rate for films',
+      'Match frame rate for channels',
+      'Deinterlacing',
+      'Buffering',
+    ]);
+  });
+
   testWidgets('languages are saved as typed; Deinterlacing Off', (
     tester,
   ) async {

@@ -55,23 +55,34 @@ class SettingsScreen extends ConsumerWidget {
                     tokens.spacing.s24 + 4,
                     tokens.spacing.s20,
                   ),
-                  child: FocusTraversalGroup(
-                    policy: appTraversalPolicy(),
-                    child: switch (section) {
-                      SettingsSection.sources => const SourcesSettings(),
-                      SettingsSection.categories => const CategoriesManager(),
-                      SettingsSection.playback =>
-                        const PlaybackSettingsSection(),
-                      SettingsSection.guide => const GuideSettingsSection(),
-                      SettingsSection.casting => const CastSettingsSection(),
-                      SettingsSection.downloads =>
-                        const DownloadSettingsSection(),
-                      SettingsSection.appearance => const AppearanceSection(),
-                      SettingsSection.shortcuts => const ShortcutsSection(),
-                      SettingsSection.about => const AboutSection(),
-                      SettingsSection.data => const DataSection(),
-                    },
-                  ),
+                  // A form's ↑/↓ go row by row (ADR-050); the categories
+                  // are a list that moves with Alt+↑/↓ of its own.
+                  child: section == SettingsSection.categories
+                      ? FocusTraversalGroup(
+                          policy: appTraversalPolicy(),
+                          child: const CategoriesManager(),
+                        )
+                      : RowsTraversalGroup(
+                          child: switch (section) {
+                            SettingsSection.sources => const SourcesSettings(),
+                            SettingsSection.categories =>
+                              const CategoriesManager(),
+                            SettingsSection.playback =>
+                              const PlaybackSettingsSection(),
+                            SettingsSection.guide =>
+                              const GuideSettingsSection(),
+                            SettingsSection.casting =>
+                              const CastSettingsSection(),
+                            SettingsSection.downloads =>
+                              const DownloadSettingsSection(),
+                            SettingsSection.appearance =>
+                              const AppearanceSection(),
+                            SettingsSection.shortcuts =>
+                              const ShortcutsSection(),
+                            SettingsSection.about => const AboutSection(),
+                            SettingsSection.data => const DataSection(),
+                          },
+                        ),
                 ),
               ),
             ],
