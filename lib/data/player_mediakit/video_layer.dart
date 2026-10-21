@@ -22,15 +22,15 @@ bool videoLayerWanted(String define) => define != 'off';
 bool get videoLayerBuilt =>
     Platform.isAndroid && videoLayerWanted(_videoLayerBuild);
 
-/// Whether a play goes on the layer: in T1 a file (a film or an episode,
-/// which only ever plays full screen) on Android's direct output, in a
-/// build that has it. Channels stay on the texture: their preview pane
-/// and full screen share one picture. Exposed for tests.
-bool playsOnLayer({
-  required bool built,
-  required bool direct,
-  required bool live,
-}) => built && direct && !live;
+/// Whether a play goes on the layer: anything on Android's direct
+/// output, in a build that has it. Films since T1; channels since T2
+/// (ADR-045): on the texture, Flutter redrew the screen for every frame
+/// and a 25 fps channel at 50 Hz showed one frame in ten a refresh early
+/// or late (the user's news ticker stuttered). The preview pane and full
+/// screen share the one layer, which moves between their places.
+/// Exposed for tests.
+bool playsOnLayer({required bool built, required bool direct}) =>
+    built && direct;
 
 /// The layer's surface, as mpv takes it.
 typedef LayerSurface = ({int wid, int width, int height});

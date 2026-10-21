@@ -85,14 +85,14 @@ void main() {
   });
 
   group('playsOnLayer', () {
-    test('a file on the direct output, in a build with the layer', () {
-      expect(playsOnLayer(built: true, direct: true, live: false), isTrue);
+    test('a file or a channel on the direct output, in a build with the '
+        'layer (ADR-045)', () {
+      expect(playsOnLayer(built: true, direct: true), isTrue);
     });
 
-    test('never a channel, the desktop, or a build without it', () {
-      expect(playsOnLayer(built: true, direct: true, live: true), isFalse);
-      expect(playsOnLayer(built: true, direct: false, live: false), isFalse);
-      expect(playsOnLayer(built: false, direct: true, live: false), isFalse);
+    test('never the desktop, or a build without it', () {
+      expect(playsOnLayer(built: true, direct: false), isFalse);
+      expect(playsOnLayer(built: false, direct: true), isFalse);
     });
 
     test('no build of this test has it: it is never off Android', () {
