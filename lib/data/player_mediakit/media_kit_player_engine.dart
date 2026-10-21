@@ -390,6 +390,13 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   bool _buffering = false;
   Timer? _slowSeekTimer;
 
+  /// mpv's `seeking`, as it last said.
+  bool _seeking = false;
+
+  /// The seek asked for last, until it plays again: logged with how long
+  /// that took, and how far ahead was buffered when it was asked.
+  ({Stopwatch took, Duration from, Duration to, Duration ahead})? _seekAsked;
+
   /// A seek into what is buffered lands within a few frames; one still
   /// waiting after this is waiting on the network (a panel can take
   /// seconds to answer a range, ADR-027), so it is buffering, not a stall.
@@ -474,6 +481,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       (value) async {
         _cacheWait = value == 'yes';
         _updateBuffering();
+        _seekSettled();
       },
     );
     // mpv's `seeking` is yes until playback has restarted where a seek
@@ -484,9 +492,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     ) async {
       _slowSeekTimer?.cancel();
       _slowSeekTimer = null;
+      _seeking = value == 'yes';
       if (value != 'yes') {
         _seekWait = false;
         _updateBuffering();
+        _seekSettled();
         return;
       }
       if (!_open || !_started) return;
@@ -532,6 +542,25 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     if (_open) _emit(PlayerBuffering(buffering: buffering));
   }
 
+  /// A seek playing again (mpv done seeking, not waiting for its cache,
+  /// and its time at the place asked): one line, so a slow one shows in
+  /// the log of a TV.
+  void _seekSettled() {
+    final asked = _seekAsked;
+    if (asked == null || _seeking || _cacheWait) return;
+    if ((_position - asked.to).abs() > const Duration(seconds: 2)) return;
+    _seekAsked = null;
+    final jump = asked.to - asked.from;
+    final seconds = (jump.inMilliseconds / 1000).round();
+    _log.info(
+      _tag,
+      'Seek ${seconds < 0 ? '−' : '+'}${seconds.abs()} s: playing again '
+      'in ${asked.took.elapsedMilliseconds} ms '
+      '(${(asked.ahead.inMilliseconds / 1000).toStringAsFixed(1)} s was '
+      'buffered ahead)',
+    );
+  }
+
   /// A new open, or none: nothing is waited for.
   void _resetBuffering() {
     _slowSeekTimer?.cancel();
@@ -539,6 +568,8 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _cacheWait = false;
     _seekWait = false;
     _buffering = false;
+    _seeking = false;
+    _seekAsked = null;
   }
 
   String _clean(String text) => redact(text, secrets: _secrets.values);
@@ -762,6 +793,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   void _onPosition(Duration position) {
     if (!_open) return;
     _position = position;
+    if (_seekAsked != null) _seekSettled();
     final now = DateTime.now();
     // mpv reports every frame; the watchdog needs a few a second.
     if (now.difference(_lastProgress) < const Duration(milliseconds: 250)) {
@@ -946,6 +978,14 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   @override
   Future<void> seek(Duration position) async {
     if (!_open) return;
+    if (_started) {
+      _seekAsked = (
+        took: Stopwatch()..start(),
+        from: _position,
+        to: position,
+        ahead: _buffered,
+      );
+    }
     final seconds = (position.inMilliseconds / 1000).toStringAsFixed(3);
     await _native.command([
       'seek',
