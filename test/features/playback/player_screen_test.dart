@@ -8,9 +8,11 @@ import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
+import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
+import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 
 import '../../app/app_harness.dart';
 import '../live_tv/live_tv_fakes.dart';
@@ -19,13 +21,17 @@ void main() {
   late LiveTvFakes live;
   late AppUnderTest app;
 
-  /// Live TV with Arena Sports 1 (201) opened full screen with Enter.
+  /// Live TV with Arena Sports 1 (201) opened full screen with Enter;
+  /// [guide] what is on it now and next, [picture] false still opening.
   Future<void> open(
     WidgetTester tester, {
     FormFactor formFactor = FormFactor.desktop,
     Size size = const Size(1440, 900),
+    NowNext Function(DateTime now)? guide,
+    bool picture = true,
   }) async {
     live = LiveTvFakes();
+    if (guide != null) live.guide.byKey['201'] = guide(live.fakes.now);
     addTearDown(() => tester.runAsync(live.db.close));
     await tester.runAsync(live.seed);
     app = await pumpApp(
@@ -42,6 +48,7 @@ void main() {
     await _settle(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
+    if (!picture) return;
     live.rig.engine.firstFrame();
     await _settle(tester);
   }
@@ -532,6 +539,138 @@ void main() {
       await _settle(tester);
       expect(find.text('Audio: English'), findsNothing);
       expect(findByLabel('Subtitles: French'), findsOneWidget);
+      await finish(tester);
+    });
+  });
+
+  group('the time on screen: the clock and what is left of the programme, '
+      'top right while the OSD is hidden (docs/03)', () {
+    /// [text] in the corner, as drawn: nothing while it is gone.
+    Finder corner(String text) => find.descendant(
+      of: find.byType(PlayerTimeCorner),
+      matching: find.text(text),
+    );
+
+    /// What the corner draws: no text at all while it is gone.
+    Finder anyWords() => find.descendant(
+      of: find.byType(PlayerTimeCorner),
+      matching: find.byType(Text),
+    );
+
+    /// The match, 82 minutes in, 38 to go.
+    NowNext match(DateTime now) => NowNext(
+      now: Programme(
+        title: 'Continental Cup · Semi-final',
+        start: now.subtract(const Duration(minutes: 82)),
+        end: now.add(const Duration(minutes: 38)),
+      ),
+    );
+
+    /// The stream plays on for [seconds], a second at a time (a picture
+    /// that stands still for 8 s is a stall).
+    var played = 0;
+    Future<void> playOn(WidgetTester tester, int seconds) async {
+      for (var s = 0; s < seconds; s++) {
+        live.rig.engine.progress(Duration(seconds: ++played));
+        await tester.pump(const Duration(seconds: 1));
+      }
+    }
+
+    setUp(() => played = 0);
+
+    testWidgets('a channel with a programme: once the OSD has gone, the '
+        'clock and its time left; they move on with the clock, and only '
+        'then', (tester) async {
+      await open(tester, guide: match);
+      expect(anyWords(), findsNothing, reason: 'not while the OSD shows');
+      await playOn(tester, 4);
+      await _settle(tester);
+
+      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('38 min left'), findsOneWidget);
+      final clock = tester.widget<Text>(corner('12:00 PM'));
+
+      // The clock turns while the corner waits for its next minute, a
+      // minute after it came: nothing looks before then.
+      live.fakes.now = live.fakes.now.add(const Duration(minutes: 1));
+      await playOn(tester, 54);
+      expect(identical(tester.widget<Text>(corner('12:00 PM')), clock), isTrue);
+      await playOn(tester, 6);
+      expect(corner('12:01 PM'), findsOneWidget);
+      expect(corner('37 min left'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('a channel the guide knows nothing about: the clock alone', (
+      tester,
+    ) async {
+      await open(tester);
+      await playOn(tester, 4);
+      await _settle(tester);
+
+      expect(corner('12:00 PM'), findsOneWidget);
+      expect(anyWords(), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('not while the channel opens, though the OSD hides', (
+      tester,
+    ) async {
+      await open(tester, guide: match, picture: false);
+      await tester.pump(const Duration(seconds: 4));
+      await _settle(tester);
+      expect(anyWords(), findsNothing);
+
+      live.rig.engine.firstFrame();
+      await _settle(tester);
+      await playOn(tester, 4);
+      await _settle(tester);
+      expect(corner('38 min left'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('not while the channel panel is open', (tester) async {
+      await open(tester, guide: match);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await _settle(tester);
+      expect(find.byType(ChannelPanel), findsOneWidget);
+      await playOn(tester, 5);
+      await _settle(tester);
+      expect(anyWords(), findsNothing);
+      await finish(tester);
+    });
+
+    testWidgets('clear of the stream info, and of the number overlay, which '
+        'comes with the OSD', (tester) async {
+      await open(tester, guide: match);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyI);
+      await _settle(tester);
+      await playOn(tester, 4);
+      await _settle(tester);
+
+      expect(find.byType(StreamInfoOverlay), findsOneWidget);
+      expect(corner('38 min left'), findsOneWidget);
+      final shown = tester.getRect(
+        find.descendant(
+          of: find.byType(PlayerTimeCorner),
+          matching: find.byType(RepaintBoundary),
+        ),
+      );
+      expect(
+        shown.overlaps(tester.getRect(find.byType(StreamInfoOverlay))),
+        isFalse,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+      await _settle(tester);
+      expect(find.byType(NumberEntry), findsOneWidget);
+      expect(anyWords(), findsNothing);
+      expect(shown.overlaps(tester.getRect(find.byType(NumberEntry))), isFalse);
+      expect(
+        shown.bottom,
+        lessThan(tester.getRect(find.byType(NumberEntry)).top),
+      );
+      await tester.pump(const Duration(seconds: 2));
       await finish(tester);
     });
   });

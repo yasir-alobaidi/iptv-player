@@ -92,6 +92,7 @@ final class PlaybackSettings {
     this.matchChannelRate = true,
     this.pictureQuality = PictureQuality.standard,
     this.subtitleSize = SubtitleSize.medium,
+    this.timeOnScreen = TimeOnScreen.always,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -128,6 +129,9 @@ final class PlaybackSettings {
               .where((s) => s.name == json['subtitleSize'])
               .firstOrNull ??
           SubtitleSize.medium,
+      timeOnScreen: json['timeOnScreen'] == 'controls'
+          ? TimeOnScreen.controls
+          : TimeOnScreen.always,
     );
   }
 
@@ -161,6 +165,11 @@ final class PlaybackSettings {
   /// it shows at once on what is playing: the picture's view reads it.
   final SubtitleSize subtitleSize;
 
+  /// Whether the full-screen player keeps the clock and the time left in
+  /// a corner while its controls are hidden. Read at once by the player,
+  /// like [subtitleSize].
+  final TimeOnScreen timeOnScreen;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
@@ -171,6 +180,7 @@ final class PlaybackSettings {
     bool? matchChannelRate,
     PictureQuality? pictureQuality,
     SubtitleSize? subtitleSize,
+    TimeOnScreen? timeOnScreen,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
@@ -181,6 +191,7 @@ final class PlaybackSettings {
     matchChannelRate: matchChannelRate ?? this.matchChannelRate,
     pictureQuality: pictureQuality ?? this.pictureQuality,
     subtitleSize: subtitleSize ?? this.subtitleSize,
+    timeOnScreen: timeOnScreen ?? this.timeOnScreen,
   );
 
   /// As stored in the `settings` table.
@@ -198,6 +209,7 @@ final class PlaybackSettings {
     'matchChannels': matchChannelRate ? 'on' : 'off',
     'quality': pictureQuality.name,
     'subtitleSize': subtitleSize.name,
+    'timeOnScreen': timeOnScreen.name,
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -230,7 +242,8 @@ final class PlaybackSettings {
       other.matchFrameRate == matchFrameRate &&
       other.matchChannelRate == matchChannelRate &&
       other.pictureQuality == pictureQuality &&
-      other.subtitleSize == subtitleSize;
+      other.subtitleSize == subtitleSize &&
+      other.timeOnScreen == timeOnScreen;
 
   @override
   int get hashCode => Object.hash(
@@ -243,5 +256,11 @@ final class PlaybackSettings {
     matchChannelRate,
     pictureQuality,
     subtitleSize,
+    timeOnScreen,
   );
 }
+
+/// Settings → Playback → Time on screen: the full-screen player's clock
+/// and time left stay in a corner while its controls are hidden
+/// ([always]), or show only with the controls ([controls]), as before.
+enum TimeOnScreen { always, controls }

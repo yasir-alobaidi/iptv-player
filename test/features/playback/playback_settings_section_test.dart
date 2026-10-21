@@ -428,6 +428,119 @@ void main() {
       expect(await stored(tester, live), contains('"subtitleSize":"large"'));
     });
   });
+
+  group('Time on screen (docs/03), on a TV and a desktop', () {
+    /// The row: its name and line, and its two choices.
+    Finder timeOnScreen() => find
+        .ancestor(of: find.text('Time on screen'), matching: find.byType(Row))
+        .first;
+
+    SegmentedControl<TimeOnScreen> control(WidgetTester tester) =>
+        tester.widget<SegmentedControl<TimeOnScreen>>(
+          find.descendant(
+            of: timeOnScreen(),
+            matching: find.byType(SegmentedControl<TimeOnScreen>),
+          ),
+        );
+
+    PlaybackSettings settings(WidgetTester tester) => ProviderScope.containerOf(
+      tester.element(find.byType(PlaybackSettingsSection)),
+    ).read(playbackSettingsControllerProvider);
+
+    Future<String?> stored(WidgetTester tester, LiveTvFakes live) => tester
+        .runAsync<String?>(() => live.db.settingsDao.read('playback.settings'));
+
+    /// The focused segment's label, when it is one of the row's.
+    String? onRow(WidgetTester tester) {
+      final context = FocusManager.instance.primaryFocus?.context;
+      if (context == null) return null;
+      if (!identical(
+        context.findAncestorWidgetOfExactType<SegmentedControl<TimeOnScreen>>(),
+        control(tester),
+      )) {
+        return null;
+      }
+      return focusedLabelOf(tester);
+    }
+
+    testWidgets('the desktop: Always until With the controls is chosen, each '
+        'saved at once; its line says what it keeps', (tester) async {
+      final live = await open(tester);
+      expect(find.text('Time on screen'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'The clock and the time left stay in a corner while you watch, '
+          'or come and go with the controls.',
+        ),
+        findsOneWidget,
+      );
+      expect(control(tester).value, TimeOnScreen.always);
+      expect(settings(tester).timeOnScreen, TimeOnScreen.always);
+
+      await tester.tap(
+        find.descendant(
+          of: timeOnScreen(),
+          matching: find.text('With the controls'),
+        ),
+      );
+      await _settle(tester);
+      expect(settings(tester).timeOnScreen, TimeOnScreen.controls);
+      expect(control(tester).value, TimeOnScreen.controls);
+      expect(await stored(tester, live), contains('"timeOnScreen":"controls"'));
+
+      await tester.tap(
+        find.descendant(of: timeOnScreen(), matching: find.text('Always')),
+      );
+      await _settle(tester);
+      expect(await stored(tester, live), contains('"timeOnScreen":"always"'));
+    });
+
+    testWidgets('the keyboard reaches it: Tab along the page to With the '
+        'controls, Enter', (tester) async {
+      final live = await open(tester);
+      Focus.of(tester.element(find.text('Automatic'))).requestFocus();
+      await tester.pump();
+      for (var i = 0; i < 40 && onRow(tester) != 'With the controls'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(onRow(tester), 'With the controls', reason: 'Tab reaches the row');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await _settle(tester);
+      expect(settings(tester).timeOnScreen, TimeOnScreen.controls);
+      expect(await stored(tester, live), contains('"timeOnScreen":"controls"'));
+    });
+
+    testWidgets('a TV has it too: the remote reaches it, Down from '
+        'Buffering, Right to With the controls, OK', (tester) async {
+      final live = await open(tester, formFactor: FormFactor.tv);
+      expect(find.text('Time on screen'), findsOneWidget);
+      expect(control(tester).value, TimeOnScreen.always);
+
+      // Into the page, on Buffering's Low latency.
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(focusedLabelOf(tester), 'Stable');
+      for (var i = 0; i < 10 && onRow(tester) == null; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await _settle(tester);
+      }
+      expect(onRow(tester), isNotNull, reason: 'Down reaches the row');
+      for (var i = 0; i < 2 && onRow(tester) != 'With the controls'; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(onRow(tester), 'With the controls');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(settings(tester).timeOnScreen, TimeOnScreen.controls);
+      expect(await stored(tester, live), contains('"timeOnScreen":"controls"'));
+    });
+  });
 }
 
 Future<void> _settle(WidgetTester tester) async {
