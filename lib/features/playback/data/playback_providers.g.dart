@@ -59,7 +59,7 @@ String _$playbackSettingsStoreHash() =>
 
 /// Settings → Playback: the defaults at once, the stored choices as soon
 /// as they are read; a change is saved and applies to the next stream
-/// opened.
+/// opened (the subtitles' size at once: the picture watches it).
 
 @ProviderFor(PlaybackSettingsController)
 final playbackSettingsControllerProvider =
@@ -67,12 +67,12 @@ final playbackSettingsControllerProvider =
 
 /// Settings → Playback: the defaults at once, the stored choices as soon
 /// as they are read; a change is saved and applies to the next stream
-/// opened.
+/// opened (the subtitles' size at once: the picture watches it).
 final class PlaybackSettingsControllerProvider
     extends $NotifierProvider<PlaybackSettingsController, PlaybackSettings> {
   /// Settings → Playback: the defaults at once, the stored choices as soon
   /// as they are read; a change is saved and applies to the next stream
-  /// opened.
+  /// opened (the subtitles' size at once: the picture watches it).
   PlaybackSettingsControllerProvider._()
     : super(
         from: null,
@@ -105,7 +105,7 @@ String _$playbackSettingsControllerHash() =>
 
 /// Settings → Playback: the defaults at once, the stored choices as soon
 /// as they are read; a change is saved and applies to the next stream
-/// opened.
+/// opened (the subtitles' size at once: the picture watches it).
 
 abstract class _$PlaybackSettingsController
     extends $Notifier<PlaybackSettings> {
