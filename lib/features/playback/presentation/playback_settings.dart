@@ -201,10 +201,11 @@ class _PlaybackSettingsSectionState
             _Setting(
               title: 'Match frame rate for films',
               description:
-                  'Films at 23.976 or 24 fps play at their own rate, so '
-                  'slow pans are smoother. The screen goes dark for a second '
-                  "or two when such a film starts and ends. The TV's own "
-                  'Match content frame rate set to Never turns both off.',
+                  'Films and episodes at 23.976 or 24 fps play at their own '
+                  'rate, and at 25 or 50 fps at 50 Hz where the TV has it, '
+                  'so motion is even. The screen goes dark for a second or '
+                  "two when one starts and ends. The TV's own Match content "
+                  'frame rate set to Never turns both off.',
               control: SegmentedControl<bool>(
                 options: const [
                   SegmentOption(value: false, label: 'Off'),

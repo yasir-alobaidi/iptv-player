@@ -46,6 +46,18 @@ void main() {
       );
     });
 
+    test('a film at 25 or 50 fps: whether the display is at 50 Hz '
+        '(ADR-049)', () {
+      expect(
+        displayInfoText(samsung50, fps: 25, film: true),
+        '3840×2160 · 50 Hz · matched',
+      );
+      expect(
+        displayInfoText(samsung5994, fps: 25, film: true),
+        '3840×2160 · 59.94 Hz · not matched',
+      );
+    });
+
     test('a channel at 25 or 50 fps: whether the display is at 50 Hz', () {
       expect(
         displayInfoText(samsung50, fps: 25),
@@ -61,10 +73,9 @@ void main() {
       );
     });
 
-    test("nothing said of any other rate, a film's at 25, or a channel's "
-        'at 23.976', () {
+    test("nothing said of any other rate, or a channel's at 23.976", () {
       expect(
-        displayInfoText(uhd5994, fps: 25, film: true),
+        displayInfoText(uhd5994, fps: 29.97, film: true),
         '3840×2160 · 59.94 Hz',
       );
       expect(displayInfoText(uhd5994, film: true), '3840×2160 · 59.94 Hz');

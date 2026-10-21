@@ -189,8 +189,9 @@ void main() {
       expect(find.text('Match frame rate for films'), findsOneWidget);
       expect(
         find.textContaining(
-          'The screen goes dark for a second or two when such a film '
-          'starts and ends.',
+          'at 25 or 50 fps at 50 Hz where the TV has it, so motion is even. '
+          'The screen goes dark for a second or two when one starts and '
+          'ends.',
         ),
         findsOneWidget,
       );

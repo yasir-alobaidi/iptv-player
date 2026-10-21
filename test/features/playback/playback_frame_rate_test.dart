@@ -412,11 +412,29 @@ void main() {
       );
     });
 
-    test('never at any rate but 23.976 or 24', () {
-      for (final fps in [25.0, 29.97, 50.0, 59.94]) {
-        playsAsItIs(film1, fps: fps, why: 'is not 23.976 or 24');
+    test('never at any rate but 23.976, 24, 25 or 50; 25 and 50 not on a '
+        'TV without 50 Hz (ADR-049)', () {
+      for (final fps in [29.97, 30.0, 59.94]) {
+        playsAsItIs(film1, fps: fps, why: 'is not 23.976, 24, 25 or 50');
+      }
+      for (final fps in [25.0, 50.0]) {
+        playsAsItIs(film1, fps: fps, why: 'no 50 Hz mode at 3840x2160');
       }
       playsAsItIs(film1, fps: null, why: "frame rate isn't known");
+    });
+
+    test('a film or an episode at 25 or 50 fps takes 50 Hz as part of its '
+        'open where the TV has it (ADR-049)', () {
+      fakeAsync((async) {
+        final display = FakeDisplayModes.samsung();
+        final rig = tv(async, display);
+        toFirstFrame(async, rig, film1, fps: 25);
+        expect(display.requests, [samsung50.id]);
+        expect(rig.state, isA<PlaybackOpening>(), reason: 'it waits');
+        async.elapse(const Duration(milliseconds: 3300));
+        expect(display.current, samsung50);
+        expect(rig.state, isA<PlaybackPlaying>());
+      });
     });
 
     test("never when the TV's own setting is Never; Seamless only, "
@@ -560,7 +578,7 @@ void main() {
         playedThrough(async, rig, film1);
         rig.engine.calls.clear();
 
-        toFirstFrame(async, rig, film2, fps: 25);
+        toFirstFrame(async, rig, film2, fps: 29.97);
         expect(rig.engine.calls.where((c) => c.startsWith('paused')), [
           'paused:true',
         ]);
@@ -574,7 +592,7 @@ void main() {
           rig.logLines,
           logged(
             'Display mode asked: 3840x2160 23.976 → 59.94 Hz, back to the '
-            "TV's own: 25 fps is not 23.976 or 24",
+            "TV's own: 29.97 fps is not 23.976, 24, 25 or 50",
           ),
         );
         expect(

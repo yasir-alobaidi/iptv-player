@@ -30,11 +30,39 @@ void main() {
       expect(switchesTo(tvFacts(current: tvMode(8)), 24), tvMode(12));
     });
 
+    test('25 and 50 fps take the 50 Hz mode at the current size where the '
+        'TV has one (ADR-049); none on a TV without', () {
+      final samsung = tvFacts(current: samsung5994, modes: samsungModes);
+      for (final fps in [25.0, 24.95, 50.0, 49.95]) {
+        expect(switchesTo(samsung, fps), samsung50, reason: '$fps fps');
+      }
+      expect(
+        switchesTo(
+          tvFacts(current: samsungMode(1821), modes: samsungModes),
+          25,
+        ),
+        samsungMode(1831),
+        reason: '1080p stays 1080p',
+      );
+      final there = pickDisplayMode(
+        tvFacts(current: samsung50, modes: samsungModes),
+        25,
+      );
+      expect(there, isA<DisplayModeMatches>());
+      // The Bedroom's Hisense has no 50 Hz.
+      final none = pickDisplayMode(tvFacts(), 25);
+      expect(none, isA<NoDisplayMode>());
+      expect((none as NoDisplayMode).reason, 'no 50 Hz mode at 3840x2160');
+    });
+
     test('nothing for any other rate, or none known', () {
-      for (final fps in [25.0, 29.97, 30.0, 50.0, 59.94, 60.0, 23.5, 24.5]) {
+      for (final fps in [29.97, 30.0, 59.94, 60.0, 23.5, 24.5, 26.0]) {
         final pick = pickDisplayMode(tvFacts(), fps);
         expect(pick, isA<NoDisplayMode>(), reason: '$fps fps');
-        expect((pick as NoDisplayMode).reason, contains('is not 23.976 or 24'));
+        expect(
+          (pick as NoDisplayMode).reason,
+          contains('is not 23.976, 24, 25 or 50'),
+        );
       }
       for (final fps in [null, 0.0, -24.0, double.nan]) {
         expect(

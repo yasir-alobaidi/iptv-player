@@ -52,18 +52,22 @@ final class DisplayModeMatches extends DisplayModePick {
 final class NoDisplayMode extends DisplayModePick {
   const new(this.reason);
 
-  /// "25 fps is not 23.976 or 24", "no 24 Hz mode at 1280x720".
+  /// "29.97 fps is not 23.976, 24, 25 or 50", "no 24 Hz mode at
+  /// 1280x720".
   final String reason;
 }
 
 /// The mode a film at [fps] plays on: one at the display's current size
-/// whose rate is within [rateTolerance] of a 23.976 or 24 fps film's.
+/// whose rate is within [rateTolerance] of a 23.976 or 24 fps film's; at
+/// 25 or 50 fps, as a channel, the 50 Hz one (ADR-049: most of the
+/// user's films and series are 25 fps, which judder at 59.94 Hz).
 DisplayModePick pickDisplayMode(DisplayFacts display, double? fps) {
   if (fps == null || fps.isNaN || fps <= 0) {
     return const NoDisplayMode("the film's frame rate isn't known");
   }
+  if (_atChannelRate(fps)) return _pick50Hz(display);
   if (fps < filmRateLow || fps > filmRateHigh) {
-    return NoDisplayMode('${formatRate(fps)} fps is not 23.976 or 24');
+    return NoDisplayMode('${formatRate(fps)} fps is not 23.976, 24, 25 or 50');
   }
   final current = display.current;
   if (current == null) {
@@ -91,9 +95,17 @@ DisplayModePick pickChannelMode(DisplayFacts display, double? fps) {
   if (fps == null || fps.isNaN || fps <= 0) {
     return const NoDisplayMode("the channel's frame rate isn't known");
   }
-  if (!channelRates.any((rate) => (fps - rate).abs() <= channelRateTolerance)) {
+  if (!_atChannelRate(fps)) {
     return NoDisplayMode('${formatRate(fps)} fps is not 25 or 50');
   }
+  return _pick50Hz(display);
+}
+
+bool _atChannelRate(double fps) =>
+    channelRates.any((rate) => (fps - rate).abs() <= channelRateTolerance);
+
+/// The display's 50 Hz mode at its current size, for 25 or 50 fps.
+DisplayModePick _pick50Hz(DisplayFacts display) {
   final current = display.current;
   if (current == null) {
     return const NoDisplayMode("the display's mode isn't known");
@@ -124,9 +136,9 @@ String? tvRefuses(DisplayFacts display, DisplayMode target) =>
     };
 
 /// A TV's Match frame rate: a film at 23.976 or 24 fps moves the display
-/// to its rate as part of its open, a channel at 25 or 50 fps to 50 Hz
-/// as it plays, and the display goes back to the TV's own mode when
-/// nothing needs it.
+/// to its rate as part of its open (one at 25 or 50 to 50 Hz, ADR-049),
+/// a channel at 25 or 50 fps to 50 Hz as it plays, and the display goes
+/// back to the TV's own mode when nothing needs it.
 ///
 /// The coordinator tells it of every state ([playbackChanged]) and asks
 /// it at a file's first frame ([beforeFilePlays]) and a channel's
