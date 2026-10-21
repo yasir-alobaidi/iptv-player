@@ -28,16 +28,28 @@ void main() {
     }
   });
 
-  test('a file reads 60 s ahead whatever the preset, so a 10 s jump lands '
-      "in what is buffered (ADR-046); a channel keeps the preset's", () {
+  test('a file reads ahead as far as its bytes allow whatever the preset '
+      "(an hour of seconds), so a held key's jump of a minute or two lands "
+      'in what is buffered (ADR-046, ADR-048); a channel keeps the '
+      "preset's", () {
     for (final preset in BufferPreset.values) {
       for (final lowMemory in [false, true]) {
         final file = mpvOptionsFor(
           PlayRequest(url: 'u', preset: preset, live: false),
           lowMemory: lowMemory,
         );
-        expect(file['cache-secs'], '60', reason: preset.name);
-        expect(file['demuxer-readahead-secs'], '60', reason: preset.name);
+        expect(file['cache-secs'], '3600', reason: preset.name);
+        expect(file['demuxer-readahead-secs'], '3600', reason: preset.name);
+        // The bytes still stop it: the TV's 32 MiB, the preset's elsewhere.
+        expect(
+          file['demuxer-max-bytes'],
+          lowMemory
+              ? '32MiB'
+              : mpvOptionsFor(
+                  PlayRequest(url: 'u', preset: preset),
+                )['demuxer-max-bytes'],
+          reason: preset.name,
+        );
       }
     }
     expect(mpvOptionsFor(const PlayRequest(url: 'u'))['cache-secs'], '8');

@@ -283,7 +283,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _vod.item != null &&
         (_vod.timeline.paused ||
             _vod.preparing ||
-            _vod.pendingSeek != null ||
+            _vod.showsSeek ||
             _vod.ended),
     card: _vod.card,
     countdown: _vod.countdown,
@@ -536,6 +536,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     LogicalKeyboardKey.mediaStop,
   };
 
+  /// A file's keys that move the bar (the remote's fast forward and
+  /// rewind arrive as these, [_remoteVodKey]).
+  static final Set<LogicalKeyboardKey> _seekKeys = {
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+  };
+
   /// The system's back (a TV remote's Back), as Esc: what is open closes
   /// first, then the player is left. One press, one step: handled as a
   /// key, its key-up went on to Android as a second back, which left the
@@ -599,6 +606,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) {
+      // A seek runs as its key is let go, not after the keys' rest
+      // (ADR-048).
+      if (_isVod && _seekKeys.contains(_remoteVodKey(event.logicalKey))) {
+        _vod.release();
+      }
       return _remoteKeys.contains(event.logicalKey)
           ? KeyEventResult.handled
           : KeyEventResult.ignored;
@@ -1349,11 +1361,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             fade(
               VodOsdBottom(
                 timeline: _vod.timeline,
-                seeking: _vod.pendingSeek != null,
+                seeking: _vod.showsSeek,
                 resumedFrom: _vod.resumedFrom,
                 preparing: _vod.preparing,
                 onTogglePause: _vod.togglePause,
-                onNudge: _vod.nudge,
+                // A button's press is done when it is pressed.
+                onNudge: (delta) => _vod
+                  ..nudge(delta)
+                  ..release(),
                 onDrag: _vod.dragTo,
                 onStartOver: _vod.startOver,
                 onNext: next == null ? null : _vod.playNext,

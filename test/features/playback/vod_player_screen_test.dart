@@ -263,8 +263,8 @@ void main() {
       expect(find.textContaining('Resumed from'), findsNothing);
     });
 
-    _vodTest('←/→ and Shift seek once the keys rest; Space pauses; the '
-        "live player's zapping keys do nothing", (tester, t) async {
+    _vodTest('←/→ and Shift seek as each key is let go (ADR-048); Space '
+        "pauses; the live player's zapping keys do nothing", (tester, t) async {
       await t.open(tester, '/movies/src-1/501');
       await _key(tester, LogicalKeyboardKey.enter);
       await t.firstFrame(tester);
@@ -275,17 +275,23 @@ void main() {
           if (c.startsWith('seek:')) c,
       ];
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      // Down: the bar moves; up: the seek runs, no rest waited for.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(find.text('5:10'), findsWidgets);
+      expect(seeks(), isEmpty);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      expect(seeks(), ['seek:310000']);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
       await tester.pump();
-      // The bar is already there; the bubble says where.
+      // The bar is there; the bubble still says where.
       expect(find.text('4:20'), findsWidgets);
-      expect(seeks(), isEmpty);
+      expect(seeks(), ['seek:310000', 'seek:320000', 'seek:260000']);
       await tester.pump(const Duration(milliseconds: 350));
-      expect(seeks(), ['seek:260000']);
+      expect(seeks(), hasLength(3), reason: 'nothing left for the rest');
 
       await _key(tester, LogicalKeyboardKey.space);
       expect(t.rig.engine.calls, contains('paused:true'));
@@ -400,9 +406,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pump();
       expect(find.text('30:10'), findsNWidgets(2));
-      expect(seeks(), isEmpty);
-      await tester.pump(const Duration(milliseconds: 350));
-      expect(seeks(), ['seek:1810000']);
+      expect(seeks(), ['seek:1810000'], reason: 'run as the key is let go');
       expect(focused(), 'seek bar', reason: "the bar's arrows are its own");
 
       // Held: 20 repeats at 10 s, then 30 s steps; one seek, let go.
@@ -410,13 +414,14 @@ void main() {
       for (var i = 0; i < 25; i++) {
         await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
       }
+      expect(seeks(), hasLength(1), reason: 'nothing while it is held');
       await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
       // 1810 − 10 − 19 × 10 − 6 × 30 = 1430 s.
       expect(find.text('23:50'), findsNWidgets(2));
-      expect(seeks(), hasLength(1));
+      expect(seeks(), ['seek:1810000', 'seek:1430000']);
       await tester.pump(const Duration(milliseconds: 350));
-      expect(seeks().last, 'seek:1430000');
+      expect(seeks(), hasLength(2));
 
       // OK with nothing waiting pauses; after a step it goes there now
       // and plays on.

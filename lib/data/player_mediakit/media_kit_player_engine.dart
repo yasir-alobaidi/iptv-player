@@ -57,12 +57,15 @@ const Map<BufferPreset, Map<String, String>> _presetOptions = {
   },
 };
 
-/// A file reads this many seconds ahead whatever the preset, within its
-/// bytes (ADR-046): Balanced's 8 s put every 10 s jump outside what was
-/// buffered, and each went back to the provider (0.5 to 1.4 s for its
-/// answer alone); 60 s holds the jumps in reach. A channel keeps the
-/// preset's: there, reading ahead only waits behind the live edge.
-const _fileAheadSeconds = '60';
+/// A file reads ahead as far as its bytes allow, whatever the preset: an
+/// hour of seconds, so the bytes are what stop it (ADR-046, ADR-048).
+/// Balanced's 8 s put every 10 s jump outside what was buffered, and each
+/// went back to the provider (0.6 to 0.9 s, its answer and the first
+/// data); on a TV's 32 MiB a 1.3 Mb/s film holds about 150 s ahead, and a
+/// held key's jump of a minute or two plays again in 0.1 s. A channel
+/// keeps the preset's: there, reading ahead only waits behind the live
+/// edge.
+const _fileAheadSeconds = '3600';
 
 /// "Bound memory" behind the live edge; VOD keeps more to seek back into.
 const _liveBackBytes = '16MiB';
@@ -128,6 +131,23 @@ const highQualityPicture = {
   'sigmoid-upscaling': 'yes',
   'deband': 'yes',
 };
+
+/// Whether a seek to [to] has played again at [position] (ADR-048): mpv
+/// says the target itself from the moment a seek starts, before it is
+/// even seeking, so the clock at the target proves nothing yet. It has to
+/// have moved on past it, with mpv done seeking and not waiting for its
+/// cache. Exposed for tests.
+bool seekPlaysAgain({
+  required Duration to,
+  required Duration position,
+  required bool seeking,
+  required bool cacheWait,
+}) {
+  if (seeking || cacheWait) return false;
+  final past = position - to;
+  return past >= const Duration(milliseconds: 10) &&
+      past <= const Duration(seconds: 2);
+}
 
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
 /// the preset, then what varies per stream. Exposed for tests.
@@ -410,8 +430,9 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   bool _buffering = false;
   Timer? _slowSeekTimer;
 
-  /// mpv's `seeking`, as it last said.
+  /// mpv's `seeking` and `pause`, as each last said.
   bool _seeking = false;
+  bool _paused = false;
 
   /// The seek asked for last, until it plays again: logged with how long
   /// that took, and how far ahead was buffered when it was asked.
@@ -480,6 +501,10 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     await _native.observeProperty('pause', waitForInitialization: false, (
       value,
     ) async {
+      _paused = value == 'yes';
+      // A paused file's clock stands still: a seek's time to play again
+      // would be the pause's.
+      if (_paused) _seekAsked = null;
       if (_open && _started) _emit(PlayerPaused(paused: value == 'yes'));
       if (_layerShown) unawaited(_layer?.keepAwake(awake: value != 'yes'));
     });
@@ -562,13 +587,19 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     if (_open) _emit(PlayerBuffering(buffering: buffering));
   }
 
-  /// A seek playing again (mpv done seeking, not waiting for its cache,
-  /// and its time at the place asked): one line, so a slow one shows in
-  /// the log of a TV.
+  /// A seek playing again ([seekPlaysAgain]): one line, so a slow one
+  /// shows in the log of a TV.
   void _seekSettled() {
     final asked = _seekAsked;
-    if (asked == null || _seeking || _cacheWait) return;
-    if ((_position - asked.to).abs() > const Duration(seconds: 2)) return;
+    if (asked == null ||
+        !seekPlaysAgain(
+          to: asked.to,
+          position: _position,
+          seeking: _seeking,
+          cacheWait: _cacheWait,
+        )) {
+      return;
+    }
     _seekAsked = null;
     final jump = asked.to - asked.from;
     final seconds = (jump.inMilliseconds / 1000).round();
@@ -1017,7 +1048,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   @override
   Future<void> seek(Duration position) async {
     if (!_open) return;
-    if (_started) {
+    if (_started && !_paused) {
       _seekAsked = (
         took: Stopwatch()..start(),
         from: _position,

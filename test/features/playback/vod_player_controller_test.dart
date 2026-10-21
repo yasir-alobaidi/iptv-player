@@ -144,6 +144,41 @@ void main() {
       });
     });
 
+    test('the key let go seeks at once, without the rest; the bubble stays '
+        'a moment, so a quick press does not blink it (ADR-048)', () {
+      fakeAsync((async) {
+        start(async, PlayableMovie(movie(1)));
+        play(async, from: 0, seconds: 30);
+        expect(vod.showsSeek, isFalse);
+
+        vod.nudge(const Duration(seconds: 10));
+        expect(vod.showsSeek, isTrue);
+        vod.release();
+        async.flushMicrotasks();
+        expect(seeks(), ['seek:40000']);
+        expect(vod.pendingSeek, isNull);
+        expect(vod.showsSeek, isTrue);
+        expect(vod.timeline.position, const Duration(seconds: 40));
+
+        // Nothing waits: no second seek after the rest, and a release with
+        // nothing asked does nothing.
+        async.elapse(const Duration(milliseconds: 350));
+        vod.release();
+        async.flushMicrotasks();
+        expect(seeks(), ['seek:40000']);
+
+        async.elapse(VodPlayerController.seekShownFor);
+        expect(vod.showsSeek, isFalse);
+
+        // The next press goes on from where the last one went.
+        vod
+          ..nudge(const Duration(seconds: 10))
+          ..release();
+        async.flushMicrotasks();
+        expect(seeks(), ['seek:40000', 'seek:50000']);
+      });
+    });
+
     test('never before the start or past the end', () {
       fakeAsync((async) {
         start(async, PlayableMovie(movie(1)));

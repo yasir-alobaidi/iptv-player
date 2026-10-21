@@ -83,8 +83,13 @@ final class VodPlayerController extends ChangeNotifier {
     _onState(_coordinator.state);
   }
 
-  /// The keys rest this long before the one seek runs.
+  /// The keys rest this long before the one seek runs, when no key-up
+  /// ran it first ([release]).
   static const seekDebounce = Duration(milliseconds: 300);
+
+  /// A seek's bubble stays this long after the seek runs, so a quick
+  /// press doesn't blink it.
+  static const seekShownFor = Duration(milliseconds: 800);
   static const resumedFor = Duration(seconds: 5);
 
   /// The card shows with this much of an episode left, counting …
@@ -121,6 +126,7 @@ final class VodPlayerController extends ChangeNotifier {
   Playable? _item;
   Duration? _pending;
   Timer? _seekTimer;
+  Timer? _shownTimer;
   Duration? _resumedFrom;
   Timer? _resumedTimer;
   NextEpisode? _next;
@@ -155,8 +161,12 @@ final class VodPlayerController extends ChangeNotifier {
           );
   }
 
-  /// Where the keys are taking the bar; the bubble shows while set.
+  /// Where the keys are taking the bar.
   Duration? get pendingSeek => _pending;
+
+  /// The bubble over the bar: while the keys move it, and
+  /// [seekShownFor] after its seek runs.
+  bool get showsSeek => _pending != null || _shownTimer != null;
 
   /// "Resumed from 24:10 · Home starts over", for its first 5 s.
   Duration? get resumedFrom => _resumedFrom;
@@ -190,7 +200,8 @@ final class VodPlayerController extends ChangeNotifier {
   /// while, and the player says so rather than look frozen.
   bool get preparing => _item != null && _coordinator.state is PlaybackOpening;
 
-  /// ←/→ (10 s) and Shift+←/→ (60 s): the bar moves at once.
+  /// ←/→ (10 s) and Shift+←/→ (60 s): the bar moves at once; the seek
+  /// runs when the key is let go ([release]), or once the keys rest.
   void nudge(Duration delta) {
     if (!_playing) return;
     final base = _pending ?? _coordinator.timeline.position;
@@ -199,6 +210,11 @@ final class VodPlayerController extends ChangeNotifier {
     _seekTimer = Timer(seekDebounce, _commitSeek);
     notifyListeners();
   }
+
+  /// The key that moved the bar is let go, or a button's press is done:
+  /// its seek runs now, not after the rest (a held key's steps have all
+  /// come by then; ADR-048). Nothing waiting, nothing to do.
+  void release() => _commitSeek();
 
   /// A TV remote's ←/→, [repeats] into a hold: a press is 10 s; held, the
   /// steps grow to 30 s after about a second and to a minute after about
@@ -281,6 +297,11 @@ final class VodPlayerController extends ChangeNotifier {
     // The coordinator's timeline is at the target before this returns.
     unawaited(_coordinator.seek(target));
     _pending = null;
+    _shownTimer?.cancel();
+    _shownTimer = Timer(seekShownFor, () {
+      _shownTimer = null;
+      notifyListeners();
+    });
     notifyListeners();
   }
 
@@ -314,6 +335,8 @@ final class VodPlayerController extends ChangeNotifier {
     _item = item;
     _seekTimer?.cancel();
     _pending = null;
+    _shownTimer?.cancel();
+    _shownTimer = null;
     _stopCountdown();
     _leaving = false;
     _hidden = false;
@@ -456,6 +479,7 @@ final class VodPlayerController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _seekTimer?.cancel();
+    _shownTimer?.cancel();
     _resumedTimer?.cancel();
     _countdownTimer?.cancel();
     unawaited(_states.cancel());
