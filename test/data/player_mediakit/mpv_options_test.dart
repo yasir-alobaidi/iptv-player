@@ -249,6 +249,19 @@ void main() {
       );
     });
 
+    test("Android's sound goes through AudioTrack, whose clock times the "
+        'frames evenly (ADR-046); OpenSL ES if it fails; the desktop picks '
+        'its own', () {
+      expect(
+        mpvOptionsFor(const PlayRequest(url: 'u'), direct: true)['ao'],
+        'audiotrack,opensles',
+      );
+      expect(
+        mpvOptionsFor(const PlayRequest(url: 'u')).containsKey('ao'),
+        isFalse,
+      );
+    });
+
     test("Android's direct output skips mpv's scaler, so Fill and Stretch "
         "are the picture widget's fit (a 4:3 channel kept its bars on the "
         "Bedroom TV); the ratios stay mpv's", () {

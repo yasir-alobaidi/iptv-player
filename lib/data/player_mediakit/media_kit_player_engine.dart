@@ -81,6 +81,9 @@ const hwdecOff = 'no';
 const hwdecDirect = 'mediacodec';
 const _directOutput = 'mediacodec_embed';
 
+/// mpv's audio on Android: AudioTrack, then media_kit's OpenSL ES.
+const _androidAudio = 'audiotrack,opensles';
+
 /// Diagnostics for a TV, where mpv's log is otherwise out of reach: a
 /// build with `--dart-define=BIJOU_MPV_LOG=ao,ad,cplayer` writes mpv's
 /// verbose lines from those modules to the app's log, and so to logcat
@@ -152,6 +155,11 @@ Map<String, String> mpvOptionsFor(
     // media_kit keeps the output while nothing plays (`force-window`); the
     // direct output then spun a core of a TV after every film (ADR-032).
     if (direct) 'force-window': 'no',
+    // media_kit's OpenSL ES moves mpv's clock in coarse steps, and the
+    // frames timed by it came a refresh early or late (a channel's ticker
+    // stuttered at 50 Hz); AudioTrack's clock is exact: every frame of a
+    // 25 fps channel held two refreshes (ADR-046). OpenSL ES if it fails.
+    if (direct) 'ao': _androidAudio,
     if (direct)
       'hwdec': hwdecDirect
     else if (!request.hardwareDecoding)
