@@ -13,6 +13,7 @@ import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_version.dart';
 import 'package:iptv_player/data/library/library_scan.dart' show subtitleBeside;
 import 'package:iptv_player/data/player_mediakit/desktop_picture.dart';
+import 'package:iptv_player/data/player_mediakit/layer_picture.dart';
 import 'package:iptv_player/data/player_mediakit/subtitle_style.dart';
 import 'package:iptv_player/data/player_mediakit/video_layer.dart';
 import 'package:iptv_player/data/player_mediakit/video_layer_geometry.dart';
@@ -856,13 +857,15 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _emit(PlayerVideoChanged(width: width, height: height));
   }
 
-  /// T1: a file on a TV goes on the picture's own layer, anything else on
-  /// the texture; with no surface from the layer within a second, the
-  /// texture. Before the file opens, with nothing playing.
+  /// On a TV everything goes on the picture's own layer (T1 films, T2
+  /// channels); with no surface from the layer within a second, the
+  /// texture. Before the stream opens, with nothing playing.
   Future<void> _chooseOutput(PlayRequest request) async {
     final layer = _layer;
     if (layer == null) return;
-    if (!playsOnLayer(built: true, direct: _direct, live: request.live)) {
+    _leaveTimer?.cancel();
+    _leaveTimer = null;
+    if (!playsOnLayer(built: true, direct: _direct)) {
       await _leaveLayer();
       return;
     }
@@ -985,8 +988,25 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       if ((await _get('idle-active')) == 'yes') break;
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
-    await _leaveLayer();
+    _leaveSoon();
   }
+
+  /// A stop leaves the layer only if nothing opens on it soon: a zap on
+  /// a one-connection source stops the last channel first, and mpv taken
+  /// off the layer and put back on it would remake its output twice
+  /// between two channels (T2, ADR-045). The app paints over a stopped
+  /// picture meanwhile.
+  void _leaveSoon() {
+    if (_layer == null) return;
+    _leaveTimer?.cancel();
+    _leaveTimer = Timer(_leaveAfter, () {
+      _leaveTimer = null;
+      if (!_open) unawaited(_leaveLayer());
+    });
+  }
+
+  Timer? _leaveTimer;
+  static const _leaveAfter = Duration(milliseconds: 1500);
 
   // Straight to mpv: media_kit's own play() and pause() wait for the
   // video controller's first texture.
@@ -1120,13 +1140,16 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
         key: key,
         valueListenable: _behind,
         builder: (context, behind, _) => behind
-            ? _LayerPicture(
-                controller: controller,
-                subtitles: subtitles,
+            ? LayerPicture(
                 onPlaced: (box) {
                   _layerBox = box;
                   unawaited(_placeLayer());
                 },
+                // As the texture's `Video` draws them (ADR-038).
+                child: SubtitleView(
+                  controller: controller,
+                  configuration: subtitles,
+                ),
               )
             : _directVideo(
                 controller,
@@ -1194,6 +1217,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _disposed = true;
     _firstFramePoll?.cancel();
     _slowSeekTimer?.cancel();
+    _leaveTimer?.cancel();
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
@@ -1204,42 +1228,4 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _desktop?.dispose();
     await _player.dispose();
   }
-}
-
-/// The picture on its own layer: nothing painted, so the layer under the
-/// app shows, and the subtitles over it. It reports its place on screen
-/// in physical pixels after each layout, for the layer to follow; the
-/// layer keeps the screen awake while it shows (MainActivity's
-/// VideoLayer), as media_kit's `Video` does on the texture.
-class _LayerPicture extends StatelessWidget {
-  const new({
-    required this.controller,
-    required this.subtitles,
-    required this.onPlaced,
-  });
-
-  final VideoController controller;
-
-  /// As the texture's `Video` draws them (ADR-038).
-  final SubtitleViewConfiguration subtitles;
-  final ValueChanged<Rect> onPlaced;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        final box = context.findRenderObject();
-        if (box is! RenderBox || !box.hasSize) return;
-        final ratio = View.of(context).devicePixelRatio;
-        onPlaced(
-          Rect.fromPoints(
-            box.localToGlobal(Offset.zero) * ratio,
-            box.localToGlobal(box.size.bottomRight(Offset.zero)) * ratio,
-          ),
-        );
-      });
-      return SubtitleView(controller: controller, configuration: subtitles);
-    },
-  );
 }
