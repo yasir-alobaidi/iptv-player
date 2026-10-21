@@ -110,8 +110,8 @@ class _PlayerTimeCornerState extends ConsumerState<PlayerTimeCorner> {
   }
 }
 
-/// The clock straight on the picture: a small label in the muted text
-/// colour over a soft dark halo, which keeps it legible over a bright
+/// The clock straight on the picture: small and heavy (17 px at 800), in
+/// the muted text colour over a soft dark halo, which keeps it legible over a bright
 /// scene without a box around it.
 class _TimeCornerFace extends StatelessWidget {
   const new(this.clock);
@@ -123,7 +123,7 @@ class _TimeCornerFace extends StatelessWidget {
     final tokens = context.tokens;
     return Text(
       clock,
-      style: tokens.text.label.copyWith(
+      style: tokens.text.titleSmall.copyWith(
         color: tokens.colors.textEmphasis,
         shadows: tokens.elevation.textOverPicture,
       ),
