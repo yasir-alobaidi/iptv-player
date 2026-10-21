@@ -71,7 +71,7 @@ States: `idle → opening → playing ⇄ buffering → reconnecting → failed`
 - A codec or resolution change restarts mpv's video output and resets `frame-drop-count`; a lower count isn't an error
 
 ## Channel zapping
-- Up/Down, PageUp/PageDown: show the channel banner immediately; open the stream after a 350 ms debounce
+- Up/Down, PageUp/PageDown: show the channel banner immediately; open the stream at once when the keys were at rest, else after they rest 350 ms, so a burst or a held key opens its first channel and then only its last (ADR-052; the wait was a third of a zap on the TV)
 - Number entry: overlay; commits after 1.5 s or Enter
 - Backspace: last channel
 - Reuse one engine instance across channels
