@@ -230,22 +230,34 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('↓↓ shows the banner at once and opens one stream after a '
-      'moment', (tester) async {
+  testWidgets('↓ opens the next channel at once; ↓↓ in a row shows the '
+      'banner at once and opens only the last after a moment, not each '
+      'between (ADR-052)', (tester) async {
     await open(tester);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await _settle(tester);
+    await tester.pump();
+    await tester.pump();
+    expect(live.rig.engine.opened, hasLength(2), reason: 'no wait');
+    expect(live.rig.engine.opened.last.url, contains('202'));
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await _settle(tester);
+    await tester.pump();
+    await tester.pump();
     expect(find.byType(ChannelBanner), findsOneWidget);
     expect(find.text('203  Velocity Motors'), findsOneWidget);
-    expect(live.rig.engine.opened, hasLength(1));
+    expect(live.rig.engine.opened, hasLength(2), reason: 'the keys move on');
 
     await tester.pump(const Duration(milliseconds: 400));
     await _settle(tester);
-    expect(live.rig.engine.opened, hasLength(2));
+    expect(live.rig.engine.opened, hasLength(3));
     expect(live.rig.engine.opened.last.url, contains('203'));
+
+    // At rest again: the next ↓ opens at once.
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.pump();
+    expect(live.rig.engine.opened, hasLength(4));
     await finish(tester);
   });
 

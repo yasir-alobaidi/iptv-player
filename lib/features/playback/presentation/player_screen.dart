@@ -38,9 +38,10 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 /// The full-screen player (canvas `Full-screen player`, docs/05 §4; its
 /// controls as ADR-017 has them): the picture edge to edge, an OSD that
 /// hides after [osdTimeout] without input (the cursor with it), and the
-/// keyboard: ↑↓ and PageUp/PageDown zap (a banner at once, the stream
-/// after [zapDebounce]), digits enter a number (committed after
-/// [numberTimeout] or Enter), Backspace goes to the last channel, ← opens
+/// keyboard: ↑↓ and PageUp/PageDown zap (a banner at once, the stream at
+/// once from rest, else after [zapDebounce]), digits enter a number
+/// (committed after [numberTimeout] or Enter), Backspace goes to the last
+/// channel, ← opens
 /// the channel panel, + and − turn the volume, M mutes, A and S cycle
 /// audio and subtitles, I shows the stream info, F or a double-click
 /// toggles the window's full screen, Esc goes back. Every key has a
@@ -384,8 +385,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     });
   }
 
-  /// ↑ (-1) and ↓ (+1): the banner at once, the stream after a moment,
-  /// so holding the key runs through channels without opening each.
+  /// ↑ (-1) and ↓ (+1): the banner at once; the stream at once too when
+  /// the keys were at rest, else after a moment, so holding the key or
+  /// pressing it again runs through channels without opening each
+  /// (ADR-052: the wait was a third of a zap's time on the TV).
   Future<void> _zap(int delta) async {
     final query = _query;
     final from = _zapTarget ?? ref.read(playbackCoordinatorProvider).current;
@@ -398,9 +401,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final next = (await repository.range(query, target, 1)).valueOrNull;
     if (!mounted || next == null || next.isEmpty) return;
     final channel = next.first;
+    final atRest = !(_zapTimer?.isActive ?? false);
     _zapTarget = channel;
     _showBanner(channel);
     _zapTimer?.cancel();
+    if (atRest) {
+      _play(channel);
+      // A key within the moment after waits for the keys to rest.
+      _zapTimer = Timer(PlayerScreen.zapDebounce, () => _zapTarget = null);
+      return;
+    }
     _zapTimer = Timer(PlayerScreen.zapDebounce, () {
       _zapTarget = null;
       _play(channel);

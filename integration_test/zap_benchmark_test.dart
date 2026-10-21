@@ -2,7 +2,8 @@
 // provider): 50 zaps between two H.264 channels on the real player and
 // coordinator, the source limited to one connection, so every zap closes
 // the old stream before opening the new one. Each is timed from the key
-// press: the 350 ms debounce, the close, the open, the first frame.
+// press: the close, the open, the first frame (a zap from rest opens at
+// once, ADR-052; before that each waited 350 ms for the keys to rest).
 //
 // Timings on a shared CI runner are noise, so this runs only when asked:
 //   IPTV_BENCHMARK=1 flutter test integration_test/zap_benchmark_test.dart -d linux
@@ -25,7 +26,6 @@ import 'package:iptv_player/features/playback/data/db_stream_resolver.dart';
 import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
 import 'package:iptv_player/features/playback/domain/playback_coordinator.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
-import 'package:iptv_player/features/playback/presentation/player_screen.dart';
 import 'package:iptv_player/features/sources/data/db_source_repository.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
 
@@ -117,10 +117,7 @@ void main() {
 
       Future<Duration> zap(ChannelItem channel) async {
         final watch = Stopwatch()..start();
-        // The key press: the banner at once, the stream after the debounce.
-        await tester.runAsync(
-          () => Future<void>.delayed(PlayerScreen.zapDebounce),
-        );
+        // The key press from rest: the banner and the stream at once.
         await tester.runAsync(() => coordinator.playLive(channel));
         final deadline = DateTime.now().add(const Duration(seconds: 20));
         while (DateTime.now().isBefore(deadline)) {
@@ -154,8 +151,7 @@ void main() {
           'zap on a one-connection source, $_zaps zaps, video '
           '${video ? 'on' : 'off'}: p50 ${p50.inMilliseconds} ms, p95 '
           '${p95.inMilliseconds} ms, worst ${sorted.last.inMilliseconds} ms '
-          '(includes the ${PlayerScreen.zapDebounce.inMilliseconds} ms '
-          'debounce)';
+          '(from rest, no wait for the keys)';
       // The measurement is this test's output.
       // ignore: avoid_print
       print(line);
