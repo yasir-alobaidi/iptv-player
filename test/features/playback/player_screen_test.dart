@@ -543,8 +543,8 @@ void main() {
     });
   });
 
-  group('the time on screen: the clock and what is left of the programme, '
-      'top right while the OSD is hidden (docs/03)', () {
+  group('the time on screen: a small clock top right while the OSD is '
+      'hidden (docs/03, ADR-051)', () {
     /// [text] in the corner, as drawn: nothing while it is gone.
     Finder corner(String text) => find.descendant(
       of: find.byType(PlayerTimeCorner),
@@ -579,15 +579,15 @@ void main() {
     setUp(() => played = 0);
 
     testWidgets('a channel with a programme: once the OSD has gone, the '
-        'clock and its time left; they move on with the clock, and only '
-        'then', (tester) async {
+        'clock alone, no time left (ADR-051); it moves on with the clock, '
+        'and only then', (tester) async {
       await open(tester, guide: match);
       expect(anyWords(), findsNothing, reason: 'not while the OSD shows');
       await playOn(tester, 4);
       await _settle(tester);
 
       expect(corner('12:00 PM'), findsOneWidget);
-      expect(corner('38 min left'), findsOneWidget);
+      expect(anyWords(), findsOneWidget, reason: 'the clock alone');
       final clock = tester.widget<Text>(corner('12:00 PM'));
 
       // The clock turns while the corner waits for its next minute, a
@@ -597,7 +597,7 @@ void main() {
       expect(identical(tester.widget<Text>(corner('12:00 PM')), clock), isTrue);
       await playOn(tester, 6);
       expect(corner('12:01 PM'), findsOneWidget);
-      expect(corner('37 min left'), findsOneWidget);
+      expect(anyWords(), findsOneWidget);
       await finish(tester);
     });
 
@@ -625,7 +625,7 @@ void main() {
       await _settle(tester);
       await playOn(tester, 4);
       await _settle(tester);
-      expect(corner('38 min left'), findsOneWidget);
+      expect(corner('12:00 PM'), findsOneWidget);
       await finish(tester);
     });
 
@@ -649,7 +649,7 @@ void main() {
       await _settle(tester);
 
       expect(find.byType(StreamInfoOverlay), findsOneWidget);
-      expect(corner('38 min left'), findsOneWidget);
+      expect(corner('12:00 PM'), findsOneWidget);
       final shown = tester.getRect(
         find.descendant(
           of: find.byType(PlayerTimeCorner),

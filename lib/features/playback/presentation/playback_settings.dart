@@ -293,8 +293,8 @@ class _PlaybackSettingsSectionState
           _Setting(
             title: 'Time on screen',
             description:
-                'The clock and the time left stay in a corner while you '
-                'watch, or come and go with the controls.',
+                'A small clock stays in the corner while you watch, or '
+                'comes and goes with the controls.',
             control: SegmentedControl<TimeOnScreen>(
               options: const [
                 SegmentOption(value: TimeOnScreen.always, label: 'Always'),

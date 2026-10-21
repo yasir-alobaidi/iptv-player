@@ -923,6 +923,14 @@ class AppElevation {
   List<BoxShadow> get overArtwork => const [
     BoxShadow(color: Color(0x80000000), blurRadius: 4),
   ];
+
+  /// Small text straight on a picture, with no box under it (the
+  /// player's corner clock, ADR-051): a soft dark halo, so it reads over a
+  /// bright scene and is all but gone over a dark one.
+  List<Shadow> get textOverPicture => const [
+    Shadow(color: Color(0x99000000), blurRadius: 8),
+    Shadow(color: Color(0x80000000), blurRadius: 2, offset: Offset(0, 1)),
+  ];
 }
 
 /// Every design token, reachable from a [BuildContext] through

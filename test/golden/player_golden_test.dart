@@ -15,8 +15,6 @@ import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/theme.dart';
-import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
-import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
@@ -288,8 +286,8 @@ void main() {
     );
 
     // The picture in a test is black: the corner over bright ones, where
-    // its shade has to keep it legible, and a mid-grey and a black one,
-    // where it should all but vanish.
+    // its halo has to keep it legible, and a mid-grey and a black one,
+    // where it should all but vanish (ADR-051: no box).
     testWidgets('the time corner over bright and dark pictures', (
       tester,
     ) async {
@@ -297,12 +295,6 @@ void main() {
       tester.view.physicalSize = const Size(1280, 160);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      const channel = ChannelItem(
-        id: 1,
-        sourceId: 'src-1',
-        remoteKey: '201',
-        name: 'Arena Sports 1',
-      );
       final now = goldenNow();
       const pictures = [
         [Color(0xFFFFFFFF), Color(0xFFDDEEFF)],
@@ -312,18 +304,7 @@ void main() {
       ];
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            appClockProvider.overrideWithValue(() => now),
-            nowNextProvider(channel).overrideWith(
-              (ref) async => NowNext(
-                now: Programme(
-                  title: 'Continental Cup · Semi-final',
-                  start: now.subtract(const Duration(minutes: 48)),
-                  end: now.add(const Duration(hours: 1, minutes: 12)),
-                ),
-              ),
-            ),
-          ],
+          overrides: [appClockProvider.overrideWithValue(() => now)],
           child: MaterialApp(
             theme: buildAppTheme(),
             home: Material(
@@ -344,12 +325,9 @@ void main() {
                             ),
                           ),
                           const Positioned(
-                            top: 28,
-                            right: 20,
-                            child: PlayerTimeCorner(
-                              shown: true,
-                              channel: channel,
-                            ),
+                            top: 40,
+                            right: 32,
+                            child: PlayerTimeCorner(shown: true),
                           ),
                         ],
                       ),
