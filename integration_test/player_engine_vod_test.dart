@@ -409,9 +409,11 @@ void main() {
         );
 
         // ── A seek the panel holds back: buffering while it waits, then
-        // playing from there.
+        // playing from there. Back to before the place it resumed at,
+        // which was never read: a file reads as far ahead as its bytes
+        // allow (ADR-048), so a seek ahead lands in what is buffered.
         events.clear();
-        final target = start + const Duration(seconds: 60);
+        final target = start - const Duration(seconds: 15);
         final sought = watch.elapsed;
         await tester.runAsync(() => engine.seek(target));
         await _until(
@@ -423,7 +425,8 @@ void main() {
           tester,
           () =>
               seen<PlayerBuffering>().lastOrNull?.buffering == false &&
-              position() >= target,
+              position() >= target &&
+              position() < start,
           'the seek to land',
           seconds: 30,
         );
