@@ -547,7 +547,9 @@ final class PlaybackCoordinator {
       final watch = Stopwatch()..start();
       await engine.stop();
       _openSource = null;
-      _log.debug(
+      // Info, so a TV's log has a zap's whole time: this, then the
+      // player's "First frame in N ms" (ADR-048).
+      _log.info(
         _tag,
         'Closed the old stream in ${watch.elapsedMilliseconds} ms',
       );
