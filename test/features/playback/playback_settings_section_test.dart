@@ -525,8 +525,8 @@ void main() {
       expect(find.text('Time on screen'), findsOneWidget);
       expect(
         find.textContaining(
-          'A small clock stays in the corner while you watch, or comes and '
-          'goes with the controls.',
+          'The clock stays top left while you watch, or comes and goes '
+          'with the controls.',
         ),
         findsOneWidget,
       );

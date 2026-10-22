@@ -1366,8 +1366,8 @@ void main() {
     });
   });
 
-  group('the time on screen: a small clock top right while the OSD is '
-      'hidden (docs/03, ADR-051)', () {
+  group('the time on screen: the clock top left while the OSD is hidden '
+      '(docs/03, ADR-053)', () {
     /// [text] in the corner, as drawn: nothing while it is gone.
     Finder corner(String text) => find.descendant(
       of: find.byType(PlayerTimeCorner),
@@ -1416,14 +1416,17 @@ void main() {
       await settle(tester);
     }
 
-    _vodTest('a movie: once the OSD has gone, a small clock stays where the '
-        "OSD's was, alone, with no box and no time left (ADR-051); the OSD "
-        'back, it goes', (tester, t) async {
+    _vodTest('a movie: once the OSD has gone, the clock stays top left, '
+        "where Back was, as large as the OSD's clock and without AM/PM, "
+        'alone with no box (ADR-053); the OSD back, it goes', (
+      tester,
+      t,
+    ) async {
       await watch(tester, t);
 
       expect(_osd(tester), 0);
       expect(cornerShown(tester), 1);
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       expect(anyWords(), findsOneWidget, reason: 'the clock alone');
       expect(
         find.descendant(
@@ -1433,23 +1436,26 @@ void main() {
         findsNothing,
         reason: 'no box',
       );
-      // Where the OSD's clock is: its right edge, and its middle.
+      // Back's left edge, the top bar's middle, the OSD clock's size.
       final osdClock = find.descendant(
         of: find.byType(VodOsdTop),
         matching: find.text('12:00 PM'),
       );
-      expect(
-        tester.getTopRight(corner('12:00 PM')).dx,
-        moreOrLessEquals(tester.getTopRight(osdClock).dx),
+      final back = find.descendant(
+        of: find.byType(VodOsdTop),
+        matching: find.byType(OsdBack),
       );
       expect(
-        tester.getCenter(corner('12:00 PM')).dy,
+        tester.getTopLeft(corner('12:00')).dx,
+        moreOrLessEquals(tester.getTopLeft(back).dx),
+      );
+      expect(
+        tester.getCenter(corner('12:00')).dy,
         moreOrLessEquals(tester.getCenter(osdClock).dy, epsilon: 2),
       );
-      // And smaller than it.
       expect(
-        tester.getSize(corner('12:00 PM')).height,
-        lessThan(tester.getSize(osdClock).height),
+        tester.getSize(corner('12:00')).height,
+        moreOrLessEquals(tester.getSize(osdClock).height),
       );
 
       // A mouse move: the OSD comes back and the corner fades out.
@@ -1491,7 +1497,7 @@ void main() {
     _vodTest("it changes with the clock's next minute, never with the "
         "film's every tick", (tester, t) async {
       await watch(tester, t);
-      final clock = tester.widget<Text>(corner('12:00 PM'));
+      final clock = tester.widget<Text>(corner('12:00'));
 
       // Ten seconds on, its time heard 4 times a second: the same words,
       // so not built again.
@@ -1501,17 +1507,17 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 250));
       }
-      expect(identical(tester.widget<Text>(corner('12:00 PM')), clock), isTrue);
+      expect(identical(tester.widget<Text>(corner('12:00')), clock), isTrue);
 
       // A jump in the film changes nothing.
       t.rig.engine.progress(const Duration(minutes: 49));
       await settle(tester);
-      expect(identical(tester.widget<Text>(corner('12:00 PM')), clock), isTrue);
+      expect(identical(tester.widget<Text>(corner('12:00')), clock), isTrue);
 
       // The clock turns 12:01.
       t.vod.fakes.now = t.vod.fakes.now.add(const Duration(minutes: 1));
       await _playOn(t, tester, from: const Duration(minutes: 49), seconds: 60);
-      expect(corner('12:01 PM'), findsOneWidget);
+      expect(corner('12:01'), findsOneWidget);
       expect(anyWords(), findsOneWidget);
     });
 
@@ -1533,7 +1539,7 @@ void main() {
         isTrue,
       );
 
-      await tester.tapAt(tester.getCenter(corner('12:00 PM')));
+      await tester.tapAt(tester.getCenter(corner('12:00')));
       // A click waits to see whether it is the first of two.
       await tester.pump(const Duration(milliseconds: 350));
       await settle(tester);
@@ -1546,7 +1552,7 @@ void main() {
     _vodTest('on a TV too', (tester, t) async {
       await watch(tester, t, tv: true);
       expect(_focused(), 'player');
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       expect(anyWords(), findsOneWidget);
     });
 
@@ -1583,7 +1589,7 @@ void main() {
 
       unawaited(settings.update(const PlaybackSettings()));
       await settle(tester);
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
     });
   });
 }

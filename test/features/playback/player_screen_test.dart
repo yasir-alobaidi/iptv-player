@@ -555,8 +555,8 @@ void main() {
     });
   });
 
-  group('the time on screen: a small clock top right while the OSD is '
-      'hidden (docs/03, ADR-051)', () {
+  group('the time on screen: the clock top left while the OSD is hidden '
+      '(docs/03, ADR-053)', () {
     /// [text] in the corner, as drawn: nothing while it is gone.
     Finder corner(String text) => find.descendant(
       of: find.byType(PlayerTimeCorner),
@@ -598,17 +598,17 @@ void main() {
       await playOn(tester, 4);
       await _settle(tester);
 
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       expect(anyWords(), findsOneWidget, reason: 'the clock alone');
-      final clock = tester.widget<Text>(corner('12:00 PM'));
+      final clock = tester.widget<Text>(corner('12:00'));
 
       // The clock turns while the corner waits for its next minute, a
       // minute after it came: nothing looks before then.
       live.fakes.now = live.fakes.now.add(const Duration(minutes: 1));
       await playOn(tester, 54);
-      expect(identical(tester.widget<Text>(corner('12:00 PM')), clock), isTrue);
+      expect(identical(tester.widget<Text>(corner('12:00')), clock), isTrue);
       await playOn(tester, 6);
-      expect(corner('12:01 PM'), findsOneWidget);
+      expect(corner('12:01'), findsOneWidget);
       expect(anyWords(), findsOneWidget);
       await finish(tester);
     });
@@ -620,7 +620,7 @@ void main() {
       await playOn(tester, 4);
       await _settle(tester);
 
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       expect(anyWords(), findsOneWidget);
       await finish(tester);
     });
@@ -637,7 +637,7 @@ void main() {
       await _settle(tester);
       await playOn(tester, 4);
       await _settle(tester);
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       await finish(tester);
     });
 
@@ -661,7 +661,7 @@ void main() {
       await _settle(tester);
 
       expect(find.byType(StreamInfoOverlay), findsOneWidget);
-      expect(corner('12:00 PM'), findsOneWidget);
+      expect(corner('12:00'), findsOneWidget);
       final shown = tester.getRect(
         find.descendant(
           of: find.byType(PlayerTimeCorner),

@@ -287,7 +287,7 @@ void main() {
 
     // The picture in a test is black: the corner over bright ones, where
     // its halo has to keep it legible, and a mid-grey and a black one,
-    // where it should all but vanish (ADR-051: no box).
+    // where it should all but vanish (ADR-051, ADR-053: no box).
     testWidgets('the time corner over bright and dark pictures', (
       tester,
     ) async {
@@ -326,7 +326,7 @@ void main() {
                           ),
                           const Positioned(
                             top: 40,
-                            right: 32,
+                            left: 32,
                             child: PlayerTimeCorner(shown: true),
                           ),
                         ],

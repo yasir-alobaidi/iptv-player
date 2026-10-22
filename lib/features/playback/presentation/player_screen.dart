@@ -46,9 +46,9 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 /// audio and subtitles, I shows the stream info, F or a double-click
 /// toggles the window's full screen, Esc goes back. Every key has a
 /// control on the OSD, large enough to read from across a room, and the
-/// OSD is drawn larger in a larger window. While it is hidden a small
-/// clock stays top right ([PlayerTimeCorner]), unless Settings → Playback
-/// → Time on screen keeps it with the controls.
+/// OSD is drawn larger in a larger window. While it is hidden the clock
+/// stays top left ([PlayerTimeCorner]), unless Settings → Playback → Time
+/// on screen keeps it with the controls.
 ///
 /// A movie or an episode (Phase 5 step 6) has its own face and keys:
 /// Space or a click on the picture plays and pauses, ←/→ seek 10 s and
@@ -1249,18 +1249,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                                   ],
                                 ),
                               ),
-                            // The clock, small, while the OSD is hidden and
-                            // the picture plays (not while it opens, has
-                            // failed, or anything holds the OSD up): at the
-                            // OSD clock's right edge, in the middle of the
-                            // top bar's row as its clock is.
+                            // The clock while the OSD is hidden and the
+                            // picture plays (not while it opens, has
+                            // failed, or anything holds the OSD up): top
+                            // left, where Back is when the OSD shows, in the
+                            // middle of the top bar's row (ADR-053).
                             if (timeOnScreen == TimeOnScreen.always)
                               Positioned(
                                 top: tokens.spacing.s24,
-                                right: tokens.spacing.s32,
+                                left: tokens.spacing.s32,
                                 child: SizedBox(
                                   height: tokens.player.controlSize,
-                                  child: Center(
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: 1,
                                     child: PlayerTimeCorner(
                                       shown:
                                           !showOsd && state is PlaybackPlaying,

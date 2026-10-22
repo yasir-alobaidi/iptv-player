@@ -13,14 +13,13 @@ Duration timeCornerWait(DateTime now) {
   return Duration(microseconds: minute - now.microsecondsSinceEpoch % minute);
 }
 
-/// The clock, small, top right of the full-screen player while its
-/// controls are hidden (Settings → Playback → Time on screen): where the
-/// OSD's clock is, so the time stays when the OSD goes. No box and no time
-/// left (ADR-051: the user found the first, a shaded box with the time
-/// left under the clock, too big and too much to look at while
-/// watching); the time left is on the controls a key away. It fades in
-/// as the OSD fades out and out as it comes back, and takes no clicks and
-/// no focus.
+/// The clock, top left of the full-screen player while its controls are
+/// hidden (Settings → Playback → Time on screen), as large and heavy as
+/// the OSD's own clock and without AM/PM (ADR-053: the user's words, after
+/// a shaded box with the time left, ADR-047, and then a small clock,
+/// ADR-051). No box and no time left; the time left is on the controls a
+/// key away. It fades in as the OSD fades out and out as it comes back,
+/// and takes no clicks and no focus.
 ///
 /// The picture under it is on a layer of its own and Flutter draws
 /// nothing while the OSD is hidden: this is drawn again only when its
@@ -91,7 +90,10 @@ class _PlayerTimeCornerState extends ConsumerState<PlayerTimeCorner> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final clock = formatClock(ref.watch(appClockProvider)(), tokens.timeStyle);
+    final clock = formatClockShort(
+      ref.watch(appClockProvider)(),
+      tokens.timeStyle,
+    );
     if (clock != _clock || _face == null) {
       _clock = clock;
       _face = RepaintBoundary(child: _TimeCornerFace(clock));
@@ -110,9 +112,9 @@ class _PlayerTimeCornerState extends ConsumerState<PlayerTimeCorner> {
   }
 }
 
-/// The clock straight on the picture: small and heavy (17 px at 800), in
-/// the muted text colour over a soft dark halo, which keeps it legible
-/// over a bright scene without a box around it.
+/// The clock straight on the picture, as the OSD draws its own (22 px at
+/// 700, the primary text colour), over a soft dark halo, which keeps it
+/// legible over a bright scene without a box around it.
 class _TimeCornerFace extends StatelessWidget {
   const new(this.clock);
 
@@ -123,8 +125,8 @@ class _TimeCornerFace extends StatelessWidget {
     final tokens = context.tokens;
     return Text(
       clock,
-      style: tokens.text.titleSmall.copyWith(
-        color: tokens.colors.textEmphasis,
+      style: tokens.text.h2.copyWith(
+        color: tokens.colors.textPrimary,
         shadows: tokens.elevation.textOverPicture,
       ),
     );
