@@ -8,16 +8,16 @@
 **Where everything is:**
 - **`main` = `dev` = the docs commit after 2269e7f, tagged `stable-328`** (fast-forward from 0ee42b2 `stable-306`): ADR-044 to ADR-053. Checks on 2269e7f: analyze and format clean; the full suite under `TZ=UTC` **5,509 passed, 27 skipped**; **21 walks** under Xvfb all passed (app_launch, vod_player, vod_walk, home_continue, favorites_walk, hiding_walk, live_tv_keyboard, guide_keyboard, guide_settings_keyboard, guide_watch, sources_keyboard, search_keyboard, library_walk, library_playback, library_scan, reminder_walk, player_engine, player_engine_vod, playback_faults, cast_walk, library_cast_walk); not run: the profile measurements, the soak, the real-provider walks.
 - **Living Room TV** (Chromecast 192.168.1.155:33013 for adb; Samsung UN60DU7200 at .154): **the stable "FAISAL TV" updated 307 → 328** (built from `main` in a worktree with only the launcher label changed; its data and sign-in untouched) and **Bijou Beta 327** (signed in to the user's provider; Settings as the user had them: films' matching Off, channels' On). Side effects of the tests on Beta: Continue watching has Searching for Onoda, The Gentleman and Argylle; Recently watched channels are the beIN ones the preview passed through.
-- **Bedroom TV:** not used (not free this session): still Beta 314 and the stable 306; its stable to 328 when it's free (ask).
+- **Bedroom TV** (192.168.1.231:38317 for adb): freed by the user at the end ("It's free and I just pushed everything"): **the stable Bijou 328** (from `main`, label "Bijou"; opened once to Home with the user's provider data, then back to Google TV) and **Bijou Beta 328** (the fake panel).
 - **Worktree** `<scratchpad>/wt` (detached): remove with `git worktree remove` or `git worktree prune` next session.
 
 **1. First:** CI after the user's push (`main` should go green: the generated file's fix is in).
-**2. The Bedroom's stable 328** when the user frees that TV (`tools/tv_apk.sh stable` from `main`, `adb install -r`); Beta there to the latest too.
+**2. Nothing left to install:** both TVs have the stable 328 (FAISAL TV on the Living Room's) and Beta 327/328.
 **3. Then:** a file with no frame rate in its container measured from the clock's steps (ADR-049's "Next"); frames timed to the display's refresh for a matched 23.976 Hz film (mpv's `mediacodec_embed` has no vsync snapping); a real 5.1 film's sound sync through AudioTrack; the older list (ADR-043's subtitle, the desktop's data folder, the quality badge, Phase 10).
 
 **Before you start the next session (user):**
 1. **Push:** `git push origin --all && git push origin --tags` (this sends `main`, `dev` and the new tag `stable-328`).
-2. **On the Living Room TV:** FAISAL TV is now the same as Beta (the clock top left while you watch, faster seeking and channel changes); tell me anything that's off. The Bedroom TV's stable waits for you to free it.
+2. **On either TV:** the stable app is 328, the same as Beta (the clock top left while you watch, faster seeking and channel changes); tell me anything that's off.
 
 ### The twenty-fourth session, short
 The user asked to continue with the Living Room TV free (the provider idle; the Bedroom not free), then the questions and requests above.
