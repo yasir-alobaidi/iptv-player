@@ -64,6 +64,12 @@ abstract interface class DownloadTitles {
 
   /// Whether the library already holds [request]'s title as a file.
   Future<bool> downloaded(DownloadRequest request);
+
+  /// Whether [sourceId]'s provider refuses the sign-in itself, asked after
+  /// it refused a download (401/403): false when the account answers, so
+  /// the refusal was its connections, in use elsewhere (ADR-054); null
+  /// when it can't be told.
+  Future<bool?> signInRefused(String sourceId);
 }
 
 /// How finishing a download went.

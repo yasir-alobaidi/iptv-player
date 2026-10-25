@@ -59,6 +59,7 @@ void main() {
     DownloadTimings timings = const DownloadTimings(report: Duration.zero),
     void Function(HttpDownload download, DownloadNews news)? watch,
     String? url,
+    List<String>? notes,
   }) async {
     final news = <DownloadNews>[];
     late HttpDownload download;
@@ -81,6 +82,7 @@ void main() {
         watch?.call(download, item);
       },
       timings: timings,
+      note: notes?.add,
     );
     final outcome = await download.run();
     return (news: news, outcome: outcome);
@@ -219,6 +221,113 @@ void main() {
     expect(run.news.last, isA<DownloadDone>());
     expect(clock.elapsed, greaterThan(const Duration(milliseconds: 1300)));
     expect(onDisk(), sample);
+  });
+
+  // The user's panel, short: fast for a connection's first bytes, then
+  // held to a trickle (ADR-054).
+  const burstThenTrickle = 'size_mb=2&burst_kb=256&throttle_kbps=400';
+  const quickPace = DownloadTimings(
+    report: Duration.zero,
+    paceWindow: Duration(milliseconds: 200),
+    paceSettle: Duration(milliseconds: 300),
+    freshPause: Duration(milliseconds: 20),
+  );
+
+  test('a panel that slows each connection after its first bytes: fresh '
+      'connections from the same byte, every byte right', () async {
+    final clock = Stopwatch()..start();
+    final notes = <String>[];
+    final run = await attempt(
+      '$movie?$burstThenTrickle',
+      timings: quickPace,
+      notes: notes,
+    );
+    final done = run.news.last as DownloadDone;
+    expect(done.bytes, 2 << 20);
+    // One connection at 50 KB/s past its first 256 KB: about 37 s.
+    expect(clock.elapsed, lessThan(const Duration(seconds: 20)));
+    final opened = run.news.whereType<DownloadOpened>().toList();
+    expect(opened.length, greaterThanOrEqualTo(4));
+    expect(opened.skip(1).every((o) => o.bytes > 0 && !o.restarted), isTrue);
+    final bytes = onDisk();
+    expect(bytes.sublist(0, sampleSize), sample);
+    for (final at in [sampleSize, 1 << 20, (2 << 20) - 1]) {
+      expect(bytes[at], fakePaddingByte(at), reason: '$at');
+    }
+    expect(notes.first, contains('the provider slowed it'));
+    expect(notes.last, contains('fresh connections'));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(panel.state.activeStreams, 0);
+  });
+
+  test('a panel slow from the first byte, or the speed limit: the one '
+      'connection, no fresh ones', () async {
+    for (final (path, limit) in [
+      ('$movie?throttle_kbps=4000', null),
+      ('$movie?burst_kb=128&throttle_kbps=4000', 300 * 1024),
+    ]) {
+      final run = await attempt(path, timings: quickPace, limit: limit);
+      expect(run.news.last, isA<DownloadDone>(), reason: path);
+      expect(run.news.whereType<DownloadOpened>(), hasLength(1), reason: path);
+      expect(onDisk(), sample);
+      File(part()).deleteSync();
+    }
+  });
+
+  test('connection pace: slowed once the last window is under a quarter of '
+      'the best, on a connection old enough', () {
+    final pace = ConnectionPace(
+      window: const Duration(seconds: 4),
+      settle: const Duration(seconds: 6),
+    );
+    var bytes = 0;
+    var at = Duration.zero;
+    // 3 MB/s for 5 s, then 0.28 MB/s.
+    for (
+      ;
+      at < const Duration(seconds: 5);
+      at += const Duration(milliseconds: 100)
+    ) {
+      pace.add(at, bytes += 300000);
+    }
+    expect(pace.best, closeTo(3e6, 1e5));
+    expect(pace.slowed(at), isFalse, reason: 'too young');
+    for (
+      ;
+      at < const Duration(seconds: 7);
+      at += const Duration(milliseconds: 100)
+    ) {
+      pace.add(at, bytes += 28000);
+    }
+    expect(
+      pace.slowed(at),
+      isFalse,
+      reason: 'the window still holds the burst',
+    );
+    for (
+      ;
+      at < const Duration(seconds: 10);
+      at += const Duration(milliseconds: 100)
+    ) {
+      pace.add(at, bytes += 28000);
+    }
+    expect(pace.recent, closeTo(2.8e5, 1e4));
+    expect(pace.slowed(at), isTrue);
+
+    final steady = ConnectionPace(
+      window: const Duration(seconds: 4),
+      settle: const Duration(seconds: 6),
+    );
+    bytes = 0;
+    for (
+      at = Duration.zero;
+      at < const Duration(seconds: 20);
+      at += const Duration(milliseconds: 100)
+    ) {
+      // Uneven, as a network is: 0.1–0.5 MB/s.
+      steady.add(at, bytes += 10000 + (at.inMilliseconds ~/ 100 % 5) * 10000);
+    }
+    expect(steady.slowed(at), isFalse);
   });
 
   test(

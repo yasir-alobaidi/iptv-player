@@ -319,6 +319,9 @@ final class _Titles implements DownloadTitles {
 
   @override
   Future<bool> downloaded(DownloadRequest request) async => false;
+
+  @override
+  Future<bool?> signInRefused(String sourceId) async => false;
 }
 
 /// Starts the victim and kills it once [killWhen] says so (checked on

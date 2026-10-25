@@ -30,6 +30,40 @@ final class AccountCheck {
       activeConnections != null &&
       maxConnections != null &&
       activeConnections! >= maxConnections!;
+
+  /// The panel refused the sign-in, or the account isn't active: a
+  /// refused stream was the account's, not its connections'.
+  bool get refused =>
+      !signedIn || (status != null && status!.toLowerCase() != 'active');
+}
+
+/// [sourceId]'s account as its Xtream panel says it now; null for another
+/// kind of source, or when the panel can't be asked.
+Future<AccountCheck?> readAccount(
+  SourceRepository sources,
+  String sourceId,
+) async {
+  final found = (await sources.byId(sourceId)).valueOrNull;
+  if (found == null || found.type != SourceType.xtream) return null;
+  final credentials = (await sources.credentialsFor(sourceId)).valueOrNull;
+  if (credentials == null) return null;
+  final client = XtreamClient(
+    server: credentials.url,
+    username: credentials.username ?? '',
+    password: credentials.password ?? '',
+    userAgent: found.userAgent,
+  );
+  final result = await client.account(retry: false);
+  return switch (result) {
+    Ok(:final value) => AccountCheck(
+      signedIn: true,
+      status: value.status,
+      activeConnections: value.activeConnections,
+      maxConnections: value.maxConnections,
+    ),
+    Err(failure: AuthFailure()) => const AccountCheck(signedIn: false),
+    Err() => null,
+  };
 }
 
 /// docs/03's error classes from what the stream's URL answered: [status]
@@ -148,7 +182,7 @@ final class HttpStreamProber implements StreamProber {
         status == 401 ||
         status == 403 ||
         (status == 404 && body.trim().isEmpty);
-    if (refused) account = await _account(sourceId);
+    if (refused) account = await readAccount(_sources, sourceId);
     return classifyStreamFailure(
       status: status,
       body: body,
@@ -190,29 +224,5 @@ final class HttpStreamProber implements StreamProber {
       // probe must not hold the slot the next attempt needs.
       cancel.cancel();
     }
-  }
-
-  Future<AccountCheck?> _account(String sourceId) async {
-    final found = (await _sources.byId(sourceId)).valueOrNull;
-    if (found == null || found.type != SourceType.xtream) return null;
-    final credentials = (await _sources.credentialsFor(sourceId)).valueOrNull;
-    if (credentials == null) return null;
-    final client = XtreamClient(
-      server: credentials.url,
-      username: credentials.username ?? '',
-      password: credentials.password ?? '',
-      userAgent: found.userAgent,
-    );
-    final result = await client.account(retry: false);
-    return switch (result) {
-      Ok(:final value) => AccountCheck(
-        signedIn: true,
-        status: value.status,
-        activeConnections: value.activeConnections,
-        maxConnections: value.maxConnections,
-      ),
-      Err(failure: AuthFailure()) => const AccountCheck(signedIn: false),
-      Err() => null,
-    };
   }
 }

@@ -250,4 +250,7 @@ final class PanelTitles implements DownloadTitles {
 
   @override
   Future<bool> downloaded(DownloadRequest request) async => false;
+
+  @override
+  Future<bool?> signInRefused(String sourceId) async => false;
 }

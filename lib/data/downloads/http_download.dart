@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +18,9 @@ final class DownloadTimings {
     this.idle = const Duration(seconds: 30),
     this.report = const Duration(milliseconds: 250),
     this.flushEvery = 64 << 20,
+    this.paceWindow = const Duration(seconds: 4),
+    this.paceSettle = const Duration(seconds: 6),
+    this.freshPause = const Duration(seconds: 1),
   });
 
   final Duration connect;
@@ -35,6 +39,51 @@ final class DownloadTimings {
   /// laptop's SSD, and a crash of the app loses nothing written anyway
   /// (only a power cut does), so 64 MB (ADR-015 step 3).
   final int flushEvery;
+
+  /// [ConnectionPace]'s window and the age a connection has before it is
+  /// judged slowed.
+  final Duration paceWindow;
+  final Duration paceSettle;
+
+  /// Between a slowed connection's close and the fresh one: a panel that
+  /// allows one connection counts the old one until it has gone.
+  final Duration freshPause;
+}
+
+/// Whether the provider has slowed a connection it started fast (ADR-054).
+/// The user's panel sends each new connection at ~3 MB/s for its first
+/// seconds, then holds it to about twice the video's bitrate: 0.28 MB/s,
+/// flat, at a 10 ms round trip with the window wide open. A fresh
+/// connection from the same byte is fast again. Fed the connection's
+/// bytes as they come; [slowed] once the last [window] went at under a
+/// quarter of the best one, on a connection [settle] old. Exposed for
+/// tests.
+final class ConnectionPace {
+  new({required this.window, required this.settle});
+
+  final Duration window;
+  final Duration settle;
+  final _samples = Queue<(Duration, int)>();
+
+  /// Bytes a second over the best and the last whole window.
+  double best = 0;
+  double recent = 0;
+
+  /// [bytes] had come on the connection [at] after it opened.
+  void add(Duration at, int bytes) {
+    if (_samples.isNotEmpty && at - _samples.last.$1 < window ~/ 10) return;
+    _samples.addLast((at, bytes));
+    while (_samples.length > 2 && at - _samples.elementAt(1).$1 >= window) {
+      _samples.removeFirst();
+    }
+    final (from, fromBytes) = _samples.first;
+    final span = at - from;
+    if (span < window * 3 ~/ 4) return;
+    recent = (bytes - fromBytes) * 1e6 / span.inMicroseconds;
+    if (recent > best) best = recent;
+  }
+
+  bool slowed(Duration at) => at >= settle && best > 0 && recent < best / 4;
 }
 
 /// How an attempt went: the file is whole, the attempt ended (said in
@@ -46,19 +95,44 @@ enum HttpDownloadOutcome { ended, playlist }
 /// the `.part` file's size on disk is where it starts; `Range` +
 /// `If-Range` ask for the rest; a 200 empties the `.part` and starts
 /// over; a 416 is the end when the size matches. Chunks go straight to
-/// disk, flushed every 8 MB. Runs in the downloads isolate: plain Dart.
+/// disk, flushed every 8 MB. A connection the provider slows down after
+/// its first seconds ends, and a fresh one carries on from the same byte
+/// ([ConnectionPace]). Runs in the downloads isolate: plain Dart.
 final class HttpDownload {
   new(
     this.order,
     this._upstream,
     this._emit, {
     this.timings = const DownloadTimings(),
-  });
+    void Function(String line)? note,
+  }) : _note = note ?? _quiet;
 
   final DownloadOrder order;
   final UpstreamFor _upstream;
   final void Function(DownloadNews news) _emit;
   final DownloadTimings timings;
+
+  /// A line for the app's log.
+  final void Function(String line) _note;
+  static void _quiet(String _) {}
+
+  /// Fresh connections so far, and those in a row that came no faster:
+  /// at two, this download stops opening them (a panel slow from the
+  /// first byte, or one that keeps a connection's pace across them).
+  int _fresh = 0;
+  int _freshInVain = 0;
+
+  /// The pace that made the last fresh connection, to tell whether it
+  /// helped.
+  double? _slowedAt;
+
+  bool get _freshAllowed =>
+      order.bytesPerSecond == null && _freshInVain < _freshTries;
+  static const _freshTries = 2;
+
+  /// A fresh connection the provider refuses (its old one not yet gone)
+  /// is asked again this many times before the refusal stands.
+  static const _freshRefusals = 3;
 
   HttpClient? _client;
   bool _stopping = false;
@@ -114,6 +188,8 @@ final class HttpDownload {
     var startsOver = 0;
     var useRange = true;
     var total = order.total;
+    // Asked again after a refusal or a failure of a fresh connection.
+    var refusedFresh = 0;
     while (true) {
       if (_stopping) return _halt();
       final client = HttpClient()
@@ -154,8 +230,14 @@ final class HttpDownload {
           continue;
         }
         if (status != HttpStatus.ok && status != HttpStatus.partialContent) {
+          if (_slowedAt != null && refusedFresh < _freshRefusals) {
+            await _drain(response);
+            await _sleep(timings.freshPause * (1 << refusedFresh++));
+            continue;
+          }
           return await _refused(response);
         }
+        refusedFresh = 0;
 
         final restarted = status == HttpStatus.ok && _size > 0;
         if (status == HttpStatus.partialContent) {
@@ -173,16 +255,40 @@ final class HttpDownload {
         } else {
           total = response.contentLength >= 0 ? response.contentLength : null;
         }
-        if (restarted) await _truncate(part);
+        if (restarted) {
+          await _truncate(part);
+          // A panel that answered a fresh connection's range with the
+          // whole file would take every one back to the start.
+          if (_slowedAt != null) _freshInVain = _freshTries;
+        }
         if (status == HttpStatus.ok && _isPlaylistType(response.headers)) {
           await _drain(response);
           return HttpDownloadOutcome.playlist;
         }
-        return await _write(part, response, total: total, restarted: restarted);
+        final ranged =
+            status == HttpStatus.partialContent ||
+            response.headers.value(HttpHeaders.acceptRangesHeader) == 'bytes';
+        final wrote = await _write(
+          part,
+          response,
+          total: total,
+          restarted: restarted,
+          fresh: ranged && _freshAllowed,
+        );
+        if (wrote != null) return wrote;
+        // Slowed: the same file from the same byte, on a fresh connection,
+        // once the old one has gone.
+        client.close(force: true);
+        await _sleep(timings.freshPause);
+        continue;
       } on FileSystemException catch (error) {
         return _fail(DownloadEnd.diskWrite, detail: error.message);
       } on Object catch (error) {
         if (_stopping) return _halt();
+        if (_slowedAt != null && refusedFresh < _freshRefusals) {
+          await _sleep(timings.freshPause * (1 << refusedFresh++));
+          continue;
+        }
         return _fail(DownloadEnd.network, detail: '$error');
       } finally {
         client.close(force: true);
@@ -191,12 +297,14 @@ final class HttpDownload {
     }
   }
 
-  /// The body into the `.part`.
-  Future<HttpDownloadOutcome> _write(
+  /// The body into the `.part`: how the attempt ended, or null when the
+  /// provider slowed this connection and a fresh one should go on.
+  Future<HttpDownloadOutcome?> _write(
     File part,
     HttpClientResponse response, {
     required int? total,
     required bool restarted,
+    required bool fresh,
   }) async {
     final expected = response.contentLength;
     final file = await part.open(mode: FileMode.append);
@@ -222,6 +330,13 @@ final class HttpDownload {
 
     final reported = Stopwatch()..start();
     final paced = Stopwatch()..start();
+    // From the answer's headers: a burst that comes in one read still
+    // counts as fast.
+    final pace = ConnectionPace(
+      window: timings.paceWindow,
+      settle: timings.paceSettle,
+    )..add(Duration.zero, 0);
+    var slowed = false;
     // No bytes for [DownloadTimings.idle]: the connection is broken. A
     // check now and then, not a timeout wrapped round every chunk: that
     // cost a fifth of the speed at a gigabyte a second.
@@ -269,6 +384,14 @@ final class HttpDownload {
             quiet.reset();
           }
           if (_stopping) break;
+          if (fresh) {
+            final at = paced.elapsed;
+            pace.add(at, received);
+            if (pace.slowed(at) && _worthFresh(pace, total)) {
+              slowed = true;
+              break;
+            }
+          }
         }
       } on FileSystemException {
         rethrow;
@@ -286,6 +409,12 @@ final class HttpDownload {
     if (playlist) return HttpDownloadOutcome.playlist;
     open();
     if (_stopping) return _halt();
+    _judgeFresh(pace);
+    if (slowed && broke == null) {
+      _emit(DownloadMoved(order.id, bytes: _size, durable: _size));
+      _openFresh(pace);
+      return null;
+    }
     if (broke != null) {
       return _fail(DownloadEnd.network, detail: '$broke');
     }
@@ -295,9 +424,50 @@ final class HttpDownload {
         detail: 'the body ended at $received of $expected bytes',
       );
     }
+    if (_fresh > 0) {
+      _note('Download ${order.id} done after $_fresh fresh connections');
+    }
     _emit(DownloadDone(order.id, bytes: _size, total: total));
     return HttpDownloadOutcome.ended;
   }
+
+  /// Worth a fresh connection: the rest at the slowed pace would take
+  /// longer than a few of the pauses one costs.
+  bool _worthFresh(ConnectionPace pace, int? total) {
+    if (total == null) return true;
+    final left = total - _size;
+    final pause = timings.freshPause.inMicroseconds / 1e6;
+    return pace.recent <= 0 || left / pace.recent > 5 * pause;
+  }
+
+  /// Whether the last fresh connection came faster than the pace that
+  /// made it: two in a row that didn't and no more are opened.
+  void _judgeFresh(ConnectionPace pace) {
+    final slowedAt = _slowedAt;
+    if (slowedAt == null) return;
+    if (pace.best >= slowedAt * 2) {
+      _freshInVain = 0;
+    } else if (++_freshInVain == _freshTries) {
+      _note(
+        'Download ${order.id}: fresh connections come no faster '
+        '(${_mbps(pace.best)} MB/s): it keeps the one it has',
+      );
+    }
+  }
+
+  void _openFresh(ConnectionPace pace) {
+    if (_fresh++ == 0) {
+      _note(
+        'Download ${order.id}: the provider slowed it to '
+        '${_mbps(pace.recent)} MB/s (from ${_mbps(pace.best)}): a fresh '
+        'connection from byte $_size',
+      );
+    }
+    _slowedAt = pace.recent;
+  }
+
+  static String _mbps(double bytesPerSecond) =>
+      (bytesPerSecond / 1e6).toStringAsFixed(2);
 
   Future<HttpDownloadOutcome> _refused(HttpClientResponse response) async {
     final status = response.statusCode;

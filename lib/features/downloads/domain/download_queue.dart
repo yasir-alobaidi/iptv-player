@@ -6,6 +6,7 @@ import 'package:iptv_player/core/downloads/download_runner.dart';
 import 'package:iptv_player/core/downloads/download_service.dart';
 import 'package:iptv_player/core/downloads/download_settings.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
+import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/platform/sleep_inhibitor.dart';
 import 'package:iptv_player/core/result.dart';
@@ -128,6 +129,12 @@ final class DownloadQueue implements DownloadService {
 
   /// Sources whose sign-in the provider refused: paused until resumed.
   final _refused = <String>{};
+
+  /// Sources that refused a download for their connections: nothing else
+  /// starts there until that one tries again, so the queue keeps its
+  /// order (each next download used to be tried and refused in turn, and
+  /// whichever got in first after the wait went first, ADR-054).
+  final _limitedUntil = <String, DateTime>{};
 
   bool _noSpace = false;
   bool _started = false;
@@ -271,6 +278,7 @@ final class DownloadQueue implements DownloadService {
         if (task == null) continue;
         targets.add(target);
         _tasks[task.id] = task;
+        await _placeEpisode(task);
       }
       _onConnections();
       _emit();
@@ -278,11 +286,46 @@ final class DownloadQueue implements DownloadService {
     },
   );
 
+  /// A series' episodes download in their order: a new one goes before
+  /// the first of its series' later episodes not yet running (the user
+  /// added E01–E03 of a series whose E07–E33 were queued, and they came
+  /// last, ADR-054). Anything else joins the end.
+  Future<void> _placeEpisode(DownloadTask added) async {
+    final key = added.seriesKey;
+    final episode = added.episode;
+    if (added.type != VodType.episode || key == null || episode == null) {
+      return;
+    }
+    final place = (added.season ?? 0, episode);
+    final order = current;
+    final before = order.indexWhere(
+      (t) =>
+          t.id != added.id &&
+          t.type == VodType.episode &&
+          t.sourceId == added.sourceId &&
+          t.seriesKey == key &&
+          !t.state.isFinished &&
+          !_runs.containsKey(t.id) &&
+          _comesAfter((t.season ?? 0, t.episode ?? 0), place),
+    );
+    if (before < 0) return;
+    for (final task in await _store.move(added.id, before)) {
+      final known = _tasks[task.id];
+      if (known != null) {
+        _tasks[task.id] = known.copyWith(sortOrder: task.sortOrder);
+      }
+    }
+  }
+
+  static bool _comesAfter((int, int) a, (int, int) b) =>
+      a.$1 > b.$1 || (a.$1 == b.$1 && a.$2 > b.$2);
+
   @override
   Future<void> pause(int taskId) async {
     final task = _tasks[taskId];
     if (task == null || task.state.isFinished) return;
     if (_runs[taskId] case final run?) {
+      _log.info(_tag, 'Download $taskId paused at ${task.downloadedBytes} B');
       await _stopRun(run, _Stop.user);
       return;
     }
@@ -299,6 +342,8 @@ final class DownloadQueue implements DownloadService {
       _refused.remove(task.sourceId);
     }
     if (task.problem == DownloadProblem.noSpace) _noSpace = false;
+    // Asked for: it tries now, whatever the source said last.
+    _limitedUntil.remove(task.sourceId);
     _cancelWait(taskId);
     _update(
       task.copyWith(
@@ -365,11 +410,17 @@ final class DownloadQueue implements DownloadService {
     _pump();
   }
 
+  /// The waiting ones first, then the running ones: a running one
+  /// stopped first let the next in the queue start, only for that one to
+  /// be stopped in its turn, and so on down the queue (ADR-054).
   @override
   Future<void> pauseAll() async {
-    for (final task in current) {
-      if (!task.state.isFinished && task.state != DownloadTaskState.paused) {
-        await pause(task.id);
+    for (final running in [false, true]) {
+      for (final task in current) {
+        if (_runs.containsKey(task.id) != running) continue;
+        if (!task.state.isFinished && task.state != DownloadTaskState.paused) {
+          await pause(task.id);
+        }
       }
     }
   }
@@ -426,6 +477,8 @@ final class DownloadQueue implements DownloadService {
   bool _room(String sourceId) {
     final quiet = _quietUntil[sourceId];
     if (quiet != null && _now().isBefore(quiet)) return false;
+    final limited = _limitedUntil[sourceId];
+    if (limited != null && _now().isBefore(limited)) return false;
     final limit = _limits[sourceId] ?? 1;
     final others = _connections.held(sourceId, except: StreamHolder.download);
     return others + _runsAt(sourceId) < limit;
@@ -506,6 +559,10 @@ final class DownloadQueue implements DownloadService {
         run
           ..started = true
           ..baseBytes = task.downloadedBytes;
+        _log.info(
+          _tag,
+          'Download ${task.id} starts at ${task.downloadedBytes} B',
+        );
         var first = true;
         await _runner.start(
           DownloadOrder(
@@ -736,7 +793,7 @@ final class DownloadQueue implements DownloadService {
       case DownloadEnd.server:
         _networkTrouble(at, DownloadProblem.server, news.detail);
       case DownloadEnd.auth:
-        _refuse(at);
+        _refusedOrBusy(at, news.status);
       case DownloadEnd.notFound || DownloadEnd.unresolved:
         _update(
           at.copyWith(
@@ -753,7 +810,7 @@ final class DownloadQueue implements DownloadService {
           ),
           save: true,
         );
-        _wait(at.id, timings.limitWait);
+        _limitWait(at);
       case DownloadEnd.diskWrite:
         _update(
           at.copyWith(
@@ -796,6 +853,44 @@ final class DownloadQueue implements DownloadService {
       save: true,
     );
     _wait(task.id, waits[math.min(attempts, waits.length) - 1]);
+  }
+
+  /// 401/403 (docs/09): the account message, unless the account answers.
+  /// A panel that allows one connection refuses a second with 401 while
+  /// the first is in use (the user's TV), and every download paused for
+  /// the account then waited for Resume all (ADR-054). Meanwhile it waits
+  /// as for the connection limit.
+  void _refusedOrBusy(DownloadTask task, int? status) {
+    _update(
+      task.copyWith(
+        state: DownloadTaskState.waitingForConnection,
+        problem: DownloadProblem.connectionLimit,
+      ),
+      save: true,
+    );
+    _limitWait(task);
+    unawaited(() async {
+      final refused = await _titles.signInRefused(task.sourceId);
+      final now = _tasks[task.id];
+      if (_closed || now == null) return;
+      if (now.state != DownloadTaskState.waitingForConnection ||
+          now.problem != DownloadProblem.connectionLimit ||
+          _runs.containsKey(now.id)) {
+        return;
+      }
+      if (refused ?? false) {
+        _cancelWait(now.id);
+        _refuse(now);
+        _pump();
+        return;
+      }
+      _log.info(
+        _tag,
+        'Download ${task.id}: the provider said ${status ?? 'no'} while '
+        "its account ${refused == null ? "couldn't be read" : 'answers'}: "
+        'waiting for its connection',
+      );
+    }());
   }
 
   /// 401/403: the source's downloads pause, with the account message.
@@ -862,6 +957,7 @@ final class DownloadQueue implements DownloadService {
           ..sort((a, b) => a.since.compareTo(b.since));
     if (runs.isEmpty) return;
     final newest = runs.last;
+    _log.info(_tag, 'Download ${newest.id} gives way to playback');
     _busy.add(sourceId);
     if (_told.add(sourceId)) {
       _tell(
@@ -916,6 +1012,13 @@ final class DownloadQueue implements DownloadService {
         });
       }
     }
+  }
+
+  /// docs/09's 60 s for the connection limit, the source's other
+  /// downloads held as long.
+  void _limitWait(DownloadTask task) {
+    _limitedUntil[task.sourceId] = _now().add(timings.limitWait);
+    _wait(task.id, timings.limitWait);
   }
 
   void _wait(int taskId, Duration wait) {

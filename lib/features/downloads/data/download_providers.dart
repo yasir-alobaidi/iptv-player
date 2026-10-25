@@ -21,7 +21,9 @@ import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/downloads/data/catalogue_download_titles.dart';
 import 'package:iptv_player/features/downloads/domain/download_ports.dart';
 import 'package:iptv_player/features/downloads/domain/download_queue.dart';
+import 'package:iptv_player/features/playback/data/http_stream_prober.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'download_providers.g.dart';
@@ -108,6 +110,10 @@ DownloadQueue downloadQueue(Ref ref) {
       db,
       ref.watch(streamResolverProvider),
       folder: () => ref.read(downloadFolderProvider.future),
+      signInRefused: (sourceId) async => (await readAccount(
+        ref.read(sourceRepositoryProvider),
+        sourceId,
+      ))?.refused,
     ),
     runner: ref.watch(downloadRunnerProvider),
     finisher: FileDownloadFinisher(

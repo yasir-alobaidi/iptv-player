@@ -61,6 +61,10 @@ final class MemoryStore implements DownloadStore {
       remoteKey: request.remoteKey,
       title: request.title,
       year: request.year,
+      seriesKey: request.seriesKey,
+      showTitle: request.showTitle,
+      season: request.season,
+      episode: request.episode,
       targetPath: targetPath,
       state: DownloadTaskState.queued,
       downloadedBytes: 0,
@@ -95,6 +99,19 @@ final class ScriptedTitles implements DownloadTitles {
   int maxConnections = 1;
   final answers = <String, DownloadSourceAnswer>{};
   final inLibrary = <String>{};
+
+  /// What the account says after a refusal; held while [accountWait] is
+  /// set.
+  bool? refusesSignIn = false;
+  Completer<void>? accountWait;
+  final accountAsked = <String>[];
+
+  @override
+  Future<bool?> signInRefused(String sourceId) async {
+    accountAsked.add(sourceId);
+    await accountWait?.future;
+    return refusesSignIn;
+  }
 
   @override
   Future<DownloadSourceAnswer> source(DownloadTask task) async =>

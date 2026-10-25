@@ -114,6 +114,7 @@ class FakeFaults {
     this.ignoreRange = false,
     this.dropAfterBytes,
     this.throttleKbps,
+    this.burstKb,
     this.seekDelayMs,
     this.changeEtag = false,
     this.wrongContentLength = false,
@@ -153,6 +154,7 @@ class FakeFaults {
       ignoreRange: asBool('ignore_range'),
       dropAfterBytes: asInt('drop_after_bytes'),
       throttleKbps: asInt('throttle_kbps'),
+      burstKb: asInt('burst_kb'),
       seekDelayMs: asInt('seek_delay_ms'),
       changeEtag: asBool('change_etag'),
       wrongContentLength: asBool('wrong_content_length'),
@@ -179,6 +181,12 @@ class FakeFaults {
   final bool ignoreRange;
   final int? dropAfterBytes;
   final int? throttleKbps;
+
+  /// Each answer's first this many KiB go at full speed, and only the rest
+  /// at `throttle_kbps`: the user's panel sends a download's first seconds
+  /// at ~3 MB/s, then holds it to about twice the video's bitrate, on every
+  /// new connection (ADR-054).
+  final int? burstKb;
 
   /// A range that starts past a file's first byte (a player's seek, or a
   /// resume's) is answered this much later: a panel slow to let a seek in
@@ -229,6 +237,7 @@ class FakeFaults {
     'ignore_range': ignoreRange,
     'drop_after_bytes': dropAfterBytes,
     'throttle_kbps': throttleKbps,
+    'burst_kb': burstKb,
     'seek_delay_ms': seekDelayMs,
     'change_etag': changeEtag,
     'wrong_content_length': wrongContentLength,

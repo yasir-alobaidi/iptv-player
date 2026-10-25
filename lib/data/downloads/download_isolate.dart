@@ -157,6 +157,7 @@ Future<void> downloadIsolateMain(DownloadIsolateSetup setup) async {
         () => upstreamOf(order.id),
         app.send,
         timings: setup.timings,
+        note: (line) => log.info('downloads', line),
       );
       attempt.current = http.stop;
       final outcome = await http.run();

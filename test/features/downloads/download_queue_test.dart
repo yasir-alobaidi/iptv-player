@@ -15,6 +15,19 @@ import 'package:logger/logger.dart';
 
 import 'support/queue_doubles.dart';
 
+DownloadRequest episode(int number, {String series = 'S1', int season = 1}) =>
+    DownloadRequest(
+      sourceId: 'src',
+      type: VodType.episode,
+      remoteKey: '$series-$season-$number',
+      title: 'Episode $number',
+      seriesKey: series,
+      showTitle: 'Show $series',
+      season: season,
+      episode: number,
+      extension: 'mp4',
+    );
+
 DownloadRequest movie(String key, {String source = 'src', String? title}) =>
     DownloadRequest(
       sourceId: source,
@@ -301,7 +314,9 @@ void main() {
       async.elapse(const Duration(seconds: 2));
       expect(r.runner.started.where((o) => o.id == b), hasLength(starts + 1));
 
+      r.titles.refusesSignIn = true;
       r.say(DownloadFailedNews(c, DownloadEnd.auth, bytes: 0, status: 401));
+      expect(r.titles.accountAsked, ['src']);
       expect(r.state(c), DownloadTaskState.paused);
       expect(r.task(c).problem, DownloadProblem.auth);
       expect(r.runner.stopped, contains(b), reason: "the source's others");
@@ -321,6 +336,73 @@ void main() {
       unawaited(r.queue.resume(c));
       r.settle();
       expect(r.state(c), DownloadTaskState.connecting);
+    });
+  });
+
+  test('a 401 while the account answers is the connection in use '
+      "(the user's TV): it waits 60 s and tries again; nothing pauses", () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1'), movie('2')]);
+      final [a, b] = [for (final t in r.latest) t.id];
+      r.titles.accountWait = Completer<void>();
+      r.say(DownloadFailedNews(a, DownloadEnd.auth, bytes: 500, status: 401));
+      expect(r.state(a), DownloadTaskState.waitingForConnection);
+      expect(r.runner.started.map((o) => o.id), [a], reason: 'not again yet');
+      r.titles.accountWait!.complete();
+      r.settle();
+      expect(r.state(a), DownloadTaskState.waitingForConnection);
+      expect(r.task(a).problem, DownloadProblem.connectionLimit);
+      expect(r.state(b), DownloadTaskState.queued, reason: 'held, in order');
+      expect(r.notices.whereType<DownloadsAccountRefused>(), isEmpty);
+      async.elapse(const Duration(seconds: 61));
+      expect(r.runner.started.map((o) => o.id), [a, a]);
+
+      // Unknown (the panel's API down too): the same.
+      r
+        ..titles.refusesSignIn = null
+        ..say(DownloadFailedNews(a, DownloadEnd.auth, bytes: 500, status: 401));
+      expect(r.state(a), DownloadTaskState.waitingForConnection);
+      expect(r.notices.whereType<DownloadsAccountRefused>(), isEmpty);
+    });
+  });
+
+  test('the connection limit holds the queue in its order: the next one '
+      'is not tried meanwhile, and the refused one goes first after 60 s', () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1'), movie('2'), movie('3')]);
+      final [a, b, _] = [for (final t in r.latest) t.id];
+      r.say(DownloadFailedNews(a, DownloadEnd.connectionLimit, bytes: 0));
+      async.elapse(const Duration(seconds: 59));
+      expect(r.runner.started.map((o) => o.id), [a]);
+      expect(r.state(b), DownloadTaskState.queued);
+      async.elapse(const Duration(seconds: 2));
+      expect(r.runner.started.map((o) => o.id), [a, a]);
+
+      // Resume on one asks now.
+      r.say(DownloadFailedNews(a, DownloadEnd.connectionLimit, bytes: 0));
+      unawaited(r.queue.pause(a));
+      r.settle();
+      expect(r.runner.started.map((o) => o.id), [a, a], reason: 'still held');
+      unawaited(r.queue.resume(b));
+      r.settle();
+      expect(r.runner.started.last.id, b);
+    });
+  });
+
+  test('a refusal checked while the user pauses it: the pause stands', () {
+    fakeAsync((async) {
+      final r = rig(async)..enqueue([movie('1')]);
+      final a = r.latest.single.id;
+      r
+        ..titles.accountWait = Completer<void>()
+        ..titles.refusesSignIn = true
+        ..say(DownloadFailedNews(a, DownloadEnd.auth, bytes: 0, status: 401));
+      unawaited(r.queue.pause(a));
+      r.settle();
+      r.titles.accountWait!.complete();
+      r.settle();
+      expect(r.state(a), DownloadTaskState.paused);
+      expect(r.notices.whereType<DownloadsAccountRefused>(), isEmpty);
     });
   });
 
@@ -443,6 +525,57 @@ void main() {
       r.settle();
       expect(r.state(a), DownloadTaskState.connecting);
       expect(r.state(b), DownloadTaskState.queued);
+    });
+  });
+
+  test('pause all with a runner that stops at once: what waited never '
+      'starts', () {
+    fakeAsync((async) {
+      final r = rig(async)
+        ..runner.haltOnStop = true
+        ..enqueue([movie('1'), movie('2'), movie('3')]);
+      final ids = [for (final t in r.latest) t.id];
+      unawaited(r.queue.pauseAll());
+      r.settle();
+      expect(r.runner.started.map((o) => o.id), [ids.first]);
+      expect(ids.map(r.state), everyElement(DownloadTaskState.paused));
+    });
+  });
+
+  test("a series' episodes in their order: ones added later go before its "
+      'later episodes not running; other titles join the end', () {
+    fakeAsync((async) {
+      final r = rig(async)
+        ..enqueue([for (var n = 7; n <= 10; n++) episode(n)])
+        ..enqueue([movie('m')]);
+      final e7 = r.latest.first.id;
+      expect(r.runner.started.single.id, e7);
+      r.enqueue([episode(1), episode(2), episode(3), episode(1, series: 'S2')]);
+      List<String> names() => [
+        for (final t in r.latest)
+          if (t.type == VodType.episode)
+            '${t.seriesKey} E${t.episode}'
+          else
+            'movie',
+      ];
+      expect(names(), [
+        'S1 E7',
+        'S1 E1',
+        'S1 E2',
+        'S1 E3',
+        'S1 E8',
+        'S1 E9',
+        'S1 E10',
+        'movie',
+        'S2 E1',
+      ]);
+      // E7 goes on; E1 is next.
+      r.say(DownloadDone(e7, bytes: 1, total: 1));
+      expect(r.task(r.runner.started.last.id).episode, 1);
+
+      // A later season's episode goes after the earlier season's.
+      r.enqueue([episode(2, season: 2)]);
+      expect(names().last, 'S1 E2');
     });
   });
 

@@ -16,11 +16,21 @@ import 'package:path/path.dart' as p;
 /// title's row and its source by the [StreamResolver], as playback's is
 /// (docs/09: never stored).
 final class CatalogueDownloadTitles implements DownloadTitles {
-  new(this._db, this._resolver, {required this._folder});
+  new(this._db, this._resolver, {required this._folder, this._signInRefused});
 
   final AppDatabase _db;
   final StreamResolver _resolver;
   final Future<String> Function() _folder;
+  final Future<bool?> Function(String sourceId)? _signInRefused;
+
+  @override
+  Future<bool?> signInRefused(String sourceId) async {
+    try {
+      return await _signInRefused?.call(sourceId);
+    } on Object {
+      return null;
+    }
+  }
 
   @override
   Future<String> folder() => _folder();

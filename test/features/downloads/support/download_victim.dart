@@ -80,6 +80,9 @@ final class _Titles implements DownloadTitles {
 
   @override
   Future<bool> downloaded(DownloadRequest request) async => false;
+
+  @override
+  Future<bool?> signInRefused(String sourceId) async => false;
 }
 
 final class _NeverFinished implements DownloadFinisher {

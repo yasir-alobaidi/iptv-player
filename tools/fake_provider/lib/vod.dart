@@ -14,8 +14,9 @@
 /// Faults (`/admin/faults` or the query): `http_status`, `slow_start_ms`,
 /// `ignore_range` (every answer is the whole file), `drop_after_bytes` (the
 /// connection closes once a body passes that byte of the file, so a request
-/// starting past it gets through), `throttle_kbps` and `seek_delay_ms` (a
-/// range starting past the first byte waits that long); for downloads
+/// starting past it gets through), `throttle_kbps` (after each answer's
+/// first `burst_kb` KiB, if set) and `seek_delay_ms` (a range starting
+/// past the first byte waits that long); for downloads
 /// (Phase 8) `change_etag` (new validators on every answer, so `If-Range`
 /// never matches), `wrong_content_length` (a Content-Length 4 KiB past the
 /// body), `size_mb` (the file padded to that many MiB with
@@ -302,8 +303,8 @@ class VodRelay {
   }
 
   /// The file from [start] to [endExclusive] — past [sampleSize], the
-  /// padding — paced by `throttle_kbps` and ending early where
-  /// `drop_after_bytes` says.
+  /// padding — paced by `throttle_kbps` past its first `burst_kb` KiB and
+  /// ending early where `drop_after_bytes` says.
   Stream<List<int>> _bytes(
     File file,
     int sampleSize,
@@ -328,10 +329,18 @@ class VodRelay {
     }
     final clock = Stopwatch()..start();
     final piece = math.max(512, bytesPerSecond ~/ 20);
+    var burst = (faults.burstKb ?? 0) * 1024;
     var sent = 0;
     await for (final chunk in content) {
       for (var at = 0; at < chunk.length; at += piece) {
         final part = chunk.sublist(at, math.min(chunk.length, at + piece));
+        if (burst > 0) {
+          // Unpaced; the pace starts counting where the burst ends.
+          burst -= part.length;
+          clock.reset();
+          yield part;
+          continue;
+        }
         sent += part.length;
         final due = Duration(microseconds: sent * 1000000 ~/ bytesPerSecond);
         final wait = due - clock.elapsed;
