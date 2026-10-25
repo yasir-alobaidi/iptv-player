@@ -227,13 +227,20 @@ void main() {
       // ── mpv's own picks are the ones ticked: its sound, and the English
       // file Preferred subtitles asked for (ADR-041: mpv 0.34 knows no
       // language for a file beside the video; the engine reads its name).
-      final audio = (await tester.runAsync(() => engine.mpvProperty('aid')))!;
-      expect(audio, isNot('no'));
-      await _until(
-        tester,
-        () => tracks()?.audioId == audio,
-        "mpv's sound ticked (${tracks()?.audioId} for $audio)",
-      );
+      // With no sound device (CI's runner) mpv plays no sound track at all
+      // (`aid` no), and there is none to tick.
+      final output = (await tester.runAsync(
+        () => engine.mpvProperty('current-ao'),
+      ))!;
+      if (output.isNotEmpty) {
+        final audio = (await tester.runAsync(() => engine.mpvProperty('aid')))!;
+        expect(audio, isNot('no'));
+        await _until(
+          tester,
+          () => tracks()?.audioId == audio,
+          "mpv's sound ticked (${tracks()?.audioId} for $audio)",
+        );
+      }
       String? englishId() => tracks()?.subtitles
           .where((t) => t.title?.contains('.en.') ?? false)
           .firstOrNull
