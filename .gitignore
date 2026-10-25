@@ -22,6 +22,10 @@ pubspec_overrides.yaml
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+*.keystore
+
+# Release files made by tools/package_linux.sh and the release workflow
+/dist/
 
 # Golden test failure output
 **/test/**/failures/
