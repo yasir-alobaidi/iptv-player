@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tools/brand/make_icons.py: under the cover's layer, which
+     covers it (the dark look's background, AppColors.bg). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FF0A0C10" />
+</shape>

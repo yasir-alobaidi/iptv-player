@@ -40,6 +40,11 @@ val dartDefines: Map<String, String> =
 // installed beside the stable Bijou.
 val betaChannel: Boolean = dartDefines["BIJOU_CHANNEL"] == "beta"
 
+// The icon outside the app: Bijou's jewel (ADR-057), or with
+// `--dart-define=BIJOU_ICON=cover` the cover photo (the Living Room's
+// "FAISAL TV"; tools/tv_apk.sh stable cover). Beta always has its own.
+val coverIcon: Boolean = dartDefines["BIJOU_ICON"] == "cover"
+
 // The picture's own layer (T1, ADR-035 §1): in every build since the
 // Bedroom TV's go; `--dart-define=BIJOU_VIDEO_LAYER=off` builds the texture
 // instead, `=clear` the layer with no window background. Dart reads the same.
@@ -86,12 +91,23 @@ android {
         // About reads "Bijou 0.1.0-beta (build 245)" in the beta.
         versionNameSuffix = if (betaChannel) "-beta" else null
         manifestPlaceholders["appLabel"] = if (betaChannel) "Bijou Beta" else "Bijou"
-        // The cover with a BETA pill, so the two apps' circles differ on
-        // the TV (tools/brand/make_icons.py, ADR-041).
-        val icons = if (betaChannel) "ic_launcher_beta" else "ic_launcher"
+        // The jewel, Beta's with a BETA pill so the two apps' circles
+        // differ on the TV, or the cover (tools/brand/make_icons.py,
+        // ADR-057).
+        val icons =
+            when {
+                betaChannel -> "ic_launcher_beta"
+                coverIcon -> "ic_launcher_cover"
+                else -> "ic_launcher"
+            }
         manifestPlaceholders["appIcon"] = "@mipmap/$icons"
         manifestPlaceholders["appRoundIcon"] = "@mipmap/${icons}_round"
-        manifestPlaceholders["appBanner"] = if (betaChannel) "@drawable/banner_beta" else "@drawable/banner"
+        manifestPlaceholders["appBanner"] =
+            when {
+                betaChannel -> "@drawable/banner_beta"
+                coverIcon -> "@drawable/banner_cover"
+                else -> "@drawable/banner"
+            }
         buildConfigField(
             "boolean",
             "VIDEO_LAYER",

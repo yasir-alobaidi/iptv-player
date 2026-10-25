@@ -7,30 +7,36 @@ default accent's tile. Smaller, they merge: one band along each edge
 under 64 px, the triangle alone under 32 px (JewelPainter and
 JewelDetail in lib/design/components/app_mark.dart draw the same).
 
-Inside the app the jewel is Bijou's mark. Outside it, every icon is the
-cover photo, design/brand/faisal.jpeg (the user: "I want it to be the
-cover image of the app on the PC and the tv from outside only not inside
-the app"; ADR-041), its head framed in a circle (COVER_MIDDLE,
+The jewel is Bijou's mark inside the app and outside it: the launcher,
+the dock, the taskbar, the TV's circle and banner (the user, giving
+Bijou to others: "I need it with the original name Bijou and also with
+the original gerated blue logo"; ADR-057). The cover photo,
+design/brand/faisal.jpeg, stays as a TV build's icon on request
+(`--dart-define=BIJOU_ICON=cover`, the Living Room's "FAISAL TV"; ADR-041
+had it everywhere outside), its head framed in a circle (COVER_MIDDLE,
 COVER_DIAMETER).
 
 Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
-- the jewel: design/brand/bijou_icon.svg (the master), bijou_icon_1024.png
-  and bijou_sizes.png (a look at every size), and the Android launch
-  splash's mark (drawable-<density>/splash_mark.png, 240 dp: Android 12
-  and up would show the launcher's icon there);
-- the cover: linux/packaging/icons/hicolor/<n>x<n>/apps/<app id>.png
-  (the desktop entry's icon, round), windows/runner/resources/
-  app_icon.ico (16 to 256 px, round);
-- for Android (Bijou, and Bijou Beta's with its BETA pill,
-  `ic_launcher_beta*`, `banner_beta`): mipmap-<density>/ic_launcher.png
-  and ic_launcher_round.png (48 to 192 px, round; Android before 8), the
-  adaptive icon Android 8 and up draws, and what Google TV's "Your apps"
-  row shows, in a circle (ADR-028): mipmap-anydpi-v26/ic_launcher.xml and
-  ic_launcher_round.xml, a dark background (drawable/
-  ic_launcher_background.xml) under the photo's 108 dp layer
-  (mipmap-<density>/ic_launcher_foreground.png), the head in its middle
-  66 dp; and drawable-xhdpi/banner.png, the 320 x 180 banner a leanback
-  launcher's app cards show (the photo edge to edge).
+- design/brand/bijou_icon.svg (the master), bijou_icon_1024.png and
+  bijou_sizes.png (a look at every size);
+- linux/packaging/icons/hicolor/<n>x<n>/apps/<app id>.png and
+  scalable/apps/<app id>.svg (the desktop entry's icon);
+- windows/runner/resources/app_icon.ico (16 to 256 px);
+- for Android, three sets the build picks from (`appIcon`, `appBanner`
+  in android/app/build.gradle.kts): Bijou's (`ic_launcher*`, `banner`),
+  Bijou Beta's with an amber BETA pill (`ic_launcher_beta*`,
+  `banner_beta`), and the cover's (`ic_launcher_cover*`, `banner_cover`).
+  Each: mipmap-<density>/<name>.png and <name>_round.png (48 to 192 px,
+  round; Android before 8); the adaptive icon Android 8 and up draws, and
+  what Google TV's "Your apps" row shows, in a circle (ADR-028):
+  mipmap-anydpi-v26/<name>.xml and <name>_round.xml over a background
+  (the accent's gradient under the jewel, drawable/
+  ic_launcher_background.xml; dark under the photo,
+  ic_launcher_cover_background.xml) and a 108 dp layer (mipmap-<density>/
+  <name>_foreground.png); and drawable-xhdpi/<banner>.png, the 320 x 180
+  banner a leanback launcher's app cards show;
+- the Android launch splash's mark (drawable-<density>/splash_mark.png,
+  240 dp: Android 12 and up would show the launcher's icon there).
 
 Needs Pillow; nothing else. Re-run it after changing the drawing or the
 photo.
@@ -191,8 +197,9 @@ SPLASH_ICONS = {"mdpi": 240, "hdpi": 360, "xhdpi": 480, "xxhdpi": 720, "xxxhdpi"
 
 def foreground(n):
     """The jewel alone at [n] px, sized as an adaptive icon's 108 dp
-    layer: the tile's 896 units scaled to the 72 dp a mask shows (the
-    launch splash's mark)."""
+    layer: the tile's 896 units scaled to the 72 dp a mask shows, so the
+    round icon reads as the square one does (the adaptive icon's layer,
+    and the launch splash's mark)."""
     canvas = round(n * VISIBLE_DP / LAYER_DP * 1024 / (TILE[2] - TILE[0]))
     jewel = draw(canvas, tile=False)
     layer = Image.new("RGBA", (n, n), (0, 0, 0, 0))
@@ -200,16 +207,67 @@ def foreground(n):
     return layer
 
 
+def jewel_layer(n, beta=False):
+    """The adaptive icon's foreground at [n] px: the jewel, and Beta's
+    pill inside the circle a launcher shows."""
+    layer = foreground(n)
+    if beta:
+        side = round(n * VISIBLE_DP / LAYER_DP)
+        o = (n - side) // 2
+        middle = layer.crop((o, o, o + side, o + side))
+        beta_pill(middle)
+        layer.paste(middle, (o, o))
+    return layer
+
+
+def tile_icon(n, beta=False):
+    """The square icon before Android 8 ([draw]'s tile), with Beta's pill."""
+    icon = draw(n * 4)
+    if beta:
+        beta_pill(icon)
+    return icon.resize((n, n), Image.LANCZOS)
+
+
+def round_icon(n, beta=False):
+    """The round icon before Android 8 (no adaptive icons there): the
+    adaptive one as a launcher masks it, drawn at [n] px."""
+    k = 4
+    layer = round(n * k * LAYER_DP / VISIBLE_DP)
+    icon = gradient(layer, layer).convert("RGBA")
+    icon.alpha_composite(foreground(layer))
+    o = (layer - n * k) // 2
+    icon = icon.crop((o, o, o + n * k, o + n * k))
+    if beta:
+        beta_pill(icon)
+    mask = Image.new("L", icon.size, 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, n * k - 1, n * k - 1], fill=255)
+    out = Image.new("RGBA", icon.size, (0, 0, 0, 0))
+    out.paste(icon, (0, 0), mask)
+    return out.resize((n, n), Image.LANCZOS)
+
+
 ADAPTIVE = """<?xml version="1.0" encoding="utf-8"?>
-<!-- Written by tools/brand/make_icons.py: the cover, masked by the
-     launcher (round on Google TV). -->
+<!-- Written by tools/brand/make_icons.py: %s, masked by the launcher
+     (round on Google TV). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <background android:drawable="@drawable/%s" />
+    <foreground android:drawable="@mipmap/%s_foreground" />
 </adaptive-icon>
 """
 
 BACKGROUND = """<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tools/brand/make_icons.py: the accent's gradient, from the
+     top left to its deep shade (the tile's). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:endColor="#%02X%02X%02X"
+        android:startColor="#%02X%02X%02X" />
+</shape>
+""" % (DEEP + ACCENT)
+
+COVER_BACKGROUND = """<?xml version="1.0" encoding="utf-8"?>
 <!-- Written by tools/brand/make_icons.py: under the cover's layer, which
      covers it (the dark look's background, AppColors.bg). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
@@ -217,6 +275,53 @@ BACKGROUND = """<?xml version="1.0" encoding="utf-8"?>
     <solid android:color="#FF0A0C10" />
 </shape>
 """
+
+# The banner's ground: the dark look's background (AppColors.bg) lifted
+# a little at the top, so the card stands off Google TV's dark home.
+BANNER_TOP = (0x1A, 0x20, 0x2C)
+BANNER_BOTTOM = (0x0A, 0x0C, 0x10)
+
+
+def banner(beta=False):
+    """The 320 x 180 banner a leanback launcher's app cards show (Google
+    TV's "Your apps" row shows the adaptive icon in a circle instead,
+    ADR-028): the round icon and the name, white, centred as one on the
+    dark background, edge to edge (the launcher rounds the card's
+    corners)."""
+    k = 4
+    w, h = BANNER[0] * k, BANNER[1] * k
+    image = Image.new("RGBA", (w, h))
+    d = ImageDraw.Draw(image)
+    for y in range(h):
+        d.line([(0, y), (w, y)], fill=mix(BANNER_TOP, BANNER_BOTTOM, y / (h - 1)))
+    name = "Bijou Beta" if beta else "Bijou"
+    # Bijou's sizes; a longer name shrinks the badge and the name together
+    # until the two fit with a margin each side.
+    scale = 1.0
+    while True:
+        badge_side = round(112 * k * scale)
+        font = ImageFont.truetype(_font_path(), round(50 * k * scale))
+        font.set_variation_by_axes([700])
+        text_left, _, text_right, _ = d.textbbox((0, 0), name, font=font, anchor="ls")
+        gap = round(20 * k * scale)
+        group = badge_side + gap + (text_right - text_left)
+        if group <= w * 0.84 or scale < 0.5:
+            break
+        scale *= 0.95
+    badge = round_icon(badge_side, beta=beta)
+    _, cap_top, _, _ = d.textbbox((0, 0), "B", font=font, anchor="ls")
+    x = (w - group) / 2
+    middle = h / 2
+    image.alpha_composite(badge, (round(x), round(middle - badge.height / 2)))
+    # The capitals' middle on the circle's.
+    d.text(
+        (x + badge.width + gap - text_left, middle - cap_top / 2),
+        name,
+        font=font,
+        fill=WHITE,
+        anchor="ls",
+    )
+    return image.resize(BANNER, Image.LANCZOS)
 
 
 # The cover (the user: "I want it to be the cover image of the app on the
@@ -383,19 +488,15 @@ def main():
         x += n + 40
     sheet.save(out("design", "brand", "bijou_sizes.png"))
 
-    # Outside: the cover.
-    photo = cover_photo(root)
+    # Outside: the jewel too (ADR-057).
     hicolor = ("linux", "packaging", "icons", "hicolor")
-    # A scalable icon would win over the photo's sizes.
-    old = os.path.join(root, *hicolor, "scalable", "apps", f"{APP_ID}.svg")
-    if os.path.exists(old):
-        os.remove(old)
+    write(svg(), *hicolor, "scalable", "apps", f"{APP_ID}.svg")
     for n in [16, 24, 32, 48, 64, 128, 256, 512]:
-        cover_round(photo, n).save(out(*hicolor, f"{n}x{n}", "apps", f"{APP_ID}.png"))
+        draw(n).save(out(*hicolor, f"{n}x{n}", "apps", f"{APP_ID}.png"))
 
     ico = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
     # Pillow writes each size from the frame given for it.
-    frames = {n: cover_round(photo, n) for n in ico}
+    frames = {n: draw(n) for n in ico}
     frames[256].save(
         out("windows", "runner", "resources", "app_icon.ico"),
         sizes=[(n, n) for n in ico],
@@ -403,21 +504,37 @@ def main():
     )
 
     res = ("android", "app", "src", "main", "res")
-    for beta, name in [(False, "ic_launcher"), (True, "ic_launcher_beta")]:
+
+    def android_set(name, background, layer, square_one, round_one, banner_image, banner_name, what):
         for density, n in ANDROID_ICONS.items():
-            icon = cover_round(photo, n, beta=beta)
-            icon.save(out(*res, f"mipmap-{density}", f"{name}.png"))
-            icon.save(out(*res, f"mipmap-{density}", f"{name}_round.png"))
+            square_one(n).save(out(*res, f"mipmap-{density}", f"{name}.png"))
+            round_one(n).save(out(*res, f"mipmap-{density}", f"{name}_round.png"))
         for density, n in ANDROID_LAYERS.items():
-            cover_layer(photo, n, beta=beta).save(
-                out(*res, f"mipmap-{density}", f"{name}_foreground.png")
-            )
-        adaptive = ADAPTIVE.replace("ic_launcher_foreground", f"{name}_foreground")
+            layer(n).save(out(*res, f"mipmap-{density}", f"{name}_foreground.png"))
+        adaptive = ADAPTIVE % (what, background, name)
         for suffix in ["", "_round"]:
             write(adaptive, *res, "mipmap-anydpi-v26", f"{name}{suffix}.xml")
+        banner_image.save(out(*res, "drawable-xhdpi", f"{banner_name}.png"))
+
     write(BACKGROUND, *res, "drawable", "ic_launcher_background.xml")
-    cover_banner(photo).save(out(*res, "drawable-xhdpi", "banner.png"))
-    cover_banner(photo, beta=True).save(out(*res, "drawable-xhdpi", "banner_beta.png"))
+    write(COVER_BACKGROUND, *res, "drawable", "ic_launcher_cover_background.xml")
+    android_set(
+        "ic_launcher", "ic_launcher_background", jewel_layer, draw, round_icon,
+        banner(), "banner", "Bijou's jewel",
+    )
+    android_set(
+        "ic_launcher_beta", "ic_launcher_background",
+        lambda n: jewel_layer(n, beta=True), lambda n: tile_icon(n, beta=True),
+        lambda n: round_icon(n, beta=True),
+        banner(beta=True), "banner_beta", "Bijou Beta's jewel and pill",
+    )
+    photo = cover_photo(root)
+    android_set(
+        "ic_launcher_cover", "ic_launcher_cover_background",
+        lambda n: cover_layer(photo, n), lambda n: cover_round(photo, n),
+        lambda n: cover_round(photo, n),
+        cover_banner(photo), "banner_cover", "the cover",
+    )
 
     # The launch splash (Android 12 and up draws the launcher's icon
     # unless told otherwise): the jewel, on the accent's circle.

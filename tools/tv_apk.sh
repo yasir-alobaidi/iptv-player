@@ -9,6 +9,9 @@
 #   texture      --dart-define=BIJOU_VIDEO_LAYER=off: the picture on
 #                Flutter's texture, as before T1 (to compare, or fall back)
 #   layer-clear  the layer, the window with no background of its own
+#   cover        the cover photo as the icon, not the jewel (the Living
+#                Room's "FAISAL TV", ADR-057; change its label by hand)
+# To hand out (32- and 64-bit, dist/Bijou-TV.apk): tools/dist_apk.sh.
 # Install: adb -s <tv> install -r build/tv/bijou-<channel>-<build>.apk
 # Run nothing else with flutter in this checkout while it builds, and stop
 # Gradle afterwards (docs/setup.md; the laptop's memory).
@@ -22,7 +25,7 @@ case $channel in
   stable) defines=() ;;
   beta) defines=(--dart-define=BIJOU_CHANNEL=beta) ;;
   *)
-    echo "usage: $0 stable|beta [texture|layer-clear]" >&2
+    echo "usage: $0 stable|beta [texture|layer-clear|cover]" >&2
     exit 2
     ;;
 esac
@@ -31,8 +34,9 @@ case $trial in
   layer) trial= ;; # the default since ADR-035's go; kept for old notes
   texture) defines+=(--dart-define=BIJOU_VIDEO_LAYER=off) ;;
   layer-clear) defines+=(--dart-define=BIJOU_VIDEO_LAYER=clear) ;;
+  cover) defines+=(--dart-define=BIJOU_ICON=cover) ;;
   *)
-    echo "usage: $0 stable|beta [texture|layer-clear]" >&2
+    echo "usage: $0 stable|beta [texture|layer-clear|cover]" >&2
     exit 2
     ;;
 esac
