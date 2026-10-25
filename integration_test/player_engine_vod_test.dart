@@ -17,6 +17,7 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/data/player_mediakit/media_kit_player_engine.dart';
+import 'package:logger/logger.dart' show MemoryOutput;
 
 import 'support/fake_panel.dart';
 import 'support/keyboard.dart';
@@ -34,14 +35,17 @@ void main() {
         () => FakePanel.start(streams: true),
       ))!;
       addTearDown(() => tester.runAsync(panel.stop));
+      final logged = MemoryOutput();
       final engine = (await tester.runAsync(
         () => MediaKitPlayerEngine.create(
-          log: AppLog(output: SilentOutput(), secrets: SecretRegistry()),
+          log: AppLog(output: logged, secrets: SecretRegistry()),
           secrets: SecretRegistry(),
           video: video,
         ),
       ))!;
       addTearDown(() => tester.runAsync(engine.dispose));
+      // Muted: the sound still goes through the system's output, unheard.
+      await tester.runAsync(() => engine.setMuted(muted: true));
       final events = <PlayerEvent>[];
       final subscription = engine.events.listen(events.add);
       addTearDown(subscription.cancel);
@@ -85,6 +89,7 @@ void main() {
       expect(length, greaterThan(const Duration(seconds: 60)));
 
       // ── Pause and play, reported back; the position holds while paused.
+      final playing = position();
       events.clear();
       await tester.runAsync(() => engine.setPaused(paused: true));
       await _until(
@@ -107,6 +112,18 @@ void main() {
         tester,
         () => events.whereType<PlayerPaused>().any((e) => !e.paused),
         'playing reported',
+      );
+      // Paused over a second: the sound starts afresh with the picture,
+      // from where it stood (ADR-054), and plays on from there.
+      await _until(
+        tester,
+        () => position() > playing + const Duration(seconds: 1),
+        'playing on after the resume',
+      );
+      expect(position(), lessThan(playing + const Duration(seconds: 3)));
+      expect(
+        logged.buffer.map((e) => e.lines.join()),
+        contains(contains('Resumed after')),
       );
 
       // ── A seek near the end, then the end of the file.
@@ -168,6 +185,8 @@ void main() {
         ),
       ))!;
       addTearDown(() => tester.runAsync(engine.dispose));
+      // Muted: the sound still goes through the system's output, unheard.
+      await tester.runAsync(() => engine.setMuted(muted: true));
       final events = <PlayerEvent>[];
       final subscription = engine.events.listen(events.add);
       addTearDown(subscription.cancel);
@@ -351,6 +370,8 @@ void main() {
           ),
         ))!;
         addTearDown(() => tester.runAsync(engine.dispose));
+        // Muted: the sound still goes through the system's output, unheard.
+        await tester.runAsync(() => engine.setMuted(muted: true));
         final events = <(Duration, PlayerEvent)>[];
         final watch = Stopwatch();
         final subscription = engine.events.listen(

@@ -149,6 +149,19 @@ bool seekPlaysAgain({
       past <= const Duration(seconds: 2);
 }
 
+/// Whether a resume first seeks to where the picture stands (ADR-054): a
+/// film or a file that has played and stood paused [pausedFor] a second
+/// or more; not a live channel, which plays on from what it has. mpv's
+/// audio clock can come back off after a pause (PulseAudio, which also
+/// sends a quiet output to sleep after 5 s), and the picture then follows
+/// a sound that is late or early until a seek: the user's own way out
+/// was a seek. Exposed for tests.
+bool resyncsOnResume({
+  required bool started,
+  required bool live,
+  required Duration pausedFor,
+}) => started && !live && pausedFor >= const Duration(seconds: 1);
+
 /// The mpv options [MediaKitPlayerEngine] sets for [request], in order:
 /// the preset, then what varies per stream. Exposed for tests.
 ///
@@ -434,6 +447,11 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   bool _seeking = false;
   bool _paused = false;
 
+  /// How long the file has stood paused, and whether it is a channel:
+  /// [resyncsOnResume].
+  final _pausedFor = Stopwatch();
+  bool _live = false;
+
   /// The seek asked for last, until it plays again: logged with how long
   /// that took, and how far ahead was buffered when it was asked.
   ({Stopwatch took, Duration from, Duration to, Duration ahead})? _seekAsked;
@@ -504,7 +522,14 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       _paused = value == 'yes';
       // A paused file's clock stands still: a seek's time to play again
       // would be the pause's.
-      if (_paused) _seekAsked = null;
+      if (_paused) {
+        _seekAsked = null;
+        _pausedFor
+          ..reset()
+          ..start();
+      } else {
+        _pausedFor.stop();
+      }
       if (_open && _started) _emit(PlayerPaused(paused: value == 'yes'));
       if (_layerShown) unawaited(_layer?.keepAwake(awake: value != 'yes'));
     });
@@ -636,6 +661,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     _buffered = Duration.zero;
     _subtitleLanguages = request.subtitleLanguages;
     _video = request.url;
+    _live = request.live;
     _resetBuffering();
     _sinceOpen
       ..reset()
@@ -1042,8 +1068,35 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   // Straight to mpv: media_kit's own play() and pause() wait for the
   // video controller's first texture.
   @override
-  Future<void> setPaused({required bool paused}) =>
-      _set('pause', paused ? 'yes' : 'no');
+  Future<void> setPaused({required bool paused}) async {
+    if (!paused &&
+        _paused &&
+        resyncsOnResume(
+          started: _open && _started,
+          live: _live,
+          pausedFor: _pausedFor.elapsed,
+        )) {
+      await _resync();
+    }
+    await _set('pause', paused ? 'yes' : 'no');
+  }
+
+  /// An exact seek to where the picture stands, still paused: mpv starts
+  /// the sound afresh from there, with the picture (ADR-054).
+  Future<void> _resync() async {
+    final at = double.tryParse(await _get('time-pos'));
+    if (at == null) return;
+    await _native.command([
+      'seek',
+      at.toStringAsFixed(3),
+      'absolute+exact',
+    ], waitForInitialization: false);
+    _log.info(
+      _tag,
+      'Resumed after ${_pausedFor.elapsed.inSeconds} s: sound and picture '
+      'start together from ${at.toStringAsFixed(1)} s',
+    );
+  }
 
   @override
   Future<void> seek(Duration position) async {
