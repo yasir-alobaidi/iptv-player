@@ -16,6 +16,26 @@ The stable version is always `main` (ADR-034): only tested work is merged
 there, and each merge is tagged `stable-<build>`. `dev` is where new work
 happens first.
 
+## The files to hand out: `dist/`
+
+The installers live in the project's **`dist/`** folder (git ignores it),
+ready to copy to a USB stick or another computer:
+
+- **`dist/Bijou-TV.apk`**: the TV app, "Bijou" with the blue jewel, 32-
+  and 64-bit, signed with the TVs' key. Made here, from the checkout (on
+  `main` for the stable one): `tools/dist_apk.sh` (about 3 minutes).
+  `tools/dist_apk.sh cover` makes `dist/Bijou-TV-cover.apk` with the
+  cover photo instead (FAISAL TV's look; its label is changed by hand).
+  To hand it to a TV on this Wi-Fi: `python3 tools/serve_apk.py`, then
+  the address it shows in the TV's Downloader
+  ([the TV guide](install/android-tv.md#from-a-computer-over-wi-fi-the-fastest)).
+- **`dist/Bijou-Setup.exe`**: the Windows installer. A Windows app can
+  only be built on Windows, so GitHub builds it (the release, below);
+  `tools/fetch_release.sh` downloads the latest release's
+  `Bijou-Setup.exe` and `Bijou-TV.apk` into `dist/` (`all` for the Linux
+  files too, and a tag for an older release).
+- The Linux installer needs no file: one line (the Linux guide).
+
 ## Keep the code on GitHub
 
 After every session (or whenever there are new commits):

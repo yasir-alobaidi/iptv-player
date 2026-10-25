@@ -5,7 +5,8 @@ For **Windows 10 and 11** (64-bit). It takes about two minutes.
 ## Install
 
 1. Download **[Bijou-Setup.exe](https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-Setup.exe)**
-   (over 100 MB).
+   (over 100 MB). If someone gave you the file (on a USB stick, say,
+   from the project's `dist/` folder), copy it to the PC and go to step 2.
    - If Edge says *"Bijou-Setup.exe isn't commonly downloaded"*: point at
      the download, click **…** (More actions) → **Keep** → **Show more**
      → **Keep anyway**.

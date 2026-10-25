@@ -8,7 +8,7 @@ The name, the icon and how the app describes itself: docs/05-design-system.md, "
 
 - **Windows 10 and 11:** download [Bijou-Setup.exe](https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-Setup.exe) and open it. [Step by step](docs/install/windows.md).
 - **Linux** (Ubuntu 22.04 or newer, Linux Mint, Pop!_OS, Zorin OS, elementary OS, Debian 13): in a Terminal, `curl -fsSL https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/install-linux.sh | bash`. [Step by step](docs/install/linux.md).
-- **Google TV, Android TV, Fire TV:** with the free Downloader app, `github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-TV.apk`. [Step by step](docs/install/android-tv.md).
+- **Google TV, Android TV, Fire TV:** the file `Bijou-TV.apk` (in this project, `dist/Bijou-TV.apk`), installed with the free Downloader app from this computer over Wi-Fi (`python3 tools/serve_apk.py`) or from `github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-TV.apk`; no debugging needed. [Step by step](docs/install/android-tv.md).
 
 The same links always give the newest release. How releases are made: `docs/install.md`.
 

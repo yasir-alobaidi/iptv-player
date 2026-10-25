@@ -14,9 +14,25 @@ on Apple TV, or on the **Fire TV Stick 4K Select** (its new system
 doesn't run Android apps). For those TVs, plug in a Google TV streamer or
 a Fire TV stick and install Bijou there.
 
-Bijou isn't in the Play Store, so it's installed with the free
-**Downloader** app. It takes about ten minutes the first time; updates
-take two.
+Bijou isn't in the Play Store: it is one file, **`Bijou-TV.apk`**
+(about 95 MB), installed on the TV by hand. **None of the ways below
+needs Developer options' "wireless debugging" or "USB debugging"**, only
+permission for one app to install apps. It takes about ten minutes the
+first time; updates take two, and keep everything (sign-in, sources,
+favourites).
+
+**Which way?**
+
+| You have… | Do this |
+|---|---|
+| `Bijou-TV.apk` on a computer on the same Wi-Fi as the TV | [From a computer over Wi-Fi](#from-a-computer-over-wi-fi-the-fastest), the fastest |
+| nothing yet, and the TV has internet | [Google TV and Android TV](#google-tv-and-android-tv) or [Fire TV](#fire-tv): Downloader and the address |
+| the file on a USB stick | [From a USB stick](#from-a-usb-stick) |
+| the file on an Android phone | [From a phone](#from-a-phone-instead-of-typing) |
+
+The file itself: in this project it is **`dist/Bijou-TV.apk`**
+(`tools/dist_apk.sh` makes it; docs/install.md); the newest release's is
+at the address in [step 3](#3-install-bijou).
 
 ## Google TV and Android TV
 
@@ -84,6 +100,52 @@ apps**). Open it and sign in to your services or add your playlists.
 Bijou is in your list of apps (the apps button on the home screen, or
 **Settings** → **Applications** → **Manage Installed Applications**).
 
+## From a computer over Wi-Fi (the fastest)
+
+For a TV on the same Wi-Fi as a computer that has `Bijou-TV.apk`. No
+cable, no debugging, no link on the internet: the TV downloads the file
+straight from the computer.
+
+1. **On the TV, once:** do [part 1](#1-get-the-downloader-app-once) and
+   [part 2](#2-allow-downloader-to-install-apps-once) above (on Fire TV,
+   its [steps 1–3](#fire-tv)): Downloader, allowed to install apps.
+2. **On the computer**, in the project folder, in a Terminal:
+
+   ```
+   python3 tools/serve_apk.py
+   ```
+
+   It shows an address such as **`192.168.1.20:8000`**. (Another file:
+   `python3 tools/serve_apk.py path/to/Bijou-TV.apk`. Any computer with
+   Python 3 can do it with this one script and the APK.)
+3. **On the TV**, open **Downloader**, type that address in the box at
+   the top (just the numbers, the dots and `:8000`), and select **Go**.
+   The file downloads at once.
+4. Select **Install**, then **Done**, then **Delete** (the downloaded
+   file; Bijou stays). If Google Play Protect warns, **More details** →
+   **Install anyway**.
+5. On the computer, press **Ctrl + C** to stop.
+
+If the TV can't reach the address: both must be on the same network (not
+a guest Wi-Fi), and a firewall on the computer must let port 8000 in
+(Ubuntu's is off unless turned on: `sudo ufw allow 8000/tcp`).
+
+## From a USB stick
+
+For a TV or box with a USB port (a Chromecast with Google TV has only its
+USB-C power port: it needs a USB-C hub with power through).
+
+1. Copy `Bijou-TV.apk` onto a USB stick and plug it into the TV.
+2. On the TV, from the **Play Store**, install a file manager, e.g.
+   **X-plore File Manager** (or **File Commander**).
+3. Allow it to install apps: **Settings** → **Apps** → **Security &
+   restrictions** → **Unknown sources** → switch the file manager on
+   (after turning on Developer options as in
+   [part 2](#2-allow-downloader-to-install-apps-once); some TVs ask by
+   themselves at the next step).
+4. In the file manager, open the USB stick, select **Bijou-TV.apk**, and
+   **Install**.
+
 ## From a phone instead of typing
 
 1. On an Android phone, open
@@ -116,6 +178,12 @@ The downloaded Bijou also updates a Bijou put on the TV from the laptop
 
 Uninstalling deletes Bijou's data on the TV (sign-in, favourites,
 settings); install it again and sign in once more.
+
+## For developers: adb
+
+With **USB debugging** or **wireless debugging** on (Developer options),
+from the project folder: `adb connect <TV's address>:<port>` (wireless),
+then `adb install -r dist/Bijou-TV.apk`. Not needed for anything above.
 
 ## If something goes wrong
 
