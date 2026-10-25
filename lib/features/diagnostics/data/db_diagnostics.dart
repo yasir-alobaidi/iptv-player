@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
+import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -33,6 +34,7 @@ final class DbDiagnostics implements DiagnosticsService {
     required this._secrets,
     this._player,
     this._castFolder,
+    this._exits = const NoLastExits(),
     this.homeFolder,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
@@ -45,6 +47,7 @@ final class DbDiagnostics implements DiagnosticsService {
   final SecretRegistry _secrets;
   final PlayerEngine? _player;
   final Directory? _castFolder;
+  final LastExitsSource _exits;
 
   /// Written `~` in the report.
   final String? homeFolder;
@@ -74,6 +77,7 @@ final class DbDiagnostics implements DiagnosticsService {
       )).valueOrNull,
     );
     final rows = problems?.rows ?? const <LogRow>[];
+    final last = _exits.available ? await _try(_exits.read) : null;
     return DiagnosticsFacts(
       now: _clock(),
       appVersion: (await _try(_version))?.short ?? 'unknown',
@@ -103,6 +107,8 @@ final class DbDiagnostics implements DiagnosticsService {
       ],
       homeFolder: homeFolder,
       named: await _try(_named) ?? const {},
+      drawing: last?.drawing,
+      exits: last?.exits,
     );
   }
 

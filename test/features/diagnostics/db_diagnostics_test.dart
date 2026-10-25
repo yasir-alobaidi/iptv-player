@@ -8,6 +8,7 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
+import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -59,19 +60,23 @@ void main() {
     folder.deleteSync(recursive: true);
   });
 
-  DbDiagnostics diagnostics({LogReader? log, PlayerEngine? player}) =>
-      DbDiagnostics(
-        db: db,
-        version: () async => const AppVersion(version: '0.1.0', build: '1'),
-        system: const _Facts(),
-        decoders: DbDecoderNotes(SettingsRepository(db), clock: () => _now),
-        log: log ?? const NoLogReader(),
-        secrets: secrets,
-        player: player,
-        castFolder: Directory(p.join(folder.path, 'cast')),
-        homeFolder: '/home/mariam',
-        clock: () => _now,
-      );
+  DbDiagnostics diagnostics({
+    LogReader? log,
+    PlayerEngine? player,
+    LastExitsSource exits = const NoLastExits(),
+  }) => DbDiagnostics(
+    db: db,
+    version: () async => const AppVersion(version: '0.1.0', build: '1'),
+    system: const _Facts(),
+    decoders: DbDecoderNotes(SettingsRepository(db), clock: () => _now),
+    log: log ?? const NoLogReader(),
+    secrets: secrets,
+    player: player,
+    castFolder: Directory(p.join(folder.path, 'cast')),
+    exits: exits,
+    homeFolder: '/home/mariam',
+    clock: () => _now,
+  );
 
   Future<void> source(
     String id, {
@@ -113,6 +118,30 @@ void main() {
       'Downloads: 0 waiting or running · 0 finished',
       'Recent warnings and errors: none',
     ]);
+  });
+
+  test("a TV's last ends and how it draws come from its record of them "
+      '(ADR-058)', () async {
+    final report = (await diagnostics(
+      exits: _Exits(
+        LastExits(
+          exits: [
+            AppExit(
+              time: _now.subtract(const Duration(minutes: 5)),
+              reason: ExitReason.crashNative,
+              importance: 100,
+              thread: '1.raster',
+              drawing: true,
+            ),
+          ],
+          drawing: const DrawingBackend(openGles: true),
+        ),
+      ),
+    ).report()).valueOrNull!;
+
+    expect(report, contains('(i915) · drawn with OpenGL ES'));
+    expect(report, contains('Unexpected ends (1):'));
+    expect(report, contains('thread 1.raster'));
   });
 
   test('a source whose last sync failed, with a guide import that skipped '
@@ -374,4 +403,19 @@ void main() {
     expect(report, contains('http://127.0.0.1:38412/p/abc/stream.mp4 stalled'));
     expect(report, contains('GET http://<address>/player_api.php?username='));
   });
+}
+
+final class _Exits implements LastExitsSource {
+  const new(this._last);
+
+  final LastExits _last;
+
+  @override
+  bool get available => true;
+
+  @override
+  Future<LastExits?> read() async => _last;
+
+  @override
+  Future<void> seen(DateTime upTo) async {}
 }

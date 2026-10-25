@@ -200,3 +200,10 @@ then `adb install -r dist/Bijou-TV.apk`. Not needed for anything above.
   short; download it again.
 - **Not enough space:** delete the downloaded file in Downloader (its
   **Files** tab) and other files you don't need, then try again.
+- **Bijou closes by itself:** open it again. It shows what happened
+  ("Bijou closed by itself last time", with the details under it); take
+  a photo of that screen and send it. If it closed while drawing the
+  screen, it switches by itself to another way of drawing on that TV
+  (OpenGL ES) and says so. **Update** rather than uninstall: an update
+  keeps what Android noted of the crashes, so the new Bijou can read
+  them at once.

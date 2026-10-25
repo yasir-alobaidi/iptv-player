@@ -1,5 +1,6 @@
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/redact.dart';
+import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/text/format.dart';
@@ -83,6 +84,8 @@ final class DiagnosticsFacts {
     this.problems = const [],
     this.homeFolder,
     this.named = const {},
+    this.drawing,
+    this.exits,
   });
 
   final DateTime now;
@@ -123,6 +126,13 @@ final class DiagnosticsFacts {
   /// it appears: each source's server (`<server>`) and its name (`Source
   /// 1`). A log line may say either; the report may not.
   final Map<String, String> named;
+
+  /// How a TV draws the screen (ADR-058); null where it isn't known.
+  final DrawingBackend? drawing;
+
+  /// A TV's last ends Android kept, newest first (ADR-058); null where
+  /// nothing keeps them (the desktop).
+  final List<AppExit>? exits;
 }
 
 /// Shorter names and hosts aren't replaced as plain text: they would
@@ -181,6 +191,24 @@ String _run(RunFacts run, DateTime now) {
   };
 }
 
+/// The unexpected ends among [exits], each with its facts under it;
+/// nothing where none are kept.
+List<String> _exits(List<AppExit>? exits, DateTime now) {
+  if (exits == null) return const [];
+  final unexpected = [
+    for (final exit in exits)
+      if (exit.unexpected) exit,
+  ];
+  if (unexpected.isEmpty) return const ['Unexpected ends: none kept'];
+  return [
+    'Unexpected ends (${unexpected.length}):',
+    for (final exit in unexpected) ...[
+      '  ${formatAgo(exit.time, now)}: ${exit.summary}',
+      for (final line in exit.details) '    ${withoutAddresses(line)}',
+    ],
+  ];
+}
+
 /// The diagnostics report (Phase 9 decision 9, sketch D), as plain text
 /// to paste somewhere. It names no provider and no person: every source
 /// is "Source 1", "Source 2"; a log line's addresses are `<address>`;
@@ -191,9 +219,19 @@ String buildDiagnosticsReport(
   Iterable<String> secrets = const [],
 }) {
   final system = facts.system;
-  final graphics = system.graphics.isEmpty
+  final cards = system.graphics.isEmpty
       ? 'not known'
       : system.graphics.map((card) => card.line).join(' · ');
+  final drawing = facts.drawing;
+  final graphics = drawing == null || !drawing.openGles
+      ? cards
+      : [
+          cards,
+          'drawn with OpenGL ES',
+          if (drawing.since case final since?)
+            'since ${formatAgo(since, facts.now)}',
+          ?drawing.cause,
+        ].join(' · ');
   final decoding = facts.decoders.isEmpty
       ? 'nothing played yet'
       : facts.decoders.map((note) => note.line).join(' · ');
@@ -256,6 +294,7 @@ String buildDiagnosticsReport(
       'Downloads: ${formatCount(facts.downloadsWaiting)} waiting or '
       'running · ${formatCount(facts.downloadsFinished)} finished',
     )
+    ..addAll(_exits(facts.exits, facts.now))
     ..add(
       facts.problems.isEmpty
           ? 'Recent warnings and errors: none'

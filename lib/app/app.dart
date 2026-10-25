@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/app/last_exit_notice.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/app_toasts.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
@@ -65,7 +66,9 @@ class IptvPlayerApp extends ConsumerWidget {
               shown: !onTv,
               child: onTv
                   ? TvCanvas(
-                      child: StillWatching(child: TvSelectKey(child: app)),
+                      child: StillWatching(
+                        child: LastExitNotice(child: TvSelectKey(child: app)),
+                      ),
                     )
                   : app,
             ),

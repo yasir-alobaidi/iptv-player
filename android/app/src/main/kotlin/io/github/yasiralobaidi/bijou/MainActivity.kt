@@ -7,6 +7,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterShellArgs
 
 class MainActivity : FlutterActivity() {
     // The picture's own layer (VideoLayer, T1, ADR-035 §1): in every build but
@@ -14,6 +15,14 @@ class MainActivity : FlutterActivity() {
     // android/app/build.gradle.kts). Without it every override below does what
     // FlutterActivity does.
     private var videoLayer: VideoLayer? = null
+
+    // Why the last runs ended, for Dart (ADR-058).
+    private var lastExits: LastExits? = null
+
+    // Read as the engine is made, once per process: OpenGL ES after a crash
+    // drawing with Vulkan (ADR-058).
+    override fun getFlutterShellArgs(): FlutterShellArgs =
+        super.getFlutterShellArgs().apply { Drawing.shellArgs(this@MainActivity).forEach(::add) }
 
     // A FlutterSurfaceView with a transparent pixel format, z-ordered on top of
     // the window: where Flutter paints nothing, the layer under it shows.
@@ -29,12 +38,15 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         lifecycle.addObserver(DisplayModes(this, flutterEngine.dartExecutor.binaryMessenger))
+        lastExits = LastExits(this, flutterEngine.dartExecutor.binaryMessenger)
         if (BuildConfig.VIDEO_LAYER) {
             videoLayer = VideoLayer(this, flutterEngine.dartExecutor.binaryMessenger)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // First, so a crash anywhere after it leaves its stack (ADR-058).
+        JavaCrashes.install(this)
         super.onCreate(savedInstanceState)
         if (!BuildConfig.VIDEO_LAYER) return
         videoLayer?.attach(findViewById(android.R.id.content))
@@ -45,6 +57,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        lastExits?.release()
+        lastExits = null
         videoLayer?.release()
         videoLayer = null
         super.cleanUpFlutterEngine(flutterEngine)
@@ -57,6 +71,9 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         val leaving = isFinishing && !isChangingConfigurations
         super.onDestroy()
-        if (leaving) Process.killProcess(Process.myPid())
+        if (!leaving) return
+        // This end is the app's own, not one to tell of (ADR-058).
+        LastExits.leaving(this)
+        Process.killProcess(Process.myPid())
     }
 }

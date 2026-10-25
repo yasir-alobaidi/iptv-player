@@ -3,6 +3,7 @@
 // ignore_for_file: no_adjacent_strings_in_list
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/features/diagnostics/domain/diagnostics_report.dart';
@@ -108,6 +109,73 @@ void main() {
       'Downloads: 0 waiting or running · 0 finished',
       'Recent warnings and errors: none',
     ]);
+  });
+
+  group("a TV's drawing and its last ends (ADR-058)", () {
+    final crashed = now.subtract(const Duration(hours: 2));
+
+    test('drawn with OpenGL ES after a crash drawing: said on the Graphics '
+        'line; the unexpected ends listed with their facts, addresses '
+        'hidden, a kill in the background left out', () {
+      final report = buildDiagnosticsReport(
+        DiagnosticsFacts(
+          now: now,
+          drawing: DrawingBackend(
+            openGles: true,
+            since: crashed,
+            cause: 'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
+          ),
+          exits: [
+            AppExit(
+              time: now.subtract(const Duration(hours: 1)),
+              reason: ExitReason.signaled,
+              status: 9,
+              importance: 400,
+            ),
+            AppExit(
+              time: crashed,
+              reason: ExitReason.crashNative,
+              importance: 100,
+              signal: 'SIGSEGV SEGV_MAPERR',
+              thread: '1.raster',
+              abort: 'stream http://203.0.113.7:8080/live/1.ts',
+              frames: const ['pc 00000000000a1c2e libGLES_mali.so'],
+              drawing: true,
+            ),
+          ],
+        ),
+      );
+      final lines = report.split('\n');
+      expect(
+        lines,
+        contains(
+          'Graphics: not known · drawn with OpenGL ES · since 2 h ago · '
+          'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
+        ),
+      );
+      final at = lines.indexOf('Unexpected ends (1):');
+      expect(at, isNot(-1));
+      expect(lines.sublist(at + 1, at + 5), [
+        '  2 h ago: It crashed while drawing the screen.',
+        '    crashNative · SIGSEGV SEGV_MAPERR · thread 1.raster',
+        '    abort: stream http://<address>/live/1.ts',
+        '    #00 pc 00000000000a1c2e libGLES_mali.so',
+      ]);
+      expect(report, isNot(contains('203.0.113.7')));
+    });
+
+    test("Flutter's own drawing and no unexpected end: the Graphics line as "
+        'it is, and a line that says none', () {
+      final report = buildDiagnosticsReport(
+        DiagnosticsFacts(
+          now: now,
+          drawing: const DrawingBackend(),
+          exits: const [],
+        ),
+      );
+      expect(report, contains('Graphics: not known\n'));
+      expect(report, contains('Unexpected ends: none kept'));
+    });
   });
 
   test('a sync that failed, one still running, one cancelled, and a source '
