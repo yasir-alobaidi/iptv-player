@@ -104,7 +104,11 @@ class LastExitDialog extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final exit = news.newest;
-    final switched = news.drawing.openGles && exit.drawing;
+    // This end made it OpenGL ES: a crash drawing, or one Android kept
+    // nothing of (Drawing.kt).
+    final switched =
+        news.drawing.openGles &&
+        (exit.drawing || news.drawing.since == exit.time);
     final body = tokens.text.body.copyWith(color: colors.textSecondary);
     final facts = redact(
       ['$appName · ${_when(exit.time)}', ...exit.details].join('\n'),

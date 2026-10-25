@@ -178,6 +178,55 @@ void main() {
       expect(find.textContaining('"main" prio=5'), findsOneWidget);
     });
 
+    testWidgets('a native crash Android kept nothing of: the switch it made '
+        'is said too', (tester) async {
+      await pumpApp(
+        tester,
+        LastExits(
+          exits: [
+            AppExit(
+              time: crashedAt,
+              reason: ExitReason.crashNative,
+              importance: 100,
+            ),
+          ],
+          drawing: DrawingBackend(
+            openGles: true,
+            since: crashedAt,
+            cause: 'a native crash Android kept no details of',
+          ),
+        ),
+      );
+      expect(
+        find.textContaining('It crashed in its native code. From now on'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an older switch is not said again for a later crash', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        LastExits(
+          exits: [
+            AppExit(
+              time: crashedAt,
+              reason: ExitReason.crashNative,
+              importance: 100,
+              thread: 'mpv/demux',
+            ),
+          ],
+          drawing: DrawingBackend(openGles: true, since: earlier),
+        ),
+      );
+      expect(
+        find.textContaining('It crashed in its native code.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('OpenGL ES'), findsNothing);
+    });
+
     testWidgets('nothing new: no notice', (tester) async {
       await pumpApp(
         tester,

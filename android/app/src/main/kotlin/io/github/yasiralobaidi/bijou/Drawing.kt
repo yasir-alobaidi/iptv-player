@@ -9,8 +9,9 @@ import android.util.Log
  * Which of Impeller's back ends draws Bijou (ADR-058). Flutter picks Vulkan wherever the GPU's
  * driver offers it and isn't on its own list of bad ones (the Chromecasts' Mali-G31 draws with
  * it); a driver that crashes drawing took the app with it on a TCL TV (Android 12), as search or
- * the menu opened. So after a native crash on one of Flutter's drawing threads, or inside a GPU
- * driver, every launch from the next one on draws with OpenGL ES, which every Android TV has.
+ * the menu opened. So after a native crash on one of Flutter's drawing threads, inside a GPU
+ * driver, or one Android kept no tombstone of, every launch from the next one on draws with
+ * OpenGL ES, which every Android TV has.
  * Kept for good on that TV (until its data is cleared): nothing tells a fixed driver apart.
  *
  * Decided in [MainActivity.getFlutterShellArgs], before the engine starts: the engine takes its
@@ -75,17 +76,24 @@ object Drawing {
         val checkedUpTo = prefs.getLong(CHECKED_UP_TO, 0L)
         val exits = LastExits.recent(context).filter { it.timestamp > checkedUpTo }
         if (exits.isEmpty()) return
+        // A native crash Android kept nothing of counts too: on a TV out of reach, the drawing
+        // is the likeliest, and OpenGL ES costs little where it wasn't.
         val drawing = exits
             .filter { it.reason == ApplicationExitInfo.REASON_CRASH_NATIVE }
             .firstNotNullOfOrNull { exit ->
-                LastExits.nativeCrash(exit)?.takeIf { isDrawingCrash(it) }?.let { exit to it }
+                val crash = LastExits.nativeCrash(exit)
+                if (crash == null || isDrawingCrash(crash)) exit to crash else null
             }
         val editor = prefs.edit().putLong(CHECKED_UP_TO, exits.maxOf { it.timestamp })
         if (drawing != null) {
             val (exit, crash) = drawing
-            val where = crash.frames.firstOrNull()?.line()?.substringAfter(' ')?.substringAfter(' ')
-            val cause = listOfNotNull(crash.signal, crash.thread?.let { "on $it" }, where?.let { "in $it" })
-                .joinToString(" ")
+            val where = crash?.frames?.firstOrNull()?.line()?.substringAfter(' ')?.substringAfter(' ')
+            val cause = if (crash == null) {
+                "a native crash Android kept no details of"
+            } else {
+                listOfNotNull(crash.signal, crash.thread?.let { "on $it" }, where?.let { "in $it" })
+                    .joinToString(" ")
+            }
             editor.putString(BACKEND, OPENGLES).putLong(SINCE, exit.timestamp).putString(CAUSE, cause)
             Log.w(TAG, "Drawing with OpenGL ES from now on, after a crash drawing: $cause")
         }
