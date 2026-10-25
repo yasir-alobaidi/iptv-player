@@ -60,7 +60,18 @@ const int downloadSpaceCheckEvery = 256 << 20;
 const int downloadSaveEvery = 8 << 20;
 
 /// Why the queue stopped a download it had started.
-enum _Stop { user, gaveWay, noSpace, account, cancel, removal, shutdown }
+enum _Stop {
+  user,
+  gaveWay,
+  noSpace,
+  account,
+  cancel,
+  removal,
+  shutdown,
+
+  /// One before it in the queue can start in its place (ADR-054).
+  makeWay,
+}
 
 /// The download queue (docs/09 "DownloadQueue"): the order, how many run
 /// at once, the connection rules, the errors and their waits, the disk
@@ -447,13 +458,17 @@ final class DownloadQueue implements DownloadService {
   // ---- Running.
 
   /// Starts what is due, in the queue's order (docs/09: 1–3 at a time,
-  /// never more than a source has free).
+  /// never more than a source has free). The order is binding: one that
+  /// could start, ahead of one running, takes its place ([_makeWay]).
   void _pump() {
     if (!_started || _closed || _noSpace) return;
     final atATime = _settings().atATime;
     var running = _runs.length;
     for (final task in current) {
-      if (running >= atATime) break;
+      if (running >= atATime) {
+        _makeWay(task);
+        break;
+      }
       final state = task.state;
       if (state != DownloadTaskState.queued &&
           state != DownloadTaskState.waitingForConnection) {
@@ -473,12 +488,59 @@ final class DownloadQueue implements DownloadService {
     if (_runs.isEmpty) unawaited(_releaseSleep());
   }
 
+  /// With every slot taken, the first download that could start but
+  /// waits ([first], or one after it) takes the place of the last running
+  /// one behind it in the queue: that one stops and goes back to waiting,
+  /// from its `.part`, and [_pump] starts the first once it has. The user
+  /// resumed E08 while E11 ran, and the queue said E08 next but ran E11;
+  /// pausing one to get another going started the one after it instead.
+  void _makeWay(DownloadTask first) {
+    if (_runs.values.any((r) => r.stop != null)) return;
+    final order = current;
+    final places = {for (final (i, t) in order.indexed) t.id: i};
+    for (final task in order.skip(places[first.id] ?? 0)) {
+      if (_runs.containsKey(task.id)) return;
+      final state = task.state;
+      if (state != DownloadTaskState.queued &&
+          state != DownloadTaskState.waitingForConnection) {
+        continue;
+      }
+      if (_waits.containsKey(task.id) || _refused.contains(task.sourceId)) {
+        continue;
+      }
+      final behind =
+          _runs.values
+              .where((r) => (places[r.id] ?? -1) > (places[task.id] ?? 0))
+              .where(
+                (r) => r.sourceId == task.sourceId
+                    ? !_held(task.sourceId)
+                    : _room(task.sourceId),
+              )
+              .toList()
+            ..sort((a, b) => places[a.id]!.compareTo(places[b.id]!));
+      if (behind.isEmpty) continue;
+      final last = behind.last;
+      _log.info(
+        _tag,
+        'Download ${last.id} makes way for ${task.id}, before it in the queue',
+      );
+      unawaited(_stopRun(last, _Stop.makeWay));
+      return;
+    }
+  }
+
+  /// Whether [sourceId] takes no download for now: just let go by the
+  /// player or a cast, or holding the queue after a refusal.
+  bool _held(String sourceId) {
+    final quiet = _quietUntil[sourceId];
+    if (quiet != null && _now().isBefore(quiet)) return true;
+    final limited = _limitedUntil[sourceId];
+    return limited != null && _now().isBefore(limited);
+  }
+
   /// Whether another download may open a connection at [sourceId] now.
   bool _room(String sourceId) {
-    final quiet = _quietUntil[sourceId];
-    if (quiet != null && _now().isBefore(quiet)) return false;
-    final limited = _limitedUntil[sourceId];
-    if (limited != null && _now().isBefore(limited)) return false;
+    if (_held(sourceId)) return false;
     final limit = _limits[sourceId] ?? 1;
     final others = _connections.held(sourceId, except: StreamHolder.download);
     return others + _runsAt(sourceId) < limit;
@@ -752,6 +814,8 @@ final class DownloadQueue implements DownloadService {
           at.copyWith(state: DownloadTaskState.waitingForConnection),
           save: true,
         );
+      case _Stop.makeWay:
+        _update(at.copyWith(state: DownloadTaskState.queued), save: true);
       case _Stop.noSpace:
         _update(
           at.copyWith(
@@ -971,7 +1035,13 @@ final class DownloadQueue implements DownloadService {
   }
 
   Future<void> _stopRun(_Run run, _Stop why) async {
-    run.stop ??= why;
+    // The queue's own reasons yield to anyone else's: a cancel while a
+    // download makes way still cancels it.
+    if (run.stop == null ||
+        run.stop == _Stop.makeWay ||
+        run.stop == _Stop.gaveWay) {
+      run.stop = why;
+    }
     if (run.started) {
       await _runner.stop(run.id);
       return;

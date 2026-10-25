@@ -509,6 +509,51 @@ void main() {
     });
   });
 
+  test("the queue's order is binding: one ahead that can start takes the "
+      'place of one running behind it, which waits from its .part', () {
+    fakeAsync((async) {
+      final r = rig(async)
+        ..runner.haltOnStop = true
+        ..enqueue([movie('1'), movie('2'), movie('3'), movie('4')]);
+      final [a, b, c, d] = [for (final t in r.latest) t.id];
+      r.runs(a, bytes: 4000);
+
+      // The user's E11 and E08: a paused, b starts; a resumed, b makes
+      // way and waits, a goes on from where it was.
+      unawaited(r.queue.pause(a));
+      r.settle();
+      expect(r.runner.started.last.id, b);
+      r.runs(b, bytes: 2000);
+      unawaited(r.queue.resume(a));
+      r.settle();
+      expect(r.runner.stopped.last, b);
+      expect(r.state(b), DownloadTaskState.queued);
+      expect(r.task(b).downloadedBytes, 2000);
+      expect(r.runner.started.last.id, a);
+      expect(r.runner.started.where((o) => o.id != d), hasLength(3));
+
+      // Moved to the top: it starts now.
+      unawaited(r.queue.move(c, 0));
+      r.settle();
+      expect(r.runner.stopped.last, a);
+      expect(r.runner.started.last.id, c);
+      expect(r.state(a), DownloadTaskState.queued);
+
+      // A cancel while one makes way still cancels it.
+      r.runner.haltOnStop = false;
+      unawaited(r.queue.move(d, 0));
+      r.settle();
+      expect(r.runner.stopped.last, c);
+      unawaited(r.queue.cancel(c));
+      r
+        ..settle()
+        ..say(DownloadHalted(c, bytes: 10));
+      expect(r.latest.map((t) => t.id), isNot(contains(c)));
+      expect(r.finisher.discarded, [c]);
+      expect(r.runner.started.last.id, d);
+    });
+  });
+
   test('pause all and resume all', () {
     fakeAsync((async) {
       final r = rig(async)..enqueue([movie('1'), movie('2')]);
