@@ -90,7 +90,7 @@ final class PlaybackSettings {
     this.hardwareDecoding = true,
     this.matchFrameRate = false,
     this.matchChannelRate = true,
-    this.pictureQuality = PictureQuality.standard,
+    this.pictureQuality = PictureQuality.high,
     this.subtitleSize = SubtitleSize.medium,
     this.timeOnScreen = TimeOnScreen.always,
   });
@@ -121,9 +121,12 @@ final class PlaybackSettings {
       // any playback setting while On was the default (ADR-042).
       matchFrameRate: json['matchRate'] == 'on',
       matchChannelRate: json['matchChannels'] != 'off',
-      pictureQuality: json['quality'] == 'high'
-          ? PictureQuality.high
-          : PictureQuality.standard,
+      // Not the old `quality`: it was written "standard" for everyone who
+      // saved any playback setting while Standard was the default
+      // (ADR-055, as ADR-042 did for Match frame rate).
+      pictureQuality: json['picture'] == 'standard'
+          ? PictureQuality.standard
+          : PictureQuality.high,
       subtitleSize:
           SubtitleSize.values
               .where((s) => s.name == json['subtitleSize'])
@@ -158,7 +161,9 @@ final class PlaybackSettings {
   /// dark only as Live TV starts and ends, never between channels.
   final bool matchChannelRate;
 
-  /// The desktop's Picture quality; a TV ignores it.
+  /// The desktop's Picture quality; a TV ignores it. High unless Standard
+  /// was chosen (ADR-055): a title High can't keep up with steps down by
+  /// itself.
   final PictureQuality pictureQuality;
 
   /// How large subtitles are over the picture (ADR-038). Unlike the rest,
@@ -207,7 +212,7 @@ final class PlaybackSettings {
     'hwdec': hardwareDecoding ? 'auto' : 'off',
     'matchRate': matchFrameRate ? 'on' : 'off',
     'matchChannels': matchChannelRate ? 'on' : 'off',
-    'quality': pictureQuality.name,
+    'picture': pictureQuality.name,
     'subtitleSize': subtitleSize.name,
     'timeOnScreen': timeOnScreen.name,
   };

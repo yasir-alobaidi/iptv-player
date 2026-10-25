@@ -156,16 +156,16 @@ void main() {
     expect(again, contains('"hwdec":"auto"'));
   });
 
-  testWidgets("Picture quality (the PC's): Standard until High is chosen "
+  testWidgets("Picture quality (the PC's): High until Standard is chosen "
       "from the keyboard, saved at once, and the next stream's request "
-      'carries it', (tester) async {
+      'carries it (ADR-055)', (tester) async {
     final live = await open(tester);
     expect(find.text('Picture quality'), findsOneWidget);
     expect(find.textContaining('sharper filters'), findsOneWidget);
     PlaybackSettings settings() => ProviderScope.containerOf(
       tester.element(find.byType(PlaybackSettingsSection)),
     ).read(playbackSettingsControllerProvider);
-    expect(settings().pictureQuality, PictureQuality.standard);
+    expect(settings().pictureQuality, PictureQuality.high);
 
     Future<String?> stored() => tester.runAsync<String?>(
       () => live.db.settingsDao.read('playback.settings'),
@@ -183,19 +183,19 @@ void main() {
 
     Focus.of(tester.element(find.text('Automatic'))).requestFocus();
     await tester.pump();
-    await tabTo('High');
+    await tabTo('Standard');
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
 
-    expect(await stored(), contains('"quality":"high"'));
+    expect(await stored(), contains('"picture":"standard"'));
     const stream = ResolvedStream(url: 'u', maxConnections: 1);
-    expect(settings().request(stream).pictureQuality, PictureQuality.high);
+    expect(settings().request(stream).pictureQuality, PictureQuality.standard);
 
-    await tabTo('Standard', back: true);
+    await tabTo('High');
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await _settle(tester);
-    expect(await stored(), contains('"quality":"standard"'));
-    expect(settings().request(stream).pictureQuality, PictureQuality.standard);
+    expect(await stored(), contains('"picture":"high"'));
+    expect(settings().request(stream).pictureQuality, PictureQuality.high);
   });
 
   testWidgets('a TV has no Picture quality: its picture never goes '

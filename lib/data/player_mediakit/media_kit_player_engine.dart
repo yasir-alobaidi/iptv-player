@@ -132,6 +132,16 @@ const highQualityPicture = {
   'deband': 'yes',
 };
 
+/// High's safety net (ADR-055): over a [window] of playing at [fps], mpv's
+/// output dropped [dropped] frames. More than 5 % of them, and at least
+/// five, is a picture High's filters can't keep up with (a weaker
+/// graphics card, a 4K file on a large screen). Exposed for tests.
+bool pictureFallsBehind({
+  required int dropped,
+  required double fps,
+  required Duration window,
+}) => dropped >= 5 && dropped > fps * window.inMicroseconds / 1e6 * 0.05;
+
 /// Whether a seek to [to] has played again at [position] (ADR-048): mpv
 /// says the target itself from the moment a seek starts, before it is
 /// even seeking, so the clock at the target proves nothing yet. It has to
@@ -452,6 +462,12 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
   final _pausedFor = Stopwatch();
   bool _live = false;
 
+  /// A pause or a seek during one of High's watched windows: that window
+  /// counts for nothing ([_watchPicture]).
+  bool _pictureDisturbed = false;
+  static const _pictureWindow = Duration(seconds: 5);
+  static const _pictureWindows = 6;
+
   /// The seek asked for last, until it plays again: logged with how long
   /// that took, and how far ahead was buffered when it was asked.
   ({Stopwatch took, Duration from, Duration to, Duration ahead})? _seekAsked;
@@ -520,6 +536,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       value,
     ) async {
       _paused = value == 'yes';
+      _pictureDisturbed = true;
       // A paused file's clock stands still: a seek's time to play again
       // would be the pause's.
       if (_paused) {
@@ -563,6 +580,7 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       _slowSeekTimer?.cancel();
       _slowSeekTimer = null;
       _seeking = value == 'yes';
+      _pictureDisturbed = true;
       if (value != 'yes') {
         _seekWait = false;
         _updateBuffering();
@@ -744,6 +762,56 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
     }
   }
 
+  /// High's first half minute of playing, watched in windows of
+  /// [_pictureWindow]: one where mpv's output dropped frames High can't
+  /// afford ([pictureFallsBehind]) steps this title down to Standard. The
+  /// next title tries High again.
+  Future<void> _watchPicture(int generation) async {
+    Future<int?> drops() async => int.tryParse(await _get('frame-drop-count'));
+    try {
+      for (var i = 0; i < _pictureWindows; i++) {
+        _pictureDisturbed = false;
+        final before = await drops();
+        await Future<void>.delayed(_pictureWindow);
+        if (generation != _generation ||
+            !_open ||
+            _pictureNow != PictureQuality.high) {
+          return;
+        }
+        final after = await drops();
+        final fps = double.tryParse(await _get('estimated-vf-fps'));
+        if (_pictureDisturbed ||
+            _paused ||
+            _buffering ||
+            before == null ||
+            after == null ||
+            fps == null) {
+          continue;
+        }
+        final dropped = after - before;
+        if (pictureFallsBehind(
+          dropped: dropped,
+          fps: fps,
+          window: _pictureWindow,
+        )) {
+          _log.warning(
+            _tag,
+            'High picture quality dropped $dropped frames in '
+            '${_pictureWindow.inSeconds} s: Standard for this title',
+          );
+          for (final MapEntry(:key, :value) in _standardPicture.entries) {
+            await _setPicture(key, value);
+          }
+          _pictureNow = PictureQuality.standard;
+          _desktop?.quality = PictureQuality.standard;
+          return;
+        }
+      }
+    } on Object catch (error) {
+      _log.debug(_tag, "Couldn't watch the picture: $error");
+    }
+  }
+
   void _refuse(String name, String why) {
     if (!_refused.add(name)) return;
     _log.warning(
@@ -807,6 +875,9 @@ final class MediaKitPlayerEngine implements PlayerEngine, PlayerVersion {
       _emit(PlayerFirstFrame(generation));
       unawaited(_logFirstFrame(took, generation));
       unawaited(_settleSubtitles(generation));
+      if (_desktop != null && _pictureNow == PictureQuality.high) {
+        unawaited(_watchPicture(generation));
+      }
       if (autoDeinterlace) await _autoDeinterlace(generation);
     });
   }

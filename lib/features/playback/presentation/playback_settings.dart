@@ -223,8 +223,9 @@ class _PlaybackSettingsSectionState
               title: 'Picture quality',
               description:
                   'High scales the picture with sharper filters and smooths '
-                  'the banding of low-bitrate streams. Uses more of your '
-                  'graphics card. Applies to the next thing you play.',
+                  'the banding of low-bitrate streams. A title your graphics '
+                  "card can't keep up with steps down to Standard by itself. "
+                  'Applies to the next thing you play.',
               control: SegmentedControl<PictureQuality>(
                 options: const [
                   SegmentOption(

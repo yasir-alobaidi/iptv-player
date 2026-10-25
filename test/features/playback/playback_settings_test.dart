@@ -13,7 +13,7 @@ void main() {
     deinterlace: false,
     hardwareDecoding: false,
     matchFrameRate: true,
-    pictureQuality: PictureQuality.high,
+    pictureQuality: PictureQuality.standard,
     subtitleSize: SubtitleSize.large,
     timeOnScreen: TimeOnScreen.controls,
   );
@@ -125,32 +125,37 @@ void main() {
     );
   });
 
-  test('Picture quality is Standard unless High was stored, and the '
-      'request carries it', () {
-    expect(const PlaybackSettings().pictureQuality, PictureQuality.standard);
-    expect(const PlaybackSettings().toJson()['quality'], 'standard');
-    expect(chosen.toJson()['quality'], 'high');
+  test('Picture quality is High unless Standard was chosen (ADR-055), and '
+      'the request carries it', () {
+    expect(const PlaybackSettings().pictureQuality, PictureQuality.high);
+    expect(const PlaybackSettings().toJson()['picture'], 'high');
+    const standard = PlaybackSettings(pictureQuality: PictureQuality.standard);
+    expect(standard.toJson()['picture'], 'standard');
     expect(
-      PlaybackSettings.fromJson(const {'quality': 'high'}).pictureQuality,
-      PictureQuality.high,
+      PlaybackSettings.fromJson(standard.toJson()).pictureQuality,
+      PictureQuality.standard,
     );
-    // Settings stored before it, or damaged: Standard.
+    // Stored before it (the old key, written "standard" for anyone who
+    // saved a playback setting while Standard was the default), or
+    // damaged: High.
     for (final stored in [
       const <String, Object?>{},
-      const {'quality': 'ultra'},
-      const {'quality': 2},
+      const {'quality': 'standard'},
+      const {'picture': 'ultra'},
+      const {'picture': 2},
     ]) {
       expect(
         PlaybackSettings.fromJson(stored).pictureQuality,
-        PictureQuality.standard,
+        PictureQuality.high,
+        reason: '$stored',
       );
     }
     const stream = ResolvedStream(url: 'u', maxConnections: 1);
-    expect(chosen.request(stream).pictureQuality, PictureQuality.high);
     expect(
       const PlaybackSettings().request(stream).pictureQuality,
-      PictureQuality.standard,
+      PictureQuality.high,
     );
+    expect(standard.request(stream).pictureQuality, PictureQuality.standard);
   });
 
   test('Subtitle size is Medium unless Small or Large was stored '
