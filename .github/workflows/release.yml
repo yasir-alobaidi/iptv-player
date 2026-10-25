@@ -1,0 +1,379 @@
+# Releases (docs/install.md): a `stable-*` tag pushed, or this workflow run
+# by hand for one, builds the installers and publishes them as that tag's
+# GitHub Release. The files keep the same names in every release, so
+# https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/<name>
+# always gives the newest, with no GitHub account:
+#   Bijou-Setup.exe                     Windows (docs/install/windows.md)
+#   install-linux.sh                    Linux (docs/install/linux.md), which
+#   bijou-linux-x64-ubuntu22.04.tar.gz  downloads one of these two and
+#   bijou-linux-x64-ubuntu24.04.tar.gz  checks it against SHA256SUMS.txt
+#   Bijou-TV.apk                        Google TV, Android TV, Fire TV
+#                                       (docs/install/android-tv.md)
+#   SHA256SUMS.txt
+# Every job checks out the tag with its whole history: the build number is
+# the commit count (`git rev-list --count HEAD`), which is also the TV's
+# version code; a shallow clone would count 1 and the TVs would refuse the
+# APK as a downgrade.
+name: Release
+
+on:
+  push:
+    tags: ['stable-*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The stable-* tag to build and publish (it must exist and have this workflow's files)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # As ci.yml (ADR-007's GO and the goldens were recorded on it).
+  FLUTTER_VERSION: 3.47.4
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  linux:
+    # One build per Ubuntu: the Linux plugin links the system's libmpv by
+    # pkg-config, libmpv.so.1 on 22.04 and libmpv.so.2 on 24.04, and 24.04's
+    # build needs its glibc (2.39). install-linux.sh picks the one that fits.
+    name: Linux (Ubuntu ${{ matrix.ubuntu }})
+    runs-on: ubuntu-${{ matrix.ubuntu }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        ubuntu: ['22.04', '24.04']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Version
+        run: |
+          case "$TAG" in stable-*) ;; *) echo "::error::'$TAG' is not a stable-* tag"; exit 1 ;; esac
+          build=$(git rev-list --count HEAD)
+          echo "BUILD=$build" >> "$GITHUB_ENV"
+          [ "$TAG" = "stable-$build" ] || echo "::warning::$TAG is build $build (the commit count)"
+
+      - name: Build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev \
+            libsecret-1-dev libjsoncpp-dev \
+            libmpv-dev libmimalloc-dev
+          # clang compiles against the newest GCC it finds: that GCC's C++
+          # headers must be there too (ci.yml's libstdc++-12-dev on 22.04).
+          gcc=$(find /usr/lib/gcc/x86_64-linux-gnu -mindepth 1 -maxdepth 1 -printf '%f\n' | sort -n | tail -n1)
+          sudo apt-get install -y "libstdc++-$gcc-dev"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: FFmpeg for casting
+        run: tools/fetch_ffmpeg.sh linux-x64
+
+      - name: libva for FFmpeg's VA-API (ADR-014)
+        run: |
+          if docker info >/dev/null 2>&1; then
+            tools/fetch_libva.sh
+          else
+            echo "::warning::No docker here: the bundle's FFmpeg uses the system's libva (VA-API casting needs 2.21 or newer)"
+          fi
+
+      - name: Build
+        run: flutter build linux --release --build-number="$BUILD"
+
+      - name: Package
+        # Prints what the bundle links (ldd): install-linux.sh's packages
+        # for this Ubuntu must cover it.
+        env:
+          BIJOU_TARGET: ubuntu${{ matrix.ubuntu }}
+        run: tools/package_linux.sh "dist/bijou-linux-x64-ubuntu${{ matrix.ubuntu }}.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-ubuntu${{ matrix.ubuntu }}
+          path: dist/bijou-linux-x64-ubuntu${{ matrix.ubuntu }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    timeout-minutes: 75
+    steps:
+      # Before checkout: CRLF would break the bash scripts below.
+      - name: Keep line endings as committed
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Version
+        shell: bash
+        run: |
+          case "$TAG" in stable-*) ;; *) echo "::error::'$TAG' is not a stable-* tag"; exit 1 ;; esac
+          echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml)" >> "$GITHUB_ENV"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: FFmpeg for casting
+        shell: bash
+        run: tools/fetch_ffmpeg.sh windows-x64
+
+      - name: Build
+        run: |
+          flutter build windows --release --build-number=$env:BUILD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path build\windows\x64\runner\Release\ffmpeg\ffmpeg.exe)) {
+            Write-Output "::error::The build has no ffmpeg\ffmpeg.exe: it couldn't cast"
+            exit 1
+          }
+
+      - name: The MSVC runtime beside the app
+        # A Windows without the Visual C++ Redistributable can't start a
+        # Flutter app, so its DLLs go app-local: the ones anything in the
+        # build imports (dumpbin), at least these three; from Visual
+        # Studio's redistributable folder, else System32.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = 'build\windows\x64\runner\Release'
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -property installationPath
+          $needed = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+          foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') { [void]$needed.Add($dll) }
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if ($dumpbin) {
+            Get-ChildItem $release -Recurse -Include *.exe, *.dll | ForEach-Object {
+              & $dumpbin.FullName /nologo /dependents $_.FullName | ForEach-Object {
+                $name = $_.Trim()
+                if ($name -match '^(msvcp140[^ ]*|vcruntime140[^ ]*|concrt140|vccorlib140)\.dll$') { [void]$needed.Add($name) }
+              }
+            }
+          } else {
+            Write-Output "::warning::No dumpbin: copying the three usual runtime DLLs only"
+          }
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT" -Directory -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          $folders = @()
+          if ($crt) { $folders += $crt.FullName }
+          $folders += "$env:SystemRoot\System32"
+          foreach ($dll in $needed) {
+            $from = $folders | ForEach-Object { Join-Path $_ $dll } | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $from) { Write-Output "::error::$dll not found in $($folders -join ', ')"; exit 1 }
+            Copy-Item $from $release -Force
+            Write-Output "$dll <- $from"
+          }
+
+      - name: The installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Find-Iscc {
+            $onPath = Get-Command iscc.exe -ErrorAction SilentlyContinue
+            if ($onPath) { return $onPath.Source }
+            Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup *\ISCC.exe", "$env:ProgramFiles\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue |
+              Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          }
+          $iscc = Find-Iscc
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress
+            $iscc = Find-Iscc
+          }
+          if (-not $iscc) { Write-Output "::error::No Inno Setup compiler (ISCC.exe)"; exit 1 }
+          & $iscc "/DAppVersion=$env:VERSION_NAME" "/DAppBuild=$env:BUILD" `
+            "/DBundleDir=$PWD\build\windows\x64\runner\Release" "/O$PWD\dist" `
+            windows\packaging\bijou.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Item dist\Bijou-Setup.exe | Format-List Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/Bijou-Setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  android:
+    # 32-bit for the Chromecast with Google TV, 64-bit for other TVs and
+    # Fire TV; signed with the repository's key, the one that signed the
+    # Bijou already on the TVs, or Android won't install it over them.
+    name: Google TV
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      # That key's certificate (apksigner's SHA-256 of bijou-stable-328.apk):
+      # a key put in the secrets by mistake fails the job instead of giving
+      # an APK that can't update the TVs. Change it only with the key.
+      EXPECTED_CERT_SHA256: 882fd9bd00307bb4e7e7a711855cc084cca76c5336ce927c50a3a4176b007e8f
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Version
+        run: |
+          case "$TAG" in stable-*) ;; *) echo "::error::'$TAG' is not a stable-* tag"; exit 1 ;; esac
+          echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+
+      - name: The signing key
+        env:
+          BIJOU_KEYSTORE_BASE64: ${{ secrets.BIJOU_KEYSTORE_BASE64 }}
+          BIJOU_KEYSTORE_PASSWORD: ${{ secrets.BIJOU_KEYSTORE_PASSWORD }}
+          BIJOU_KEY_ALIAS: ${{ secrets.BIJOU_KEY_ALIAS }}
+          BIJOU_KEY_PASSWORD: ${{ secrets.BIJOU_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in BIJOU_KEYSTORE_BASE64 BIJOU_KEYSTORE_PASSWORD BIJOU_KEY_ALIAS BIJOU_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=No signing key::Repository secrets missing:$missing (docs/install.md, 'One-time setup'). An APK signed with any other key can't update the Bijou on the TVs, so none is built."
+            exit 1
+          fi
+          printf '%s' "$BIJOU_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/bijou.keystore"
+          echo "BIJOU_KEYSTORE=$RUNNER_TEMP/bijou.keystore" >> "$GITHUB_ENV"
+
+      # The JDK the laptop builds with (ci.yml).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Build the APK
+        env:
+          BIJOU_KEYSTORE_PASSWORD: ${{ secrets.BIJOU_KEYSTORE_PASSWORD }}
+          BIJOU_KEY_ALIAS: ${{ secrets.BIJOU_KEY_ALIAS }}
+          BIJOU_KEY_PASSWORD: ${{ secrets.BIJOU_KEY_PASSWORD }}
+        run: flutter build apk --release --target-platform android-arm,android-arm64 --build-number="$BUILD"
+
+      - name: Check the signature
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n1)
+          "$apksigner" verify --print-certs "$apk" | tee certs.txt
+          actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' certs.txt)
+          if [ "$actual" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error title=Wrong signing key::The APK's certificate is $actual, not the TVs' $EXPECTED_CERT_SHA256: check BIJOU_KEYSTORE_BASE64 (docs/install.md)."
+            exit 1
+          fi
+          mkdir -p dist
+          cp "$apk" dist/Bijou-TV.apk
+          ls -l dist
+
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/bijou.keystore"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/Bijou-TV.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish
+    needs: [linux, windows, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Version
+        run: echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: The Linux installer and the checksums
+        run: |
+          cp tools/install_linux.sh dist/install-linux.sh
+          cd dist
+          files=(Bijou-Setup.exe install-linux.sh Bijou-TV.apk
+            bijou-linux-x64-ubuntu22.04.tar.gz bijou-linux-x64-ubuntu24.04.tar.gz)
+          for file in "${files[@]}"; do
+            [ -s "$file" ] || { echo "::error::$file is missing"; exit 1; }
+          done
+          sha256sum "${files[@]}" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          ls -l
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="https://github.com/$GITHUB_REPOSITORY"
+          latest="$base/releases/latest/download"
+          guides="$base/blob/main/docs/install"
+          cat > notes.md <<EOF
+          **Install or update Bijou** (step by step: [Windows]($guides/windows.md) · [Linux]($guides/linux.md) · [Google TV, Android TV, Fire TV]($guides/android-tv.md)). Updating keeps your sources, favourites and sign-ins.
+
+          - **Windows 10 or 11:** download [Bijou-Setup.exe]($latest/Bijou-Setup.exe) and open it.
+          - **Linux** (Ubuntu 22.04 or newer, Linux Mint, Pop!_OS, Zorin OS, elementary OS, Debian 13): in a terminal,
+            \`curl -fsSL $latest/install-linux.sh | bash\`
+          - **TV:** in the free Downloader app, type \`github.com/$GITHUB_REPOSITORY/releases/latest/download/Bijou-TV.apk\`
+
+          Build $BUILD ($(git rev-parse --short HEAD)).
+          EOF
+          # Only the newest stable tag is "Latest": an older one rebuilt by
+          # hand mustn't take the download links back.
+          newest=$(git tag --list 'stable-*' --sort=-version:refname | head -n1)
+          is_latest=false
+          [ "$newest" = "$TAG" ] && is_latest=true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # A re-run: the same files again.
+            gh release upload "$TAG" dist/* --clobber
+          else
+            # A draft until every file is there, so no link ever points at
+            # a release that lacks one.
+            gh release create "$TAG" --verify-tag --draft \
+              --title "Bijou $BUILD" --notes-file notes.md dist/*
+          fi
+          gh release edit "$TAG" --draft=false --title "Bijou $BUILD" \
+            --notes-file notes.md --latest="$is_latest"
+          gh release view "$TAG"

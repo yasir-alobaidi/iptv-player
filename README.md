@@ -4,12 +4,20 @@
 
 The name, the icon and how the app describes itself: docs/05-design-system.md, "Brand" (ADR-018). The repository, the Dart package and the application id keep their first name, `iptv-player`.
 
+## Install
+
+- **Windows 10 and 11:** download [Bijou-Setup.exe](https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-Setup.exe) and open it. [Step by step](docs/install/windows.md).
+- **Linux** (Ubuntu 22.04 or newer, Linux Mint, Pop!_OS, Zorin OS, elementary OS, Debian 13): in a Terminal, `curl -fsSL https://github.com/yasir-alobaidi/iptv-player/releases/latest/download/install-linux.sh | bash`. [Step by step](docs/install/linux.md).
+- **Google TV, Android TV, Fire TV:** with the free Downloader app, `github.com/yasir-alobaidi/iptv-player/releases/latest/download/Bijou-TV.apk`. [Step by step](docs/install/android-tv.md).
+
+The same links always give the newest release. How releases are made: `docs/install.md`.
+
 ## Start here
 1. Do the system setup in `docs/setup.md` (sudo steps are manual).
 2. Open Claude Code in this folder.
 3. Paste the **Phase 0** prompt from `docs/08-phases-and-prompts.md`.
 4. When Claude asks, tell it your Google TV / Chromecast model and whether you have a real Windows PC.
 
-To install the stable app (Linux, Windows) and keep the code pushed: `docs/install.md`.
+To build the stable app yourself, make a release, and keep the code pushed: `docs/install.md`.
 
 Specs live in `docs/`. Rules for Claude Code live in `CLAUDE.md`.

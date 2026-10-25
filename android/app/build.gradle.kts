@@ -45,6 +45,22 @@ val betaChannel: Boolean = dartDefines["BIJOU_CHANNEL"] == "beta"
 // instead, `=clear` the layer with no window background. Dart reads the same.
 val videoLayer: String = dartDefines["BIJOU_VIDEO_LAYER"].orEmpty()
 
+// The release's key (docs/install.md): the release workflow writes the
+// repository's secret to a file and names it in BIJOU_KEYSTORE, with
+// BIJOU_KEYSTORE_PASSWORD, BIJOU_KEY_ALIAS and BIJOU_KEY_PASSWORD. It is the
+// laptop's debug key, the one that signed the Bijou on the TVs: Android
+// installs an update only over an app signed with the same key. Without
+// BIJOU_KEYSTORE (local builds, tools/tv_apk.sh) the debug key signs, as
+// before; the two give the same certificate on this laptop.
+val releaseKeystore: File? =
+    providers.environmentVariable("BIJOU_KEYSTORE").orNull
+        ?.takeIf { it.isNotBlank() }
+        ?.let { file(it) }
+
+fun signingSecret(name: String): String =
+    providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
+        ?: throw GradleException("BIJOU_KEYSTORE is set but $name is not (docs/install.md)")
+
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
     // `io.github.yasiralobaidi.iptvplayer` keeps its first name only
@@ -88,11 +104,26 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        releaseKeystore?.let { keystore ->
+            if (!keystore.isFile) {
+                throw GradleException("BIJOU_KEYSTORE: no keystore at $keystore")
+            }
+            create("release") {
+                storeFile = keystore
+                storePassword = signingSecret("BIJOU_KEYSTORE_PASSWORD")
+                keyAlias = signingSecret("BIJOU_KEY_ALIAS")
+                keyPassword = signingSecret("BIJOU_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Sideloaded for personal use (docs/07): the debug key until
-            // TV-5's packaging gives the app a key of its own.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sideloaded (docs/07, docs/install/android-tv.md): the
+            // release's key from BIJOU_KEYSTORE, else the debug key.
+            signingConfig =
+                signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
         }
     }
 }
