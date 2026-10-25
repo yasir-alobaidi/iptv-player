@@ -14,7 +14,14 @@ import 'package:iptv_player/design/tokens.dart';
 const _tag = 'exits';
 
 /// What a launch has to tell of the runs before it (ADR-058).
-typedef ExitNews = ({AppExit newest, int count, DrawingBackend drawing});
+typedef ExitNews = ({
+  AppExit newest,
+  int count,
+  DrawingBackend drawing,
+
+  /// One of these ends made it OpenGL ES (Drawing.kt, this launch).
+  bool switched,
+});
 
 /// Logs every unexpected end not told yet (oldest first, as errors, so
 /// the diagnostics report's recent problems hold them), and how the
@@ -43,7 +50,16 @@ Future<ExitNews?> takeExitNews(LastExitsSource source, AppLog log) async {
     );
   }
   await source.seen(untold.first.time);
-  return (newest: untold.first, count: untold.length, drawing: drawing);
+  final since = drawing.since;
+  return (
+    newest: untold.first,
+    count: untold.length,
+    drawing: drawing,
+    switched:
+        drawing.openGles &&
+        since != null &&
+        untold.any((exit) => exit.time == since),
+  );
 }
 
 /// On a TV, the first launch after the app closed by itself says so, with
@@ -104,14 +120,17 @@ class LastExitDialog extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final exit = news.newest;
-    // This end made it OpenGL ES: a crash drawing, or one Android kept
-    // nothing of (Drawing.kt).
-    final switched =
-        news.drawing.openGles &&
-        (exit.drawing || news.drawing.since == exit.time);
+    // A crash under OpenGL ES already: the photo says so.
+    final since = news.drawing.since;
+    final underOpenGles =
+        news.drawing.openGles && since != null && exit.time.isAfter(since);
     final body = tokens.text.body.copyWith(color: colors.textSecondary);
     final facts = redact(
-      ['$appName · ${_when(exit.time)}', ...exit.details].join('\n'),
+      [
+        '$appName · ${_when(exit.time)}',
+        if (underOpenGles) 'drawn with OpenGL ES since ${_when(since)}',
+        ...exit.details,
+      ].join('\n'),
       secrets: secrets,
     );
 
@@ -128,7 +147,7 @@ class LastExitDialog extends StatelessWidget {
             [
               exit.summary,
               if (news.count > 1) 'It happened ${news.count} times.',
-              if (switched) _switched,
+              if (news.switched) _switched,
             ].join(' '),
             style: body,
           ),

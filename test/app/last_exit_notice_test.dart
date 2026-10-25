@@ -31,8 +31,9 @@ void main() {
     drawing: true,
   );
 
-  const openGles = DrawingBackend(
+  final openGles = DrawingBackend(
     openGles: true,
+    since: crashedAt,
     cause: 'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
   );
 
@@ -86,6 +87,7 @@ void main() {
       expect(news.newest.time, crashedAt);
       expect(news.count, 2);
       expect(news.drawing.openGles, isTrue);
+      expect(news.switched, isTrue);
       expect(source.seenUpTo, crashedAt);
 
       final errors = logLines().where((line) => line.contains('ERROR'));
@@ -203,9 +205,8 @@ void main() {
       );
     });
 
-    testWidgets('an older switch is not said again for a later crash', (
-      tester,
-    ) async {
+    testWidgets('a crash already under OpenGL ES: no promise it is fixed, '
+        'and the facts say how it was drawn', (tester) async {
       await pumpApp(
         tester,
         LastExits(
@@ -214,17 +215,22 @@ void main() {
               time: crashedAt,
               reason: ExitReason.crashNative,
               importance: 100,
-              thread: 'mpv/demux',
+              thread: '1.raster',
+              drawing: true,
             ),
           ],
           drawing: DrawingBackend(openGles: true, since: earlier),
         ),
       );
       expect(
-        find.textContaining('It crashed in its native code.'),
+        find.textContaining('It crashed while drawing the screen.'),
         findsOneWidget,
       );
-      expect(find.textContaining('OpenGL ES'), findsNothing);
+      expect(find.textContaining('From now on'), findsNothing);
+      expect(
+        find.textContaining('drawn with OpenGL ES since 2026-10-25 05:50'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('nothing new: no notice', (tester) async {

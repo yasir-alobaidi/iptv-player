@@ -138,8 +138,9 @@ final class AppExit {
       if (reason != ExitReason.crashNative && status != 0) 'status $status',
       if (rssKb > 0) 'memory ${(rssKb / 1024).round()} MB',
     ].join(' · '),
-    // Android's word for a Java crash is "crash", the kind said already.
-    if (description case final text? when text != reason.name) text,
+    // Android's word for a crash, Java or native, is "crash": the kind,
+    // said already.
+    if (description case final text? when text != 'crash') text,
     if (abort case final text? when text.isNotEmpty) 'abort: $text',
     if (cause case final text? when text.isNotEmpty) 'cause: $text',
     for (final (index, frame) in frames.indexed)

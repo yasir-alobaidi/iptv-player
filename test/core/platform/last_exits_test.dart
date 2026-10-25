@@ -28,7 +28,7 @@ void main() {
         'importance': 100,
         'pssKb': 210000,
         'rssKb': 312000,
-        'description': null,
+        'description': 'crash',
         'byBijou': false,
         'signal': 'SIGSEGV SEGV_MAPERR',
         'thread': '1.raster',
@@ -62,7 +62,7 @@ void main() {
       expect(crash.status, 11);
       expect(crash.importance, 100);
       expect(crash.rssKb, 312000);
-      expect(crash.description, isNull);
+      expect(crash.description, 'crash');
       expect(crash.signal, 'SIGSEGV SEGV_MAPERR');
       expect(crash.thread, '1.raster');
       expect(crash.cause, 'null pointer dereference');
