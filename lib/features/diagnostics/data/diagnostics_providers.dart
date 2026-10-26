@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/result.dart';
@@ -33,6 +34,7 @@ DiagnosticsService diagnostics(Ref ref) => DbDiagnostics(
   player: ref.watch(playerEngineProvider),
   castFolder: ref.watch(castFolderProvider),
   exits: ref.watch(lastExitsProvider),
+  runLogs: ref.watch(runLogsProvider),
   homeFolder:
       Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'],
   clock: ref.watch(appClockProvider),

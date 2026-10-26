@@ -39,6 +39,8 @@ final class SystemFacts {
     this.session,
     this.desktop,
     this.graphics = const [],
+    this.device,
+    this.memory,
   });
 
   /// `Ubuntu 22.04.5 LTS`, `Windows 11 Pro 10.0 (Build 22631)`.
@@ -53,6 +55,13 @@ final class SystemFacts {
   /// `GNOME`, `KDE`; null on Windows.
   final String? desktop;
   final List<GraphicsCard> graphics;
+
+  /// A TV's make, model and chip: `TCL 43V8C · board m7332 · …` (ADR-059);
+  /// null on a computer.
+  final String? device;
+
+  /// A TV's memory and what the app may use of it; null on a computer.
+  final String? memory;
 }
 
 /// Reads [SystemFacts]. Never throws: what can't be read is left out.

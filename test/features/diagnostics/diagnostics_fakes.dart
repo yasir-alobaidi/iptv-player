@@ -6,6 +6,7 @@ import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
 import 'package:iptv_player/features/diagnostics/domain/diagnostics_service.dart';
 import 'package:iptv_player/features/diagnostics/domain/log_lines.dart';
+import 'package:iptv_player/features/diagnostics/domain/report_share.dart';
 
 /// A report a test scripts.
 final class FakeDiagnostics implements DiagnosticsService {
@@ -30,6 +31,10 @@ final class FakeDiagnostics implements DiagnosticsService {
   Completer<void>? gate;
   final saved = <(String, String)>[];
   int reports = 0;
+  int shareReports = 0;
+
+  /// What [shareReport] adds after the report: each run's own log.
+  String runLogs = '';
 
   @override
   Future<Result<String>> report() async {
@@ -37,6 +42,14 @@ final class FakeDiagnostics implements DiagnosticsService {
     if (gate case final gate?) await gate.future;
     if (failure case final failure?) return Err(failure);
     return Ok(text);
+  }
+
+  @override
+  Future<Result<String>> shareReport() async {
+    shareReports++;
+    if (gate case final gate?) await gate.future;
+    if (failure case final failure?) return Err(failure);
+    return Ok('$text$runLogs');
   }
 
   @override
@@ -155,3 +168,51 @@ List<Override> diagnosticsOverrides({
   if (savePicker != null)
     reportSavePickerProvider.overrideWithValue(savePicker),
 ];
+
+/// Offers a report the way a test scripts it (ADR-059).
+final class FakeReportSharer implements ReportSharer {
+  final offered = <(String, String)>[];
+  final offers = <FakeReportOffer>[];
+  AppFailure? failure;
+
+  /// Makes [offer] wait.
+  Completer<void>? gate;
+
+  @override
+  Future<Result<ReportOffer>> offer(
+    String text, {
+    required String fileName,
+  }) async {
+    offered.add((text, fileName));
+    if (gate case final gate?) await gate.future;
+    if (failure case final failure?) return Err(failure);
+    final offer = FakeReportOffer(
+      Uri.parse('http://192.168.1.50:41234/k3v9q2mx7p/'),
+    );
+    offers.add(offer);
+    return Ok(offer);
+  }
+}
+
+/// An offer a test makes a phone fetch.
+final class FakeReportOffer implements ReportOffer {
+  new(this.address);
+
+  @override
+  final Uri address;
+
+  final _fetched = StreamController<void>.broadcast();
+  int closed = 0;
+
+  /// A phone downloads the file.
+  void fetch() => _fetched.add(null);
+
+  @override
+  Stream<void> get fetched => _fetched.stream;
+
+  @override
+  Future<void> close() async {
+    closed++;
+    await _fetched.close();
+  }
+}

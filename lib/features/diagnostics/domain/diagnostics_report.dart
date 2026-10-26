@@ -1,6 +1,7 @@
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/text/format.dart';
@@ -86,6 +87,7 @@ final class DiagnosticsFacts {
     this.named = const {},
     this.drawing,
     this.exits,
+    this.runLogs,
   });
 
   final DateTime now;
@@ -133,6 +135,10 @@ final class DiagnosticsFacts {
   /// A TV's last ends Android kept, newest first (ADR-058); null where
   /// nothing keeps them (the desktop).
   final List<AppExit>? exits;
+
+  /// A TV's own log of the run before and of this one, for the report a
+  /// phone takes (ADR-059); null in the report on the screen.
+  final RunLogs? runLogs;
 }
 
 /// Shorter names and hosts aren't replaced as plain text: they would
@@ -191,21 +197,54 @@ String _run(RunFacts run, DateTime now) {
   };
 }
 
-/// The unexpected ends among [exits], each with its facts under it;
-/// nothing where none are kept.
+/// The unexpected ends among [exits], each with its facts under it, then
+/// the others on one line (ADR-059: an end the app took for its own may
+/// be the one that wasn't); nothing where none are kept.
 List<String> _exits(List<AppExit>? exits, DateTime now) {
   if (exits == null) return const [];
   final unexpected = [
     for (final exit in exits)
       if (exit.unexpected) exit,
   ];
-  if (unexpected.isEmpty) return const ['Unexpected ends: none kept'];
+  final others = [
+    for (final exit in exits)
+      if (!exit.unexpected)
+        [
+          '${formatAgo(exit.time, now)} ${exit.reason.name}',
+          if (exit.byBijou) 'Back on Home',
+          if (exit.importance > 0) 'importance ${exit.importance}',
+          if (exit.status != 0) 'status ${exit.status}',
+          ?exit.description,
+        ].join(', '),
+  ];
   return [
-    'Unexpected ends (${unexpected.length}):',
-    for (final exit in unexpected) ...[
-      '  ${formatAgo(exit.time, now)}: ${exit.summary}',
-      for (final line in exit.details) '    ${withoutAddresses(line)}',
+    if (unexpected.isEmpty)
+      'Unexpected ends: none kept'
+    else ...[
+      'Unexpected ends (${unexpected.length}):',
+      for (final exit in unexpected) ...[
+        '  ${formatAgo(exit.time, now)}: ${exit.summary}',
+        for (final line in exit.details) '    ${withoutAddresses(line)}',
+      ],
     ],
+    if (others.isNotEmpty)
+      'Other ends: ${withoutAddresses(others.join(' · '))}',
+  ];
+}
+
+/// Each run's own log, under the rest; nothing in the report on the
+/// screen.
+List<String> _runLogs(RunLogs? logs) {
+  if (logs == null) return const [];
+  List<String> part(String title, List<String> lines) => lines.isEmpty
+      ? ['$title: nothing kept']
+      : [
+          '$title (${_plural(lines.length, 'line')}):',
+          for (final line in lines) '  ${withoutAddresses(line)}',
+        ];
+  return [
+    ...part('The run before, as Android logged it', logs.previous),
+    ...part('This run so far', logs.current),
   ];
 }
 
@@ -248,6 +287,8 @@ String buildDiagnosticsReport(
       ?system.session,
       ?system.desktop,
     ].join(' · '),
+    if (system.device case final device?) 'Device: $device',
+    if (system.memory case final memory?) 'Memory: $memory',
     'Graphics: $graphics',
     'Player: ${facts.player ?? 'not available'}',
     'Decoding: $decoding',
@@ -300,9 +341,8 @@ String buildDiagnosticsReport(
           ? 'Recent warnings and errors: none'
           : 'Recent warnings and errors (${facts.problems.length}):',
     )
-    ..addAll([
-      for (final line in facts.problems) '  ${withoutAddresses(line)}',
-    ]);
+    ..addAll([for (final line in facts.problems) '  ${withoutAddresses(line)}'])
+    ..addAll(_runLogs(facts.runLogs));
 
   var text = out.join('\n');
   final home = facts.homeFolder;

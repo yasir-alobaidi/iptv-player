@@ -123,8 +123,8 @@ class LastExits(private val context: Context, messenger: BinaryMessenger) :
         private const val SEEN_UP_TO = "seenUpTo"
         private const val LEFT_AT = "leftAt"
 
-        /** The newest ends kept: enough for a crash and the launches after it. */
-        private const val MAX_EXITS = 5
+        /** The newest ends kept: a crash, the tries after it, and the leaves between (ADR-059). */
+        private const val MAX_EXITS = 10
         private const val FRAMES = 16
         private const val TRACE_LINES = 40
         private const val TEXT_CHARS = 600

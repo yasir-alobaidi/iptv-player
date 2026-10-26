@@ -41,6 +41,8 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.6
   protobuf: ^6.1.0
+  # The code a phone scans for the diagnostics report (ADR-059).
+  qr: ^4.0.0
   riverpod_annotation: ^4.0.7
   shelf: ^1.4.2
   shelf_router: ^1.1.4

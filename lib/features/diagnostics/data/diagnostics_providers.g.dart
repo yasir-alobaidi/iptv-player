@@ -107,7 +107,7 @@ final class DiagnosticsProvider
   }
 }
 
-String _$diagnosticsHash() => r'62dbd42401c2553a6fd8985f76f411d644c3a503';
+String _$diagnosticsHash() => r'fea6d6d37c6ce5cd9210566da7a3086c6e152754';
 
 /// The report as the page shows it: made when the page opens, and again
 /// when asked.

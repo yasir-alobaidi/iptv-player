@@ -10,6 +10,9 @@ import 'package:iptv_player/core/logging/redact.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
+import 'package:iptv_player/features/diagnostics/presentation/report_view.dart';
+import 'package:iptv_player/features/diagnostics/presentation/send_report_dialog.dart';
 
 const _tag = 'exits';
 
@@ -65,8 +68,9 @@ Future<ExitNews?> takeExitNews(LastExitsSource source, AppLog log) async {
 /// On a TV, the first launch after the app closed by itself says so, with
 /// what Android kept of why: a crash's thread and where it was, plainly
 /// enough to photograph (ADR-058: a TV out of adb's reach is diagnosed
-/// from that photo). Once per end; Settings → About & diagnostics keeps
-/// them in its report.
+/// from that photo), and Send to phone for the whole report with each
+/// run's own log (ADR-059). Once per end; Settings → About & diagnostics
+/// keeps them in its report.
 class LastExitNotice extends ConsumerStatefulWidget {
   const new({required this.child, super.key});
 
@@ -99,21 +103,39 @@ class _LastExitNoticeState extends ConsumerState<LastExitNotice> {
     final secrets = ref.read(secretRegistryProvider).values;
     await showAppDialog<void>(
       context,
-      builder: (_) => LastExitDialog(news: news, secrets: secrets),
+      builder: (_) => LastExitDialog(
+        news: news,
+        secrets: secrets,
+        onSend: () => unawaited(_send(context)),
+      ),
     );
   }
+
+  /// Over the notice, which stays for its photo.
+  Future<void> _send(BuildContext context) => showSendReportDialog(
+    context,
+    load: ref.read(diagnosticsProvider).shareReport,
+    fileName: diagnosticsFileName(ref.read(appClockProvider)()),
+  );
 
   @override
   Widget build(BuildContext context) => widget.child;
 }
 
 /// "Bijou closed by itself last time": what happened, what the app did
-/// about it, and the facts, redacted.
+/// about it, and the facts, redacted; [onSend] offers the whole report to
+/// a phone.
 class LastExitDialog extends StatelessWidget {
-  const new({required this.news, this.secrets = const [], super.key});
+  const new({
+    required this.news,
+    this.secrets = const [],
+    this.onSend,
+    super.key,
+  });
 
   final ExitNews news;
   final Iterable<String> secrets;
+  final VoidCallback? onSend;
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +161,8 @@ class LastExitDialog extends StatelessWidget {
       width: 760,
       primaryLabel: 'OK',
       onPrimary: () => Navigator.of(context).pop(),
+      secondaryLabel: onSend == null ? null : 'Send to phone',
+      onSecondary: onSend,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,7 +177,11 @@ class LastExitDialog extends StatelessWidget {
           ),
           SizedBox(height: tokens.spacing.s12),
           Text(
-            'If it happens again, a photo of this screen shows where.',
+            onSend == null
+                ? 'If it happens again, a photo of this screen shows where.'
+                : 'Send to phone gives the whole report, with what Bijou '
+                      'logged before it closed. A photo of this screen helps '
+                      'too.',
             style: body,
           ),
           SizedBox(height: tokens.spacing.s16),

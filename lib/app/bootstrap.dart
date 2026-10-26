@@ -24,6 +24,7 @@ import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/platform/system_notifier.dart';
 import 'package:iptv_player/core/platform/tool_licenses.dart';
@@ -41,6 +42,8 @@ import 'package:iptv_player/data/images/cached_artwork_store.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/platform/android_display_modes.dart';
 import 'package:iptv_player/data/platform/android_last_exits.dart';
+import 'package:iptv_player/data/platform/android_run_logs.dart';
+import 'package:iptv_player/data/platform/android_system_facts.dart';
 import 'package:iptv_player/data/platform/file_reveals.dart';
 import 'package:iptv_player/data/platform/system_facts_readers.dart';
 import 'package:iptv_player/data/platform/system_networks.dart';
@@ -193,6 +196,12 @@ Future<void> bootstrap() async {
       // Why the last runs ended, and how the screen is drawn (ADR-058).
       if (!onDesktop && Platform.isAndroid)
         lastExitsProvider.overrideWithValue(AndroidLastExits(log: log)),
+      // Each run's own log, for the report a phone takes, and the version
+      // from the package: an APK has no `version.json` (ADR-059).
+      if (!onDesktop && Platform.isAndroid) ...[
+        runLogsProvider.overrideWithValue(AndroidRunLogs(log: log)),
+        appVersionProvider.overrideWith((_) => androidAppVersion()),
+      ],
       if (window != null)
         windowControlsProvider.overrideWithValue(const WindowManagerControls()),
       fileRevealProvider.overrideWithValue(platformFileReveal(log)),

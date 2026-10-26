@@ -145,6 +145,11 @@ class AppColors {
   /// Badges and small controls laid over video (canvas: bg at 70 %).
   Color get videoChip => bg.withValues(alpha: 0.7);
 
+  /// A QR code's tile and modules: a phone's camera reads dark on light,
+  /// whatever the theme (ADR-059).
+  Color get codeLight => const Color(0xFFFFFFFF);
+  Color get codeDark => const Color(0xFF0A0C10);
+
   AppColors copyWith({AppAccent? accent}) =>
       AppColors(accent: accent ?? this.accent);
 }

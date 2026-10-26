@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
+import 'package:iptv_player/core/logging/app_log.dart';
+import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
@@ -19,6 +21,7 @@ import 'package:iptv_player/features/onboarding/presentation/welcome_screen.dart
 import 'package:iptv_player/features/search/presentation/search_overlay.dart';
 import 'package:iptv_player/features/series/presentation/series_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
+import 'package:logger/logger.dart';
 
 import '../features/guide/guide_switch.dart';
 import '../features/guide/presentation/guide_settings_fakes.dart';
@@ -38,6 +41,30 @@ void main() {
       container.read(routerProvider).routeInformationProvider.value.uri.path,
       welcomeRoutePath,
     );
+  });
+
+  testWidgets("a TV's screens go into its log by path, a query never, each "
+      'once (ADR-059)', (tester) async {
+    final app = await pumpApp(tester);
+    final output = MemoryOutput();
+    final stop = logScreens(
+      app.router,
+      AppLog(output: output, secrets: SecretRegistry()),
+    );
+    addTearDown(stop);
+
+    app.router.go('/movies?q=private');
+    await tester.pumpAndSettle();
+    app.router.go('/movies');
+    await tester.pumpAndSettle();
+    app.router.go(searchRoutePath);
+    await tester.pumpAndSettle();
+
+    final lines = [for (final event in output.buffer) ...event.lines];
+    expect(lines.where((line) => line.contains('[screen]')), hasLength(2));
+    expect(lines.join('\n'), contains('[screen] /movies'));
+    expect(lines.join('\n'), contains('[screen] $searchRoutePath'));
+    expect(lines.join('\n'), isNot(contains('private')));
   });
 
   testWidgets('Welcome is a page of its own, outside the shell', (

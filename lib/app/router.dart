@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/logging/app_log.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
@@ -65,8 +68,27 @@ String startLocation(Ref ref) => '/';
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final router = buildRouter(initialLocation: ref.read(startLocationProvider));
+  if (ref.read(formFactorProvider) == FormFactor.tv) {
+    ref.onDispose(logScreens(router, ref.read(appLogProvider)));
+  }
   ref.onDispose(router.dispose);
   return router;
+}
+
+/// Logs each screen [router] shows, its path and never a query: a TV's
+/// own log of a run then says where the run ended (ADR-059). Returns the
+/// call that stops it.
+VoidCallback logScreens(GoRouter router, AppLog log) {
+  String? shown;
+  void noteScreen() {
+    final path = router.routerDelegate.currentConfiguration.uri.path;
+    if (path == shown) return;
+    shown = path;
+    log.info('screen', path);
+  }
+
+  router.routerDelegate.addListener(noteScreen);
+  return () => router.routerDelegate.removeListener(noteScreen);
 }
 
 /// Builds the app's router. Tests pass [initialLocation] to start on a

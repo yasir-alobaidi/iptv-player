@@ -7,6 +7,7 @@ import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -35,6 +36,7 @@ final class DbDiagnostics implements DiagnosticsService {
     this._player,
     this._castFolder,
     this._exits = const NoLastExits(),
+    this._runLogs = const NoRunLogs(),
     this.homeFolder,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
@@ -48,6 +50,7 @@ final class DbDiagnostics implements DiagnosticsService {
   final PlayerEngine? _player;
   final Directory? _castFolder;
   final LastExitsSource _exits;
+  final RunLogsSource _runLogs;
 
   /// Written `~` in the report.
   final String? homeFolder;
@@ -57,15 +60,27 @@ final class DbDiagnostics implements DiagnosticsService {
   /// with.
   static const problemLines = 50;
 
+  /// Each run's own log in [shareReport], at most: a phone's quick
+  /// download, and the newest part is where a run ended.
+  static const int runLogBytes = 256 * 1024;
+
   @override
   Future<Result<String>> report() => Result.guard(
     () async => buildDiagnosticsReport(await facts(), secrets: _secrets.values),
   );
 
-  /// Everything the report is written from. Each part that can't be
-  /// read is left out rather than failing the report: it is for the day
-  /// something is broken.
-  Future<DiagnosticsFacts> facts() async {
+  @override
+  Future<Result<String>> shareReport() => Result.guard(
+    () async => buildDiagnosticsReport(
+      await facts(withRunLogs: true),
+      secrets: _secrets.values,
+    ),
+  );
+
+  /// Everything the report is written from; each run's own log too with
+  /// [withRunLogs]. Each part that can't be read is left out rather than
+  /// failing the report: it is for the day something is broken.
+  Future<DiagnosticsFacts> facts({bool withRunLogs = false}) async {
     final remembered = await _try(() async {
       final folder = _castFolder;
       return folder == null ? null : await _rememberedInIsolate(folder.path);
@@ -78,6 +93,9 @@ final class DbDiagnostics implements DiagnosticsService {
     );
     final rows = problems?.rows ?? const <LogRow>[];
     final last = _exits.available ? await _try(_exits.read) : null;
+    final runLogs = withRunLogs && _runLogs.available
+        ? await _try(() => _runLogs.read(maxBytes: runLogBytes))
+        : null;
     return DiagnosticsFacts(
       now: _clock(),
       appVersion: (await _try(_version))?.short ?? 'unknown',
@@ -109,6 +127,7 @@ final class DbDiagnostics implements DiagnosticsService {
       named: await _try(_named) ?? const {},
       drawing: last?.drawing,
       exits: last?.exits,
+      runLogs: runLogs,
     );
   }
 

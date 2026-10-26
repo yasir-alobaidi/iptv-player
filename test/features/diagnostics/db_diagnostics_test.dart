@@ -9,6 +9,7 @@ import 'package:iptv_player/core/logging/rotating_file_output.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/fake_player_engine.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -64,6 +65,7 @@ void main() {
     LogReader? log,
     PlayerEngine? player,
     LastExitsSource exits = const NoLastExits(),
+    RunLogsSource runLogs = const NoRunLogs(),
   }) => DbDiagnostics(
     db: db,
     version: () async => const AppVersion(version: '0.1.0', build: '1'),
@@ -74,6 +76,7 @@ void main() {
     player: player,
     castFolder: Directory(p.join(folder.path, 'cast')),
     exits: exits,
+    runLogs: runLogs,
     homeFolder: '/home/mariam',
     clock: () => _now,
   );
@@ -142,6 +145,32 @@ void main() {
     expect(report, contains('(i915) · drawn with OpenGL ES'));
     expect(report, contains('Unexpected ends (1):'));
     expect(report, contains('thread 1.raster'));
+  });
+
+  test("the report a phone takes has each run's own log, asked at its "
+      'size; the one on the screen never reads them (ADR-059)', () async {
+    final runLogs = _RunLogs(
+      const RunLogs(
+        previous: ['I Bijou   : Key DPAD_LEFT down', 'F libc    : Fatal'],
+      ),
+    );
+    final service = diagnostics(runLogs: runLogs);
+
+    final shown = (await service.report()).valueOrNull!;
+    expect(runLogs.reads, isEmpty);
+    expect(shown, isNot(contains('The run before')));
+
+    final shared = (await service.shareReport()).valueOrNull!;
+    expect(runLogs.reads, [DbDiagnostics.runLogBytes]);
+    expect(
+      shared,
+      endsWith(
+        'The run before, as Android logged it (2 lines):\n'
+        '  I Bijou   : Key DPAD_LEFT down\n'
+        '  F libc    : Fatal\n'
+        'This run so far: nothing kept',
+      ),
+    );
   });
 
   test('a source whose last sync failed, with a guide import that skipped '
@@ -403,6 +432,22 @@ void main() {
     expect(report, contains('http://127.0.0.1:38412/p/abc/stream.mp4 stalled'));
     expect(report, contains('GET http://<address>/player_api.php?username='));
   });
+}
+
+final class _RunLogs implements RunLogsSource {
+  new(this._logs);
+
+  final RunLogs _logs;
+  final reads = <int>[];
+
+  @override
+  bool get available => true;
+
+  @override
+  Future<RunLogs?> read({int maxBytes = 0}) async {
+    reads.add(maxBytes);
+    return _logs;
+  }
 }
 
 final class _Exits implements LastExitsSource {

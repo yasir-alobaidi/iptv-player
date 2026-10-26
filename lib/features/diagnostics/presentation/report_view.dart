@@ -7,10 +7,12 @@ import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
+import 'package:iptv_player/features/diagnostics/presentation/send_report_dialog.dart';
 
 /// `bijou-diagnostics-2026-10-13.txt`, the name Save suggests.
 String diagnosticsFileName(DateTime now) {
@@ -22,8 +24,9 @@ String diagnosticsFileName(DateTime now) {
 
 /// The diagnostics report (Phase 9 decision 9, sketch D): the text
 /// itself, so the user sees what they are about to paste, with Copy
-/// diagnostics and Save to file… above it. The text is one Tab stop,
-/// scrolled by the keyboard.
+/// diagnostics and Save to file… above it; on a TV, which has neither a
+/// clipboard nor a file to give, Send to phone (ADR-059). The text is one
+/// Tab stop, scrolled by the keyboard.
 class ReportView extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -76,10 +79,17 @@ class _ReportViewState extends ConsumerState<ReportView> {
     }
   }
 
+  Future<void> _send() => showSendReportDialog(
+    context,
+    load: ref.read(diagnosticsProvider).shareReport,
+    fileName: diagnosticsFileName(ref.read(appClockProvider)()),
+  );
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
     final report = ref.watch(diagnosticsReportProvider);
     final text = report.value?.valueOrNull;
     // The service answers with a Result; an error here is the last line
@@ -100,31 +110,44 @@ class _ReportViewState extends ConsumerState<ReportView> {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: context.scaled(560)),
               child: Text(
-                'What the app, the player and the converter found on this '
-                'computer. No passwords, usernames or server addresses.',
+                onTv
+                    ? 'What the app and the player found on this TV. No '
+                          'passwords, usernames or server addresses.'
+                    : 'What the app, the player and the converter found on '
+                          'this computer. No passwords, usernames or server '
+                          'addresses.',
                 style: tokens.text.caption.copyWith(color: colors.textTertiary),
               ),
             ),
-            Wrap(
-              spacing: tokens.spacing.s8,
-              runSpacing: tokens.spacing.s8,
-              children: [
-                AppButton(
-                  label: 'Copy diagnostics',
-                  size: AppButtonSize.s,
-                  onPressed: text == null ? null : () => unawaited(_copy(text)),
-                ),
-                AppButton(
-                  label: 'Save to file…',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  loading: _saving,
-                  onPressed: text == null || _saving
-                      ? null
-                      : () => unawaited(_save(text)),
-                ),
-              ],
-            ),
+            if (onTv)
+              AppButton(
+                label: 'Send to phone',
+                size: AppButtonSize.s,
+                onPressed: () => unawaited(_send()),
+              )
+            else
+              Wrap(
+                spacing: tokens.spacing.s8,
+                runSpacing: tokens.spacing.s8,
+                children: [
+                  AppButton(
+                    label: 'Copy diagnostics',
+                    size: AppButtonSize.s,
+                    onPressed: text == null
+                        ? null
+                        : () => unawaited(_copy(text)),
+                  ),
+                  AppButton(
+                    label: 'Save to file…',
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.s,
+                    loading: _saving,
+                    onPressed: text == null || _saving
+                        ? null
+                        : () => unawaited(_save(text)),
+                  ),
+                ],
+              ),
           ],
         ),
         SizedBox(height: tokens.spacing.s12),

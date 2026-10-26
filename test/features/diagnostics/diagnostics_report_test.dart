@@ -4,6 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
+import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/player/decoder_notes.dart';
 import 'package:iptv_player/features/diagnostics/domain/diagnostics_report.dart';
@@ -175,6 +176,99 @@ void main() {
       );
       expect(report, contains('Graphics: not known\n'));
       expect(report, contains('Unexpected ends: none kept'));
+    });
+  });
+
+  group("a TV's own lines and each run's log (ADR-059)", () {
+    test('the TV, its chip and its memory under the first line, the other '
+        'ends on one line after the unexpected ones', () {
+      final report = buildDiagnosticsReport(
+        DiagnosticsFacts(
+          now: now,
+          system: const SystemFacts(
+            os: 'Android 12 (API 31, 2024-05-05)',
+            kernel: 'Linux 5.4.274+',
+            device: 'TCL 43V8C · board m7332 · platform m7332',
+            memory: '1.9 GB, 0.6 GB free, low at 0.2 GB · a low-RAM device',
+            graphics: [
+              GraphicsCard(
+                name: 'EGL mali · Vulkan 1.1 (mali) · OpenGL ES 3.2',
+              ),
+            ],
+          ),
+          exits: [
+            AppExit(
+              time: now.subtract(const Duration(minutes: 5)),
+              reason: ExitReason.exitSelf,
+              importance: 400,
+              byBijou: true,
+            ),
+            AppExit(
+              time: now.subtract(const Duration(hours: 1)),
+              reason: ExitReason.lowMemory,
+              importance: 400,
+              description: 'cached kill from 192.168.1.20',
+            ),
+          ],
+        ),
+      );
+      final lines = report.split('\n');
+      expect(lines.sublist(0, 4), [
+        'Bijou unknown · Android 12 (API 31, 2024-05-05) · Linux 5.4.274+',
+        'Device: TCL 43V8C · board m7332 · platform m7332',
+        'Memory: 1.9 GB, 0.6 GB free, low at 0.2 GB · a low-RAM device',
+        'Graphics: EGL mali · Vulkan 1.1 (mali) · OpenGL ES 3.2',
+      ]);
+      expect(
+        lines,
+        containsAllInOrder([
+          'Unexpected ends: none kept',
+          'Other ends: 5 min ago exitSelf, Back on Home, importance 400 · '
+              '1 h ago lowMemory, importance 400, cached kill from <address>',
+        ]),
+      );
+    });
+
+    test("the report a phone takes ends with each run's log, addresses "
+        'hidden and secrets redacted; one with nothing kept says so', () {
+      final report = buildDiagnosticsReport(
+        DiagnosticsFacts(
+          now: now,
+          runLogs: const RunLogs(
+            previous: [
+              '10-26 14:03:01.120  4120  4120 I Bijou   : Key DPAD_LEFT down',
+              '10-26 14:03:01.410  4120  4161 F libc    : Fatal signal 11 '
+                  '(SIGSEGV) in tid 4161 (1.raster)',
+              '10-26 14:03:01.200  4120  4150 I flutter : open '
+                  'http://203.0.113.7:8080/live/u/hunter2/1.ts',
+            ],
+          ),
+        ),
+        secrets: ['hunter2'],
+      );
+      final lines = report.split('\n');
+      final at = lines.indexOf(
+        'The run before, as Android logged it (3 lines):',
+      );
+      expect(at, isNot(-1));
+      expect(lines.sublist(at + 1), [
+        '  10-26 14:03:01.120  4120  4120 I Bijou   : Key DPAD_LEFT down',
+        '  10-26 14:03:01.410  4120  4161 F libc    : Fatal signal 11 '
+            '(SIGSEGV) in tid 4161 (1.raster)',
+        '  10-26 14:03:01.200  4120  4150 I flutter : open '
+            'http://<address>/live/***/***/1.ts',
+        'This run so far: nothing kept',
+      ]);
+      expect(report, isNot(contains('hunter2')));
+      expect(report, isNot(contains('203.0.113.7')));
+    });
+
+    test('the report on the screen has no run log and no TV lines', () {
+      final report = buildDiagnosticsReport(DiagnosticsFacts(now: now));
+      expect(report, isNot(contains('Device:')));
+      expect(report, isNot(contains('Memory:')));
+      expect(report, isNot(contains('The run before')));
+      expect(report, isNot(contains('Other ends')));
     });
   });
 

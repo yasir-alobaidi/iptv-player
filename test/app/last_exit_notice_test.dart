@@ -10,7 +10,11 @@ import 'package:iptv_player/core/logging/app_log.dart';
 import 'package:iptv_player/core/logging/secret_registry.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/design/theme.dart';
+import 'package:iptv_player/features/diagnostics/data/diagnostics_providers.dart';
+import 'package:iptv_player/features/diagnostics/data/report_share_providers.dart';
 import 'package:logger/logger.dart';
+
+import '../features/diagnostics/diagnostics_fakes.dart';
 
 /// ADR-058: the first launch after the app closed by itself says so, once,
 /// with what Android kept of why; the log keeps every such end.
@@ -103,8 +107,14 @@ void main() {
 
   group('the notice', () {
     late GoRouter router;
+    late FakeDiagnostics diagnostics;
+    late FakeReportSharer sharer;
 
     Future<_FakeExits> pumpApp(WidgetTester tester, LastExits? last) async {
+      diagnostics = FakeDiagnostics()
+        ..text = 'Bijou 0.1.0+344 · Android 12'
+        ..runLogs = '\nThe run before: Key DPAD_LEFT down';
+      sharer = FakeReportSharer();
       final source = _FakeExits(last);
       router = GoRouter(
         routes: [GoRoute(path: '/', builder: (_, _) => const Text('Home'))],
@@ -117,6 +127,9 @@ void main() {
             appLogProvider.overrideWithValue(log),
             secretRegistryProvider.overrideWithValue(secrets),
             routerProvider.overrideWithValue(router),
+            diagnosticsProvider.overrideWithValue(diagnostics),
+            reportSharerProvider.overrideWithValue(sharer),
+            appClockProvider.overrideWithValue(() => crashedAt),
           ],
           child: MaterialApp.router(
             theme: buildAppTheme(),
@@ -152,6 +165,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bijou closed by itself last time'), findsNothing);
       expect(find.text('Home'), findsOneWidget);
+    });
+
+    testWidgets("Send to phone offers the report with each run's own log "
+        'over the notice, which stays for its photo (ADR-059)', (tester) async {
+      await pumpApp(
+        tester,
+        LastExits(exits: [drawingCrash(crashedAt)], drawing: openGles),
+      );
+      expect(
+        find.textContaining('Send to phone gives the whole report'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Send to phone'));
+      await tester.pumpAndSettle();
+      expect(find.text('Send the report to your phone'), findsOneWidget);
+      expect(diagnostics.shareReports, 1);
+      expect(sharer.offered.single, (
+        'Bijou 0.1.0+344 · Android 12\nThe run before: Key DPAD_LEFT down',
+        'bijou-diagnostics-2026-10-25.txt',
+      ));
+
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Send the report to your phone'), findsNothing);
+      expect(sharer.offers.single.closed, 1);
+      expect(find.text('Bijou closed by itself last time'), findsOneWidget);
     });
 
     testWidgets('a crash elsewhere says nothing of the drawing, and how many '
