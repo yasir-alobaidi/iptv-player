@@ -309,6 +309,41 @@ class _PlaybackSettingsSectionState
                   unawaited(_save(settings.copyWith(timeOnScreen: value))),
             ),
           ),
+          // Only a TV asks (ADR-025): a Google TV may never learn that its
+          // TV was switched off. No Never: the question is what frees the
+          // connection then (ADR-064).
+          if (ref.watch(formFactorProvider) == FormFactor.tv)
+            _Setting(
+              title: 'Ask if still watching',
+              description:
+                  'After this long with no button pressed, Bijou asks, and '
+                  'stops a minute later if nobody answers, so the TV '
+                  "doesn't keep using your connection while you sleep.",
+              control: SegmentedControl<StillWatchingAfter>(
+                options: const [
+                  SegmentOption(
+                    value: StillWatchingAfter.halfHour,
+                    label: '30 min',
+                  ),
+                  SegmentOption(
+                    value: StillWatchingAfter.oneHour,
+                    label: '1 hour',
+                  ),
+                  SegmentOption(
+                    value: StillWatchingAfter.twoHours,
+                    label: '2 hours',
+                  ),
+                  SegmentOption(
+                    value: StillWatchingAfter.fourHours,
+                    label: '4 hours',
+                  ),
+                ],
+                value: settings.stillWatchingAfter,
+                onChanged: (value) => unawaited(
+                  _save(settings.copyWith(stillWatchingAfter: value)),
+                ),
+              ),
+            ),
           if (source != null && source.type == SourceType.xtream)
             _Setting(
               title: 'Live format · ${source.name}',

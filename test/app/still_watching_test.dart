@@ -5,8 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/still_watching.dart';
+import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/theme.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
+import 'package:iptv_player/features/playback/domain/playback.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
 import '../features/playback/support/playback_fakes.dart';
@@ -20,7 +22,14 @@ void main() {
   late GoRouter router;
   var second = 0;
 
-  Future<void> pumpPlaying(WidgetTester tester) async {
+  late ProviderContainer container;
+
+  /// [fixed] null asks after what Settings → Playback holds: [stored].
+  Future<void> pumpPlaying(
+    WidgetTester tester, {
+    Duration? fixed = after,
+    PlaybackSettings stored = const PlaybackSettings(),
+  }) async {
     rig = Rig();
     second = 0;
     router = GoRouter(
@@ -36,15 +45,20 @@ void main() {
         overrides: [
           playbackCoordinatorProvider.overrideWithValue(rig.coordinator),
           routerProvider.overrideWithValue(router),
+          playbackSettingsStoreProvider.overrideWithValue(_Stored(stored)),
         ],
         child: MaterialApp.router(
           theme: buildAppTheme(),
           routerConfig: router,
-          builder: (context, child) =>
-              StillWatching(after: after, child: child!),
+          builder: (context, child) {
+            container = ProviderScope.containerOf(context);
+            return StillWatching(after: fixed, child: child!);
+          },
         ),
       ),
     );
+    // The stored choices, loaded.
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.runAsync(() => rig.coordinator.playLive(channel(1)));
     rig.engine.firstFrame();
     await tester.pump();
@@ -101,4 +115,59 @@ void main() {
     expect(find.text('Still watching?'), findsNothing);
     await rig.coordinator.stop();
   });
+
+  testWidgets('with no time of its own it asks after the one Settings '
+      'holds (ADR-064)', (tester) async {
+    await pumpPlaying(
+      tester,
+      fixed: null,
+      stored: const PlaybackSettings(
+        stillWatchingAfter: StillWatchingAfter.halfHour,
+      ),
+    );
+    await play(tester, const Duration(minutes: 29));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Still watching?'), findsNothing);
+
+    await play(tester, const Duration(minutes: 1));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Still watching?'), findsOneWidget);
+    await play(tester, StillWatching.answerWithin);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(rig.state, isA<PlaybackIdle>());
+  });
+
+  testWidgets('a time chosen while playing counts at once', (tester) async {
+    await pumpPlaying(tester, fixed: null);
+    await play(tester, const Duration(minutes: 40));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Still watching?'), findsNothing, reason: '4 hours');
+
+    await container
+        .read(playbackSettingsControllerProvider.notifier)
+        .update(
+          const PlaybackSettings(
+            stillWatchingAfter: StillWatchingAfter.halfHour,
+          ),
+        );
+    await play(tester, const Duration(minutes: 1));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Still watching?'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await rig.coordinator.stop();
+  });
+}
+
+/// Settings → Playback as stored; a save is kept nowhere.
+final class _Stored implements PlaybackSettingsStore {
+  const new(this.settings);
+
+  final PlaybackSettings settings;
+
+  @override
+  Future<Result<PlaybackSettings>> load() async => Ok(settings);
+
+  @override
+  Future<Result<void>> save(PlaybackSettings settings) async => const Ok(null);
 }

@@ -9,25 +9,23 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 
-/// On a TV, playback that has gone on [after] (4 hours) with no key from the
-/// remote asks "Still watching?", and stops after [answerWithin] with no
-/// answer (ADR-025).
+/// On a TV, playback that has gone on [after] with no key from the remote
+/// asks "Still watching?", and stops after [answerWithin] with no answer
+/// (ADR-025). How long is Settings → Playback's Ask if still watching
+/// (ADR-064, 4 hours unless chosen).
 ///
 /// Why: a Google TV doesn't always learn that its TV was switched off.
 /// The Bedroom TV's Roku TV went dark and the Chromecast stayed awake,
 /// the player keeping its screen on, so Bijou went on reading the stream
 /// with nobody watching, holding a one-connection source until stopped.
 class StillWatching extends ConsumerStatefulWidget {
-  const new({
-    required this.child,
-    this.after = const Duration(hours: 4),
-    super.key,
-  });
+  const new({required this.child, this.after, super.key});
 
   final Widget child;
 
-  /// Playback with no key for this long asks.
-  final Duration after;
+  /// Playback with no key for this long asks; null is the time Settings
+  /// → Playback chose, read at each tick, so a change counts at once.
+  final Duration? after;
 
   /// The question waits this long, then playback stops.
   static const answerWithin = Duration(seconds: 60);
@@ -70,7 +68,10 @@ class _StillWatchingState extends ConsumerState<StillWatching> {
       return;
     }
     _quiet += StillWatching._tick;
-    if (_quiet >= widget.after && !_asking) unawaited(_ask());
+    final after =
+        widget.after ??
+        ref.read(playbackSettingsControllerProvider).stillWatchingAfter.after;
+    if (_quiet >= after && !_asking) unawaited(_ask());
   }
 
   Future<void> _ask() async {

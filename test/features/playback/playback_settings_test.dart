@@ -16,6 +16,7 @@ void main() {
     pictureQuality: PictureQuality.standard,
     subtitleSize: SubtitleSize.large,
     timeOnScreen: TimeOnScreen.controls,
+    stillWatchingAfter: StillWatchingAfter.oneHour,
   );
 
   test('round-trips through JSON', () {
@@ -230,6 +231,51 @@ void main() {
     );
     expect(
       const PlaybackSettings(timeOnScreen: TimeOnScreen.controls),
+      isNot(const PlaybackSettings()),
+    );
+  });
+
+  test('Ask if still watching is 4 hours unless another was stored '
+      '(ADR-064)', () {
+    expect(
+      const PlaybackSettings().stillWatchingAfter,
+      StillWatchingAfter.fourHours,
+    );
+    expect(const PlaybackSettings().toJson()['stillWatching'], 'fourHours');
+    expect(chosen.toJson()['stillWatching'], 'oneHour');
+    expect(
+      [for (final choice in StillWatchingAfter.values) choice.after],
+      const [
+        Duration(minutes: 30),
+        Duration(hours: 1),
+        Duration(hours: 2),
+        Duration(hours: 4),
+      ],
+    );
+    for (final choice in StillWatchingAfter.values) {
+      final settings = PlaybackSettings(stillWatchingAfter: choice);
+      expect(PlaybackSettings.fromJson(settings.toJson()), settings);
+    }
+    // Settings stored before it, or damaged: 4 hours, and the rest kept.
+    for (final stored in [
+      const <String, Object?>{},
+      const {'stillWatching': 'never'},
+      const {'stillWatching': 'OneHour'},
+      const {'stillWatching': 60},
+      const {'stillWatching': null},
+      const {'stillWatching': false},
+    ]) {
+      expect(
+        PlaybackSettings.fromJson(stored).stillWatchingAfter,
+        StillWatchingAfter.fourHours,
+      );
+    }
+    expect(
+      PlaybackSettings.fromJson({...chosen.toJson(), 'stillWatching': 'off'}),
+      chosen.copyWith(stillWatchingAfter: StillWatchingAfter.fourHours),
+    );
+    expect(
+      const PlaybackSettings(stillWatchingAfter: StillWatchingAfter.halfHour),
       isNot(const PlaybackSettings()),
     );
   });

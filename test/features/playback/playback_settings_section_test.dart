@@ -597,6 +597,120 @@ void main() {
       expect(await stored(tester, live), contains('"timeOnScreen":"controls"'));
     });
   });
+
+  group('Ask if still watching (ADR-064), on a TV only', () {
+    /// The row: its name and line, and its four choices.
+    Finder stillWatching() => find
+        .ancestor(
+          of: find.text('Ask if still watching'),
+          matching: find.byType(Row),
+        )
+        .first;
+
+    SegmentedControl<StillWatchingAfter> control(WidgetTester tester) =>
+        tester.widget<SegmentedControl<StillWatchingAfter>>(
+          find.descendant(
+            of: stillWatching(),
+            matching: find.byType(SegmentedControl<StillWatchingAfter>),
+          ),
+        );
+
+    PlaybackSettings settings(WidgetTester tester) => ProviderScope.containerOf(
+      tester.element(find.byType(PlaybackSettingsSection)),
+    ).read(playbackSettingsControllerProvider);
+
+    Future<String?> stored(WidgetTester tester, LiveTvFakes live) => tester
+        .runAsync<String?>(() => live.db.settingsDao.read('playback.settings'));
+
+    /// The focused segment's label, when it is one of the row's.
+    String? onRow(WidgetTester tester) {
+      final context = FocusManager.instance.primaryFocus?.context;
+      if (context == null) return null;
+      if (!identical(
+        context
+            .findAncestorWidgetOfExactType<
+              SegmentedControl<StillWatchingAfter>
+            >(),
+        control(tester),
+      )) {
+        return null;
+      }
+      return focusedLabelOf(tester);
+    }
+
+    testWidgets('a TV: 4 hours until another is chosen, each saved at once; '
+        'its line says what it is for', (tester) async {
+      final live = await open(tester, formFactor: FormFactor.tv);
+      await tester.ensureVisible(stillWatching());
+      await _settle(tester);
+      expect(
+        find.textContaining(
+          'After this long with no button pressed, Bijou asks, and stops a '
+          "minute later if nobody answers, so the TV doesn't keep using "
+          'your connection while you sleep.',
+        ),
+        findsOneWidget,
+      );
+      expect(control(tester).value, StillWatchingAfter.fourHours);
+      expect(
+        [for (final option in control(tester).options) option.label],
+        ['30 min', '1 hour', '2 hours', '4 hours'],
+      );
+
+      await tester.tap(
+        find.descendant(of: stillWatching(), matching: find.text('1 hour')),
+      );
+      await _settle(tester);
+      expect(settings(tester).stillWatchingAfter, StillWatchingAfter.oneHour);
+      expect(control(tester).value, StillWatchingAfter.oneHour);
+      expect(await stored(tester, live), contains('"stillWatching":"oneHour"'));
+
+      await tester.tap(
+        find.descendant(of: stillWatching(), matching: find.text('30 min')),
+      );
+      await _settle(tester);
+      expect(
+        await stored(tester, live),
+        contains('"stillWatching":"halfHour"'),
+      );
+    });
+
+    testWidgets('the remote reaches it: Down from Buffering, Right to '
+        '1 hour, OK', (tester) async {
+      final live = await open(tester, formFactor: FormFactor.tv);
+      // Into the page, on Buffering's Low latency.
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await _settle(tester);
+      }
+      expect(focusedLabelOf(tester), 'Stable');
+      for (var i = 0; i < 12 && onRow(tester) == null; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await _settle(tester);
+      }
+      expect(onRow(tester), isNotNull, reason: 'Down reaches the row');
+      for (var i = 0; i < 4 && onRow(tester) != '1 hour'; i++) {
+        await tester.sendKeyEvent(
+          onRow(tester) == '30 min'
+              ? LogicalKeyboardKey.arrowRight
+              : LogicalKeyboardKey.arrowLeft,
+        );
+        await _settle(tester);
+      }
+      expect(onRow(tester), '1 hour');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(settings(tester).stillWatchingAfter, StillWatchingAfter.oneHour);
+      expect(await stored(tester, live), contains('"stillWatching":"oneHour"'));
+    });
+
+    testWidgets('the desktop has no such row: it never asks', (tester) async {
+      await open(tester);
+      expect(find.text('Ask if still watching'), findsNothing);
+      expect(find.text('Time on screen'), findsOneWidget);
+    });
+  });
 }
 
 Future<void> _settle(WidgetTester tester) async {

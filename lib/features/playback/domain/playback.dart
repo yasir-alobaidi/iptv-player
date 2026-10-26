@@ -93,6 +93,7 @@ final class PlaybackSettings {
     this.pictureQuality = PictureQuality.high,
     this.subtitleSize = SubtitleSize.medium,
     this.timeOnScreen = TimeOnScreen.always,
+    this.stillWatchingAfter = StillWatchingAfter.fourHours,
   });
 
   /// Tolerant: anything unknown or damaged reads as the default.
@@ -135,6 +136,11 @@ final class PlaybackSettings {
       timeOnScreen: json['timeOnScreen'] == 'controls'
           ? TimeOnScreen.controls
           : TimeOnScreen.always,
+      stillWatchingAfter:
+          StillWatchingAfter.values
+              .where((a) => a.name == json['stillWatching'])
+              .firstOrNull ??
+          StillWatchingAfter.fourHours,
     );
   }
 
@@ -175,6 +181,11 @@ final class PlaybackSettings {
   /// like [subtitleSize].
   final TimeOnScreen timeOnScreen;
 
+  /// A TV's "Still watching?" (ADR-064): how long playback goes on with no
+  /// key from the remote before it asks. Read at once, like
+  /// [subtitleSize]; the desktop never asks.
+  final StillWatchingAfter stillWatchingAfter;
+
   PlaybackSettings copyWith({
     BufferPreset? preset,
     List<String>? audioLanguages,
@@ -186,6 +197,7 @@ final class PlaybackSettings {
     PictureQuality? pictureQuality,
     SubtitleSize? subtitleSize,
     TimeOnScreen? timeOnScreen,
+    StillWatchingAfter? stillWatchingAfter,
   }) => PlaybackSettings(
     preset: preset ?? this.preset,
     audioLanguages: audioLanguages ?? this.audioLanguages,
@@ -197,6 +209,7 @@ final class PlaybackSettings {
     pictureQuality: pictureQuality ?? this.pictureQuality,
     subtitleSize: subtitleSize ?? this.subtitleSize,
     timeOnScreen: timeOnScreen ?? this.timeOnScreen,
+    stillWatchingAfter: stillWatchingAfter ?? this.stillWatchingAfter,
   );
 
   /// As stored in the `settings` table.
@@ -215,6 +228,7 @@ final class PlaybackSettings {
     'picture': pictureQuality.name,
     'subtitleSize': subtitleSize.name,
     'timeOnScreen': timeOnScreen.name,
+    'stillWatching': stillWatchingAfter.name,
   };
 
   /// [live] false opens a file, from [start] when given.
@@ -248,7 +262,8 @@ final class PlaybackSettings {
       other.matchChannelRate == matchChannelRate &&
       other.pictureQuality == pictureQuality &&
       other.subtitleSize == subtitleSize &&
-      other.timeOnScreen == timeOnScreen;
+      other.timeOnScreen == timeOnScreen &&
+      other.stillWatchingAfter == stillWatchingAfter;
 
   @override
   int get hashCode => Object.hash(
@@ -262,6 +277,7 @@ final class PlaybackSettings {
     pictureQuality,
     subtitleSize,
     timeOnScreen,
+    stillWatchingAfter,
   );
 }
 
@@ -269,3 +285,19 @@ final class PlaybackSettings {
 /// and time left stay in a corner while its controls are hidden
 /// ([always]), or show only with the controls ([controls]), as before.
 enum TimeOnScreen { always, controls }
+
+/// Settings → Playback → Ask if still watching, on a TV (ADR-064): playback
+/// that goes on this long with no key from the remote asks "Still
+/// watching?", and stops a minute later with no answer. There is no Never:
+/// the question is what frees a one-connection source when the TV was
+/// switched off and the Google TV never learned it (ADR-025).
+enum StillWatchingAfter {
+  halfHour(Duration(minutes: 30)),
+  oneHour(Duration(hours: 1)),
+  twoHours(Duration(hours: 2)),
+  fourHours(Duration(hours: 4));
+
+  new(this.after);
+
+  final Duration after;
+}
