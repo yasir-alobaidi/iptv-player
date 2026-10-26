@@ -115,14 +115,14 @@ void main() {
   group("a TV's drawing and its last ends (ADR-058)", () {
     final crashed = now.subtract(const Duration(hours: 2));
 
-    test('drawn with OpenGL ES after a crash drawing: said on the Graphics '
-        'line; the unexpected ends listed with their facts, addresses '
-        'hidden, a kill in the background left out', () {
+    test('drawn with Skia on OpenGL ES after a crash drawing: said on the '
+        'Graphics line; the unexpected ends listed with their facts, '
+        'addresses hidden, a kill in the background left out', () {
       final report = buildDiagnosticsReport(
         DiagnosticsFacts(
           now: now,
           drawing: DrawingBackend(
-            openGles: true,
+            skia: true,
             since: crashed,
             cause: 'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
           ),
@@ -150,8 +150,8 @@ void main() {
       expect(
         lines,
         contains(
-          'Graphics: not known · drawn with OpenGL ES · since 2 h ago · '
-          'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
+          'Graphics: not known · drawn with Skia on OpenGL ES · since 2 h '
+          'ago · SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
         ),
       );
       final at = lines.indexOf('Unexpected ends (1):');
@@ -261,6 +261,48 @@ void main() {
       ]);
       expect(report, isNot(contains('hunter2')));
       expect(report, isNot(contains('203.0.113.7')));
+    });
+
+    test("the Graphics line says the renderer each run's log names, Skia "
+        'after a crash; the run before that is listed first (ADR-060)', () {
+      final report = buildDiagnosticsReport(
+        DiagnosticsFacts(
+          now: now,
+          drawing: DrawingBackend(
+            skia: true,
+            since: now.subtract(const Duration(minutes: 30)),
+          ),
+          runLogs: const RunLogs(
+            older: [
+              'I flutter : Using the Impeller rendering backend (Vulkan).',
+              'F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR)',
+            ],
+            previous: [
+              'I flutter : Using the Impeller rendering backend (Vulkan).',
+            ],
+            current: [
+              'I flutter : [Action Required]: Impeller opt-out deprecated.',
+            ],
+          ),
+        ),
+      );
+      final lines = report.split('\n');
+      expect(
+        lines,
+        contains(
+          'Graphics: not known · drawn with Skia on OpenGL ES · since 30 min '
+          'ago · this run Skia · the run before Impeller (Vulkan) · the run '
+          'before that Impeller (Vulkan)',
+        ),
+      );
+      expect(
+        lines,
+        containsAllInOrder([
+          'The run before that, as Android logged it (2 lines):',
+          'The run before, as Android logged it (1 line):',
+          'This run so far (1 line):',
+        ]),
+      );
     });
 
     test('the report on the screen has no run log and no TV lines', () {

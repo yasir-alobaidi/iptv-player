@@ -243,6 +243,9 @@ List<String> _runLogs(RunLogs? logs) {
           for (final line in lines) '  ${withoutAddresses(line)}',
         ];
   return [
+    // None in a TV's first two runs: no line for it then.
+    if (logs.older.isNotEmpty)
+      ...part('The run before that, as Android logged it', logs.older),
     ...part('The run before, as Android logged it', logs.previous),
     ...part('This run so far', logs.current),
   ];
@@ -262,15 +265,24 @@ String buildDiagnosticsReport(
       ? 'not known'
       : system.graphics.map((card) => card.line).join(' · ');
   final drawing = facts.drawing;
-  final graphics = drawing == null || !drawing.openGles
-      ? cards
-      : [
-          cards,
-          'drawn with OpenGL ES',
-          if (drawing.since case final since?)
-            'since ${formatAgo(since, facts.now)}',
-          ?drawing.cause,
-        ].join(' · ');
+  final logs = facts.runLogs;
+  final graphics = [
+    cards,
+    if (drawing != null && drawing.skia) ...[
+      'drawn with Skia on OpenGL ES',
+      if (drawing.since case final since?)
+        'since ${formatAgo(since, facts.now)}',
+      ?drawing.cause,
+    ],
+    // As the engine said it, in each run's own log.
+    if (logs != null) ...[
+      if (rendererIn(logs.current) case final renderer?) 'this run $renderer',
+      if (rendererIn(logs.previous) case final renderer?)
+        'the run before $renderer',
+      if (rendererIn(logs.older) case final renderer?)
+        'the run before that $renderer',
+    ],
+  ].join(' · ');
   final decoding = facts.decoders.isEmpty
       ? 'nothing played yet'
       : facts.decoders.map((note) => note.line).join(' · ');

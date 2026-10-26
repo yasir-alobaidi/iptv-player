@@ -37,6 +37,7 @@ void main() {
       'blank ones left out', () async {
     final source = logs(
       (_) => {
+        'older': 'crashed\n',
         'previous': 'a\n\nb  \nFatal signal 11\n',
         'current': 'started\n',
       },
@@ -45,15 +46,45 @@ void main() {
     final runs = await source.read(maxBytes: 1000);
     expect(calls.single.method, 'runLogs');
     expect(calls.single.arguments, {'maxBytes': 1000});
-    expect(runs!.previous, ['a', 'b', 'Fatal signal 11']);
+    expect(runs!.older, ['crashed']);
+    expect(runs.previous, ['a', 'b', 'Fatal signal 11']);
     expect(runs.current, ['started']);
     expect(runs.isEmpty, isFalse);
   });
 
   test('a run with nothing kept is empty, and an answer that is no map is '
       'null', () {
-    expect(runLogsFrom({'previous': null, 'current': 3})!.isEmpty, isTrue);
+    expect(
+      runLogsFrom({'older': <Object?>[], 'previous': null, 'current': 3})!
+          .isEmpty,
+      isTrue,
+    );
     expect(runLogsFrom('logs'), isNull);
+  });
+
+  test("the renderer is the engine's own word in a run's log (ADR-060): "
+      'none where it said none', () {
+    expect(
+      rendererIn([
+        '10-26 11:45:58.101  4120  4120 I Bijou   : Activity ON_CREATE',
+        'I flutter : Using the Impeller rendering backend (Vulkan).',
+      ]),
+      'Impeller (Vulkan)',
+    );
+    expect(
+      rendererIn([
+        'I flutter : Using the Impeller rendering backend (OpenGLES).',
+      ]),
+      'Impeller (OpenGLES)',
+    );
+    expect(
+      rendererIn([
+        'I flutter : [Action Required]: Impeller opt-out deprecated.',
+      ]),
+      'Skia',
+    );
+    expect(rendererIn(['I Bijou   : Drawing with Skia on OpenGL ES']), isNull);
+    expect(rendererIn(const []), isNull);
   });
 
   test('a channel that fails is logged and answered null', () async {

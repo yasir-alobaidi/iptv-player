@@ -74,9 +74,14 @@ SystemFacts androidSystemFactsFrom(Object? answer) {
     if (text('board') case final board?) 'board $board',
     if (text('hardware') case final hardware?) 'hardware $hardware',
     if (prop('ro.board.platform') case final platform?) 'platform $platform',
-    if (prop('ro.mediatek.platform') case final platform?) 'MediaTek $platform',
+    if (prop('ro.vendor.mediatek.platform') ?? prop('ro.mediatek.platform')
+        case final platform?)
+      'MediaTek $platform',
     if (socModel != null) 'chip $soc',
     ?text('abis'),
+    // Flutter keeps a MediaTek chip under vendor SDK 32 off Vulkan.
+    if (prop('ro.vendor.build.version.sdk') case final vendor?)
+      'vendor SDK $vendor',
     if (text('build') case final build?) 'build $build',
   ].join(' · ');
 

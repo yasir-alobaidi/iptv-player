@@ -137,12 +137,12 @@ void main() {
               drawing: true,
             ),
           ],
-          drawing: const DrawingBackend(openGles: true),
+          drawing: const DrawingBackend(skia: true),
         ),
       ),
     ).report()).valueOrNull!;
 
-    expect(report, contains('(i915) · drawn with OpenGL ES'));
+    expect(report, contains('(i915) · drawn with Skia on OpenGL ES'));
     expect(report, contains('Unexpected ends (1):'));
     expect(report, contains('thread 1.raster'));
   });

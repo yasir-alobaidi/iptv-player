@@ -154,6 +154,8 @@ class SystemInfo(private val context: Context, messenger: BinaryMessenger) :
             "ro.opengles.version", "ro.product.name", "ro.vendor.product.model",
             "ro.mediatek.platform", "ro.soc.manufacturer", "ro.soc.model", "ro.config.low_ram",
             "dalvik.vm.heapgrowthlimit", "ro.product.first_api_level", "ro.vendor.build.fingerprint",
+            // What Flutter's own choice of Vulkan reads (android_context_dynamic_impeller.cc).
+            "ro.vendor.build.version.sdk", "ro.vendor.mediatek.platform",
         )
     }
 }

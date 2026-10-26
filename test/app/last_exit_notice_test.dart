@@ -35,8 +35,8 @@ void main() {
     drawing: true,
   );
 
-  final openGles = DrawingBackend(
-    openGles: true,
+  final skia = DrawingBackend(
+    skia: true,
     since: crashedAt,
     cause: 'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
   );
@@ -84,13 +84,13 @@ void main() {
             ),
             drawingCrash(earlier),
           ],
-          drawing: openGles,
+          drawing: skia,
         ),
       );
       final news = (await takeExitNews(source, log))!;
       expect(news.newest.time, crashedAt);
       expect(news.count, 2);
-      expect(news.drawing.openGles, isTrue);
+      expect(news.drawing.skia, isTrue);
       expect(news.switched, isTrue);
       expect(source.seenUpTo, crashedAt);
 
@@ -101,7 +101,7 @@ void main() {
       expect(errors.first, contains('thread 1.raster'));
       expect(errors.first, contains('libGLES_mali.so'));
       expect(logLines().join('\n'), isNot(contains(password)));
-      expect(logLines().join('\n'), contains('Drawing with OpenGL ES'));
+      expect(logLines().join('\n'), contains('Drawing with Skia on OpenGL ES'));
     });
   });
 
@@ -148,7 +148,7 @@ void main() {
     ) async {
       final source = await pumpApp(
         tester,
-        LastExits(exits: [drawingCrash(crashedAt)], drawing: openGles),
+        LastExits(exits: [drawingCrash(crashedAt)], drawing: skia),
       );
       expect(source.seenUpTo, crashedAt);
       expect(find.text('Bijou closed by itself last time'), findsOneWidget);
@@ -156,7 +156,7 @@ void main() {
         find.textContaining('It crashed while drawing the screen.'),
         findsOneWidget,
       );
-      expect(find.textContaining('(OpenGL ES)'), findsOneWidget);
+      expect(find.textContaining('(Skia on OpenGL ES)'), findsOneWidget);
       expect(find.textContaining('thread 1.raster'), findsOneWidget);
       expect(find.textContaining('libGLES_mali.so'), findsOneWidget);
       expect(find.textContaining(password), findsNothing);
@@ -171,7 +171,7 @@ void main() {
         'over the notice, which stays for its photo (ADR-059)', (tester) async {
       await pumpApp(
         tester,
-        LastExits(exits: [drawingCrash(crashedAt)], drawing: openGles),
+        LastExits(exits: [drawingCrash(crashedAt)], drawing: skia),
       );
       expect(
         find.textContaining('Send to phone gives the whole report'),
@@ -216,7 +216,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.textContaining('OpenGL ES'), findsNothing);
+      expect(find.textContaining('Skia'), findsNothing);
       expect(find.textContaining('"main" prio=5'), findsOneWidget);
     });
 
@@ -233,7 +233,7 @@ void main() {
             ),
           ],
           drawing: DrawingBackend(
-            openGles: true,
+            skia: true,
             since: crashedAt,
             cause: 'a native crash Android kept no details of',
           ),
@@ -245,7 +245,7 @@ void main() {
       );
     });
 
-    testWidgets('a crash already under OpenGL ES: no promise it is fixed, '
+    testWidgets('a crash already under Skia: no promise it is fixed, '
         'and the facts say how it was drawn', (tester) async {
       await pumpApp(
         tester,
@@ -259,7 +259,7 @@ void main() {
               drawing: true,
             ),
           ],
-          drawing: DrawingBackend(openGles: true, since: earlier),
+          drawing: DrawingBackend(skia: true, since: earlier),
         ),
       );
       expect(
@@ -268,7 +268,9 @@ void main() {
       );
       expect(find.textContaining('From now on'), findsNothing);
       expect(
-        find.textContaining('drawn with OpenGL ES since 2026-10-25 05:50'),
+        find.textContaining(
+          'drawn with Skia on OpenGL ES since 2026-10-25 05:50',
+        ),
         findsOneWidget,
       );
     });

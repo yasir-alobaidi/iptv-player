@@ -43,7 +43,7 @@ void main() {
     ],
     'seenUpTo': seenUpTo ?? 0,
     'drawing': {
-      'backend': 'opengles',
+      'backend': 'skia',
       'since': crashedAt.millisecondsSinceEpoch,
       'cause': 'SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so',
     },
@@ -70,7 +70,7 @@ void main() {
       expect(crash.drawing, isTrue);
       expect(last.exits.first.byBijou, isTrue);
       expect(last.seenUpTo, isNull);
-      expect(last.drawing.openGles, isTrue);
+      expect(last.drawing.skia, isTrue);
       expect(last.drawing.since, crashedAt);
       expect(last.drawing.cause, contains('libGLES_mali.so'));
     });
@@ -120,7 +120,16 @@ void main() {
       expect(exit.thread, isNull);
       expect(exit.trace, isNull);
       expect(last.seenUpTo, isNull);
-      expect(last.drawing.openGles, isFalse);
+      expect(last.drawing.skia, isFalse);
+    });
+
+    test("builds 343 to 345's mark, Impeller's OpenGL ES, is not Skia: a "
+        'release engine ignored it (ADR-060)', () {
+      final last = lastExitsFrom({
+        'exits': <Object?>[],
+        'drawing': {'backend': 'opengles', 'since': 1792922624560},
+      })!;
+      expect(last.drawing.skia, isFalse);
     });
 
     test('no exits at all, as before Android 11', () {
@@ -130,7 +139,7 @@ void main() {
       })!;
       expect(last.exits, isEmpty);
       expect(last.untold, isEmpty);
-      expect(last.drawing.openGles, isFalse);
+      expect(last.drawing.skia, isFalse);
     });
   });
 

@@ -90,7 +90,7 @@ final class AppExit {
   final List<String> frames;
 
   /// The native crash was in the drawing: one of Flutter's drawing
-  /// threads, or a GPU driver.
+  /// threads, a GPU driver, or the engine itself (ADR-060).
   final bool drawing;
 
   /// A Java crash's stack, or an ANR's main thread.
@@ -152,15 +152,18 @@ final class AppExit {
   String toString() => 'AppExit($time, ${reason.name})';
 }
 
-/// How the screen is drawn on this TV: Flutter's own choice (Vulkan where
-/// the driver has it), or OpenGL ES after a crash drawing (ADR-058).
+/// How the screen is drawn on this TV: Flutter's own choice (Impeller, on
+/// Vulkan where the driver has it), or Skia on OpenGL ES after a crash
+/// drawing (ADR-058, ADR-060).
 @immutable
 final class DrawingBackend {
-  const new({this.openGles = false, this.since, this.cause});
+  const new({this.skia = false, this.since, this.cause});
 
-  final bool openGles;
+  final bool skia;
 
-  /// The crash that made it OpenGL ES, and what it was:
+  /// When Skia took over: the crash that made it so, or the launch that
+  /// first gave it to the engine (builds 343 to 345 asked for Impeller's
+  /// OpenGL ES, which a release engine ignores); and what the crash was:
   /// `SIGSEGV SEGV_MAPERR on 1.raster in libGLES_mali.so`.
   final DateTime? since;
   final String? cause;
@@ -231,7 +234,7 @@ LastExits? lastExitsFrom(Object? answer) {
     seenUpTo: _time(answer['seenUpTo']),
     drawing: drawing is Map
         ? DrawingBackend(
-            openGles: drawing['backend'] == 'opengles',
+            skia: drawing['backend'] == 'skia',
             since: _time(drawing['since']),
             cause: _text(drawing['cause']),
           )

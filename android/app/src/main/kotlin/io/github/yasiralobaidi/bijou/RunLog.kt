@@ -14,7 +14,8 @@ import java.io.RandomAccessFile
  * them.
  *
  * A `logcat` child writes `runlog/run.log` (256 KB, then one older file); the next launch moves
- * both to `runlog/previous.log`. Supervised (hard rule 8): its pid in `runlog/logcat.pid`,
+ * both to `runlog/previous.log`, and the one there to `runlog/older.log`: a crash's run is still
+ * kept after the launch that told of it (ADR-060: a TV whose notice closed with the app). Supervised (hard rule 8): its pid in `runlog/logcat.pid`,
  * stopped when Bijou leaves, killed with the app's process group when Android ends it, and one
  * left over from a run that ended any other way is killed at the next start. Nothing here throws:
  * without it the app runs as before.
@@ -24,6 +25,7 @@ object RunLog {
     private const val DIR = "runlog"
     private const val RUN = "run.log"
     private const val PREVIOUS = "previous.log"
+    private const val OLDER = "older.log"
     private const val PID = "logcat.pid"
     private const val ROTATE_KB = 256
 
@@ -73,10 +75,14 @@ object RunLog {
         }
     }
 
-    /** `{previous, current}`: the run before's lines and this run's, each its newest [maxBytes]. */
+    /**
+     * `{older, previous, current}`: the run before that's lines, the run before's and this run's,
+     * each its newest [maxBytes].
+     */
     fun read(context: Context, maxBytes: Int): Map<String, String?> {
         val dir = File(context.filesDir, DIR)
         return mapOf(
+            "older" to tail(listOf(File(dir, OLDER)), maxBytes),
             "previous" to tail(listOf(File(dir, PREVIOUS)), maxBytes),
             "current" to tail(listOf(File(dir, "$RUN.1"), File(dir, RUN)), maxBytes),
         )
@@ -99,6 +105,11 @@ object RunLog {
         val parts = listOf(File(dir, "$RUN.1"), File(dir, RUN)).filter { it.isFile }
         if (parts.isEmpty()) return
         val previous = File(dir, PREVIOUS)
+        val older = File(dir, OLDER)
+        if (previous.isFile) {
+            older.delete()
+            previous.renameTo(older)
+        }
         val text = tail(parts, MAX_PREVIOUS)
         if (text != null) previous.writeText(text) else previous.delete()
         parts.forEach { it.delete() }

@@ -52,6 +52,24 @@ void main() {
     'freeStorageMb': 3277,
   };
 
+  test("the vendor's SDK and MediaTek's platform, which Flutter's own "
+      'choice of Vulkan reads, are on the Device line (ADR-060)', () async {
+    answer(
+      (_) => {
+        ...tcl,
+        'prop:ro.vendor.build.version.sdk': '31',
+        'prop:ro.vendor.mediatek.platform': 'MT9612',
+      },
+    );
+    final facts = await const AndroidSystemFacts().read();
+    expect(
+      facts.device,
+      'TCL 43V8C · device mt9612 · board m7332 · hardware m7332 · '
+      'platform m7332 · MediaTek MT9612 · chip Mediatek MT9612 · '
+      'armeabi-v7a,armeabi · vendor SDK 31 · build V8C-R.0.0.1',
+    );
+  });
+
   test("read asks for the facts and says the TV's model, chip, drivers and "
       'memory', () async {
     late MethodCall asked;

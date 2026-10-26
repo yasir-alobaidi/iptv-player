@@ -30,8 +30,8 @@ class MainActivity : FlutterActivity() {
     // The key last logged: Flutter hands a key it didn't handle back to the activity.
     private var lastKey: KeyEvent? = null
 
-    // Read as the engine is made, once per process: OpenGL ES after a crash
-    // drawing with Vulkan (ADR-058).
+    // Read as the engine is made, once per process: Skia on OpenGL ES after
+    // a crash drawing with Impeller (ADR-058, ADR-060).
     override fun getFlutterShellArgs(): FlutterShellArgs =
         super.getFlutterShellArgs().apply { Drawing.shellArgs(this@MainActivity).forEach(::add) }
 

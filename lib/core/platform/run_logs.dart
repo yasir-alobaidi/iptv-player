@@ -3,19 +3,45 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'run_logs.g.dart';
 
-/// What a TV logged in its run before this one and in this one, as
+/// What a TV logged in its two runs before this one and in this one, as
 /// logcat had it (`RunLog.kt`, ADR-059): the engine's lines, a GPU
 /// driver's, the app's log, the keys and the activity's steps, up to the
 /// moment the run ended. Each is its newest part; empty when none was
 /// kept.
 @immutable
 final class RunLogs {
-  const new({this.previous = const [], this.current = const []});
+  const new({
+    this.older = const [],
+    this.previous = const [],
+    this.current = const [],
+  });
 
+  /// The run before [previous]: still there after the launch that told
+  /// of a crash (ADR-060).
+  final List<String> older;
   final List<String> previous;
   final List<String> current;
 
-  bool get isEmpty => previous.isEmpty && current.isEmpty;
+  bool get isEmpty => older.isEmpty && previous.isEmpty && current.isEmpty;
+}
+
+/// The renderer the engine named as it started, in a run's log:
+/// `Impeller (Vulkan)` from "Using the Impeller rendering backend
+/// (Vulkan).", `Skia` from its warning that the app opted out of
+/// Impeller; null when no line says (a long run's log keeps only its
+/// newest part). What the TV drew with, not what was asked for: a
+/// release engine ignored Impeller's OpenGL ES (ADR-060).
+String? rendererIn(List<String> lines) {
+  const said = 'Using the Impeller rendering backend (';
+  for (final line in lines) {
+    if (line.contains('Impeller opt-out deprecated')) return 'Skia';
+    final at = line.indexOf(said);
+    if (at < 0) continue;
+    final rest = line.substring(at + said.length);
+    final end = rest.indexOf(')');
+    return 'Impeller (${end < 0 ? rest.trim() : rest.substring(0, end)})';
+  }
+  return null;
 }
 
 /// Each run's own log (ADR-059). Never throws: what can't be read is
@@ -55,6 +81,7 @@ RunLogs? runLogsFrom(Object? answer) {
         ]
       : const [];
   return RunLogs(
+    older: lines(answer['older']),
     previous: lines(answer['previous']),
     current: lines(answer['current']),
   );

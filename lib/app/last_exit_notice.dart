@@ -22,7 +22,7 @@ typedef ExitNews = ({
   int count,
   DrawingBackend drawing,
 
-  /// One of these ends made it OpenGL ES (Drawing.kt, this launch).
+  /// One of these ends made it Skia (Drawing.kt, this launch).
   bool switched,
 });
 
@@ -36,10 +36,11 @@ Future<ExitNews?> takeExitNews(LastExitsSource source, AppLog log) async {
   final last = await source.read();
   if (last == null) return null;
   final drawing = last.drawing;
-  if (drawing.openGles) {
+  if (drawing.skia) {
     log.info(
       _tag,
-      'Drawing with OpenGL ES since ${drawing.since?.toIso8601String()} '
+      'Drawing with Skia on OpenGL ES since '
+      '${drawing.since?.toIso8601String()} '
       '(${drawing.cause ?? 'a crash drawing'})',
     );
   }
@@ -59,7 +60,7 @@ Future<ExitNews?> takeExitNews(LastExitsSource source, AppLog log) async {
     count: untold.length,
     drawing: drawing,
     switched:
-        drawing.openGles &&
+        drawing.skia &&
         since != null &&
         untold.any((exit) => exit.time == since),
   );
@@ -142,15 +143,15 @@ class LastExitDialog extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final exit = news.newest;
-    // A crash under OpenGL ES already: the photo says so.
+    // A crash under Skia already: the photo says so.
     final since = news.drawing.since;
-    final underOpenGles =
-        news.drawing.openGles && since != null && exit.time.isAfter(since);
+    final underSkia =
+        news.drawing.skia && since != null && exit.time.isAfter(since);
     final body = tokens.text.body.copyWith(color: colors.textSecondary);
     final facts = redact(
       [
         '$appName · ${_when(exit.time)}',
-        if (underOpenGles) 'drawn with OpenGL ES since ${_when(since)}',
+        if (underSkia) 'drawn with Skia on OpenGL ES since ${_when(since)}',
         ...exit.details,
       ].join('\n'),
       secrets: secrets,
@@ -214,8 +215,8 @@ class LastExitDialog extends StatelessWidget {
   }
 
   static const _switched =
-      'From now on it draws the screen another way on this TV (OpenGL ES), '
-      'which should keep that from happening again.';
+      'From now on it draws the screen another way on this TV (Skia on '
+      'OpenGL ES), which should keep that from happening again.';
 
   /// `2026-10-25 06:03`, the TV's own time.
   static String _when(DateTime time) {

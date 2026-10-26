@@ -50,14 +50,14 @@ void main() {
           },
         ],
         'seenUpTo': 0,
-        'drawing': {'backend': 'opengles', 'since': 1792922624560},
+        'drawing': {'backend': 'skia', 'since': 1792922624560},
       },
     );
     expect(source.available, isTrue);
     final last = await source.read();
     expect(calls.single.method, 'read');
     expect(last!.untold.single.thread, '1.raster');
-    expect(last.drawing.openGles, isTrue);
+    expect(last.drawing.skia, isTrue);
   });
 
   test("an answer it can't read is null, and says so in the log", () async {
