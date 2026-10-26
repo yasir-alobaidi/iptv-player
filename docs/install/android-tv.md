@@ -205,9 +205,9 @@ then `adb install -r dist/Bijou-TV.apk`. Not needed for anything above.
   Choose **Send to phone** and follow [Send the report to a
   phone](#send-the-report-to-a-phone); a photo of the screen helps too.
   If it closed while drawing the screen, it switches by itself to
-  another way of drawing on that TV (OpenGL ES) and says so. **Update**
-  rather than uninstall: an update keeps what Android noted of the
-  crashes, so the new Bijou can read them at once.
+  another way of drawing on that TV (Skia on OpenGL ES) and says so.
+  **Update** rather than uninstall: an update keeps what Android noted
+  of the crashes, so the new Bijou can read them at once.
 
 ## Send the report to a phone
 
