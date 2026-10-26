@@ -201,9 +201,31 @@ then `adb install -r dist/Bijou-TV.apk`. Not needed for anything above.
 - **Not enough space:** delete the downloaded file in Downloader (its
   **Files** tab) and other files you don't need, then try again.
 - **Bijou closes by itself:** open it again. It shows what happened
-  ("Bijou closed by itself last time", with the details under it); take
-  a photo of that screen and send it. If it closed while drawing the
-  screen, it switches by itself to another way of drawing on that TV
-  (OpenGL ES) and says so. **Update** rather than uninstall: an update
-  keeps what Android noted of the crashes, so the new Bijou can read
-  them at once.
+  ("Bijou closed by itself last time", with the details under it).
+  Choose **Send to phone** and follow [Send the report to a
+  phone](#send-the-report-to-a-phone); a photo of the screen helps too.
+  If it closed while drawing the screen, it switches by itself to
+  another way of drawing on that TV (OpenGL ES) and says so. **Update**
+  rather than uninstall: an update keeps what Android noted of the
+  crashes, so the new Bijou can read them at once.
+
+## Send the report to a phone
+
+For a TV no computer can reach. Bijou keeps a report of the TV: what
+Android noted each time Bijou ended, and Bijou's own log of the run
+before and of this one, up to the moment it ended. No passwords,
+usernames or server addresses are in it.
+
+1. Open it: **Send to phone** on the "Bijou closed by itself last time"
+   screen, or **Settings** → **About & diagnostics** → **Send to phone**
+   (to reach Settings without the side menu: press **Up** to the top bar
+   and choose the source's name beside the page's title, then **Manage
+   sources…** if a list opens; Settings opens on Sources, and **About &
+   diagnostics** is further down its list).
+2. Connect a phone to the **same Wi-Fi** as the TV (not a guest
+   network: those keep devices apart).
+3. Point the phone's camera at the code on the TV and open the link, or
+   type the address shown under it in the phone's browser.
+4. On the phone, tap **Download the report** and send the file (a chat
+   app, email). The TV says when the phone has it; **Done** closes it,
+   and the address stops working.
