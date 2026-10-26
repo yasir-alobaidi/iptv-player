@@ -99,6 +99,9 @@ class OsdButton extends StatelessWidget {
         onPressed: onPressed,
         enabled: onPressed != null,
         focusNode: focusNode,
+        // A click leaves the keyboard on the picture, where Space pauses
+        // and the arrows seek.
+        focusOnPress: false,
         borderRadius: radius,
         // Play is white: its ring is the accent on a TV too.
         onLight: primary,

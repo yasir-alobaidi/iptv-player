@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,6 +77,29 @@ void main() {
     expect(focusIsIn(tester, find.text('Below')), isTrue);
     await tester.pump(const Duration(milliseconds: 200));
     expect(hasFocusRing(tester, of: pane), isFalse);
+  });
+
+  testWidgets('on a desktop a click hides its ring, the focus kept; a key '
+      'shows it again', (tester) async {
+    final controller = await pump(tester);
+    FocusVisibility.install();
+    addTearDown(FocusVisibility.uninstall);
+    final pane = find.byType(ScrollPane);
+    await press(tester, LogicalKeyboardKey.tab);
+    await press(tester, LogicalKeyboardKey.tab);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(hasFocusRing(tester, of: pane), isTrue);
+
+    await tester.tap(find.text('Line 0'), kind: PointerDeviceKind.mouse);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(focusIsIn(tester, pane), isTrue);
+    expect(hasFocusRing(tester, of: pane), isFalse);
+
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(hasFocusRing(tester, of: pane), isTrue);
+    expect(controller.offset, greaterThan(0));
   });
 
   testWidgets('↓ and ↑ move a line, PageDown and PageUp a boxful, End and '

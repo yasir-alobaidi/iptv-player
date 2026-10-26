@@ -227,6 +227,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     _vertical.addListener(_scheduleRequest);
     _x.addListener(_onX);
     _focus.addListener(_onFocus);
+    FocusVisibility.shown.addListener(_onFocusShown);
   }
 
   @override
@@ -254,6 +255,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     _xMotion.dispose();
     _x.dispose();
     _vertical.dispose();
+    FocusVisibility.shown.removeListener(_onFocusShown);
     _focus.dispose();
     super.dispose();
   }
@@ -283,6 +285,13 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   void _onFocus() {
     if (_focus.hasFocus) _placeCursor();
     setState(() {});
+  }
+
+  /// The cursor is the keyboard's focus, and shows as rings do
+  /// ([FocusVisibility]): a click moves it to the cell clicked unringed,
+  /// and the next key rings it there.
+  void _onFocusShown() {
+    if (_focus.hasFocus) setState(() {});
   }
 
   void _onGuideChanged() {
@@ -937,7 +946,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
       );
     }
     _claimFocus();
-    final hasFocus = _focus.hasFocus;
+    final cursorShown = _focus.hasFocus && FocusVisibility.shown.value;
     return Focus(
       focusNode: _focus,
       onKeyEvent: _onKey,
@@ -967,7 +976,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
                 now: _now,
                 cells: (from, to) =>
                     channel == null ? null : _cells(channel.id, from, to),
-                cursor: hasFocus && index == _row ? _anchor : null,
+                cursor: cursorShown && index == _row ? _anchor : null,
                 reminders: _reminded[channel?.remoteKey] ?? const {},
                 channelKey: index == _row ? _cursorChannel : null,
                 onTap: channel == null

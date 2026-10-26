@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:iptv_player/design/focus/app_intents.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
+import 'package:iptv_player/design/focus/focus_visibility.dart';
 import 'package:iptv_player/design/tokens.dart';
 
 export 'package:iptv_player/design/focus/focus_ring.dart'
@@ -133,6 +134,7 @@ class FocusableSurface extends StatefulWidget {
     this.semanticButton = true,
     this.mouseCursor,
     this.canRequestFocus = true,
+    this.focusOnPress = true,
     this.ring = true,
     this.ringPlacement = RingPlacement.outside,
     super.key,
@@ -157,6 +159,7 @@ class FocusableSurface extends StatefulWidget {
     bool semanticButton = true,
     MouseCursor? mouseCursor,
     bool canRequestFocus = true,
+    bool focusOnPress = true,
     RingPlacement ringPlacement = RingPlacement.outside,
     Key? key,
   }) => FocusableSurface(
@@ -177,6 +180,7 @@ class FocusableSurface extends StatefulWidget {
     semanticButton: semanticButton,
     mouseCursor: mouseCursor,
     canRequestFocus: canRequestFocus,
+    focusOnPress: focusOnPress,
     ringPlacement: ringPlacement,
   );
 
@@ -197,6 +201,12 @@ class FocusableSurface extends StatefulWidget {
   final MouseCursor? mouseCursor;
   final bool canRequestFocus;
 
+  /// Whether a press of a pointer puts the keyboard's focus here, where a
+  /// press hides the rings ([FocusVisibility]). Off on the player's
+  /// controls: its keys are the picture's (Space pauses, the arrows
+  /// seek), and a click on Subtitles would leave Space opening its menu.
+  final bool focusOnPress;
+
   /// The focus ring. Off where the control draws its focus itself: the
   /// TV's keyboard keys (ADR-026: neighbours 6 px away), a card that
   /// rings its picture and not its caption (ADR-029).
@@ -215,6 +225,7 @@ class FocusableSurface extends StatefulWidget {
 }
 
 class _FocusableSurfaceState extends State<FocusableSurface> {
+  /// The focus is here (the highlight Flutter would show).
   bool _focused = false;
   bool _hovered = false;
   bool _pressed = false;
@@ -229,8 +240,28 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
 
   @override
   void dispose() {
+    FocusVisibility.shown.removeListener(_onShown);
     _ownNode?.dispose();
     super.dispose();
+  }
+
+  /// The focus is here and shows: on a desktop, only while the keyboard
+  /// is in use ([FocusVisibility]).
+  bool get _focusShown => _focused && FocusVisibility.shown.value;
+
+  /// The rings came or went while the focus is here. Nothing scrolls for
+  /// it: the key that brought them back may move the focus a frame later
+  /// (a grid's PageDown), and the control it lands on reveals itself.
+  void _onShown() {
+    if (mounted) setState(() {});
+  }
+
+  /// A press takes the focus, so the keys go on from the control clicked
+  /// (and its pane remembers it), its ring hidden until a key.
+  void _focusFromPointer() {
+    if (!FocusVisibility.installed || !widget.focusOnPress) return;
+    final node = _node;
+    if (node.canRequestFocus && !node.hasPrimaryFocus) node.requestFocus();
   }
 
   void _activate() {
@@ -249,7 +280,7 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
   /// screen or a row's edge (ADR-029).
   void _reveal() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_focused) return;
+      if (!mounted || !_focusShown) return;
       final box = context.findRenderObject();
       if (box is! RenderBox || !box.attached || !box.hasSize) return;
       final focus = context.tokens.focus;
@@ -292,7 +323,7 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
     final states =
         SurfaceStateOverride.maybeOf(context) ??
         SurfaceStates(
-          focused: _focused,
+          focused: _focusShown,
           hovered: _hovered,
           pressed: _pressed,
           disabled: disabled,
@@ -365,7 +396,14 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
       onShowFocusHighlight: (value) {
         if (value == _focused) return;
         setState(() => _focused = value);
-        if (value) _reveal();
+        // Only the focused surface hears the rings come and go.
+        if (value) {
+          FocusVisibility.shown.addListener(_onShown);
+        } else {
+          FocusVisibility.shown.removeListener(_onShown);
+        }
+        // Not for a click: the control clicked stays where it is.
+        if (_focusShown) _reveal();
       },
       onShowHoverHighlight: (value) {
         if (value != _hovered) setState(() => _hovered = value);
@@ -378,8 +416,15 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
           behavior: HitTestBehavior.opaque,
           onTap: widget._interactive ? _activate : null,
           onSecondaryTap: widget.onMenu == null ? null : _menu,
+          // A right-click too: the menu closed, the focus is back here.
+          onSecondaryTapDown: widget.onMenu == null
+              ? null
+              : (_) => _focusFromPointer(),
           onTapDown: widget._interactive
-              ? (_) => setState(() => _pressed = true)
+              ? (_) {
+                  _focusFromPointer();
+                  setState(() => _pressed = true);
+                }
               : null,
           onTapUp: widget._interactive
               ? (_) => setState(() => _pressed = false)

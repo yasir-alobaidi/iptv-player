@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/design/focus/focus_ring.dart';
+import 'package:iptv_player/design/focus/focus_visibility.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
@@ -81,8 +82,15 @@ class _ScrollPaneState extends State<ScrollPane> {
 
   @override
   void dispose() {
+    FocusVisibility.shown.removeListener(_onShown);
     _own?.dispose();
     super.dispose();
+  }
+
+  /// The rings came or went ([FocusVisibility]) while the pane has the
+  /// focus: a click elsewhere hides its ring too.
+  void _onShown() {
+    if (mounted) setState(() {});
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -142,13 +150,19 @@ class _ScrollPaneState extends State<ScrollPane> {
         focusNode: widget.focusNode,
         autofocus: widget.autofocus,
         onShowFocusHighlight: (value) {
-          if (value != _focused) setState(() => _focused = value);
+          if (value == _focused) return;
+          setState(() => _focused = value);
+          if (value) {
+            FocusVisibility.shown.addListener(_onShown);
+          } else {
+            FocusVisibility.shown.removeListener(_onShown);
+          }
         },
         child: Semantics(
           label: widget.semanticLabel,
           container: true,
           child: AppFocusRing(
-            visible: _focused,
+            visible: _focused && FocusVisibility.shown.value,
             borderRadius: radius,
             child: ClipRRect(
               borderRadius: radius,

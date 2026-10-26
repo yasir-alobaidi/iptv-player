@@ -54,6 +54,7 @@ import 'package:iptv_player/data/secure/secure_credential_store.dart';
 import 'package:iptv_player/data/settings/db_ui_preferences.dart';
 import 'package:iptv_player/data/settings/db_window_bounds_store.dart';
 import 'package:iptv_player/data/settings/settings_repository.dart';
+import 'package:iptv_player/design/focus/focus_visibility.dart';
 import 'package:iptv_player/design/fonts.dart';
 import 'package:iptv_player/features/casting/data/artwork_cast_pictures.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
@@ -132,7 +133,11 @@ Future<void> bootstrap() async {
   final formFactor = detectFormFactor(platform: defaultTargetPlatform);
   final onDesktop = formFactor == FormFactor.desktop;
   log.info('bootstrap', 'Form factor: ${formFactor.name}');
-  if (!onDesktop) {
+  if (onDesktop) {
+    // The rings are the keyboard's: a click focuses what it pressed and
+    // hides them, the next key shows them (as a browser does).
+    FocusVisibility.install();
+  } else {
     // Android starts in touch mode, which draws no focus; a remote has
     // no touch, and focus is all a TV shows of where you are (docs/07).
     FocusManager.instance.highlightStrategy =

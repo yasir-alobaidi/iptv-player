@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/core/library/library_item.dart';
@@ -15,6 +16,7 @@ import 'package:iptv_player/features/vod/presentation/title_grid.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../app/app_harness.dart';
+import '../../../design/design_harness.dart' show hasFocusRing;
 import '../../vod/catalogue_screen_test.dart' show focusedLabel;
 import '../../vod/vod_fakes.dart';
 import 'library_ui_support.dart';
@@ -477,6 +479,36 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.end);
     await settle(tester);
     expect(focusedLabel(), 'The Quiet Harbor');
+  });
+
+  testWidgets("with the mouse, no ring: the rail's Library and a tab "
+      'clicked take the focus unringed, and a key goes on from the tab '
+      '(the user: the ring stayed on Movies)', (tester) async {
+    await openLibrary(tester, location: '/movies', before: _canvas);
+    // The desktop's rule, as bootstrap installs it.
+    FocusVisibility.install();
+    addTearDown(FocusVisibility.uninstall);
+    List<String> ringed() => [
+      for (final label in const ['Movies', 'Series', 'Videos'])
+        if (hasFocusRing(tester, of: tab(label))) label,
+    ];
+
+    await tester.tap(findByLabel('Library'), kind: PointerDeviceKind.mouse);
+    await settle(tester);
+    expect(ringed(), isEmpty);
+    expect(focusedLabel(), 'Library');
+
+    await tester.tap(tab('Series'), kind: PointerDeviceKind.mouse);
+    await settle(tester);
+    expect(ringed(), isEmpty);
+    expect(focusedLabel(), 'Series, 2');
+    expect(tester.widget<CountTab>(tab('Series')).selected, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await settle(tester);
+    expect(focusedLabel(), 'Videos, 2');
+    expect(ringed(), ['Videos']);
+    expect(tester.widget<CountTab>(tab('Series')).selected, isTrue);
   });
 
   testWidgets('a folder the system cannot watch is scanned when the '

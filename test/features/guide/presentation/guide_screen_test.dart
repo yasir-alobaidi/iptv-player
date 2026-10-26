@@ -176,6 +176,32 @@ void main() {
       await _finish(tester);
     });
 
+    testWidgets('with the mouse, no ring: a click puts the cursor on the '
+        'programme clicked; the next key rings it and moves on from there', (
+      tester,
+    ) async {
+      await pump(tester);
+      // The desktop's rule, as bootstrap installs it.
+      FocusVisibility.install();
+      addTearDown(FocusVisibility.uninstall);
+      await _focusGrid(tester);
+      expect(_ringed(), 'Continental Cup · Semi-final');
+
+      await tester.tap(find.text('Pit Lane'), kind: PointerDeviceKind.mouse);
+      await _settle(tester);
+      expect(find.byType(GuideProgrammeSheet), findsOneWidget);
+      // Closed by a click outside it.
+      await tester.tapAt(const Offset(4, 4), kind: PointerDeviceKind.mouse);
+      await _settle(tester);
+      expect(find.byType(GuideProgrammeSheet), findsNothing);
+      expect(_gridHasFocus(tester), isTrue);
+      expect(_ringed(), isNull);
+
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(_ringed(), 'Classic Races: Harbor Circuit');
+      await _finish(tester);
+    });
+
     testWidgets("the menu key opens the cursor channel's menu; Hide channel "
         'takes its row out, and Undo brings it back', (tester) async {
       await pump(tester);
