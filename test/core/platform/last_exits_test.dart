@@ -123,6 +123,29 @@ void main() {
       expect(last.drawing.skia, isFalse);
     });
 
+    test("an abort message's trailing NUL bytes and blanks are left out, as "
+        "the TCL's Scudo errors had them (ADR-061)", () {
+      final last = lastExitsFrom({
+        'exits': [
+          {
+            'time': 1700000000000,
+            'reason': 'crashNative',
+            'abort':
+                'Scudo ERROR: corrupted chunk header at address 0xee60b4d0\n'
+                '\u0000\u0000   \u0000',
+            'cause': '\u0000 ',
+          },
+        ],
+      })!;
+      final exit = last.exits.single;
+      expect(
+        exit.abort,
+        'Scudo ERROR: corrupted chunk header at address 0xee60b4d0',
+      );
+      expect(exit.cause, isNull);
+      expect(exit.details.join('\n'), isNot(contains('\u0000')));
+    });
+
     test("builds 343 to 345's mark, Impeller's OpenGL ES, is not Skia: a "
         'release engine ignored it (ADR-060)', () {
       final last = lastExitsFrom({

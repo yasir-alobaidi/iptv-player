@@ -275,7 +275,12 @@ DateTime? _time(Object? value) => value is num && value > 0
 
 int _int(Object? value) => value is num ? value.toInt() : 0;
 
-String? _text(Object? value) =>
-    value is String && value.trim().isNotEmpty ? value : null;
+/// A tombstone's abort message can end in NUL bytes (the TCL's Scudo
+/// errors did): they and the blanks after the text are left out.
+String? _text(Object? value) {
+  if (value is! String) return null;
+  final text = value.replaceAll('\u0000', '').trimRight();
+  return text.trim().isEmpty ? null : text;
+}
 
 List<Object?> _list(Object? value) => value is List ? value : const [];

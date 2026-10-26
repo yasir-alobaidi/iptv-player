@@ -71,8 +71,11 @@ void main() {
       ]),
       'Impeller (Vulkan)',
     );
+    // The TCL's PowerVR: Vulkan tried, refused, then OpenGL ES.
     expect(
       rendererIn([
+        'I flutter : Using the Impeller rendering backend (Vulkan).',
+        'E IMGSRV  : :2445: albert-tex LOSSY set to: 75',
         'I flutter : Using the Impeller rendering backend (OpenGLES).',
       ]),
       'Impeller (OpenGLES)',

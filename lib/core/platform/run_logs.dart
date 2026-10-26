@@ -26,22 +26,28 @@ final class RunLogs {
 }
 
 /// The renderer the engine named as it started, in a run's log:
-/// `Impeller (Vulkan)` from "Using the Impeller rendering backend
-/// (Vulkan).", `Skia` from its warning that the app opted out of
+/// `Impeller (OpenGLES)` from "Using the Impeller rendering backend
+/// (OpenGLES).", `Skia` from its warning that the app opted out of
 /// Impeller; null when no line says (a long run's log keeps only its
-/// newest part). What the TV drew with, not what was asked for: a
-/// release engine ignored Impeller's OpenGL ES (ADR-060).
+/// newest part). The last such line: a Vulkan the engine tried and
+/// refused is named before the OpenGL ES it fell back to (ADR-061).
+/// What the TV drew with, not what was asked for: a release engine
+/// ignored Impeller's OpenGL ES (ADR-060).
 String? rendererIn(List<String> lines) {
   const said = 'Using the Impeller rendering backend (';
+  String? renderer;
   for (final line in lines) {
-    if (line.contains('Impeller opt-out deprecated')) return 'Skia';
+    if (line.contains('Impeller opt-out deprecated')) {
+      renderer = 'Skia';
+      continue;
+    }
     final at = line.indexOf(said);
     if (at < 0) continue;
     final rest = line.substring(at + said.length);
     final end = rest.indexOf(')');
-    return 'Impeller (${end < 0 ? rest.trim() : rest.substring(0, end)})';
+    renderer = 'Impeller (${end < 0 ? rest.trim() : rest.substring(0, end)})';
   }
-  return null;
+  return renderer;
 }
 
 /// Each run's own log (ADR-059). Never throws: what can't be read is
