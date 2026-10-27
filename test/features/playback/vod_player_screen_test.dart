@@ -697,6 +697,48 @@ void main() {
       expect(t.rig.engine.calls, contains('speed:1.0'));
     });
 
+    /// [text] under the OSD's clock.
+    Finder top(String text) =>
+        find.descendant(of: find.byType(VodOsdTop), matching: find.text(text));
+
+    _vodTest('the clock says when the film ends, at the speed it plays '
+        '(ADR-065)', (tester, t) async {
+      // An hour's film, 5 minutes in, at noon.
+      await play(tester, t);
+      expect(top('12:00 PM'), findsOneWidget);
+      expect(top('Ends 12:55 PM'), findsOneWidget);
+
+      await tester.tap(findByLabel('Speed'));
+      await settle(tester);
+      await tester.tap(find.text('1.5×'));
+      await settle(tester);
+      // 55 minutes at 1.5×: 36 min 40 s, to the nearest minute.
+      expect(top('Ends 12:37 PM'), findsOneWidget);
+    });
+
+    _vodTest('paused, the clock and the end move on with the minute, though '
+        'nothing else changes (ADR-065)', (tester, t) async {
+      await play(tester, t);
+      await tester.tapAt(tester.getCenter(find.byType(PlayerScreen)));
+      await tester.pump(const Duration(milliseconds: 350));
+      await settle(tester);
+      expect(find.byType(OsdCenterPlay), findsOneWidget);
+
+      t.vod.fakes.now = t.vod.fakes.now.add(const Duration(minutes: 1));
+      await tester.pump(const Duration(minutes: 1));
+      await settle(tester);
+      expect(top('12:01 PM'), findsOneWidget);
+      expect(top('Ends 12:56 PM'), findsOneWidget);
+    });
+
+    _vodTest('no end in its last minute', (tester, t) async {
+      await play(tester, t);
+      t.rig.engine.progress(_hour - const Duration(seconds: 50));
+      await settle(tester);
+      expect(top('12:00 PM'), findsOneWidget);
+      expect(find.textContaining('Ends'), findsNothing);
+    });
+
     _vodTest('Picture size sets the shape and ticks it; leaving the player '
         'puts Fit back', (tester, t) async {
       await play(tester, t);

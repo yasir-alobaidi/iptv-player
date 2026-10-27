@@ -14,6 +14,7 @@ import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/presentation/playback_text.dart';
+import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 
 /// The scrim behind one edge of the OSD, fading into the picture. It
 /// takes no clicks: one on it is a click on the picture.
@@ -83,7 +84,6 @@ class OsdTop extends ConsumerWidget {
     final colors = tokens.colors;
     final player = tokens.player;
     final size = ref.watch(videoSizeProvider).value;
-    final now = ref.watch(appClockProvider)();
     return OsdShade(
       top: true,
       child: Padding(
@@ -134,10 +134,7 @@ class OsdTop extends ConsumerWidget {
               ),
             ),
             SizedBox(width: tokens.spacing.s16),
-            Text(
-              formatClock(now, tokens.timeStyle),
-              style: tokens.text.h2.copyWith(color: colors.textPrimary),
-            ),
+            const OsdClock(),
           ],
         ),
       ),

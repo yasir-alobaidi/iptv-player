@@ -12,7 +12,6 @@ import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
-import 'package:iptv_player/core/text/languages.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
@@ -30,6 +29,7 @@ import 'package:iptv_player/features/playback/presentation/player_overlays.dart'
 import 'package:iptv_player/features/playback/presentation/player_sound.dart';
 import 'package:iptv_player/features/playback/presentation/player_surface.dart';
 import 'package:iptv_player/features/playback/presentation/time_corner.dart';
+import 'package:iptv_player/features/playback/presentation/track_text.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
 import 'package:iptv_player/features/playback/presentation/vod_player_controller.dart';
 import 'package:iptv_player/features/vod/data/vod_providers.dart';
@@ -873,20 +873,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return j >= 0 ? j : null;
   }
 
-  /// A track as its menu names it: "English · Commentary · ac3 · 5.1".
-  static String _trackLine(MediaTrack t) => [
-    _trackName(t),
-    if (t.title != null && t.language != null) t.title!,
-    ?t.codec,
-    ?t.channels,
-  ].join(' · ');
-
-  /// A track in a word or two: its language, else its title.
-  static String _trackName(MediaTrack t) => switch (t.language) {
-    final code? when code.isNotEmpty && code != 'und' => languageName(code),
-    _ => t.title ?? 'Track ${t.id}',
-  };
-
   /// Opens one of the OSD's menus, which holds the OSD up while it is
   /// open (the Bedroom TV: it hid behind the menu, and after a choice the
   /// focus was on a control nobody could see). Closed, the OSD's clock
@@ -906,15 +892,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   Future<void> _trackMenu(BuildContext anchor, {required bool audio}) {
     final tracks = ref.read(playerTracksProvider).value;
+    final sounds = tracks?.audio ?? const <MediaTrack>[];
+    final texts = tracks?.subtitles ?? const <MediaTrack>[];
+    // A language is named only where the tags tell the tracks apart
+    // (track_text.dart, ADR-065).
+    final soundLanguages = namesLanguages(sounds);
+    final textLanguages = namesLanguages(texts);
     return _holdingOsd(
       () => showAppMenu(
         anchor,
         width: 280,
         items: audio
             ? [
-                for (final t in tracks?.audio ?? const <MediaTrack>[])
+                for (final (i, t) in sounds.indexed)
                   AppMenuItem(
-                    label: _trackLine(t),
+                    label: trackLine(t, i + 1, languages: soundLanguages),
                     checked: t.id == tracks?.audioId,
                     onPressed: () => unawaited(_engine.selectAudio(t.id)),
                   ),
@@ -927,9 +919,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   checked: tracks?.subtitleId == null,
                   onPressed: () => unawaited(_engine.selectSubtitle(null)),
                 ),
-                for (final t in tracks?.subtitles ?? const <MediaTrack>[])
+                for (final (i, t) in texts.indexed)
                   AppMenuItem(
-                    label: _trackLine(t),
+                    label: trackLine(t, i + 1, languages: textLanguages),
                     checked: t.id == tracks?.subtitleId,
                     onPressed: () => unawaited(_engine.selectSubtitle(t.id)),
                   ),
@@ -1003,18 +995,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   /// The OSD's right-hand controls, live or not: what is heard and read,
   /// then the picture, then where it plays.
   List<Widget> _controls(PlayerTracks? tracks, {required bool vod}) {
-    final audio = tracks?.audio
-        .where((t) => t.id == tracks.audioId)
-        .firstOrNull;
-    final subtitle = tracks?.subtitles
-        .where((t) => t.id == tracks.subtitleId)
-        .firstOrNull;
+    final subtitled = tracks?.subtitles.any((t) => t.id == tracks.subtitleId);
     return [
       Builder(
         builder: (anchor) => OsdButton(
           icon: AppIcons.audio,
           tooltip: 'Audio',
-          label: audio == null ? 'Audio' : 'Audio: ${_trackName(audio)}',
+          label: audioLabel(tracks),
           shortcut: 'A',
           onPressed: () => unawaited(_trackMenu(anchor, audio: true)),
         ),
@@ -1023,11 +1010,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         builder: (anchor) => OsdButton(
           icon: AppIcons.subtitles,
           tooltip: 'Subtitles',
-          label: subtitle == null
-              ? 'Subtitles: Off'
-              : 'Subtitles: ${_trackName(subtitle)}',
+          label: subtitlesLabel(tracks),
           shortcut: 'S',
-          selected: subtitle != null,
+          selected: subtitled ?? false,
           onPressed: () => unawaited(_trackMenu(anchor, audio: false)),
         ),
       ),
@@ -1363,7 +1348,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           fade(Center(child: OsdCenterPlay(onPressed: _vod.togglePause))),
         Column(
           children: [
-            fade(VodOsdTop(item: item, onBack: _exit)),
+            fade(
+              VodOsdTop(
+                item: item,
+                onBack: _exit,
+                remaining: _vod.preparing || _vod.ended
+                    ? null
+                    : _vod.timeline.remaining,
+                speed: _speed,
+              ),
+            ),
             const Spacer(),
             if (card)
               Align(

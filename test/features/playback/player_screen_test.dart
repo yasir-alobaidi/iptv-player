@@ -536,10 +536,16 @@ void main() {
       await open(tester);
       live.rig.engine.emit(
         const PlayerTracks(
-          audio: [MediaTrack(id: '1', language: 'eng')],
-          subtitles: [MediaTrack(id: '2', language: 'fra')],
+          audio: [
+            MediaTrack(id: '1', language: 'eng'),
+            MediaTrack(id: '2', language: 'tur'),
+          ],
+          subtitles: [
+            MediaTrack(id: '3', language: 'fra'),
+            MediaTrack(id: '4', language: 'ara'),
+          ],
           audioId: '1',
-          subtitleId: '2',
+          subtitleId: '3',
         ),
       );
       await _settle(tester);
@@ -551,6 +557,36 @@ void main() {
       await _settle(tester);
       expect(find.text('Audio: English'), findsNothing);
       expect(findByLabel('Subtitles: French'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('a lone track\'s tag names no language: the encoder\'s "eng" '
+        'on a Turkish episode is what is heard (ADR-065)', (tester) async {
+      await open(tester);
+      live.rig.engine.emit(
+        const PlayerTracks(
+          audio: [
+            MediaTrack(
+              id: '1',
+              language: 'eng',
+              codec: 'aac',
+              channels: 'stereo',
+            ),
+          ],
+          subtitles: [MediaTrack(id: '2', language: 'eng')],
+          audioId: '1',
+          subtitleId: '2',
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.text('Audio: Stereo'), findsOneWidget);
+      expect(find.text('Subtitles: On'), findsOneWidget);
+      expect(find.textContaining('English'), findsNothing);
+
+      await tester.tap(find.text('Audio: Stereo'));
+      await _settle(tester);
+      expect(find.text('Track 1 · Stereo · AAC'), findsOneWidget);
       await finish(tester);
     });
   });

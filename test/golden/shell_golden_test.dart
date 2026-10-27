@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/core_providers.dart';
 
 import '../app/app_harness.dart';
 import 'golden_harness.dart';
@@ -20,7 +21,12 @@ void main() {
 
       sceneTest('renders at $name', audit: size.width == 1280, (tester) async {
         hideDebugBanner();
-        await pumpApp(tester, size: size);
+        await pumpApp(
+          tester,
+          size: size,
+          // The top bar's clock (ADR-065) at the goldens' moment.
+          overrides: [appClockProvider.overrideWithValue(goldenNow)],
+        );
 
         await golden(tester, 'images/shell_$name.png');
       });

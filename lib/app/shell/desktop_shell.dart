@@ -357,6 +357,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                               showCast: ref.watch(castsToTvsProvider),
                               paneController: _topBarPane,
                               onLeaveDown: onTv ? _contentPane.focusPane : null,
+                              clock: ref.watch(appClockProvider),
                             ),
                           if (notice != null && !widget.immersive)
                             _NoticeBar(notice: notice),

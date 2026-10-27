@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/app/shell/top_bar.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:iptv_player/design/components.dart';
+import 'package:iptv_player/design/theme.dart';
 
 import '../features/guide/guide_switch.dart';
 import 'app_harness.dart';
@@ -218,6 +221,101 @@ void main() {
       );
 
       expect(button.onPressed, isNull);
+    });
+
+    testWidgets('the time at its right end, quiet and without AM/PM, on '
+        'every destination (ADR-065)', (tester) async {
+      final app = await pumpApp(
+        tester,
+        overrides: [
+          appClockProvider.overrideWithValue(
+            () => DateTime(2026, 9, 14, 20, 5),
+          ),
+          ...emptyLibraryOverrides,
+        ],
+      );
+
+      for (final destination in AppDestination.values) {
+        app.router.go(destination.path);
+        await settleApp(tester);
+        final clock = find.descendant(
+          of: find.byType(ShellTopBar),
+          matching: find.text('8:05'),
+        );
+        expect(clock, findsOneWidget, reason: destination.label);
+        // The last thing in the bar, at its padding.
+        expect(
+          tester.getTopRight(clock).dx,
+          moreOrLessEquals(
+            tester.getTopRight(find.byType(ShellTopBar)).dx - 24,
+          ),
+          reason: destination.label,
+        );
+      }
+      // A screen reader hears the whole time.
+      expect(
+        tester.widget<Text>(find.text('8:05')).semanticsLabel,
+        'The time: 8:05 PM',
+      );
+    });
+
+    testWidgets('the clock gives way first in a cramped bar: a 1024 px '
+        'window at 115 % text and more', (tester) async {
+      tester.view
+        ..physicalSize = const Size(1400, 300)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      Future<void> bar(double width, double text) => tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(text)),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: ShellTopBar(
+                  title: 'Home',
+                  onOpenSearch: () {},
+                  syncStatus: const ShellSyncStatus(
+                    message: 'Syncing channels · 12,340',
+                  ),
+                  clock: () => DateTime(2026, 9, 14, 20, 5),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      Finder clock() => find.byType(ShellClock);
+
+      // The bar beside a 1024 px window's rail.
+      await bar(952, 1);
+      expect(clock(), findsOneWidget);
+      await bar(952, 1.15);
+      expect(clock(), findsNothing);
+      await bar(952, 1.3);
+      expect(clock(), findsNothing);
+      // A 1280 px window, and a TV's 1280 canvas, at 130 %.
+      await bar(1208, 1.3);
+      expect(clock(), findsOneWidget);
+    });
+
+    testWidgets('the clock turns with the minute on its own', (tester) async {
+      var now = DateTime(2026, 9, 14, 20, 5, 40);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: ShellClock(clock: () => now),
+        ),
+      );
+      expect(find.text('8:05'), findsOneWidget);
+
+      now = now.add(const Duration(seconds: 20));
+      await tester.pump(const Duration(seconds: 19));
+      expect(find.text('8:05'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('8:06'), findsOneWidget);
     });
 
     testWidgets('the search field opens the overlay', (tester) async {

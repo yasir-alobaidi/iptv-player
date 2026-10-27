@@ -25,6 +25,10 @@ import '../guide_grid_fakes.dart';
 /// The fixture of the test running, so its end can stop what it started.
 GuideFixture? _fixture;
 
+/// [text] in the grid (the now pill), not the top bar's clock (ADR-065).
+Finder _inGrid(String text) =>
+    find.descendant(of: find.byType(GuideGrid), matching: find.text(text));
+
 void main() {
   tearDown(() => _fixture = null);
 
@@ -89,7 +93,7 @@ void main() {
       expect(find.text('8:30 PM'), findsOneWidget);
       expect(find.text('9:00'), findsOneWidget);
       expect(find.text('12:00 AM'), findsOneWidget);
-      expect(find.text('9:22'), findsOneWidget, reason: 'the now pill');
+      expect(_inGrid('9:22'), findsOneWidget, reason: 'the now pill');
       expect(_selectedPill(tester), 'Today');
       await _finish(tester);
     });
@@ -122,7 +126,7 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
       await _settle(tester);
 
-      expect(find.text('10:02'), findsOneWidget);
+      expect(_inGrid('10:02'), findsOneWidget);
       expect(
         find.bySemanticsLabel(
           'Continental Cup · Semi-final, 8:00 – 10:00 PM, ended',
@@ -522,12 +526,12 @@ void main() {
       await _settle(tester);
       expect(find.text('WEDNESDAY 16'), findsOneWidget);
       expect(_selectedPill(tester), 'Tomorrow');
-      expect(find.text('9:22'), findsNothing, reason: 'now is off screen');
+      expect(_inGrid('9:22'), findsNothing, reason: 'now is off screen');
 
       await tester.tap(find.text('Jump to now'));
       await _settle(tester);
       expect(find.text('TUESDAY 15'), findsOneWidget);
-      expect(find.text('9:22'), findsOneWidget);
+      expect(_inGrid('9:22'), findsOneWidget);
       expect(_selectedPill(tester), 'Today');
       await _finish(tester);
     });

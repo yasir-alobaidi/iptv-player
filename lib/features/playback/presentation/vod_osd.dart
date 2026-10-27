@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
 import 'package:iptv_player/core/text/format.dart';
@@ -11,18 +10,31 @@ import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
+import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 import 'package:iptv_player/features/playback/presentation/vod_player_controller.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
 /// The top of a movie's or an episode's OSD (the approved sketch): the
 /// title, "S2 · E4 · Undertow" for an episode, the picture's and sound's
-/// badges, and the clock.
+/// badges, and the clock with the time it ends.
 class VodOsdTop extends ConsumerWidget {
-  const new({required this.item, required this.onBack, super.key});
+  const new({
+    required this.item,
+    required this.onBack,
+    this.remaining,
+    this.speed = 1,
+    super.key,
+  });
 
   final Playable item;
   final VoidCallback onBack;
+
+  /// What is left to play, for the clock's "Ends 10:42 PM" ([OsdClock]);
+  /// null while it isn't known or isn't worth saying (the file opening,
+  /// its end card).
+  final Duration? remaining;
+  final double speed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +42,6 @@ class VodOsdTop extends ConsumerWidget {
     final colors = tokens.colors;
     final size = ref.watch(videoSizeProvider).value;
     final tracks = ref.watch(playerTracksProvider).value;
-    final now = ref.watch(appClockProvider)();
     final sound = tracks?.audio
         .where((t) => t.id == tracks.audioId)
         .firstOrNull
@@ -79,10 +90,7 @@ class VodOsdTop extends ConsumerWidget {
               AppBadge(badge, tone: AppBadgeTone.outline),
             ],
             SizedBox(width: tokens.spacing.s16),
-            Text(
-              formatClock(now, tokens.timeStyle),
-              style: tokens.text.h2.copyWith(color: colors.textPrimary),
-            ),
+            OsdClock(remaining: remaining, speed: speed),
           ],
         ),
       ),

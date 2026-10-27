@@ -46,6 +46,11 @@ class OsdScale extends StatelessWidget {
 /// ([OsdControlRow]); with no room it is the icon alone and [tooltip]
 /// names it. [text] takes the icon's place for a control whose state is
 /// its face ("1×"). [primary] is Play / Pause: a size up, round, filled.
+///
+/// Round on purpose (ADR-065, docs/05 "Shapes"): the player's one main
+/// action over a picture is a circle, as [OsdCenterPlay] is, and read
+/// across a room by its shape; every other button, here and on the
+/// pages, is a rounded rectangle, and pills are chips and badges only.
 class OsdButton extends StatelessWidget {
   const new({
     required this.tooltip,

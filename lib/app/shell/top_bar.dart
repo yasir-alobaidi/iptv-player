@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
+import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 
 /// The shell's 64 px top bar (canvas; docs/05 said 56 px and the canvas
 /// wins — ADR-008): screen title, source chip, search field, sync status,
-/// download indicator and the cast button.
+/// download indicator, the cast button, and the clock.
 class ShellTopBar extends StatelessWidget {
   const new({
     required this.title,
@@ -24,11 +26,18 @@ class ShellTopBar extends StatelessWidget {
     this.showCast = true,
     this.paneController,
     this.onLeaveDown,
+    this.clock,
     super.key,
   });
 
   static const height = 64.0;
   static const searchWidth = 380.0;
+
+  /// The bar's width inside its padding, at the canvas's text size, from
+  /// which the clock is drawn: it gives way first when the bar is
+  /// cramped (a 1024 px window at 115 % text while a sync is said), where
+  /// the window isn't full screen and the desktop's own clock shows.
+  static const clockFrom = 850.0;
 
   final String title;
   final VoidCallback onOpenSearch;
@@ -58,6 +67,10 @@ class ShellTopBar extends StatelessWidget {
   /// the arrows move as everywhere.
   final bool Function()? onLeaveDown;
 
+  /// The time, for the clock at the bar's right end ([ShellClock]); null
+  /// draws none (the component gallery).
+  final DateTime Function()? clock;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -76,6 +89,29 @@ class ShellTopBar extends StatelessWidget {
           bindings: {
             const SingleActivator(LogicalKeyboardKey.arrowDown): ?onLeaveDown,
           },
+          child: LayoutBuilder(
+            builder: (context, constraints) => _row(
+              context,
+              clock: constraints.maxWidth >= context.scaled(clockFrom)
+                  ? clock
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, {required DateTime Function()? clock}) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return Row(
+      children: [
+        // The title and the chip take the room the right end
+        // doesn't, so the right end sits at the bar's edge (canvas).
+        // A Spacer beside the Flexible title split the room with
+        // it, and the search field stood off in the middle.
+        Expanded(
           child: Row(
             children: [
               Flexible(
@@ -92,35 +128,35 @@ class ShellTopBar extends StatelessWidget {
                 choices: sourceChoices,
                 onManage: onOpenSource,
               ),
-              const Spacer(),
-              SizedBox(width: tokens.spacing.s16),
-              SearchField(width: searchWidth, onTap: onOpenSearch),
-              if (syncStatus != null) ...[
-                SizedBox(width: tokens.spacing.s16),
-                _SyncStatus(status: syncStatus!),
-              ],
-              if (downloads != null) ...[
-                SizedBox(width: tokens.spacing.s16),
-                _DownloadIndicator(
-                  downloads: downloads!,
-                  onPressed: onOpenDownloads,
-                ),
-              ],
-              if (showCast) ...[
-                SizedBox(width: tokens.spacing.s16),
-                AppIconButton(
-                  icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
-                  tooltip: castConnected ? 'Casting' : 'Cast',
-                  shortcut: 'C',
-                  bordered: true,
-                  selected: castConnected,
-                  onPressed: onCast,
-                ),
-              ],
             ],
           ),
         ),
-      ),
+        SizedBox(width: tokens.spacing.s16),
+        SearchField(width: searchWidth, onTap: onOpenSearch),
+        if (syncStatus != null) ...[
+          SizedBox(width: tokens.spacing.s16),
+          _SyncStatus(status: syncStatus!),
+        ],
+        if (downloads != null) ...[
+          SizedBox(width: tokens.spacing.s16),
+          _DownloadIndicator(downloads: downloads!, onPressed: onOpenDownloads),
+        ],
+        if (showCast) ...[
+          SizedBox(width: tokens.spacing.s16),
+          AppIconButton(
+            icon: castConnected ? AppIcons.castConnected : AppIcons.cast,
+            tooltip: castConnected ? 'Casting' : 'Cast',
+            shortcut: 'C',
+            bordered: true,
+            selected: castConnected,
+            onPressed: onCast,
+          ),
+        ],
+        if (clock case final clock?) ...[
+          SizedBox(width: tokens.spacing.s16),
+          ShellClock(clock: clock),
+        ],
+      ],
     );
   }
 }
@@ -302,6 +338,59 @@ class _DownloadIndicator extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The time while browsing, at the top bar's right end (ADR-065): a full
+/// screen window hides the desktop's own clock, and a TV shows none in an
+/// app. A clock to glance at, as the player's corner is (ADR-053): quiet,
+/// without AM/PM ("2:15"; "14:15" with a 24-hour clock in Appearance),
+/// never a stop for the keys or the mouse. It turns with the minute on
+/// its own.
+class ShellClock extends StatefulWidget {
+  const new({required this.clock, super.key});
+
+  final DateTime Function() clock;
+
+  @override
+  State<ShellClock> createState() => _ShellClockState();
+}
+
+class _ShellClockState extends State<ShellClock> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  void _schedule() {
+    _tick = Timer(timeCornerWait(widget.clock()), () {
+      if (!mounted) return;
+      setState(() {});
+      _schedule();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final now = widget.clock();
+    return Text(
+      formatClockShort(now, tokens.timeStyle),
+      maxLines: 1,
+      semanticsLabel: 'The time: ${formatClock(now, tokens.timeStyle)}',
+      style: tokens.text.bodyStrong.copyWith(
+        color: tokens.colors.textSecondary,
       ),
     );
   }

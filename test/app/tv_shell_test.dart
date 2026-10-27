@@ -51,6 +51,15 @@ void main() {
     await open(tester, formFactor: FormFactor.tv);
 
     expect(findByLabel('Cast'), findsNothing);
+    // The time is the bar's last thing, a TV having no clock of its own
+    // in an app (ADR-065).
+    expect(
+      find.descendant(
+        of: find.byType(ShellTopBar),
+        matching: find.byType(ShellClock),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(Kbd), findsNothing);
     expect(railItem('Library'), findsNothing);
     expect(railItem('Live TV'), findsOneWidget);
