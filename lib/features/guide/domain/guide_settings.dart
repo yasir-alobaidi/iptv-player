@@ -10,10 +10,12 @@ final class GuideSettings {
   const new({this.enabled = false, this.keepDays = defaultKeepDays});
 
   /// The choices a device starts with: the Guide off, and a week ahead on
-  /// a desktop; on a TV, with its 2 GB, three days (docs/07).
+  /// a desktop; on a TV, with its 2 GB, three days (docs/07), and on a
+  /// phone, whose storage and memory are its apps' to share (ADR-068).
   factory defaultsOn(FormFactor formFactor) => switch (formFactor) {
     FormFactor.desktop => const GuideSettings(),
-    FormFactor.tv => const GuideSettings(keepDays: defaultKeepDaysOnTv),
+    FormFactor.tv ||
+    FormFactor.mobile => const GuideSettings(keepDays: defaultKeepDaysOnTv),
   };
 
   /// Tolerant: anything missing, damaged or out of range reads as
@@ -51,7 +53,7 @@ final class GuideSettings {
   /// desktop; the last two hours on a TV (docs/07).
   static Duration keepBehindOn(FormFactor formFactor) => switch (formFactor) {
     FormFactor.desktop => const Duration(days: 1),
-    FormFactor.tv => const Duration(hours: 2),
+    FormFactor.tv || FormFactor.mobile => const Duration(hours: 2),
   };
 
   /// Whether the guide is imported and the Guide shown (ADR-031). Off,

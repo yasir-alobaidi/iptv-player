@@ -112,14 +112,18 @@ void main() {
     for (final size in const [Size(1280, 800), Size(1920, 1080)]) {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
 
-      sceneTest('view $name', audit: size.width == 1280, (tester) async {
+      sceneTest('view $name', phone: false, audit: size.width == 1280, (
+        tester,
+      ) async {
         await pump(tester, size);
         await castTo(tester, PlayableChannel(arena));
         await golden(tester, 'images/casting_view_$name.png');
         await end(tester);
       });
 
-      sceneTest('picker $name', audit: size.width == 1280, (tester) async {
+      sceneTest('picker $name', phone: false, audit: size.width == 1280, (
+        tester,
+      ) async {
         await pump(tester, size);
         ui.devices = [tvDevice, _bedroom, _kitchen];
         unawaited(ui.live.rig.coordinator.playLive(arena));
@@ -135,7 +139,7 @@ void main() {
       });
     }
 
-    sceneTest('a movie (sketch A)', (tester) async {
+    sceneTest('a movie (sketch A)', phone: false, (tester) async {
       await pump(tester, const Size(1280, 800));
       ui.cast.probe.next = const StreamProbed(mkvFacts);
       await castTo(tester, PlayableMovie(movie(7, runtime: mkvFacts.duration)));
@@ -148,7 +152,9 @@ void main() {
     // A film with subtitles has one control more in its row: at 130 %
     // the row was 5 px too long (found by the library's cast walk at that
     // size). No picture of its own: the audit's looks are the test.
-    sceneTest('a film with subtitles, its row of controls', (tester) async {
+    sceneTest('a film with subtitles, its row of controls', phone: false, (
+      tester,
+    ) async {
       await pump(tester, const Size(1280, 800));
       ui.live.rig.resolver.downloads['m7'] = '/downloads/Film (2025).mp4';
       ui.cast.probe.next = const StreamProbed(mkvFacts);
@@ -166,27 +172,29 @@ void main() {
       await end(tester);
     });
 
-    sceneTest("it failed: the TV couldn't reach this computer (sketch D)", (
-      tester,
-    ) async {
-      await pump(tester, const Size(1280, 800));
-      unawaited(ui.cast.coordinator.connect(tvDevice));
-      await settleCast(tester);
-      unawaited(ui.live.rig.coordinator.playLive(arena));
-      ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
-          .read(castingViewOpenProvider.notifier)
-          .open();
-      await settleCast(tester);
-      // The TV never asks for the stream.
-      await tester.pump(const CastTimings().reach);
-      await settleCast(tester);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(
-        find.text("Living Room TV couldn't reach this computer"),
-        findsOneWidget,
-      );
-      await golden(tester, 'images/casting_view_failed.png');
-      await end(tester);
-    });
+    sceneTest(
+      "it failed: the TV couldn't reach this computer (sketch D)",
+      phone: false,
+      (tester) async {
+        await pump(tester, const Size(1280, 800));
+        unawaited(ui.cast.coordinator.connect(tvDevice));
+        await settleCast(tester);
+        unawaited(ui.live.rig.coordinator.playLive(arena));
+        ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
+            .read(castingViewOpenProvider.notifier)
+            .open();
+        await settleCast(tester);
+        // The TV never asks for the stream.
+        await tester.pump(const CastTimings().reach);
+        await settleCast(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+          find.text("Living Room TV couldn't reach this computer"),
+          findsOneWidget,
+        );
+        await golden(tester, 'images/casting_view_failed.png');
+        await end(tester);
+      },
+    );
   }, skip: goldenSkipReason);
 }

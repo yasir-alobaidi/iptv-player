@@ -7,7 +7,6 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -506,6 +505,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         : const <DraftField, DraftProblem>{};
     final checking = _check is CheckRunning;
     final passed = _check is CheckPassed;
+    final formFactor = ref.watch(formFactorProvider);
 
     final card = ConnectResultCard(
       key: _cardKey,
@@ -525,9 +525,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       child: OnboardingFrame(
         step: 1,
         title: 'Connect your provider',
-        subtitle: ref.watch(formFactorProvider) == FormFactor.tv
-            ? "Your password is kept encrypted on this TV, never in the app's "
-                  'files.'
+        subtitle: formFactor.isAndroidDevice
+            ? 'Your password is kept encrypted on ${formFactor.thisDevice}, '
+                  "never in the app's files."
             : 'Your password is kept in your system keychain, never in the '
                   "app's files.",
         body: narrow
@@ -898,8 +898,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     (_, _) => 'Enter a web address that starts with http:// or https://.',
   };
 
-  /// A TV has no playlist files to open (docs/07).
-  List<SourceType> get _types => ref.read(formFactorProvider) == FormFactor.tv
+  /// A TV has no playlist files to open (docs/07); a phone's are out of
+  /// the app's reach without a picker of Android's own (ADR-068).
+  List<SourceType> get _types => ref.read(formFactorProvider).isAndroidDevice
       ? [SourceType.xtream, SourceType.m3uUrl]
       : SourceType.values;
 

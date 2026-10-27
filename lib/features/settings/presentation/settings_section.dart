@@ -23,9 +23,10 @@ enum SettingsSection {
   final String label;
 
   /// The sections on [formFactor]: a TV has no casting (it is the
-  /// player), no downloads or library, and no keyboard (docs/07).
+  /// player), no downloads or library, and no keyboard (docs/07); a phone
+  /// or tablet neither (ADR-068).
   static List<SettingsSection> on(FormFactor formFactor) =>
-      formFactor == FormFactor.tv
+      !formFactor.isDesktop
       ? values
             .where((s) => s != casting && s != downloads && s != shortcuts)
             .toList()

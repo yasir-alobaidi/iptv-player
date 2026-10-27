@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:iptv_player/core/core_providers.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/db_providers.dart';
 import 'package:iptv_player/data/sync/epg_importer.dart';
@@ -101,8 +100,8 @@ GuideScheduler guideScheduler(Ref ref) {
       },
     ),
     // A TV has one picture and 2 GB: the import waits for the end of
-    // whatever plays, a paused film too (docs/07).
-    playing: ref.watch(formFactorProvider) == FormFactor.tv
+    // whatever plays, a paused film too (docs/07); a phone's the same.
+    playing: ref.watch(formFactorProvider).isAndroidDevice
         ? () => coordinatorIn(
             (state) => switch (state) {
               PlaybackOpening() ||

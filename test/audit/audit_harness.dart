@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/components.dart';
 
 import 'audit_look.dart';
@@ -39,6 +40,7 @@ final class AuditScene {
     this.allow = const {},
     this.keyboard = true,
     this.close,
+    this.phone = true,
   });
 
   /// "content", "loading", "no source" …
@@ -56,13 +58,19 @@ final class AuditScene {
   /// Stops what the scene started (a stream, a cast), while the test
   /// still pumps.
   final Future<void> Function(WidgetTester tester)? close;
+
+  /// False for a desktop's own screen (Casting, the Library, downloads,
+  /// the keyboard's page): a phone never shows it, so the phone's looks
+  /// leave it out (ADR-068).
+  final bool phone;
 }
 
 /// One test per scene and look.
 void auditScreen(String screen, List<AuditScene> scenes) {
   group(screen, () {
     for (final scene in scenes) {
-      for (final look in auditLooks) {
+      for (final look in auditLooksToRun) {
+        if (!scene.phone && look.formFactor == FormFactor.mobile) continue;
         testWidgets('${scene.state} — ${look.name}', (tester) async {
           auditReport(
             '$screen, ${scene.state}',

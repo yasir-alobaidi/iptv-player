@@ -1049,8 +1049,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           shortcut: 'C',
           onPressed: () => unawaited(castFrom(context)),
         ),
-      // A TV has no window: the picture is always the whole screen.
-      if (!_onTv)
+      // A TV or a phone has no window: the picture is always the whole
+      // screen (ADR-068).
+      if (ref.watch(formFactorProvider).isDesktop)
         OsdButton(
           icon: _fullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
           tooltip: _fullScreen ? 'Exit full screen' : 'Full screen',
@@ -1089,7 +1090,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       shortcut: 'Backspace',
       onPressed: () => unawaited(_lastChannel()),
     ),
-    if (!_onTv) _volume(sound),
+    if (ref.watch(formFactorProvider).isDesktop) _volume(sound),
   ];
 
   @override
@@ -1408,7 +1409,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 playFocusNode: _entry,
                 seekFocusNode: _onTv ? _seekBar : null,
                 rowFocusNode: _onTv ? _controlRow : null,
-                leading: [if (!_onTv) _volume(sound)],
+                leading: [
+                  if (ref.watch(formFactorProvider).isDesktop) _volume(sound),
+                ],
                 trailing: _controls(tracks, vod: true),
               ),
             ),

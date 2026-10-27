@@ -7,7 +7,6 @@ import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/core/app_identity.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -89,7 +88,8 @@ class _ReportViewState extends ConsumerState<ReportView> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+    final formFactor = ref.watch(formFactorProvider);
+    final onTv = formFactor.isTv;
     final report = ref.watch(diagnosticsReportProvider);
     final text = report.value?.valueOrNull;
     // The service answers with a Result; an error here is the last line
@@ -110,9 +110,10 @@ class _ReportViewState extends ConsumerState<ReportView> {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: context.scaled(560)),
               child: Text(
-                onTv
-                    ? 'What the app and the player found on this TV. No '
-                          'passwords, usernames or server addresses.'
+                !formFactor.isDesktop
+                    ? 'What the app and the player found on '
+                          '${formFactor.thisDevice}. No passwords, usernames '
+                          'or server addresses.'
                     : 'What the app, the player and the converter found on '
                           'this computer. No passwords, usernames or server '
                           'addresses.',
@@ -137,15 +138,18 @@ class _ReportViewState extends ConsumerState<ReportView> {
                         ? null
                         : () => unawaited(_copy(text)),
                   ),
-                  AppButton(
-                    label: 'Save to file…',
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.s,
-                    loading: _saving,
-                    onPressed: text == null || _saving
-                        ? null
-                        : () => unawaited(_save(text)),
-                  ),
+                  // A phone has no save dialog to put a file where the
+                  // user chooses (ADR-068): Copy is its way out.
+                  if (formFactor.isDesktop)
+                    AppButton(
+                      label: 'Save to file…',
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.s,
+                      loading: _saving,
+                      onPressed: text == null || _saving
+                          ? null
+                          : () => unawaited(_save(text)),
+                    ),
                 ],
               ),
           ],

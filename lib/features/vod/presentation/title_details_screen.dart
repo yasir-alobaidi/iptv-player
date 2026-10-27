@@ -10,7 +10,6 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -260,7 +259,7 @@ class _MoviePage extends ConsumerWidget {
           DetailsBackdrop(
             backdropUrl: ready?.backdropUrl,
             posterUrl: movie.posterUrl,
-            cheapBlur: ref.watch(formFactorProvider) == FormFactor.tv,
+            cheapBlur: ref.watch(formFactorProvider).isAndroidDevice,
           ),
           Positioned(
             left: layout.moviePadding,
@@ -674,7 +673,7 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
               backdropUrl: details?.backdropUrl ?? series.backdropUrl,
               posterUrl: series.posterUrl,
               fadeRight: true,
-              cheapBlur: ref.watch(formFactorProvider) == FormFactor.tv,
+              cheapBlur: ref.watch(formFactorProvider).isAndroidDevice,
             ),
           ),
           Row(

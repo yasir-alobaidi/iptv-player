@@ -67,11 +67,25 @@ Future<AppUnderTest> pumpApp(
     // A test that brings its own appearance has the look in it already
     // (`appearanceOverrides` reads it too).
     if (look != null && !withAppearance) ...appearanceOverrides(),
+    // A phone's or a tablet's look pumps the app as one (ADR-068).
+    if (look?.formFactor case final formFactor?)
+      formFactorProvider.overrideWithValue(formFactor),
   ];
   FocusManager.instance.highlightStrategy =
       FocusHighlightStrategy.alwaysTraditional;
   tester.view.physicalSize = look?.size ?? size;
   tester.view.devicePixelRatio = 1;
+  // A phone's status bar and gesture bar, which the app must keep clear.
+  if (look != null && look.insets != EdgeInsets.zero) {
+    final insets = FakeViewPadding(
+      left: look.insets.left,
+      top: look.insets.top,
+      bottom: look.insets.bottom,
+    );
+    tester.view
+      ..padding = insets
+      ..viewPadding = insets;
+  }
   addTearDown(tester.view.reset);
 
   final log = AppLog(output: _SilentOutput(), secrets: SecretRegistry());

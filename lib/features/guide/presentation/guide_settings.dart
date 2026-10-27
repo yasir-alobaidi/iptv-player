@@ -8,7 +8,6 @@ import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -435,7 +434,7 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
         (coverage.value?.isImporting ?? false) ||
         ref.watch(guideImportServiceProvider).isImporting(_sourceId);
     final keepDays = ref.watch(guideSettingsControllerProvider).keepDays;
-    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+    final onTv = ref.watch(formFactorProvider).isAndroidDevice;
 
     final rows = [
       ...widget.top,

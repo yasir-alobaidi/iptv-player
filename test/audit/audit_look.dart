@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/appearance.dart';
 
 /// The smallest window the app allows, and a large one.
@@ -14,9 +17,24 @@ final class AuditLook {
     this.text, {
     this.reduceMotion = false,
     this.keyboard = false,
+    this.formFactor,
   });
 
   final Size size;
+
+  /// A phone's or a tablet's look ([FormFactor.mobile], ADR-068): the app
+  /// pumped as one, with a status bar above and a gesture bar below
+  /// ([insets]). Null: the scene's own (the desktop, unless it says).
+  final FormFactor? formFactor;
+
+  /// The system's bars a phone draws over the app, in logical pixels.
+  EdgeInsets get insets => formFactor == FormFactor.mobile
+      ? EdgeInsets.only(
+          top: size.width < size.height ? 32 : 0,
+          bottom: 24,
+          left: size.width < size.height ? 0 : 32,
+        )
+      : EdgeInsets.zero;
   final TextSizeChoice text;
   final bool reduceMotion;
 
@@ -26,6 +44,7 @@ final class AuditLook {
   final bool keyboard;
 
   String get name =>
+      '${formFactor == FormFactor.mobile ? 'phone ' : ''}'
       '${size.width.toInt()}×${size.height.toInt()} at ${text.label}'
       '${reduceMotion ? ', reduce motion' : ''}';
 
@@ -56,7 +75,40 @@ const auditLooks = [
   AuditLook(Size(1600, 900), TextSizeChoice.s100),
   AuditLook(Size(2560, 1440), TextSizeChoice.s100),
   AuditLook(Size(3440, 1440), TextSizeChoice.s100),
+  // Android phones and tablets (ADR-068): the smallest phone people
+  // have, held upright, with the keyboard walked; a large one at 130 %;
+  // a phone on its side; a tablet held upright.
+  AuditLook(
+    Size(360, 780),
+    TextSizeChoice.s100,
+    keyboard: true,
+    formFactor: FormFactor.mobile,
+  ),
+  AuditLook(Size(412, 915), TextSizeChoice.s130, formFactor: FormFactor.mobile),
+  AuditLook(Size(780, 360), TextSizeChoice.s100, formFactor: FormFactor.mobile),
+  AuditLook(
+    Size(800, 1280),
+    TextSizeChoice.s100,
+    formFactor: FormFactor.mobile,
+  ),
 ];
+
+/// The looks this run draws: with `AUDIT_LOOKS=phone` only the phone's
+/// and tablet's, `AUDIT_LOOKS=all` every one of [auditLooks], otherwise
+/// the desktop's. The phone's join the default once every screen has its
+/// phone layout (ADR-068, in progress).
+List<AuditLook> get auditLooksToRun =>
+    switch (Platform.environment['AUDIT_LOOKS']) {
+      'phone' => [
+        for (final look in auditLooks)
+          if (look.formFactor == FormFactor.mobile) look,
+      ],
+      'all' => auditLooks,
+      _ => [
+        for (final look in auditLooks)
+          if (look.formFactor != FormFactor.mobile) look,
+      ],
+    };
 
 /// The look the audit is drawing in right now; null in every other test.
 ///

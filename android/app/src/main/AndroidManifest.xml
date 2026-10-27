@@ -3,7 +3,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Google TV first (docs/07): the TV launcher's row, no touchscreen
-         needed. Not required, so the same APK still installs elsewhere. -->
+         needed. Not required, so the same APK installs on phones, tablets
+         and Chromebooks too (ADR-068). -->
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />
@@ -11,13 +12,19 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
-    <!-- usesCleartextTraffic: many services and playlists are plain http. -->
+    <!-- usesCleartextTraffic: many services and playlists are plain http.
+         enableOnBackInvokedCallback="false": Android 16 sends an app that
+         targets it no Back key and goes home itself unless Flutter claims
+         the gesture, which a screen's root never does; Back is the app's
+         (to Home, then out), on a TV's remote and a phone's gesture alike
+         (ADR-068). -->
     <application
         android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="${appIcon}"
         android:roundIcon="${appRoundIcon}"
         android:banner="${appBanner}"
+        android:enableOnBackInvokedCallback="false"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"

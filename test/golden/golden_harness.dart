@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/appearance.dart';
 
 import '../audit/audit_harness.dart';
@@ -58,6 +59,7 @@ void sceneTest(
   Map<String, String> allow = const {},
   bool keyboard = true,
   String? large,
+  bool phone = true,
 }) {
   testWidgets(description, body);
   if (large != null) {
@@ -77,7 +79,9 @@ void sceneTest(
   // files may each have a scene called "content".
   final file = RegExp(r'(\w+?)(_golden)?_test\.dart')
       .firstMatch('${StackTrace.current}'.split('\n').skip(1).join('\n'))?[1];
-  for (final look in auditLooks) {
+  for (final look in auditLooksToRun) {
+    // A desktop's own screen is never on a phone (ADR-068).
+    if (!phone && look.formFactor == FormFactor.mobile) continue;
     testWidgets('$description — audit, ${look.name}', (tester) async {
       final scene = '${file ?? 'scene'} $description';
       final findings = await auditRun(tester, look, name: scene, (check) async {

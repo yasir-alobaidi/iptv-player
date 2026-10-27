@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/core/core_providers.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
 import 'package:iptv_player/core/settings/ui_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -59,7 +58,9 @@ class PlayerSoundController extends _$PlayerSoundController {
     }
   }
 
-  bool get _onTv => ref.read(formFactorProvider) == FormFactor.tv;
+  /// A TV's remote and a phone's keys turn the system's volume: the app's
+  /// stays full (ADR-068).
+  bool get _onTv => ref.read(formFactorProvider).isAndroidDevice;
 
   void _set(PlayerSound next) {
     final before = state;

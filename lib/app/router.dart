@@ -7,7 +7,6 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/shell/desktop_shell.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/design/gallery/gallery_availability.dart';
 import 'package:iptv_player/design/gallery/gallery_screen.dart';
 import 'package:iptv_player/features/favorites/presentation/favorites_screen.dart';
@@ -68,7 +67,7 @@ String startLocation(Ref ref) => '/';
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final router = buildRouter(initialLocation: ref.read(startLocationProvider));
-  if (ref.read(formFactorProvider) == FormFactor.tv) {
+  if (ref.read(formFactorProvider).isAndroidDevice) {
     ref.onDispose(logScreens(router, ref.read(appLogProvider)));
   }
   ref.onDispose(router.dispose);

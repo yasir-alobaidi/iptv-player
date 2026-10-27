@@ -68,14 +68,19 @@ void main() {
   // ---------------------------------------------------------- no source
   auditScreen('with no source', [
     for (final destination in AppDestination.values)
-      AuditScene(destination.label, (tester, look) async {
-        await pumpApp(
-          tester,
-          size: look.size,
-          initialLocation: destination.path,
-          overrides: emptyLibraryOverrides,
-        );
-      }),
+      AuditScene(
+        destination.label,
+        // A phone has no Library (ADR-068).
+        phone: destination != AppDestination.library,
+        (tester, look) async {
+          await pumpApp(
+            tester,
+            size: look.size,
+            initialLocation: destination.path,
+            overrides: emptyLibraryOverrides,
+          );
+        },
+      ),
   ]);
 
   // ------------------------------------------------- movies and series
@@ -199,14 +204,18 @@ void main() {
       AppDestination.library,
       AppDestination.settings,
     ])
-      AuditScene('${destination.label}, with no source', (tester, look) async {
-        await pumpApp(
-          tester,
-          size: look.size,
-          initialLocation: destination.path,
-          overrides: [...emptyLibraryOverrides, offline],
-        );
-      }),
+      AuditScene(
+        '${destination.label}, with no source',
+        phone: destination != AppDestination.library,
+        (tester, look) async {
+          await pumpApp(
+            tester,
+            size: look.size,
+            initialLocation: destination.path,
+            overrides: [...emptyLibraryOverrides, offline],
+          );
+        },
+      ),
   ]);
 
   // --------------------------------------------------------- onboarding
@@ -325,7 +334,7 @@ void main() {
 
   // ---------------------------------------------------------- settings
   auditScreen('Settings', [
-    AuditScene('Casting', (tester, look) async {
+    AuditScene('Casting', phone: false, (tester, look) async {
       final ui = CastUi();
       addTearDown(() => tester.runAsync(ui.live.db.close));
       addTearDown(ui.dispose);

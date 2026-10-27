@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/app/shell/bottom_bar.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/shell/top_bar.dart';
@@ -290,9 +291,28 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
       if (off && _current == AppDestination.guide) _go(AppDestination.home);
     });
 
-    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+    final formFactor = ref.watch(formFactorProvider);
+    final onTv = formFactor.isTv;
+    final destinations = AppDestination.primaryOn(
+      formFactor,
+      guide: ref.watch(guideEnabledProvider),
+    );
     final shell = LayoutBuilder(
       builder: (context, constraints) {
+        // A phone held upright (ADR-068): a compact top bar and the
+        // bottom bar, under the status bar and above the gesture bar.
+        if (formFactor == FormFactor.mobile &&
+            constraints.maxWidth < WindowSizes.phoneWidth) {
+          return _phone(
+            context,
+            destinations: destinations,
+            source: source,
+            sourceChoices: sourceChoices,
+            notice: notice,
+            offline: offline,
+            overlay: overlay,
+          );
+        }
         // Below 1280 px the rail collapses whatever the user chose
         // (docs/05); their choice comes back when the window grows.
         // A TV's rail stays collapsed: its canvas is just 1280 wide, and
@@ -306,151 +326,231 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
           backgroundColor: colors.bg,
           body: Actions(
             actions: {CloseTopIntent: _LeaveChromeAction(this)},
-            child: Stack(
-              children: [
-                Row(
-                  children: [
-                    NavRail(
-                      current: _current,
-                      expanded: expanded,
-                      onSelect: _go,
-                      onToggleExpanded: () =>
-                          ref.read(railExpandedProvider.notifier).toggle(),
-                      paneController: _railPane,
-                      // Left/Right between panes return to the item the user
-                      // left from, or the pane's first (docs/05).
-                      onLeaveRight: _contentPane.focusPane,
-                      // A remote opens a destination by resting on it, as
-                      // OK does, but never back to the root of the one
-                      // shown (the rail skips that one too).
-                      onRest: onTv
-                          ? (destination) => widget.navigationShell.goBranch(
-                              destination.index,
-                            )
-                          : null,
-                      showToggle: !onTv,
-                      destinations: AppDestination.primaryOn(
-                        ref.watch(formFactorProvider),
-                        guide: ref.watch(guideEnabledProvider),
+            // A tablet's or a phone on its side: clear of the status bar,
+            // the camera's cutout and the system's bar (ADR-068). A
+            // desktop or a TV has none to clear.
+            child: SafeArea(
+              top: formFactor == FormFactor.mobile,
+              bottom: formFactor == FormFactor.mobile,
+              left: formFactor == FormFactor.mobile,
+              right: formFactor == FormFactor.mobile,
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      NavRail(
+                        current: _current,
+                        expanded: expanded,
+                        onSelect: _go,
+                        onToggleExpanded: () =>
+                            ref.read(railExpandedProvider.notifier).toggle(),
+                        paneController: _railPane,
+                        // Left/Right between panes return to the item the user
+                        // left from, or the pane's first (docs/05).
+                        onLeaveRight: _contentPane.focusPane,
+                        // A remote opens a destination by resting on it, as
+                        // OK does, but never back to the root of the one
+                        // shown (the rail skips that one too).
+                        onRest: onTv
+                            ? (destination) => widget.navigationShell.goBranch(
+                                destination.index,
+                              )
+                            : null,
+                        showToggle: !onTv,
+                        destinations: destinations,
                       ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          if (!widget.immersive)
-                            ShellTopBar(
-                              title: _current.label,
-                              source: source,
-                              sourceChoices: sourceChoices,
-                              syncStatus: syncStatus,
-                              downloads: downloads,
-                              onOpenSearch: widget.onOpenSearch ?? () {},
-                              onOpenSource: () => _go(AppDestination.settings),
-                              onOpenDownloads: () {
-                                ref.read(shellShowDownloadsProvider)?.call();
-                                _go(AppDestination.library);
-                              },
-                              onCast: castButton == null
-                                  ? null
-                                  : () => castButton.onPressed(context),
-                              castConnected: castButton?.connected ?? false,
-                              showCast: ref.watch(castsToTvsProvider),
-                              paneController: _topBarPane,
-                              onLeaveDown: onTv ? _contentPane.focusPane : null,
-                              clock: ref.watch(appClockProvider),
-                            ),
-                          if (notice != null && !widget.immersive)
-                            _NoticeBar(notice: notice),
-                          if (offline && !widget.immersive)
-                            _OfflineBar(
-                              // Already there: nothing to open.
-                              onOpenLibrary: _current == AppDestination.library
-                                  ? null
-                                  : () => _go(AppDestination.library),
-                            ),
-                          Expanded(
-                            child: _ContentPane(
-                              controller: _contentPane,
-                              // A remote's Left lands on the screen's own
-                              // item, as a TV's menus do, not on the item
-                              // last focused there (the Bedroom TV:
-                              // Settings, from Home). A keyboard's
-                              // returns where it left the rail.
-                              onLeaveLeft: onTv
-                                  ? _railPane.focusFirst
-                                  : _railPane.focusPane,
-                              // A remote reaches the top bar (search, the
-                              // source) only so; a keyboard also by Tab.
-                              onLeaveUp: onTv && !widget.immersive
-                                  ? _upToTopBar
-                                  : null,
-                              textFieldsKeepArrows: !onTv,
-                              // A title's page on a TV: Left from Play
-                              // went up to ‹ Back, far above its row,
-                              // before the menu (the Bedroom TV).
-                              leftStaysInRow: onTv && widget.immersive,
-                              child: overlay == null
-                                  ? widget.navigationShell
-                                  : Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        // Kept, as it was, under the
-                                        // overlay: back to it on Esc.
-                                        Offstage(
-                                          child: ExcludeFocus(
-                                            child: TickerMode(
-                                              enabled: false,
-                                              child: widget.navigationShell,
-                                            ),
-                                          ),
-                                        ),
-                                        overlay,
-                                      ],
-                                    ),
-                            ),
-                          ),
-                          if (cast != null)
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                tokens.spacing.s16,
-                                0,
-                                tokens.spacing.s16,
-                                tokens.spacing.s16,
+                      Expanded(
+                        child: Column(
+                          children: [
+                            if (!widget.immersive)
+                              ShellTopBar(
+                                title: _current.label,
+                                source: source,
+                                sourceChoices: sourceChoices,
+                                syncStatus: syncStatus,
+                                downloads: downloads,
+                                onOpenSearch: widget.onOpenSearch ?? () {},
+                                onOpenSource: () =>
+                                    _go(AppDestination.settings),
+                                onOpenDownloads: () {
+                                  ref.read(shellShowDownloadsProvider)?.call();
+                                  _go(AppDestination.library);
+                                },
+                                onCast: castButton == null
+                                    ? null
+                                    : () => castButton.onPressed(context),
+                                castConnected: castButton?.connected ?? false,
+                                showCast: ref.watch(castsToTvsProvider),
+                                paneController: _topBarPane,
+                                onLeaveDown: onTv
+                                    ? _contentPane.focusPane
+                                    : null,
+                                clock: ref.watch(appClockProvider),
                               ),
-                              child: CastingBar(
-                                title: cast.title,
-                                deviceName: cast.deviceName,
-                                imageName: cast.imageName,
-                                image: artworkFor(
-                                  context,
-                                  cast.imageUrl,
-                                  width: tokens.cast.barLogo,
+                            if (notice != null && !widget.immersive)
+                              _NoticeBar(notice: notice),
+                            if (offline && !widget.immersive)
+                              _OfflineBar(
+                                formFactor: formFactor,
+                                // Already there: nothing to open.
+                                onOpenLibrary:
+                                    _current == AppDestination.library
+                                    ? null
+                                    : () => _go(AppDestination.library),
+                              ),
+                            Expanded(
+                              child: _ContentPane(
+                                controller: _contentPane,
+                                // A remote's Left lands on the screen's own
+                                // item, as a TV's menus do, not on the item
+                                // last focused there (the Bedroom TV:
+                                // Settings, from Home). A keyboard's
+                                // returns where it left the rail.
+                                onLeaveLeft: onTv
+                                    ? _railPane.focusFirst
+                                    : _railPane.focusPane,
+                                // A remote reaches the top bar (search, the
+                                // source) only so; a keyboard also by Tab.
+                                onLeaveUp: onTv && !widget.immersive
+                                    ? _upToTopBar
+                                    : null,
+                                textFieldsKeepArrows: !onTv,
+                                // A title's page on a TV: Left from Play
+                                // went up to ‹ Back, far above its row,
+                                // before the menu (the Bedroom TV).
+                                leftStaysInRow: onTv && widget.immersive,
+                                child: _screen(overlay),
+                              ),
+                            ),
+                            if (cast != null)
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  tokens.spacing.s16,
+                                  0,
+                                  tokens.spacing.s16,
+                                  tokens.spacing.s16,
                                 ),
-                                quality: cast.quality,
-                                status: cast.status,
-                                isPlaying: cast.isPlaying,
-                                reconnecting: cast.reconnecting,
-                                onOpen: cast.onOpen,
-                                onPlayPause: cast.onPlayPause,
-                                onStop: cast.onStop,
+                                child: CastingBar(
+                                  title: cast.title,
+                                  deviceName: cast.deviceName,
+                                  imageName: cast.imageName,
+                                  image: artworkFor(
+                                    context,
+                                    cast.imageUrl,
+                                    width: tokens.cast.barLogo,
+                                  ),
+                                  quality: cast.quality,
+                                  status: cast.status,
+                                  isPlaying: cast.isPlaying,
+                                  reconnecting: cast.reconnecting,
+                                  onOpen: cast.onOpen,
+                                  onPlayPause: cast.onPlayPause,
+                                  onStop: cast.onStop,
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
     );
     // A TV's Back at a section's root goes Home; on Home it leaves the
-    // app. A desktop has no system back.
-    return ref.watch(formFactorProvider) == FormFactor.tv
+    // app; a phone's the same (ADR-068). A desktop has no system back.
+    return formFactor.isAndroidDevice
         ? BackButtonListener(onBackButtonPressed: _backOnTv, child: shell)
         : shell;
+  }
+
+  /// The screen shown, or the overlay over it (Search on a TV).
+  Widget _screen(Widget? overlay) => overlay == null
+      ? widget.navigationShell
+      : Stack(
+          fit: StackFit.expand,
+          children: [
+            // Kept, as it was, under the overlay: back to it on Esc.
+            Offstage(
+              child: ExcludeFocus(
+                child: TickerMode(
+                  enabled: false,
+                  child: widget.navigationShell,
+                ),
+              ),
+            ),
+            overlay,
+          ],
+        );
+
+  /// A phone held upright (ADR-068): the compact top bar (the title, the
+  /// source, Search, the Guide when it is on, Settings), the screen, and
+  /// the bottom bar with the rest of the rail's destinations. No casting
+  /// bar: a phone doesn't cast.
+  Widget _phone(
+    BuildContext context, {
+    required List<AppDestination> destinations,
+    required ShellSource? source,
+    required ShellSourceChoices? sourceChoices,
+    required ShellNotice? notice,
+    required bool offline,
+    required Widget? overlay,
+  }) {
+    final colors = context.tokens.colors;
+    return Scaffold(
+      backgroundColor: colors.bg,
+      body: Actions(
+        actions: {CloseTopIntent: _LeaveChromeAction(this)},
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (!widget.immersive)
+                ShellTopBar(
+                  compact: true,
+                  title: _current.label,
+                  source: source,
+                  sourceChoices: sourceChoices,
+                  onOpenSearch: widget.onOpenSearch ?? () {},
+                  onOpenSource: () => _go(AppDestination.settings),
+                  onOpenSettings: () => _go(AppDestination.settings),
+                  onOpenGuide: destinations.contains(AppDestination.guide)
+                      ? () => _go(AppDestination.guide)
+                      : null,
+                  showCast: false,
+                  paneController: _topBarPane,
+                ),
+              if (notice != null && !widget.immersive)
+                _NoticeBar(notice: notice),
+              if (offline && !widget.immersive)
+                const _OfflineBar(
+                  formFactor: FormFactor.mobile,
+                  onOpenLibrary: null,
+                ),
+              Expanded(
+                child: _ContentPane(
+                  controller: _contentPane,
+                  onLeaveLeft: () => false,
+                  child: _screen(overlay),
+                ),
+              ),
+              ShellBottomBar(
+                current: _current,
+                destinations: [
+                  for (final destination in destinations)
+                    if (destination != AppDestination.guide) destination,
+                ],
+                onSelect: _go,
+                paneController: _railPane,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Android leaves an app on Back from any section's root: a remote's
@@ -499,7 +599,10 @@ class _NoticeBar extends StatelessWidget {
 /// Phase 9 step 7): what is on this computer still plays, and the Library
 /// is where it is.
 class _OfflineBar extends StatelessWidget {
-  const new({required this.onOpenLibrary});
+  const new({required this.formFactor, required this.onOpenLibrary});
+
+  /// A TV or a phone has no downloads, files or Library to offer.
+  final FormFactor formFactor;
 
   /// Null on the Library itself.
   final VoidCallback? onOpenLibrary;
@@ -507,15 +610,19 @@ class _OfflineBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.tokens.spacing;
+    final desktop = formFactor.isDesktop;
     return Padding(
       padding: EdgeInsets.fromLTRB(spacing.s24, spacing.s12, spacing.s24, 0),
       child: Semantics(
         liveRegion: true,
         child: AppBanner(
-          message: "You're offline — downloads and local files still play.",
+          message: desktop
+              ? "You're offline — downloads and local files still play."
+              : "You're offline — check ${formFactor.thisDevice}'s "
+                    'connection to the internet.',
           tone: BannerTone.warning,
-          actionLabel: onOpenLibrary == null ? null : 'Open Library',
-          onAction: onOpenLibrary,
+          actionLabel: desktop && onOpenLibrary != null ? 'Open Library' : null,
+          onAction: desktop ? onOpenLibrary : null,
         ),
       ),
     );

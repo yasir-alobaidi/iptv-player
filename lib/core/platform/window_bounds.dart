@@ -114,6 +114,11 @@ abstract final class WindowSizes {
 
   /// Below this the nav rail collapses (docs/05).
   static const railCollapseWidth = 1280.0;
+
+  /// Narrower than this, a phone's shell has the bottom bar, not the rail:
+  /// a phone held upright (Material's compact width; ADR-068). A desktop
+  /// window never is ([minimum]).
+  static const phoneWidth = 600.0;
 }
 
 /// True in a native Wayland session, where a window cannot position

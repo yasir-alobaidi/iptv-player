@@ -83,7 +83,9 @@ import 'package:iptv_player/features/sources/presentation/source_shell_slots.dar
 import 'package:logger/logger.dart';
 
 /// Sets up logging and the global error handlers, then starts the app.
-Future<void> bootstrap() async {
+/// [args] are `main`'s: on Android the activity names the form factor
+/// ([detectFormFactor], ADR-068).
+Future<void> bootstrap({List<String> args = const []}) async {
   final sinceMain = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   registerBundledFontLicenses();
@@ -130,13 +132,16 @@ Future<void> bootstrap() async {
   final firstRun = await _hasNoSources(database, log);
 
   // The TV is the player: no casting, no downloads, no library, no
-  // FFmpeg (docs/07).
-  final formFactor = detectFormFactor(platform: defaultTargetPlatform);
-  final onDesktop = formFactor == FormFactor.desktop;
+  // FFmpeg (docs/07); a phone or tablet neither (ADR-068).
+  final formFactor = detectFormFactor(
+    platform: defaultTargetPlatform,
+    args: args,
+  );
+  final onDesktop = formFactor.isDesktop;
   log.info('bootstrap', 'Form factor: ${formFactor.name}');
-  if (onDesktop) {
-    // The rings are the keyboard's: a click focuses what it pressed and
-    // hides them, the next key shows them (as a browser does).
+  if (!formFactor.isTv) {
+    // The rings are the keyboard's: a click or a touch focuses what it
+    // pressed and hides them, the next key shows them (as a browser does).
     FocusVisibility.install();
   } else {
     // Android starts in touch mode, which draws no focus; a remote has
@@ -196,14 +201,15 @@ Future<void> bootstrap() async {
       playerEngineProvider.overrideWithValue(player),
       formFactorProvider.overrideWithValue(formFactor),
       // A TV's display, for Match frame rate (ADR-035); the desktop's,
-      // and the laptop's `FORM_FACTOR=tv`, have none to ask.
-      if (!onDesktop && Platform.isAndroid)
+      // the laptop's `FORM_FACTOR=tv` and a phone's have none to ask.
+      if (formFactor.isTv && Platform.isAndroid)
         displayModesProvider.overrideWithValue(AndroidDisplayModes(log: log)),
       // Why the last runs ended, and how the screen is drawn (ADR-058).
       if (!onDesktop && Platform.isAndroid)
         lastExitsProvider.overrideWithValue(AndroidLastExits(log: log)),
       // Each run's own log, for the report a phone takes, and the version
-      // from the package: an APK has no `version.json` (ADR-059).
+      // from the package: an APK has no `version.json` (ADR-059). A phone
+      // or tablet's too (ADR-068).
       if (!onDesktop && Platform.isAndroid) ...[
         runLogsProvider.overrideWithValue(AndroidRunLogs(log: log)),
         appVersionProvider.overrideWith((_) => androidAppVersion()),
@@ -245,7 +251,8 @@ Future<void> bootstrap() async {
         libraryThumbnailFolderProvider.overrideWithValue(paths.thumbnails),
       ],
       ...sourceShellOverrides,
-      // A TV is the player: no Cast button, bar or view (docs/07).
+      // A TV is the player: no Cast button, bar or view (docs/07); a
+      // phone has no FFmpeg for the relay (ADR-068).
       if (onDesktop) ...castShellOverrides,
       ...downloadShellOverrides,
       if (Platform.isWindows)

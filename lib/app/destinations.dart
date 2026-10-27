@@ -77,15 +77,15 @@ enum AppDestination {
       values.where((d) => d != AppDestination.settings).toList();
 
   /// [primary] on [formFactor]: a TV has no library (docs/07: downloads
-  /// and local files are the desktop's; they reach a TV by casting); no
+  /// and local files are the desktop's; they reach a TV by casting), nor
+  /// a phone (ADR-068); no
   /// Guide while its switch is off ([guide], ADR-031).
   static List<AppDestination> primaryOn(
     FormFactor formFactor, {
     required bool guide,
   }) => [
     for (final destination in primary)
-      if (!(formFactor == FormFactor.tv &&
-              destination == AppDestination.library) &&
+      if (!(!formFactor.isDesktop && destination == AppDestination.library) &&
           (guide || destination != AppDestination.guide))
         destination,
   ];

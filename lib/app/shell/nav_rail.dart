@@ -89,33 +89,46 @@ class NavRail extends StatelessWidget {
                 },
               ),
             },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _AppMark(expanded: expanded),
-                SizedBox(height: tokens.spacing.s16),
-                for (final destination
-                    in destinations ?? AppDestination.primary) ...[
-                  _RailItem(
-                    destination: destination,
-                    selected: destination == current,
-                    expanded: expanded,
-                    onPressed: () => onSelect(destination),
-                    onRest: _restOn(destination),
+            // Scrolls when the screen is shorter than the rail: a phone
+            // on its side is 360 high (ADR-068). Otherwise Settings sits
+            // at the bottom, under the spacer.
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _AppMark(expanded: expanded),
+                      SizedBox(height: tokens.spacing.s16),
+                      for (final destination
+                          in destinations ?? AppDestination.primary) ...[
+                        _RailItem(
+                          destination: destination,
+                          selected: destination == current,
+                          expanded: expanded,
+                          onPressed: () => onSelect(destination),
+                          onRest: _restOn(destination),
+                        ),
+                        SizedBox(height: tokens.spacing.s8),
+                      ],
+                      const Spacer(),
+                      if (showToggle) ...[
+                        _ToggleItem(
+                          expanded: expanded,
+                          onPressed: onToggleExpanded,
+                        ),
+                        SizedBox(height: tokens.spacing.s8),
+                      ],
+                      _RailItem(
+                        destination: AppDestination.settings,
+                        selected: current == AppDestination.settings,
+                        expanded: expanded,
+                        onPressed: () => onSelect(AppDestination.settings),
+                        onRest: _restOn(AppDestination.settings),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: tokens.spacing.s8),
-                ],
-                const Spacer(),
-                if (showToggle) ...[
-                  _ToggleItem(expanded: expanded, onPressed: onToggleExpanded),
-                  SizedBox(height: tokens.spacing.s8),
-                ],
-                _RailItem(
-                  destination: AppDestination.settings,
-                  selected: current == AppDestination.settings,
-                  expanded: expanded,
-                  onPressed: () => onSelect(AppDestination.settings),
-                  onRest: _restOn(AppDestination.settings),
                 ),
               ],
             ),

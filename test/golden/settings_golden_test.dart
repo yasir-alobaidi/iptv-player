@@ -221,7 +221,7 @@ void main() {
       await golden(tester, 'images/settings_appearance.png');
     });
 
-    sceneTest('Keyboard shortcuts', (tester) async {
+    sceneTest('Keyboard shortcuts', phone: false, (tester) async {
       hideDebugBanner();
       await pumpApp(
         tester,
@@ -234,24 +234,26 @@ void main() {
       await golden(tester, 'images/settings_shortcuts.png');
     });
 
-    sceneTest('the F1 panel, over Settings in the smallest window', (
-      tester,
-    ) async {
-      hideDebugBanner();
-      await pumpApp(
-        tester,
-        size: const Size(1024, 640),
-        initialLocation: AppDestination.settings.path,
-        overrides: [...sketch().overrides, ...sourceShellOverrides],
-      );
-      await tester.sendKeyEvent(LogicalKeyboardKey.f1);
-      await settleApp(tester);
-      // Once more: the list takes the focus when it opens, and its ring
-      // is drawn the frame after.
-      await settleApp(tester);
+    sceneTest(
+      'the F1 panel, over Settings in the smallest window',
+      phone: false,
+      (tester) async {
+        hideDebugBanner();
+        await pumpApp(
+          tester,
+          size: const Size(1024, 640),
+          initialLocation: AppDestination.settings.path,
+          overrides: [...sketch().overrides, ...sourceShellOverrides],
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.f1);
+        await settleApp(tester);
+        // Once more: the list takes the focus when it opens, and its ring
+        // is drawn the frame after.
+        await settleApp(tester);
 
-      await golden(tester, 'images/shortcuts_panel_1024x640.png');
-    });
+        await golden(tester, 'images/shortcuts_panel_1024x640.png');
+      },
+    );
 
     /// Settings → Data, with 412 MB of pictures and a guide (switched on:
     /// one is kept only then, ADR-031); Import… answers with sketch C's
@@ -305,7 +307,7 @@ void main() {
       await golden(tester, 'images/settings_data.png');
     });
 
-    sceneTest("Data: an import's preview", (tester) async {
+    sceneTest("Data: an import's preview", phone: false, (tester) async {
       await data(tester);
       // In the smallest window at the largest text its row is past what
       // the list has built yet.

@@ -27,10 +27,16 @@ class ShellTopBar extends StatelessWidget {
     this.paneController,
     this.onLeaveDown,
     this.clock,
+    this.compact = false,
+    this.onOpenSettings,
+    this.onOpenGuide,
     super.key,
   });
 
   static const height = 64.0;
+
+  /// A phone's bar, held upright (ADR-068).
+  static const compactHeight = 56.0;
   static const searchWidth = 380.0;
 
   /// The bar's width inside its padding, at the canvas's text size, from
@@ -71,14 +77,28 @@ class ShellTopBar extends StatelessWidget {
   /// draws none (the component gallery).
   final DateTime Function()? clock;
 
+  /// A phone held upright (ADR-068): the title and the source, then Search
+  /// and Settings as buttons ([onOpenSettings]: the bottom bar has no room
+  /// for it). No clock: the phone's status bar has one.
+  final bool compact;
+
+  /// Settings, from the compact bar; the rail's otherwise.
+  final VoidCallback? onOpenSettings;
+
+  /// The Guide, from the compact bar while its switch is on (ADR-031);
+  /// null draws no button.
+  final VoidCallback? onOpenGuide;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
 
     return Container(
-      height: context.scaled(height),
-      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s24),
+      height: context.scaled(compact ? compactHeight : height),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? tokens.spacing.s16 : tokens.spacing.s24,
+      ),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: colors.borderSubtle)),
       ),
@@ -90,15 +110,64 @@ class ShellTopBar extends StatelessWidget {
             const SingleActivator(LogicalKeyboardKey.arrowDown): ?onLeaveDown,
           },
           child: LayoutBuilder(
-            builder: (context, constraints) => _row(
-              context,
-              clock: constraints.maxWidth >= context.scaled(clockFrom)
-                  ? clock
-                  : null,
-            ),
+            builder: (context, constraints) => compact
+                ? _compactRow(context)
+                : _row(
+                    context,
+                    clock: constraints.maxWidth >= context.scaled(clockFrom)
+                        ? clock
+                        : null,
+                  ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _compactRow(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.text.h2.copyWith(color: colors.textPrimary),
+          ),
+        ),
+        SizedBox(width: tokens.spacing.s12),
+        Flexible(
+          child: _SourceChip(
+            source: source,
+            choices: sourceChoices,
+            onManage: onOpenSource,
+          ),
+        ),
+        const Spacer(),
+        AppIconButton(
+          icon: AppIcons.search,
+          tooltip: 'Search',
+          onPressed: onOpenSearch,
+        ),
+        if (onOpenGuide != null) ...[
+          SizedBox(width: tokens.spacing.s4),
+          AppIconButton(
+            icon: AppIcons.guide,
+            tooltip: 'Guide',
+            onPressed: onOpenGuide,
+          ),
+        ],
+        if (onOpenSettings != null) ...[
+          SizedBox(width: tokens.spacing.s4),
+          AppIconButton(
+            icon: AppIcons.settings,
+            tooltip: 'Settings',
+            onPressed: onOpenSettings,
+          ),
+        ],
+      ],
     );
   }
 
@@ -247,10 +316,15 @@ class _SourceChip extends StatelessWidget {
                 decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
               ),
               SizedBox(width: tokens.spacing.s8),
-              Text(
-                label,
-                style: tokens.text.caption.copyWith(
-                  color: colors.textSecondary,
+              // A long name gives way on a phone's bar (ADR-068).
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
               SizedBox(width: tokens.spacing.s8),

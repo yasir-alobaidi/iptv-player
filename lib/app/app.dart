@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/last_exit_notice.dart';
 import 'package:iptv_player/app/router.dart';
@@ -30,7 +31,8 @@ class IptvPlayerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final look = ref.watch(appearanceProvider);
-    final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
+    final formFactor = ref.watch(formFactorProvider);
+    final onTv = formFactor.isTv;
     return ArtworkScope(
       images: ref.watch(artworkImagesProvider),
       child: MaterialApp.router(
@@ -63,7 +65,9 @@ class IptvPlayerApp extends ConsumerWidget {
           final tv = TvMode(
             on: onTv,
             child: KeyHints(
-              shown: !onTv,
+              // Keycaps are a desktop's: a phone has no keyboard to name
+              // (ADR-068).
+              shown: formFactor.isDesktop,
               child: onTv
                   ? TvCanvas(
                       child: StillWatching(
@@ -76,7 +80,18 @@ class IptvPlayerApp extends ConsumerWidget {
           // The keyboard's language, kept (ADR-027); only its own
           // dependents rebuild when it changes.
           return Consumer(
-            child: tv,
+            // A phone draws the app under its status bar and gesture bar
+            // (Android 15's edge to edge): their icons light, over the
+            // app's dark (ADR-068).
+            child: formFactor == FormFactor.mobile
+                ? AnnotatedRegion<SystemUiOverlayStyle>(
+                    value: SystemUiOverlayStyle.light.copyWith(
+                      statusBarColor: Colors.transparent,
+                      systemNavigationBarColor: Colors.transparent,
+                    ),
+                    child: tv,
+                  )
+                : tv,
             builder: (context, ref, tv) => RemoteKeyboardLanguage(
               language: ref.watch(remoteKeyboardChoiceProvider),
               onChanged: ref.read(remoteKeyboardChoiceProvider.notifier).choose,

@@ -30,6 +30,11 @@ class MainActivity : FlutterActivity() {
     // The key last logged: Flutter hands a key it didn't handle back to the activity.
     private var lastKey: KeyEvent? = null
 
+    // A TV or a phone, tablet or Chromebook: Dart's shell follows (ADR-068).
+    override fun getDartEntrypointArgs(): List<String> =
+        (super.getDartEntrypointArgs() ?: emptyList()) +
+            "--form-factor=${DeviceKind.formFactor(this)}"
+
     // Read as the engine is made, once per process: Skia on OpenGL ES after
     // a crash drawing with Impeller (ADR-058, ADR-060).
     override fun getFlutterShellArgs(): FlutterShellArgs =

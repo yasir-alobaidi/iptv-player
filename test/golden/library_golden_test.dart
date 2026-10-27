@@ -167,6 +167,7 @@ void main() {
       final name = '${size.width.toInt()}x${size.height.toInt()}';
       sceneTest(
         'movies $name',
+        phone: false,
         audit: size.width == 1280,
         large: size.width == 1280 ? 'images/library_130_1280x800.png' : null,
         (tester) async {
@@ -184,7 +185,7 @@ void main() {
       );
     }
 
-    sceneTest('series', (tester) async {
+    sceneTest('series', phone: false, (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Series'));
       await settle(tester);
@@ -192,7 +193,7 @@ void main() {
       await golden(tester, 'images/library_series.png');
     });
 
-    sceneTest('videos', (tester) async {
+    sceneTest('videos', phone: false, (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Videos'));
       await settle(tester);
@@ -200,7 +201,7 @@ void main() {
       await golden(tester, 'images/library_videos.png');
     });
 
-    sceneTest('folders', (tester) async {
+    sceneTest('folders', phone: false, (tester) async {
       await open(tester);
       await tester.tap(find.widgetWithText(CountTab, 'Folders'));
       await settle(tester);
@@ -208,7 +209,7 @@ void main() {
       await golden(tester, 'images/library_folders.png');
     });
 
-    sceneTest('downloads', (tester) async {
+    sceneTest('downloads', phone: false, (tester) async {
       await open(
         tester,
         before: (ui) async {
@@ -280,7 +281,7 @@ void main() {
       await golden(tester, 'images/library_downloads.png');
     });
 
-    sceneTest('settings: downloads and library', (tester) async {
+    sceneTest('settings: downloads and library', phone: false, (tester) async {
       await open(tester, location: '/settings');
       await tester.tap(find.text('Downloads & library'));
       await settle(tester);
@@ -288,22 +289,25 @@ void main() {
       await golden(tester, 'images/settings_downloads.png');
     });
 
-    sceneTest('the first run', (tester) async {
+    sceneTest('the first run', phone: false, (tester) async {
       await open(tester, before: (ui) async {});
 
       await golden(tester, 'images/library_first_run.png');
     });
 
-    sceneTest('a movie of the library', large: 'images/library_movie_130.png', (
-      tester,
-    ) async {
-      // Paper Kites is the sixth row written.
-      await open(tester, location: '/library/movie/6');
+    sceneTest(
+      'a movie of the library',
+      phone: false,
+      large: 'images/library_movie_130.png',
+      (tester) async {
+        // Paper Kites is the sixth row written.
+        await open(tester, location: '/library/movie/6');
 
-      await golden(tester, 'images/library_movie.png');
-    });
+        await golden(tester, 'images/library_movie.png');
+      },
+    );
 
-    sceneTest('a show of the library', (tester) async {
+    sceneTest('a show of the library', phone: false, (tester) async {
       await open(tester, location: '/library/show/l%3Akettle%20bay');
 
       await golden(tester, 'images/library_show.png');
