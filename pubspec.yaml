@@ -14,6 +14,9 @@ dependencies:
   # A source's fingerprint in a settings export (ADR-016); the icon
   # extractor's md5 too.
   crypto: ^3.0.6
+  # AirPlay's pairing and encryption: Ed25519, X25519, ChaCha20-Poly1305,
+  # HKDF-SHA512 (ADR-067).
+  cryptography: ^2.9.0
   dbus: ^0.7.15
   desktop_drop: ^0.8.4
   dio: ^5.11.1
