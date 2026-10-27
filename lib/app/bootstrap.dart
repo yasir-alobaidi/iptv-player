@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/app/app.dart';
+import 'package:iptv_player/app/quit.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/app/shell/shell_state.dart';
 import 'package:iptv_player/app/window_setup.dart';
@@ -282,7 +283,7 @@ Future<void> bootstrap() async {
       TvAwayObserver(container.read(playbackCoordinatorProvider)),
     );
   }
-  window?.beforeClose = () => _quit(container, log);
+  window?.beforeClose = () => quitApp(container, log);
   container
     // What each play says about the network, for "You're offline".
     ..read(playbackReachabilityProvider)
@@ -300,27 +301,6 @@ Future<void> bootstrap() async {
 /// Linux, Windows and macOS: a window the app sizes, titles and closes.
 bool get _hasDesktopWindow =>
     Platform.isLinux || Platform.isWindows || Platform.isMacOS;
-
-/// What quitting stops, of what ran: the cast (its TV goes home), the
-/// relay and its FFmpegs, the downloads (flushed, to resume next time),
-/// every other supervised process (hard rule 8).
-Future<void> _quit(ProviderContainer container, AppLog log) async {
-  final clock = Stopwatch()..start();
-  if (container.exists(castCoordinatorProvider)) {
-    await container.read(castCoordinatorProvider).shutdown();
-  }
-  if (container.exists(castRelayProvider)) {
-    await container.read(castRelayProvider).close();
-  }
-  // Downloads pause and flush; the next launch resumes them (docs/09).
-  if (container.exists(downloadQueueProvider)) {
-    await container.read(downloadQueueProvider).shutdown();
-  }
-  if (container.exists(processSupervisorProvider)) {
-    await container.read(processSupervisorProvider).stopAll();
-  }
-  log.info('bootstrap', 'Quit in ${clock.elapsedMilliseconds} ms');
-}
 
 /// Waits for Home's rows on screen ([LaunchMark.settled]; at most
 /// [_launchHomeCap] for a launch that opens elsewhere) and a moment

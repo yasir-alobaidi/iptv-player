@@ -88,8 +88,9 @@ class AppWindow with WindowListener {
     }
   }
 
-  /// Stops listening and writes whatever is still pending. Called when
-  /// the app shuts down.
+  /// Stops listening. Called when the app shuts down; a bounds save still
+  /// waiting out its debounce (a move in the last half second) is
+  /// dropped.
   Future<void> dispose() async {
     _saveTimer?.cancel();
     if (_listening) {
