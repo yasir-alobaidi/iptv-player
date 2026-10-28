@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -48,7 +49,18 @@ double guideRowHeight(BuildContext context) {
 /// 220 px at 100 %, and only the name's part of it more at a larger text
 /// size (the number's slot grows by itself; the logo keeps its size).
 /// At 130 % the fixed column cut "Arena Sports 1" to "Arena Sp…".
+///
+/// In a grid narrower than a phone held upright (ADR-068) the column is
+/// the logo over a short name ([guideCompactColumnWidth]).
 double guideChannelColumnWidth(BuildContext context) {
+  final compact = context
+      .dependOnInheritedWidgetOfExactType<_ColumnScope>()
+      ?.compact;
+  if (compact ?? false) return guideCompactColumnWidth(context);
+  return _regularColumnWidth(context);
+}
+
+double _regularColumnWidth(BuildContext context) {
   final guide = context.tokens.guide;
   return context
       .scaledAround(
@@ -61,6 +73,38 @@ double guideChannelColumnWidth(BuildContext context) {
       )
       .ceilToDouble();
 }
+
+/// A phone's channel column (ADR-068): [GuideGrid.compactColumnWidth] at
+/// 100 %, its name's part of it more at a larger text size.
+double guideCompactColumnWidth(BuildContext context) => context
+    .scaledAround(
+      GuideGrid.compactColumnWidth,
+      fixed: context.tokens.spacing.s8 * 2,
+    )
+    .ceilToDouble();
+
+/// Whether the grid's channel column is a phone's, for the rows, the
+/// ruler and the channel cells under it.
+class _ColumnScope extends InheritedWidget {
+  const new({required this.compact, required super.child});
+
+  final bool compact;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ColumnScope>()?.compact ??
+      false;
+
+  @override
+  bool updateShouldNotify(_ColumnScope oldWidget) =>
+      oldWidget.compact != compact;
+}
+
+/// The pointers a long press opens a channel's menu for (ADR-068).
+const Set<PointerDeviceKind> _touch = {
+  PointerDeviceKind.touch,
+  PointerDeviceKind.stylus,
+  PointerDeviceKind.invertedStylus,
+};
 
 /// What the Guide's toolbar asks of the grid, and the day the grid shows
 /// (the selected day pill).
@@ -154,6 +198,10 @@ class GuideGrid extends ConsumerStatefulWidget {
   /// stand on it.
   static const minGap = Duration(minutes: 5);
 
+  /// A phone's channel column at 100 % (ADR-068): a logo over a short
+  /// name, so the hours keep most of the screen.
+  static const compactColumnWidth = 88.0;
+
   @override
   ConsumerState<GuideGrid> createState() => _GuideGridState();
 }
@@ -173,7 +221,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
   final _x = ValueNotifier<double>(0);
   late final AnimationController _xMotion = AnimationController.unbounded(
     vsync: this,
-  )..addListener(() => _x.value = _xMotion.value);
+  )..addListener(() => _x.value = _timeline.clampX(_xMotion.value, _viewWidth));
   late GuideWindowCache _cache;
   bool _failed = false;
 
@@ -780,6 +828,32 @@ class _GuideGridState extends ConsumerState<GuideGrid>
     );
   }
 
+  /// A finger flicked sideways (ADR-068): the hours glide on and slow
+  /// down, as a list does; with reduce motion they stop where the finger
+  /// left them.
+  void _fling(double velocity) {
+    if (velocity.abs() < kMinFlingVelocity ||
+        context.tokens.motion.reduceMotion) {
+      return;
+    }
+    _xMotion
+      ..value = _x.value
+      ..animateWith(
+        ClampingScrollSimulation(position: _x.value, velocity: velocity),
+      );
+  }
+
+  /// A finger held on a row (ADR-068): the channel's menu, as the menu
+  /// key opens it, once the cursor's row is the one held.
+  void _longPress(int row) {
+    setState(() => _row = row);
+    _focus.requestFocus();
+    unawaited(Feedback.forLongPress(context));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _menu();
+    });
+  }
+
   /// A click on a cell: the cursor goes there, then as Enter.
   void _tap(int row, ChannelItem channel, GuideCell cell) {
     final start = _viewStart;
@@ -844,10 +918,12 @@ class _GuideGridState extends ConsumerState<GuideGrid>
         borderRadius: tokens.radii.lgAll,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            _viewWidth = math.max(
-              0,
-              constraints.maxWidth - guideChannelColumnWidth(context),
-            );
+            // A phone's grid (ADR-068): the narrow channel column.
+            final compact = constraints.maxWidth < WindowSizes.phoneWidth;
+            final column = compact
+                ? guideCompactColumnWidth(context)
+                : _regularColumnWidth(context);
+            _viewWidth = math.max(0, constraints.maxWidth - column);
             _viewHeight = math.max(
               0,
               constraints.maxHeight - guide.rulerHeight,
@@ -859,50 +935,53 @@ class _GuideGridState extends ConsumerState<GuideGrid>
               _placed = true;
             }
             _scheduleRequest();
-            return Stack(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Ruler(
-                      timeline: _timeline,
-                      x: _x,
-                      viewWidth: _viewWidth,
-                      now: _now,
-                    ),
-                    Expanded(child: _body(context, count)),
-                  ],
-                ),
-                if ((_total ?? 0) > 0 &&
-                    _pageError == null &&
-                    _cache.failure == null)
-                  Positioned(
-                    left: guideChannelColumnWidth(context),
-                    top: guide.rulerHeight,
-                    right: 0,
-                    bottom: 0,
-                    child: IgnorePointer(
-                      child: _NowLine(
+            return _ColumnScope(
+              compact: compact,
+              child: Stack(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Ruler(
                         timeline: _timeline,
                         x: _x,
                         viewWidth: _viewWidth,
                         now: _now,
                       ),
-                    ),
+                      Expanded(child: _body(context, count)),
+                    ],
                   ),
-                if (widget.importing)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    right: 0,
-                    child: ProgressBar(
-                      value: widget.importFraction,
-                      height: 2,
-                      trackColor: colors.surface1,
-                      semanticLabel: 'Updating the guide',
+                  if ((_total ?? 0) > 0 &&
+                      _pageError == null &&
+                      _cache.failure == null)
+                    Positioned(
+                      left: column,
+                      top: guide.rulerHeight,
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: _NowLine(
+                          timeline: _timeline,
+                          x: _x,
+                          viewWidth: _viewWidth,
+                          now: _now,
+                        ),
+                      ),
                     ),
-                  ),
-              ],
+                  if (widget.importing)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      right: 0,
+                      child: ProgressBar(
+                        value: widget.importFraction,
+                        height: 2,
+                        trackColor: colors.surface1,
+                        semanticLabel: 'Updating the guide',
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -958,8 +1037,11 @@ class _GuideGridState extends ConsumerState<GuideGrid>
             PointerDeviceKind.stylus,
             PointerDeviceKind.trackpad,
           },
+          onHorizontalDragStart: (_) => _xMotion.stop(),
           onHorizontalDragUpdate: (details) =>
               _setX(_x.value - details.delta.dx, animate: false),
+          onHorizontalDragEnd: (details) =>
+              _fling(-details.velocity.pixelsPerSecond.dx),
           child: ListView.builder(
             controller: _vertical,
             itemExtent: guideRowHeight(context),
@@ -982,6 +1064,7 @@ class _GuideGridState extends ConsumerState<GuideGrid>
                 onTap: channel == null
                     ? null
                     : (cell) => _tap(index, channel, cell),
+                onLongPress: channel == null ? null : () => _longPress(index),
               );
             },
           ),
@@ -1142,7 +1225,11 @@ class _RowFrame extends StatelessWidget {
         children: [
           Container(
             width: guideChannelColumnWidth(context),
-            padding: EdgeInsets.symmetric(horizontal: guide.channelPadding),
+            padding: EdgeInsets.symmetric(
+              horizontal: _ColumnScope.of(context)
+                  ? tokens.spacing.s8
+                  : guide.channelPadding,
+            ),
             decoration: BoxDecoration(
               border: Border(right: BorderSide(color: colors.surface3)),
             ),
@@ -1170,8 +1257,12 @@ class _GuideRowView extends StatelessWidget {
     required this.cursor,
     required this.reminders,
     required this.onTap,
+    this.onLongPress,
     this.channelKey,
   });
+
+  /// A finger held on the row: its channel's menu (ADR-068).
+  final VoidCallback? onLongPress;
 
   final ChannelItem? channel;
   final GlobalKey? channelKey;
@@ -1196,20 +1287,25 @@ class _GuideRowView extends StatelessWidget {
   Widget build(BuildContext context) {
     final channel = this.channel;
     if (channel == null) return const _SkeletonRow();
-    return _RowFrame(
-      channel: _ChannelCell(key: channelKey, channel: channel),
-      strip: _Strip(
-        channelId: channel.id,
-        cache: cache,
-        budget: budget,
-        timeline: timeline,
-        x: x,
-        viewWidth: viewWidth,
-        now: now,
-        cells: cells,
-        cursor: cursor,
-        reminders: reminders,
-        onTap: onTap,
+    // Only a finger's or a pen's: a mouse held down is still a click.
+    return GestureDetector(
+      supportedDevices: _touch,
+      onLongPress: onLongPress,
+      child: _RowFrame(
+        channel: _ChannelCell(key: channelKey, channel: channel),
+        strip: _Strip(
+          channelId: channel.id,
+          cache: cache,
+          budget: budget,
+          timeline: timeline,
+          x: x,
+          viewWidth: viewWidth,
+          now: now,
+          cells: cells,
+          cursor: cursor,
+          reminders: reminders,
+          onTap: onTap,
+        ),
       ),
     );
   }
@@ -1691,6 +1787,28 @@ class _ChannelCell extends StatelessWidget {
     final colors = tokens.colors;
     final guide = tokens.guide;
     final number = channel.number;
+    // A phone's (ADR-068): the logo over the name, no number.
+    if (_ColumnScope.of(context)) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ChannelLogo(
+            name: channel.name,
+            image: artworkFor(context, channel.logoUrl, width: guide.logoSize),
+            size: guide.logoSize,
+            borderRadius: tokens.radii.smAll,
+          ),
+          SizedBox(height: tokens.spacing.s4),
+          Text(
+            channel.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: tokens.text.labelSmall.copyWith(color: colors.textPrimary),
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         SizedBox(
@@ -2161,10 +2279,18 @@ class _Ruler extends StatelessWidget {
             children: [
               Container(
                 width: guideChannelColumnWidth(context),
-                padding: EdgeInsets.symmetric(horizontal: guide.channelPadding),
+                padding: EdgeInsets.symmetric(
+                  horizontal: _ColumnScope.of(context)
+                      ? tokens.spacing.s8
+                      : guide.channelPadding,
+                ),
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${formatWeekday(from)} ${from.toLocal().day}'.toUpperCase(),
+                  // A phone's narrow column: "TUE 15" (ADR-068).
+                  (_ColumnScope.of(context)
+                          ? formatDayPill(from)
+                          : '${formatWeekday(from)} ${from.toLocal().day}')
+                      .toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.clip,
                   style: tokens.text.overline

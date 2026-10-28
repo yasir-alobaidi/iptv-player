@@ -86,6 +86,12 @@ class ChannelRow extends StatelessWidget {
   static const double _progressWidth = 72;
   static const double _progressRoom = _progressWidth + 10 + 56;
 
+  /// The name line's narrowest that still shows its tags: a few letters
+  /// of the name, and each tag ("Hidden", "FHD") with its gap, at the
+  /// text's size.
+  static const double _nameRoom = 56;
+  static const double _tagRoom = 56;
+
   String get _noProgramme => switch (upNext) {
     final next? => 'Next $next',
     null when guideKnown => 'No guide information',
@@ -152,36 +158,51 @@ class ChannelRow extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              name,
-                              overflow: TextOverflow.ellipsis,
-                              style: tokens.text.bodyStrong.copyWith(
-                                color: colors.textPrimary,
+                      // The tags give way before the name does: a phone's
+                      // row at a large text size has no room for both
+                      // (ADR-068), and a tag can't shrink.
+                      LayoutBuilder(
+                        builder: (context, line) {
+                          final tags =
+                              (hidden ? 1 : 0) +
+                              (quality == null ? 0 : 1) +
+                              badges.length;
+                          final room =
+                              line.maxWidth >=
+                              context.scaled(_nameRoom + _tagRoom * tags);
+                          return Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tokens.text.bodyStrong.copyWith(
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          if (hidden) ...[
-                            SizedBox(width: tokens.spacing.s8),
-                            ChannelBadge(
-                              'Hidden',
-                              raised: selected || states.highlighted,
-                            ),
-                          ],
-                          if (quality case final quality?) ...[
-                            SizedBox(width: tokens.spacing.s8),
-                            ChannelBadge(
-                              quality,
-                              raised: selected || states.highlighted,
-                            ),
-                          ],
-                          for (final badge in badges) ...[
-                            SizedBox(width: tokens.spacing.s8 - 2),
-                            badge,
-                          ],
-                        ],
+                              if (hidden && room) ...[
+                                SizedBox(width: tokens.spacing.s8),
+                                ChannelBadge(
+                                  'Hidden',
+                                  raised: selected || states.highlighted,
+                                ),
+                              ],
+                              if (quality case final quality? when room) ...[
+                                SizedBox(width: tokens.spacing.s8),
+                                ChannelBadge(
+                                  quality,
+                                  raised: selected || states.highlighted,
+                                ),
+                              ],
+                              if (room)
+                                for (final badge in badges) ...[
+                                  SizedBox(width: tokens.spacing.s8 - 2),
+                                  badge,
+                                ],
+                            ],
+                          );
+                        },
                       ),
                       if (guideKnown || nowTitle != null || upNext != null) ...[
                         SizedBox(height: tokens.spacing.s4 - 2),

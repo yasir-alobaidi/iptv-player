@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:iptv_player/design/focus/app_intents.dart';
@@ -40,6 +43,14 @@ void revealingFocus(
 /// [revealingFocus].
 FocusTraversalPolicy appTraversalPolicy() =>
     ReadingOrderTraversalPolicy(requestFocusCallback: revealingFocus);
+
+/// The pointers a long press opens a control's menu for: a finger or a
+/// pen, never a mouse (ADR-068).
+const Set<PointerDeviceKind> _touch = {
+  PointerDeviceKind.touch,
+  PointerDeviceKind.stylus,
+  PointerDeviceKind.invertedStylus,
+};
 
 /// The nodes [FocusableSurface]s focus by, which reveal themselves.
 final _surfaceNodes = Expando<bool>('FocusableSurface');
@@ -274,6 +285,16 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
     widget.onMenu?.call();
   }
 
+  /// A finger held on the control (ADR-068): its menu, as the desktop's
+  /// right-click and the TV's held OK open it. The keyboard's focus comes
+  /// here first, so it is back here when the menu closes.
+  void _longPress() {
+    if (!widget.enabled || widget.onMenu == null) return;
+    unawaited(Feedback.forLongPress(context));
+    _focusFromPointer();
+    _menu();
+  }
+
   /// Scrolls the focused control into view with its ring, its growth and
   /// [AppFocusTokens.revealMargin] round it: the traversal's own scroll
   /// stops at the control's edge, which left the ring cut off by the
@@ -432,7 +453,14 @@ class _FocusableSurfaceState extends State<FocusableSurface> {
           onTapCancel: widget._interactive
               ? () => setState(() => _pressed = false)
               : null,
-          child: surface,
+          // A long press only by touch or a pen: a mouse held down is
+          // still a click, and with no menu nothing joins the arena, so
+          // the mouse, the keyboard and a TV's remote are as before.
+          child: GestureDetector(
+            supportedDevices: _touch,
+            onLongPress: widget.onMenu == null ? null : _longPress,
+            child: surface,
+          ),
         ),
       ),
     );

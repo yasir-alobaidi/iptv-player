@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_grid.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
+import 'package:iptv_player/features/vod/presentation/compact_layout.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
 /// Movies or Series (canvas `Movies`; docs/05: Series uses the same grid):
@@ -63,7 +65,6 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     final source = ref.watch(currentSourceProvider);
     if (source == null) {
       return FocusPane(
@@ -88,50 +89,76 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
     final count = ref.watch(titleCountProvider(kind, query));
     return FocusPane(
       debugLabel: 'screen-${kind.name}',
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          tokens.spacing.s32 - tokens.spacing.s8,
-          tokens.spacing.s20,
-          tokens.spacing.s32 - tokens.spacing.s8,
-          0,
+      child: LayoutBuilder(
+        builder: (context, constraints) => _page(
+          context,
+          query: query,
+          count: count,
+          // A phone held upright (ADR-068): the edges closer, the filter
+          // and the sort on one line.
+          narrow: CompactLayout.narrow(constraints.maxWidth),
+          short: CompactLayout.of(context),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
-              child: _Header(
+      ),
+    );
+  }
+
+  Widget _page(
+    BuildContext context, {
+    required TitleQuery query,
+    required AsyncValue<TitleCount> count,
+    required bool narrow,
+    required bool short,
+  }) {
+    final tokens = context.tokens;
+    final side = narrow
+        ? tokens.spacing.s8
+        : tokens.spacing.s32 - tokens.spacing.s8;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        side,
+        short ? tokens.spacing.s12 : tokens.spacing.s20,
+        side,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
+            child: _Header(
+              kind: kind,
+              query: query,
+              count: count.value?.count,
+              filter: _filter,
+              narrow: narrow,
+            ),
+          ),
+          SizedBox(height: short ? tokens.spacing.s8 : tokens.spacing.s16),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
+            child: _CategoryChips(
+              kind: kind,
+              query: query,
+              controller: _chips,
+              onDown: _grid.focusPane,
+              touch: short,
+            ),
+          ),
+          SizedBox(height: short ? tokens.spacing.s4 : tokens.spacing.s12),
+          Expanded(
+            child: FocusLanding(
+              on: TvMode.of(context),
+              child: CatalogueGrid(
                 kind: kind,
                 query: query,
-                count: count.value?.count,
-                filter: _filter,
+                count: count,
+                controller: _grid,
+                empty: () => _empty(query),
               ),
             ),
-            SizedBox(height: tokens.spacing.s16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s8),
-              child: _CategoryChips(
-                kind: kind,
-                query: query,
-                controller: _chips,
-                onDown: _grid.focusPane,
-              ),
-            ),
-            SizedBox(height: tokens.spacing.s12),
-            Expanded(
-              child: FocusLanding(
-                on: TvMode.of(context),
-                child: CatalogueGrid(
-                  kind: kind,
-                  query: query,
-                  count: count,
-                  controller: _grid,
-                  empty: () => _empty(query),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -194,12 +221,18 @@ class _Header extends ConsumerWidget {
     required this.query,
     required this.count,
     required this.filter,
+    this.narrow = false,
   });
 
   final CatalogueKind kind;
   final TitleQuery query;
   final int? count;
   final TextEditingController filter;
+
+  /// A phone held upright: the filter, which says how many there are,
+  /// and the sort as a button (its menu has the three), on one line. The
+  /// chosen chip says which category shows, the top bar which screen.
+  final bool narrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -231,14 +264,53 @@ class _Header extends ConsumerWidget {
       onChanged: notifier.setText,
     );
     final sort = SegmentedControl<TitleSort>(
-      options: const [
-        SegmentOption(value: TitleSort.recentlyAdded, label: 'Recently added'),
-        SegmentOption(value: TitleSort.name, label: 'Name'),
-        SegmentOption(value: TitleSort.rating, label: 'Rating'),
+      options: [
+        for (final sort in TitleSort.values)
+          SegmentOption(value: sort, label: _sortLabel(sort)),
       ],
       value: query.sort,
       onChanged: notifier.setSort,
     );
+    if (narrow) {
+      final touch = CompactLayout.touchTarget;
+      return Row(
+        children: [
+          Expanded(
+            child: SearchField(
+              controller: filter,
+              hint: count == null
+                  ? 'Filter ${titlesWord(kind)}'
+                  : 'Filter ${titleCountLabel(kind, count!)}',
+              shortcut: null,
+              height: touch,
+              onChanged: notifier.setText,
+            ),
+          ),
+          SizedBox(width: tokens.spacing.s8),
+          Builder(
+            builder: (anchor) => AppIconButton(
+              icon: AppIcons.filter,
+              tooltip: 'Sort: ${_sortLabel(query.sort)}',
+              bordered: true,
+              size: touch,
+              onPressed: () => unawaited(
+                showAppMenu(
+                  anchor,
+                  items: [
+                    for (final sort in TitleSort.values)
+                      AppMenuItem(
+                        label: _sortLabel(sort),
+                        checked: query.sort == sort,
+                        onPressed: () => notifier.setSort(sort),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         // Narrow: the filter and the sort go under the heading.
@@ -272,6 +344,12 @@ class _Header extends ConsumerWidget {
   }
 }
 
+String _sortLabel(TitleSort sort) => switch (sort) {
+  TitleSort.recentlyAdded => 'Recently added',
+  TitleSort.name => 'Name',
+  TitleSort.rating => 'Rating',
+};
+
 String _headingFor(WidgetRef ref, CatalogueKind kind, TitleQuery query) =>
     switch (query.filter) {
       AllTitles() => allTitlesHeading(kind),
@@ -297,12 +375,17 @@ class _CategoryChips extends ConsumerWidget {
     required this.query,
     required this.controller,
     required this.onDown,
+    this.touch = false,
   });
 
   final CatalogueKind kind;
   final TitleQuery query;
   final FocusPaneController controller;
   final VoidCallback onDown;
+
+  /// A phone's: each chip a finger's target tall, a tap beside it its
+  /// own (ADR-068).
+  final bool touch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -320,8 +403,11 @@ class _CategoryChips extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.arrowDown): onDown},
       child: SizedBox(
-        // The chips' own height and the room their focus ring needs.
-        height: context.scaled(40),
+        // The chips' own height and the room their focus ring needs; on a
+        // phone, a finger's.
+        height: touch
+            ? math.max(context.scaled(40), CompactLayout.touchTarget)
+            : context.scaled(40),
         child: Row(
           children: [
             Expanded(
@@ -337,21 +423,25 @@ class _CategoryChips extends ConsumerWidget {
                       SizedBox(width: tokens.spacing.s8),
                   itemBuilder: (context, index) {
                     final (label, filter) = choices[index];
-                    return AppChip(
+                    final chip = AppChip(
                       label: label,
                       selected: query.filter == filter,
                       onPressed: () => notifier.showFilter(filter),
                     );
+                    return touch
+                        ? TouchTarget(
+                            onTap: () => notifier.showFilter(filter),
+                            child: chip,
+                          )
+                        : chip;
                   },
                 ),
               ),
             ),
             SizedBox(width: tokens.spacing.s8),
             Builder(
-              builder: (anchor) => AppChip(
-                label: 'More',
-                icon: AppIcons.chevronDown,
-                onPressed: () => unawaited(
+              builder: (anchor) {
+                void more() => unawaited(
                   showAppMenu(
                     anchor,
                     items: [
@@ -363,8 +453,14 @@ class _CategoryChips extends ConsumerWidget {
                         ),
                     ],
                   ),
-                ),
-              ),
+                );
+                final chip = AppChip(
+                  label: 'More',
+                  icon: AppIcons.chevronDown,
+                  onPressed: more,
+                );
+                return touch ? TouchTarget(onTap: more, child: chip) : chip;
+              },
             ),
           ],
         ),

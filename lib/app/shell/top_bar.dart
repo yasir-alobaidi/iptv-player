@@ -37,6 +37,12 @@ class ShellTopBar extends StatelessWidget {
 
   /// A phone's bar, held upright (ADR-068).
   static const compactHeight = 56.0;
+
+  /// The bar's width inside its padding below which Search is a button
+  /// and the sync status gives way first: a phone on its side, a tablet
+  /// held upright (ADR-068). A desktop's bar is never this narrow (904 px
+  /// in the smallest window).
+  static const narrowBelow = 800.0;
   static const searchWidth = 380.0;
 
   /// The bar's width inside its padding, at the canvas's text size, from
@@ -117,6 +123,7 @@ class ShellTopBar extends StatelessWidget {
                     clock: constraints.maxWidth >= context.scaled(clockFrom)
                         ? clock
                         : null,
+                    narrow: constraints.maxWidth < narrowBelow,
                   ),
           ),
         ),
@@ -171,7 +178,11 @@ class ShellTopBar extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, {required DateTime Function()? clock}) {
+  Widget _row(
+    BuildContext context, {
+    required DateTime Function()? clock,
+    bool narrow = false,
+  }) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     return Row(
@@ -201,10 +212,20 @@ class ShellTopBar extends StatelessWidget {
           ),
         ),
         SizedBox(width: tokens.spacing.s16),
-        SearchField(width: searchWidth, onTap: onOpenSearch),
+        if (narrow)
+          AppIconButton(
+            icon: AppIcons.search,
+            tooltip: 'Search',
+            onPressed: onOpenSearch,
+          )
+        else
+          SearchField(width: searchWidth, onTap: onOpenSearch),
         if (syncStatus != null) ...[
           SizedBox(width: tokens.spacing.s16),
-          _SyncStatus(status: syncStatus!),
+          if (narrow)
+            Flexible(child: _SyncStatus(status: syncStatus!))
+          else
+            _SyncStatus(status: syncStatus!),
         ],
         if (downloads != null) ...[
           SizedBox(width: tokens.spacing.s16),
@@ -360,11 +381,13 @@ class _SyncStatus extends StatelessWidget {
           const AppSpinner(size: 14),
           SizedBox(width: tokens.spacing.s8),
         ],
-        Text(
-          status.message,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: tokens.text.caption.copyWith(color: colors.textTertiary),
+        Flexible(
+          child: Text(
+            status.message,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.text.caption.copyWith(color: colors.textTertiary),
+          ),
         ),
       ],
     );

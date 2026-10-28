@@ -47,7 +47,7 @@ final class SettingsLocationProvider
   }
 }
 
-String _$settingsLocationHash() => r'cc55822e8d6f6de872c160ad84cd9103c2e7dc82';
+String _$settingsLocationHash() => r'edf99605e2b332d8bdb3ec53c5b1a85c3aba4beb';
 
 /// Which section Settings shows, and which source the Categories and
 /// Guide sections manage.

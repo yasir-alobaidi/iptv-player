@@ -4,6 +4,25 @@ import 'package:iptv_player/design/focus/focusable_surface.dart';
 import 'package:iptv_player/design/text_scale.dart';
 import 'package:iptv_player/design/tokens.dart';
 
+/// The least a control measures each way where it is touched: a phone's
+/// or a tablet's (ADR-068), and [AppButtonSize.m]'s height.
+const double touchTargetSize = 44;
+
+/// Below it, every [AppButton] is at least [touchTargetSize] high, a
+/// small one included: a screen laid out for a finger (ADR-068). The
+/// desktop's and the TV's screens have none.
+class TouchTargets extends InheritedWidget {
+  const new({required super.child, this.on = true, super.key});
+
+  final bool on;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TouchTargets>()?.on ?? false;
+
+  @override
+  bool updateShouldNotify(TouchTargets oldWidget) => oldWidget.on != on;
+}
+
 /// Button emphasis (docs/05). [dangerOutline] is the canvas's "Stop
 /// casting": red words in a red outline.
 enum AppButtonVariant { primary, secondary, ghost, danger, dangerOutline }
@@ -96,6 +115,9 @@ class AppButton extends StatelessWidget {
     final textStyle =
         (size == AppButtonSize.s ? tokens.text.buttonSmall : tokens.text.button)
             .copyWith(color: foreground);
+    final height = TouchTargets.of(context) && size.height < touchTargetSize
+        ? touchTargetSize
+        : size.height;
 
     return FocusableSurface(
       onPressed: _enabled ? onPressed : null,
@@ -135,7 +157,7 @@ class AppButton extends StatelessWidget {
         return Opacity(
           opacity: states.disabled ? _disabledOpacity : 1,
           child: Container(
-            height: context.scaled(size.height),
+            height: context.scaled(height),
             padding: EdgeInsets.symmetric(horizontal: size.padding),
             decoration: BoxDecoration(
               // The surface paints the background; this paints the border

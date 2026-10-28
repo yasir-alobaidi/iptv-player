@@ -13,6 +13,7 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playback.dart';
+import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
 import 'package:iptv_player/features/sources/domain/source.dart';
@@ -76,6 +77,8 @@ class _PlaybackSettingsSectionState
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    // A phone (ADR-068): the fields across the row.
+    final onePane = SettingsOnePane.of(context);
     final settings = ref.watch(playbackSettingsControllerProvider);
     // The stored choices arrive after the first frame: fill the fields
     // then, unless the user is already typing.
@@ -245,7 +248,7 @@ class _PlaybackSettingsSectionState
                 'Language codes, most wanted first, e.g. "ar, en". The '
                 "stream's own choice is used when none of them is there.",
             control: SizedBox(
-              width: 240,
+              width: onePane ? double.infinity : 240,
               child: AppTextField(
                 controller: _audio,
                 hint: 'ar, en',
@@ -261,7 +264,7 @@ class _PlaybackSettingsSectionState
                 'Language codes, most wanted first. Leave it empty to '
                 'start with subtitles off.',
             control: SizedBox(
-              width: 240,
+              width: onePane ? double.infinity : 240,
               child: AppTextField(
                 controller: _subtitles,
                 hint: 'en',
@@ -431,6 +434,14 @@ class _Setting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A phone (ADR-068): the control under the words.
+    if (SettingsOnePane.of(context)) {
+      return SettingRow(
+        title: title,
+        description: description,
+        control: control,
+      );
+    }
     final tokens = context.tokens;
     final colors = tokens.colors;
     return Container(

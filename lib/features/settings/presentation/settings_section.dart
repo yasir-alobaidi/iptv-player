@@ -36,10 +36,15 @@ enum SettingsSection {
 /// Where Settings is: the section it shows, and the source each per-source
 /// section manages (Categories, Guide). Kept for the session, so leaving
 /// Settings and coming back returns to the same place.
+///
+/// [opened]: the section is open rather than the list of sections, where
+/// Settings shows one pane at a time (a phone's width, ADR-068). Two
+/// panes show both and ignore it.
 typedef SettingsPlace = ({
   SettingsSection section,
   String? categoriesSourceId,
   String? guideSourceId,
+  bool opened,
 });
 
 /// Which section Settings shows, and which source the Categories and
@@ -51,12 +56,24 @@ class SettingsLocation extends _$SettingsLocation {
     section: SettingsSection.sources,
     categoriesSourceId: null,
     guideSourceId: null,
+    opened: false,
   );
 
+  /// Opens [section] (on a phone's width, in place of the list).
   void show(SettingsSection section) => state = (
     section: section,
     categoriesSourceId: state.categoriesSourceId,
     guideSourceId: state.guideSourceId,
+    opened: true,
+  );
+
+  /// Back to the list of sections, on a phone's width; the section shown
+  /// last stays the one the list returns to.
+  void showList() => state = (
+    section: state.section,
+    categoriesSourceId: state.categoriesSourceId,
+    guideSourceId: state.guideSourceId,
+    opened: false,
   );
 
   /// The Categories section for [sourceId].
@@ -64,6 +81,7 @@ class SettingsLocation extends _$SettingsLocation {
     section: SettingsSection.categories,
     categoriesSourceId: sourceId,
     guideSourceId: state.guideSourceId,
+    opened: true,
   );
 
   /// The Guide section for [sourceId].
@@ -71,6 +89,7 @@ class SettingsLocation extends _$SettingsLocation {
     section: SettingsSection.guide,
     categoriesSourceId: state.categoriesSourceId,
     guideSourceId: sourceId,
+    opened: true,
   );
 }
 

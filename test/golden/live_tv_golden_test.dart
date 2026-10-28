@@ -7,10 +7,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import '../app/app_harness.dart';
+import '../audit/audit_harness.dart';
 import '../features/live_tv/live_tv_fakes.dart';
 import 'golden_harness.dart';
 
@@ -55,19 +58,61 @@ void main() {
             await tester.runAsync(() => Future<void>.delayed(Duration.zero));
             await tester.pump(const Duration(milliseconds: 50));
           }
-          await tester.tap(find.text('Arena Sports 1').first);
-          for (var i = 0; i < 5; i++) {
-            await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-            await tester.pump(const Duration(milliseconds: 50));
+          // A phone's or a tablet's Live TV has no preview: a press plays
+          // full screen, the player's screen (ADR-068). Its list is drawn.
+          if (currentAuditLook?.formFactor != FormFactor.mobile) {
+            await tester.tap(find.text('Arena Sports 1').first);
+            for (var i = 0; i < 5; i++) {
+              await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+              await tester.pump(const Duration(milliseconds: 50));
+            }
+            live.rig.engine.firstFrame();
+            await tester.pump(const Duration(milliseconds: 300));
           }
-          live.rig.engine.firstFrame();
-          await tester.pump(const Duration(milliseconds: 300));
 
           await golden(tester, 'images/live_tv_$name.png');
           await live.rig.coordinator.stop();
           await tester.pump(const Duration(milliseconds: 400));
         },
       );
+    }
+
+    // A phone's own (ADR-068): the categories in their sheet, opened by
+    // the list's title. Drawn in the phone's looks only: no other window
+    // has the sheet.
+    for (final look in auditLooksToRun) {
+      if (look.formFactor != FormFactor.mobile || look.size.width >= 600) {
+        continue;
+      }
+      testWidgets('the categories sheet — audit, ${look.name}', (tester) async {
+        late LiveTvFakes live;
+        final scene = AuditScene('the categories sheet', (tester, look) async {
+          live = LiveTvFakes();
+          live.fakes.now = goldenNow();
+          addTearDown(() => tester.runAsync(live.db.close));
+          await tester.runAsync(live.seed);
+          await pumpApp(
+            tester,
+            size: look.size,
+            initialLocation: AppDestination.liveTv.path,
+            overrides: [...live.overrides, ...sourceShellOverrides],
+          );
+          await auditSettle(tester);
+          await tester.tap(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is FocusableSurface &&
+                  (widget.semanticLabel?.startsWith('Category: ') ?? false),
+            ),
+          );
+          await auditSettle(tester);
+        });
+        auditReport(
+          'live tv, the categories sheet',
+          look,
+          await audit(tester, scene, look, name: 'live tv categories sheet'),
+        );
+      });
     }
   }, skip: goldenSkipReason);
 }

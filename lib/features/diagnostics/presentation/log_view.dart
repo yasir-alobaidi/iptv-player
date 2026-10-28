@@ -28,11 +28,23 @@ class LogView extends ConsumerStatefulWidget {
   /// A line's height, at the canvas's text size.
   static const rowHeight = 24.0;
 
+  /// Narrower than this (a phone, ADR-068) a line's time, level and tag
+  /// go above its message, which then has the width to itself.
+  static const stackedBelow = 560.0;
+
   @override
   ConsumerState<LogView> createState() => _LogViewState();
 }
 
 class _LogViewState extends ConsumerState<LogView> {
+  /// The lines are drawn two to a row (a phone's width): see
+  /// [LogView.stackedBelow].
+  var _stacked = false;
+
+  /// How high [row] is drawn, at the text size in use.
+  double _extentOf(LogRow row) =>
+      context.scaled(LogView.rowHeight) *
+      (_stacked && !row.continuation ? 2 : 1);
   final _scroll = ScrollController();
   final GlobalKey _list = GlobalKey();
   final _filter = TextEditingController();
@@ -164,7 +176,7 @@ class _LogViewState extends ConsumerState<LogView> {
     // view.
     if (_scroll.hasClients && _scroll.offset > 0) {
       _scroll.position.correctBy(
-        value.rows.length * context.scaled(LogView.rowHeight),
+        value.rows.fold<double>(0, (sum, row) => sum + _extentOf(row)),
       );
     }
     setState(() => _rows = [..._rows, ...value.rows]);
@@ -228,7 +240,60 @@ class _LogViewState extends ConsumerState<LogView> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final file = ref.watch(logReaderProvider).currentFile;
+    final filter = AppTextField(
+      controller: _filter,
+      hint: 'Filter…',
+      onChanged: _onFilterChanged,
+    );
+    final kind = SegmentedControl<bool>(
+      options: const [
+        SegmentOption(value: false, label: 'All'),
+        SegmentOption(value: true, label: 'Warnings and errors'),
+      ],
+      value: _query.problemsOnly,
+      onChanged: _setProblemsOnly,
+    );
+    final copy = AppButton(
+      label: 'Copy shown',
+      variant: AppButtonVariant.secondary,
+      size: AppButtonSize.s,
+      onPressed: _rows.isEmpty ? null : () => unawaited(_copyShown()),
+    );
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _stacked = constraints.maxWidth < LogView.stackedBelow;
+        if (!_stacked) return _wide(context, file, filter, kind, copy);
+        // A phone (ADR-068): the kinds across the width, then the filter
+        // with Copy shown beside it. It has no folder of its own to show.
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            kind,
+            SizedBox(height: tokens.spacing.s8),
+            Row(
+              children: [
+                Expanded(child: filter),
+                SizedBox(width: tokens.spacing.s8),
+                copy,
+              ],
+            ),
+            SizedBox(height: tokens.spacing.s12),
+            Expanded(child: _body(context, hasFile: file != null)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _wide(
+    BuildContext context,
+    String? file,
+    Widget filter,
+    Widget kind,
+    Widget copy,
+  ) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -243,36 +308,15 @@ class _LogViewState extends ConsumerState<LogView> {
               spacing: tokens.spacing.s12,
               runSpacing: tokens.spacing.s8,
               children: [
-                SegmentedControl<bool>(
-                  options: const [
-                    SegmentOption(value: false, label: 'All'),
-                    SegmentOption(value: true, label: 'Warnings and errors'),
-                  ],
-                  value: _query.problemsOnly,
-                  onChanged: _setProblemsOnly,
-                ),
-                SizedBox(
-                  width: context.scaled(220),
-                  child: AppTextField(
-                    controller: _filter,
-                    hint: 'Filter…',
-                    onChanged: _onFilterChanged,
-                  ),
-                ),
+                kind,
+                SizedBox(width: context.scaled(220), child: filter),
               ],
             ),
             Wrap(
               spacing: tokens.spacing.s8,
               runSpacing: tokens.spacing.s8,
               children: [
-                AppButton(
-                  label: 'Copy shown',
-                  variant: AppButtonVariant.secondary,
-                  size: AppButtonSize.s,
-                  onPressed: _rows.isEmpty
-                      ? null
-                      : () => unawaited(_copyShown()),
-                ),
+                copy,
                 AppButton(
                   label: 'Open log folder',
                   variant: AppButtonVariant.secondary,
@@ -318,15 +362,22 @@ class _LogViewState extends ConsumerState<LogView> {
       return Semantics(
         label: 'Reading the log',
         container: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final width in const [560.0, 420.0, 500.0, 380.0, 460.0])
-              Padding(
-                padding: EdgeInsets.only(bottom: tokens.spacing.s8),
-                child: Skeleton(width: width),
-              ),
-          ],
+        // Cut off by a short box, not past it.
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            maxHeight: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final width in const [560.0, 420.0, 500.0, 380.0, 460.0])
+                  Padding(
+                    padding: EdgeInsets.only(bottom: tokens.spacing.s8),
+                    child: Skeleton(width: width),
+                  ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -374,10 +425,17 @@ class _LogViewState extends ConsumerState<LogView> {
             reverse: true,
             shrinkWrap: true,
             padding: EdgeInsets.symmetric(vertical: tokens.spacing.s8),
-            itemExtent: extent,
+            itemExtent: _stacked ? null : extent,
+            itemExtentBuilder: _stacked
+                ? (index, _) => index < rows.length
+                      ? _extentOf(rows[rows.length - 1 - index])
+                      : null
+                : null,
             itemCount: rows.length,
-            itemBuilder: (context, index) =>
-                _LogRowView(row: rows[rows.length - 1 - index]),
+            itemBuilder: (context, index) => _LogRowView(
+              row: rows[rows.length - 1 - index],
+              stacked: _stacked,
+            ),
           ),
         ),
       ),
@@ -386,9 +444,12 @@ class _LogViewState extends ConsumerState<LogView> {
 }
 
 class _LogRowView extends StatelessWidget {
-  const new({required this.row});
+  const new({required this.row, this.stacked = false});
 
   final LogRow row;
+
+  /// The time, level and tag on a line above the message (a phone).
+  final bool stacked;
 
   /// `20:14:03.412`, in local time: a log is read against a clock on the
   /// wall, and always to the millisecond.
@@ -422,6 +483,66 @@ class _LogRowView extends StatelessWidget {
             : colors.textSecondary,
       ),
     );
+    if (stacked) {
+      final extent = context.scaled(LogView.rowHeight);
+      return Semantics(
+        label: row.raw,
+        excludeSemantics: true,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!row.continuation)
+                SizedBox(
+                  height: extent,
+                  child: Row(
+                    children: [
+                      if (row.time case final time?) ...[
+                        Text(
+                          _time(time),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: mono.copyWith(color: colors.textTertiary),
+                        ),
+                        SizedBox(width: tokens.spacing.s8),
+                      ],
+                      Text(
+                        row.level.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: mono.withWeight(700).copyWith(color: tone),
+                      ),
+                      SizedBox(width: tokens.spacing.s8),
+                      Expanded(
+                        child: Text(
+                          row.tag,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: mono.copyWith(color: colors.textTertiary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(
+                height: extent,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: row.continuation ? tokens.spacing.s16 : 0,
+                  ),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: message,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Semantics(
       label: row.raw,
       excludeSemantics: true,

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+import 'package:iptv_player/features/vod/presentation/compact_layout.dart';
 
 /// Builds one card of a [TitleGrid]: [item] at [width], with the [focus]
 /// node the grid moves between.
@@ -69,9 +70,35 @@ class TitleGrid<T extends Object> extends StatefulWidget {
 
   static const minCardWidth = 160.0;
 
+  /// A phone's posters (ADR-068): three across a 360 px phone held
+  /// upright, more on its side.
+  static const compactMinCardWidth = 96.0;
+
   /// The canvas's gaps: 20 across, 24 down.
   static const columnGap = 20.0;
   static const rowGap = 24.0;
+
+  /// The cards' narrowest and the gaps between them in a grid [width]
+  /// wide: a phone's (narrower than 600 px, or a window lower than 480)
+  /// closer together, 12 across and 16 down.
+  static ({double minWidth, double across, double down}) spacingFor(
+    BuildContext context,
+    double width,
+    TitleGridShape shape,
+  ) {
+    final compact =
+        CompactLayout.narrow(width) ||
+        MediaQuery.sizeOf(context).height < CompactLayout.shortHeight;
+    if (!compact) {
+      return (minWidth: shape.minCardWidth, across: columnGap, down: rowGap);
+    }
+    final spacing = context.tokens.spacing;
+    return (
+      minWidth: shape.compactMinCardWidth,
+      across: spacing.s12,
+      down: spacing.s16,
+    );
+  }
 
   @override
   State<TitleGrid<T>> createState() => _TitleGridState<T>();
@@ -101,6 +128,11 @@ final class TitleGridShape {
   final double minCardWidth;
   final double pictureAspect;
   final bool landscape;
+
+  /// On a phone: smaller posters; 16:9 cards (the desktop's Library only)
+  /// as they are.
+  double get compactMinCardWidth =>
+      landscape ? minCardWidth : TitleGrid.compactMinCardWidth;
 }
 
 /// Two rows of skeleton cards laid out as a [TitleGrid] would lay them:
@@ -115,21 +147,22 @@ class TitleGridSkeleton extends StatelessWidget {
     final tokens = context.tokens;
     return LayoutBuilder(
       builder: (context, constraints) {
+        final gaps = TitleGrid.spacingFor(context, constraints.maxWidth, shape);
         final columns =
-            ((constraints.maxWidth + TitleGrid.columnGap) /
-                    (shape.minCardWidth + TitleGrid.columnGap))
+            ((constraints.maxWidth + gaps.across) /
+                    (gaps.minWidth + gaps.across))
                 .floor()
                 .clamp(1, 12);
         final width =
             (constraints.maxWidth -
                 tokens.spacing.s8 * 2 -
-                TitleGrid.columnGap * (columns - 1)) /
+                gaps.across * (columns - 1)) /
             columns;
         return Padding(
           padding: EdgeInsets.all(tokens.spacing.s8),
           child: Wrap(
-            spacing: TitleGrid.columnGap,
-            runSpacing: TitleGrid.rowGap,
+            spacing: gaps.across,
+            runSpacing: gaps.down,
             clipBehavior: Clip.hardEdge,
             children: [
               for (var i = 0; i < columns * 2; i++)
@@ -388,16 +421,18 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final shape = widget.shape;
+            final gaps = TitleGrid.spacingFor(
+              context,
+              constraints.maxWidth,
+              shape,
+            );
             (int, double, double) cardsFor(double inset, {int? columns}) {
               final width = constraints.maxWidth - inset * 2;
               columns ??= math.max(
                 1,
-                ((width + TitleGrid.columnGap) /
-                        (shape.minCardWidth + TitleGrid.columnGap))
-                    .floor(),
+                ((width + gaps.across) / (gaps.minWidth + gaps.across)).floor(),
               );
-              final cardWidth =
-                  (width - TitleGrid.columnGap * (columns - 1)) / columns;
+              final cardWidth = (width - gaps.across * (columns - 1)) / columns;
               return (
                 columns,
                 cardWidth,
@@ -419,7 +454,7 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
               (columns, cardWidth, extent) = cardsFor(inset, columns: columns);
             }
             _columns = columns;
-            _stride = extent + TitleGrid.rowGap;
+            _stride = extent + gaps.down;
             _inset = inset;
             final grid = GridView.builder(
               controller: _scroll,
@@ -429,8 +464,8 @@ class _TitleGridState<T extends Object> extends State<TitleGrid<T>> {
               scrollCacheExtent: ScrollCacheExtent.pixels(_stride * 1.5),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _columns,
-                crossAxisSpacing: TitleGrid.columnGap,
-                mainAxisSpacing: TitleGrid.rowGap,
+                crossAxisSpacing: gaps.across,
+                mainAxisSpacing: gaps.down,
                 mainAxisExtent: extent,
               ),
               itemCount: widget.total,

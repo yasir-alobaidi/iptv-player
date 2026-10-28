@@ -12,6 +12,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/downloads/download_task.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/library/library_item.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -57,6 +58,20 @@ class HomeScreen extends ConsumerStatefulWidget {
   static const continueGap = 24.0;
   static const channelsGap = 16.0;
   static const postersGap = 20.0;
+
+  /// A phone held upright (ADR-068): how many cards a row shows, the last
+  /// cut by the screen's edge so the row reads as one that scrolls on —
+  /// a Continue card and the next's edge, a channel at its narrowest
+  /// ([AppLayoutTokens.channelTileMin]) and most of the next,
+  /// two posters and most of a third.
+  static const phoneContinueAcross = 1.2;
+  static const phoneTilesAcross = 1.6;
+  static const phonePostersAcross = 2.6;
+
+  /// A phone's card width: [across] cards [gap] apart in the [room] from
+  /// the page's margin to the screen's edge.
+  static double phoneCardWidth(double room, double across, double gap) =>
+      (room + gap) / across - gap;
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -346,25 +361,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth - tokens.spacing.s32 * 2;
+        // A phone held upright (ADR-068): a phone's margin, and rows that
+        // run to the screen's edges with the next card peeking in.
+        final phone = constraints.maxWidth < WindowSizes.phoneWidth;
+        final margin = phone ? tokens.spacing.s16 : tokens.spacing.s32;
+        final width = constraints.maxWidth - margin * 2;
+        final room = constraints.maxWidth - margin;
+        final continueGap = phone ? tokens.spacing.s12 : HomeScreen.continueGap;
+        final channelsGap = phone ? tokens.spacing.s12 : HomeScreen.channelsGap;
+        final postersGap = phone ? tokens.spacing.s12 : HomeScreen.postersGap;
         // A wider window shows more cards and a smaller one fewer, each
         // near the size the canvas draws it (ADR-017).
         final layout = tokens.layout;
-        final continueWidth = layout.cardWidth(
-          width,
-          layout.continueCardMin,
-          HomeScreen.continueGap,
-        );
-        final tileWidth = layout.cardWidth(
-          width,
-          layout.channelTileMin,
-          HomeScreen.channelsGap,
-        );
-        final posterWidth = layout.cardWidth(
-          width,
-          layout.posterMin,
-          HomeScreen.postersGap,
-        );
+        final continueWidth = phone
+            ? HomeScreen.phoneCardWidth(
+                room,
+                HomeScreen.phoneContinueAcross,
+                continueGap,
+              )
+            : layout.cardWidth(width, layout.continueCardMin, continueGap);
+        final tileWidth = phone
+            ? HomeScreen.phoneCardWidth(
+                room,
+                HomeScreen.phoneTilesAcross,
+                channelsGap,
+              )
+            : layout.cardWidth(width, layout.channelTileMin, channelsGap);
+        final posterWidth = phone
+            ? HomeScreen.phoneCardWidth(
+                room,
+                HomeScreen.phonePostersAcross,
+                postersGap,
+              )
+            : layout.cardWidth(width, layout.posterMin, postersGap);
         final caption = cardCaptionHeight(context);
         final inset = HomeRow.insetFor(
           tokens,
@@ -374,23 +403,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             tileWidth,
           ].reduce(math.max),
         );
-        final side = tokens.spacing.s32 - inset;
+        // A phone's rows run to the screen's edges, the rest keep to the
+        // margin; elsewhere the page keeps to it, a row's ring room in it.
+        final side = phone ? 0.0 : margin - inset;
+        final within = phone ? margin : inset;
+        final edge = phone ? margin : null;
+        final rowGap = phone ? tokens.spacing.s24 : tokens.spacing.s32;
         final now = ref.watch(appClockProvider)();
         final sections = <Widget>[
           if (firstRun)
             Padding(
               key: const ValueKey('hero'),
-              padding: EdgeInsets.symmetric(horizontal: inset),
+              padding: EdgeInsets.symmetric(horizontal: within),
               child: Focus(
                 focusNode: _hero,
                 canRequestFocus: false,
-                child: _Hero(source: source),
+                child: _Hero(source: source, compact: phone),
               ),
             ),
           if (syncing != null && nothingYet)
             Padding(
               key: const ValueKey('syncing'),
-              padding: EdgeInsets.symmetric(horizontal: inset),
+              padding: EdgeInsets.symmetric(horizontal: within),
               child: _GettingCatalogue(progress: syncing),
             ),
           // Keyed, so a row appearing above another keeps its cards, and
@@ -407,7 +441,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardHeight:
                       continueWidth * 9 / 16 + cardCaptionHeight(context),
                   inset: inset,
-                  gap: HomeScreen.continueGap,
+                  edge: edge,
+                  gap: continueGap,
                   card: (context, i, focus) =>
                       _continueCard(continuing[i], focus, continueWidth),
                 ),
@@ -417,6 +452,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   controller: _rows[row]!,
                   width: tileWidth,
                   inset: inset,
+                  edge: edge,
+                  gap: channelsGap,
                   onSeeAll: _seeFavorites,
                   onWatch: (channel) => unawaited(
                     _watch(
@@ -436,6 +473,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   controller: _rows[row]!,
                   width: tileWidth,
                   inset: inset,
+                  edge: edge,
+                  gap: channelsGap,
                   onWatch: (channel) => unawaited(
                     _watch(channel, ChannelQuery(sourceId: source.id)),
                   ),
@@ -449,7 +488,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   inset: inset,
-                  gap: HomeScreen.postersGap,
+                  edge: edge,
+                  gap: postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.movie),
                   card: (context, i, focus) => _cardKeys(
                     favorite: () => _toggleMovie(movies[i]),
@@ -472,7 +512,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   cardWidth: posterWidth,
                   cardHeight: posterWidth * 3 / 2 + cardCaptionHeight(context),
                   inset: inset,
-                  gap: HomeScreen.postersGap,
+                  edge: edge,
+                  gap: postersGap,
                   onSeeAll: () => _seeRecent(CatalogueKind.series),
                   card: (context, i, focus) => _cardKeys(
                     favorite: () => _toggleSeries(series[i]),
@@ -505,10 +546,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final (i, section) in sections.indexed) ...[
-                  if (i > 0)
-                    SizedBox(
-                      height: math.max(0, tokens.spacing.s32 - inset * 2),
-                    ),
+                  if (i > 0) SizedBox(height: math.max(0, rowGap - inset * 2)),
                   section,
                 ],
               ],
@@ -648,9 +686,11 @@ class _ChannelRow extends ConsumerStatefulWidget {
     required this.controller,
     required this.width,
     required this.inset,
+    required this.gap,
     required this.onWatch,
     required this.onToggle,
     required this.onMenu,
+    this.edge,
     this.onSeeAll,
   });
 
@@ -659,6 +699,8 @@ class _ChannelRow extends ConsumerStatefulWidget {
   final HomeRowController controller;
   final double width;
   final double inset;
+  final double? edge;
+  final double gap;
   final void Function(ChannelItem channel) onWatch;
   final Future<void> Function(ChannelItem channel) onToggle;
   final Future<void> Function(BuildContext anchor, ChannelItem channel) onMenu;
@@ -693,7 +735,8 @@ class _ChannelRowState extends ConsumerState<_ChannelRow> {
       cardWidth: widget.width,
       cardHeight: ChannelTile.heightOf(context),
       inset: widget.inset,
-      gap: HomeScreen.channelsGap,
+      edge: widget.edge,
+      gap: widget.gap,
       onSeeAll: widget.onSeeAll,
       card: (context, i, focus) {
         final channel = widget.channels[i];
@@ -747,9 +790,13 @@ class _Tile extends ConsumerWidget {
 /// The first-run hero (the approved sketch): what the source holds, and
 /// the way into it. Open Live TV has the focus.
 class _Hero extends ConsumerWidget {
-  const new({required this.source});
+  const new({required this.source, this.compact = false});
 
   final Source source;
+
+  /// A phone's (ADR-068): a smaller title and margin, the buttons one
+  /// under the other, the screen's width.
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -782,7 +829,9 @@ class _Hero extends ConsumerWidget {
         ),
         child: AppBackdrop(
           child: Padding(
-            padding: EdgeInsets.all(tokens.spacing.s40),
+            padding: EdgeInsets.all(
+              compact ? tokens.spacing.s24 : tokens.spacing.s40,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -795,7 +844,9 @@ class _Hero extends ConsumerWidget {
                 SizedBox(height: tokens.spacing.s8),
                 Text(
                   'Start watching',
-                  style: tokens.text.hero.copyWith(color: colors.textPrimary),
+                  style: (compact ? tokens.text.h1 : tokens.text.hero).copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
                 if (line != null) ...[
                   SizedBox(height: tokens.spacing.s8),
@@ -807,25 +858,49 @@ class _Hero extends ConsumerWidget {
                   ),
                 ],
                 SizedBox(height: tokens.spacing.s24),
-                Wrap(
-                  spacing: tokens.spacing.s12,
-                  runSpacing: tokens.spacing.s12,
-                  children: [
-                    AppButton(
-                      label: 'Open Live TV',
-                      icon: AppIcons.play,
-                      size: AppButtonSize.l,
-                      onPressed: () => context.go(AppDestination.liveTv.path),
-                    ),
-                    if (browse case (final label, final path))
+                if (compact)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       AppButton(
-                        label: label,
-                        variant: AppButtonVariant.secondary,
+                        label: 'Open Live TV',
+                        icon: AppIcons.play,
                         size: AppButtonSize.l,
-                        onPressed: () => context.go(path),
+                        expand: true,
+                        onPressed: () => context.go(AppDestination.liveTv.path),
                       ),
-                  ],
-                ),
+                      if (browse case (final label, final path)) ...[
+                        SizedBox(height: tokens.spacing.s12),
+                        AppButton(
+                          label: label,
+                          variant: AppButtonVariant.secondary,
+                          size: AppButtonSize.l,
+                          expand: true,
+                          onPressed: () => context.go(path),
+                        ),
+                      ],
+                    ],
+                  )
+                else
+                  Wrap(
+                    spacing: tokens.spacing.s12,
+                    runSpacing: tokens.spacing.s12,
+                    children: [
+                      AppButton(
+                        label: 'Open Live TV',
+                        icon: AppIcons.play,
+                        size: AppButtonSize.l,
+                        onPressed: () => context.go(AppDestination.liveTv.path),
+                      ),
+                      if (browse case (final label, final path))
+                        AppButton(
+                          label: label,
+                          variant: AppButtonVariant.secondary,
+                          size: AppButtonSize.l,
+                          onPressed: () => context.go(path),
+                        ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -884,23 +959,38 @@ class _Loading extends StatelessWidget {
     final tokens = context.tokens;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth - tokens.spacing.s32 * 2;
+        // A phone's as its rows will be (ADR-068): two posters and most
+        // of a third, cut by the screen's edge.
+        final phone = constraints.maxWidth < WindowSizes.phoneWidth;
+        final margin = phone ? tokens.spacing.s16 : tokens.spacing.s32;
+        final width = constraints.maxWidth - margin * 2;
         final layout = tokens.layout;
-        final posters = layout.across(
-          width,
-          layout.posterMin,
-          HomeScreen.postersGap,
-        );
-        final poster = layout.cardWidth(
-          width,
-          layout.posterMin,
-          HomeScreen.postersGap,
+        final gap = phone ? tokens.spacing.s12 : HomeScreen.postersGap;
+        final posters = phone
+            ? HomeScreen.phonePostersAcross.ceil()
+            : layout.across(width, layout.posterMin, gap);
+        final poster = phone
+            ? HomeScreen.phoneCardWidth(
+                constraints.maxWidth - margin,
+                HomeScreen.phonePostersAcross,
+                gap,
+              )
+            : layout.cardWidth(width, layout.posterMin, gap);
+        final posterRow = Row(
+          children: [
+            for (var i = 0; i < posters; i++) ...[
+              if (i > 0) SizedBox(width: gap),
+              SkeletonPoster(width: poster),
+            ],
+          ],
         );
         return SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(
-            horizontal: tokens.spacing.s32,
-            vertical: tokens.spacing.s24,
+          padding: EdgeInsets.fromLTRB(
+            margin,
+            tokens.spacing.s24,
+            phone ? 0 : margin,
+            tokens.spacing.s24,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -909,14 +999,14 @@ class _Loading extends StatelessWidget {
                 if (row > 0) SizedBox(height: tokens.spacing.s32),
                 const Skeleton(width: 220, height: 24),
                 SizedBox(height: tokens.spacing.s16),
-                Row(
-                  children: [
-                    for (var i = 0; i < posters; i++) ...[
-                      if (i > 0) const SizedBox(width: HomeScreen.postersGap),
-                      SkeletonPoster(width: poster),
-                    ],
-                  ],
-                ),
+                if (phone)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: posterRow,
+                  )
+                else
+                  posterRow,
               ],
             ],
           ),

@@ -9,6 +9,7 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -29,6 +30,7 @@ import 'package:iptv_player/features/sources/presentation/current_source.dart';
 import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_grid.dart';
 import 'package:iptv_player/features/vod/presentation/catalogue_state.dart';
+import 'package:iptv_player/features/vod/presentation/compact_layout.dart';
 
 enum _Tab { channels, movies, series }
 
@@ -107,89 +109,141 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
       titleCountProvider(CatalogueKind.series, _titles(id)),
     );
     final spacing = tokens.spacing;
+    final tabs = [
+      for (final (tab, label, count) in [
+        (_Tab.channels, 'Channels', channelCount),
+        (_Tab.movies, 'Movies', movies.value?.count),
+        (_Tab.series, 'Series', series.value?.count),
+      ]) ...[
+        CountTab(
+          label: label,
+          count: count,
+          selected: _tab == tab,
+          onPressed: () => setState(() => _tab = tab),
+        ),
+        SizedBox(width: spacing.s16),
+      ],
+    ];
+    Widget newGroup({AppButtonSize size = AppButtonSize.s}) => AppButton(
+      label: 'New group',
+      icon: AppIcons.plus,
+      variant: AppButtonVariant.secondary,
+      size: size,
+      onPressed: () => unawaited(_newGroup(id)),
+    );
+    final dragHint = Text(
+      'Drag to reorder',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: tokens.text.caption
+          .withWeight(600)
+          .copyWith(color: colors.textTertiary),
+    );
+    final body = switch (_tab) {
+      _Tab.channels => _ChannelsPanel(
+        key: ValueKey('favorite-channels-$id'),
+        sourceId: id,
+        controller: _list,
+      ),
+      _Tab.movies => _titleGrid(CatalogueKind.movie, id, movies),
+      _Tab.series => _titleGrid(CatalogueKind.series, id, series),
+    };
 
     return FocusPane(
       debugLabel: 'screen-favorites',
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          spacing.s32,
-          spacing.s12,
-          spacing.s32,
-          spacing.s20,
-        ),
-        // The channels are rows, which have a measure; the posters fill
-        // the window.
-        child: PageMeasure(
-          maxWidth: _tab == _Tab.channels ? null : double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: colors.surface3)),
-                ),
-                child: Row(
-                  children: [
-                    for (final (tab, label, count) in [
-                      (_Tab.channels, 'Channels', channelCount),
-                      (_Tab.movies, 'Movies', movies.value?.count),
-                      (_Tab.series, 'Series', series.value?.count),
-                    ]) ...[
-                      CountTab(
-                        label: label,
-                        count: count,
-                        selected: _tab == tab,
-                        onPressed: () => setState(() => _tab = tab),
-                      ),
-                      SizedBox(width: spacing.s16),
-                    ],
-                    const Spacer(),
-                    if (_tab == _Tab.channels)
-                      Padding(
-                        padding: EdgeInsets.only(
-                          bottom: CountTab.underlineRoom(context),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // A remote drags nothing (docs/07).
-                            if (!TvMode.of(context)) ...[
-                              Text(
-                                'Drag to reorder',
-                                style: tokens.text.caption
-                                    .withWeight(600)
-                                    .copyWith(color: colors.textTertiary),
-                              ),
-                              SizedBox(width: spacing.s16),
-                            ],
-                            AppButton(
-                              label: 'New group',
-                              icon: AppIcons.plus,
-                              variant: AppButtonVariant.secondary,
-                              size: AppButtonSize.s,
-                              onPressed: () => unawaited(_newGroup(id)),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // A phone held upright (ADR-068): the tabs scroll sideways,
+          // and New group goes under them.
+          if (CompactLayout.narrow(constraints.maxWidth)) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                spacing.s16,
+                spacing.s8,
+                spacing.s16,
+                spacing.s12,
               ),
-              SizedBox(height: spacing.s16),
-              Expanded(
-                child: switch (_tab) {
-                  _Tab.channels => _ChannelsPanel(
-                    key: ValueKey('favorite-channels-$id'),
-                    sourceId: id,
-                    controller: _list,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: colors.surface3),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: tabs),
+                    ),
                   ),
-                  _Tab.movies => _titleGrid(CatalogueKind.movie, id, movies),
-                  _Tab.series => _titleGrid(CatalogueKind.series, id, series),
-                },
+                  if (_tab == _Tab.channels) ...[
+                    SizedBox(height: spacing.s8),
+                    Row(
+                      children: [
+                        Expanded(child: dragHint),
+                        SizedBox(width: spacing.s12),
+                        newGroup(size: AppButtonSize.m),
+                      ],
+                    ),
+                  ],
+                  SizedBox(height: spacing.s8),
+                  Expanded(child: body),
+                ],
               ),
-            ],
-          ),
-        ),
+            );
+          }
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              spacing.s32,
+              spacing.s12,
+              spacing.s32,
+              spacing.s20,
+            ),
+            // The channels are rows, which have a measure; the posters
+            // fill the window.
+            child: PageMeasure(
+              maxWidth: _tab == _Tab.channels ? null : double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: colors.surface3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        ...tabs,
+                        const Spacer(),
+                        if (_tab == _Tab.channels)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: CountTab.underlineRoom(context),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // A remote drags nothing (docs/07).
+                                if (!TvMode.of(context)) ...[
+                                  dragHint,
+                                  SizedBox(width: spacing.s16),
+                                ],
+                                newGroup(),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: spacing.s16),
+                  Expanded(child: body),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -393,13 +447,42 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
     BuildContext anchor,
     ChannelItem channel,
     List<FavoriteEntry> entries,
-  ) => showChannelMenu(
-    anchor,
-    ref,
-    channel,
-    onWatch: () => unawaited(_watch(channel)),
-    onFavorite: () => unawaited(_remove(channel, entries)),
-  );
+  ) {
+    // A finger has no Alt+↑/↓ (ADR-068): the menu moves the channel.
+    final touch = ref.read(formFactorProvider) == FormFactor.mobile;
+    void move({required bool down}) {
+      final groups = ref.read(favoriteGroupsProvider(widget.sourceId)).value;
+      final place = keyboardMove(
+        groups ?? const [],
+        _channels ?? const [],
+        channel,
+        down: down,
+      );
+      if (place != null) unawaited(_move(channel, place));
+    }
+
+    return showChannelMenu(
+      anchor,
+      ref,
+      channel,
+      onWatch: () => unawaited(_watch(channel)),
+      onFavorite: () => unawaited(_remove(channel, entries)),
+      after: [
+        if (touch) ...[
+          AppMenuItem(
+            label: 'Move up',
+            icon: AppIcons.arrowUp,
+            onPressed: () => move(down: false),
+          ),
+          AppMenuItem(
+            label: 'Move down',
+            icon: AppIcons.arrowDown,
+            onPressed: () => move(down: true),
+          ),
+        ],
+      ],
+    );
+  }
 
   Future<void> _headerMenu(BuildContext anchor, FavoriteGroup group) {
     final favorites = ref.read(favoritesRepositoryProvider);
@@ -490,11 +573,25 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
     return KeyEventResult.ignored;
   }
 
+  /// A phone held upright (ADR-068): the panel closer to its rows, and
+  /// the rows without the time left.
+  bool _narrow = false;
+
   @override
   Widget build(BuildContext context) {
+    // In build itself: the panel is laid out by its width.
+    ref.listen(channelRevisionProvider(_query), (_, _) => unawaited(_load()));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _narrow = CompactLayout.narrow(constraints.maxWidth);
+        return _panel(context);
+      },
+    );
+  }
+
+  Widget _panel(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    ref.listen(channelRevisionProvider(_query), (_, _) => unawaited(_load()));
     final groupsValue = ref.watch(favoriteGroupsProvider(widget.sourceId));
     ref.watch(guideRevisionProvider);
     final channels = _channels;
@@ -537,18 +634,26 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
       body = _list(context, entries, groups);
     }
 
+    final narrow = _narrow;
     return Container(
       decoration: BoxDecoration(
         color: colors.surface1,
         borderRadius: tokens.radii.lgAll,
         border: Border.all(color: colors.borderSubtle),
       ),
-      padding: EdgeInsets.fromLTRB(
-        tokens.spacing.s12,
-        tokens.spacing.s8,
-        tokens.spacing.s12,
-        tokens.spacing.s12,
-      ),
+      padding: narrow
+          ? EdgeInsets.fromLTRB(
+              tokens.spacing.s4,
+              tokens.spacing.s4,
+              tokens.spacing.s4,
+              tokens.spacing.s8,
+            )
+          : EdgeInsets.fromLTRB(
+              tokens.spacing.s12,
+              tokens.spacing.s8,
+              tokens.spacing.s12,
+              tokens.spacing.s12,
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -572,8 +677,11 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
                     KeyHints.shownIn(context)
                         ? 'on any channel, movie, or series to add it here '
                               'or remove it.'
-                        : 'Hold OK on any channel, movie, or series to add '
-                              'it here or remove it.',
+                        : TvMode.of(context)
+                        ? 'Hold OK on any channel, movie, or series to add '
+                              'it here or remove it.'
+                        : 'Touch and hold any channel, movie, or series to '
+                              'add it here or remove it.',
                     style: _hint(tokens),
                   ),
                 ),
@@ -692,6 +800,11 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
         !programme.start.isAfter(now) &&
         programme.end.isAfter(now);
     final colors = context.tokens.colors;
+    final grip = AppIcon(
+      AppIcons.dragHandle,
+      size: 18,
+      color: colors.textTertiary,
+    );
     return ChannelRow(
       name: channel.name,
       quality: channel.quality?.label,
@@ -699,7 +812,10 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
       image: artworkFor(context, channel.logoUrl, width: 40),
       nowTitle: on ? programme.title : null,
       progress: on ? programme.progressAt(now) : null,
-      timeLeft: on ? formatTimeLeft(programme.end.difference(now)) : null,
+      // A phone's row keeps its width for the name and what's on.
+      timeLeft: on && !_narrow
+          ? formatTimeLeft(programme.end.difference(now))
+          : null,
       isFavorite: true,
       focusNode: _nodeFor('c${channel.remoteKey}'),
       // A remote drags nothing (docs/07).
@@ -709,11 +825,14 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
               index: index,
               child: MouseRegion(
                 cursor: SystemMouseCursors.grab,
-                child: AppIcon(
-                  AppIcons.dragHandle,
-                  size: 18,
-                  color: colors.textTertiary,
-                ),
+                // A finger's grip is wider than the mark (ADR-068).
+                child: _narrow
+                    ? SizedBox(
+                        width: context.tokens.spacing.s32,
+                        height: CompactLayout.touchTarget,
+                        child: Center(child: grip),
+                      )
+                    : grip,
               ),
             ),
       onPressed: () => unawaited(_watch(channel)),

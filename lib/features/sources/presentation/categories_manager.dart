@@ -13,6 +13,7 @@ import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/onboarding/presentation/onboarding_state.dart';
+import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -478,7 +479,8 @@ class _Toolbar extends StatelessWidget {
             key: ValueKey('manager-filter-$kind'),
             hint: 'Filter categories',
             shortcut: null,
-            width: 260,
+            // Across the row on a phone (ADR-068).
+            width: SettingsOnePane.of(context) ? null : 260,
             onChanged: onFilter,
           ),
           AppChip(

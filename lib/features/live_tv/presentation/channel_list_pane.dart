@@ -37,10 +37,20 @@ class ChannelListPane extends ConsumerStatefulWidget {
     this.onForward,
     this.onPlay,
     this.onFullscreen,
+    this.onPickCategory,
+    this.compact = false,
     super.key,
   });
 
   final FocusPaneController controller;
+
+  /// A phone's one pane (ADR-068): the list's title is a button that
+  /// opens the categories, which have no pane of their own there.
+  final VoidCallback? onPickCategory;
+
+  /// A phone's list, the whole width of the screen: no card round it,
+  /// and the filter and the sort under the title.
+  final bool compact;
 
   /// Enter on a row: play it full screen.
   final void Function(ChannelItem channel)? onFullscreen;
@@ -290,15 +300,25 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
     // it make one band of everything, where the list (on the filter's
     // left edge) came before the filter, so Tab from the filter skipped
     // it. Inside, the header comes first, then the list.
+    final compact = widget.compact;
     return FocusTraversalGroup(
       policy: appTraversalPolicy(),
       child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface1,
-          borderRadius: tokens.radii.lgAll,
-          border: Border.all(color: colors.borderSubtle),
-        ),
-        padding: EdgeInsets.all(tokens.spacing.s12),
+        decoration: compact
+            ? null
+            : BoxDecoration(
+                color: colors.surface1,
+                borderRadius: tokens.radii.lgAll,
+                border: Border.all(color: colors.borderSubtle),
+              ),
+        padding: compact
+            ? EdgeInsets.fromLTRB(
+                tokens.spacing.s8,
+                tokens.spacing.s8,
+                tokens.spacing.s8,
+                0,
+              )
+            : EdgeInsets.all(tokens.spacing.s12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -311,29 +331,38 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
               ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final heading = Column(
+                  final channels = switch (count.value) {
+                    null => ' ',
+                    1 => '1 channel',
+                    final n => '${formatCount(n)} channels',
+                  };
+                  Widget heading = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
                         overflow: TextOverflow.ellipsis,
+                        maxLines: compact ? 1 : null,
                         style: tokens.text.h3
                             .withWeight(700)
                             .copyWith(color: colors.textPrimary),
                       ),
                       SizedBox(height: tokens.spacing.s4 - 2),
                       Text(
-                        switch (count.value) {
-                          null => ' ',
-                          1 => '1 channel',
-                          final n => '${formatCount(n)} channels',
-                        },
+                        channels,
                         style: tokens.text.labelSmall.copyWith(
                           color: colors.textTertiary,
                         ),
                       ),
                     ],
                   );
+                  if (widget.onPickCategory case final pick?) {
+                    heading = _CategoryButton(
+                      label: '$title, $channels',
+                      onPressed: pick,
+                      child: heading,
+                    );
+                  }
                   final sort = SegmentedControl<ChannelSort>(
                     options: [
                       SegmentOption(
@@ -360,12 +389,16 @@ class _ChannelListPaneState extends ConsumerState<ChannelListPane> {
                     onChanged: notifier.setText,
                   );
                   // Narrow: the filter and the sort go under the title.
-                  if (constraints.maxWidth < 560) {
+                  if (compact || constraints.maxWidth < 560) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         heading,
-                        SizedBox(height: tokens.spacing.s12),
+                        SizedBox(
+                          height: compact
+                              ? tokens.spacing.s8
+                              : tokens.spacing.s12,
+                        ),
                         Row(
                           children: [
                             Expanded(child: filter()),
@@ -737,7 +770,56 @@ class _RowState extends ConsumerState<_Row> {
               widget.onPlay();
             },
             onToggleFavorite: widget.onFavorite,
-            onMenu: () => widget.onMenu(context),
+            onMenu: () {
+              // A right-click or a finger held: no activation follows.
+              _pointer = false;
+              widget.onMenu(context);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A phone's list title (ADR-068): the category shown and its count, a
+/// chevron after them; a press opens the categories.
+class _CategoryButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return FocusableSurface(
+      onPressed: onPressed,
+      background: colors.surface2,
+      hoverBackground: colors.surface3,
+      borderRadius: tokens.radii.controlAll,
+      semanticLabel: 'Category: $label',
+      builder: (context, states) => ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: context.scaled(AppButtonSize.l.height),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: tokens.spacing.s12,
+            vertical: tokens.spacing.s8,
+          ),
+          child: Row(
+            children: [
+              Expanded(child: child),
+              SizedBox(width: tokens.spacing.s8),
+              AppIcon(AppIcons.chevronDown, color: colors.textSecondary),
+            ],
           ),
         ),
       ),

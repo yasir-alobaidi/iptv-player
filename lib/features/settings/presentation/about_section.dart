@@ -10,7 +10,9 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/diagnostics/presentation/log_view.dart';
 import 'package:iptv_player/features/diagnostics/presentation/report_view.dart';
+import 'package:iptv_player/features/settings/presentation/heading_then_body.dart';
 import 'package:iptv_player/features/settings/presentation/licenses_dialog.dart';
+import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
 /// Which of the two the lower part of the page shows.
@@ -31,6 +33,9 @@ class AboutSection extends ConsumerStatefulWidget {
 }
 
 class _AboutSectionState extends ConsumerState<AboutSection> {
+  /// The least height a phone gives the report or the log.
+  static const _phoneViewMinHeight = 360.0;
+
   _View _view = _View.report;
 
   @override
@@ -40,66 +45,90 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
     // The version file is a few bytes in the bundle: until it is read,
     // and if it can't be, the line says so rather than showing nothing.
     final version = ref.watch(appVersionProvider).value;
+    final onePane = SettingsOnePane.of(context);
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          aboutLine(version, defaultTargetPlatform),
+          style: tokens.text.bodyStrong.copyWith(color: colors.textPrimary),
+        ),
+        SizedBox(height: tokens.spacing.s4),
+        Text(
+          appDescription,
+          style: tokens.text.caption.copyWith(color: colors.textTertiary),
+        ),
+      ],
+    );
+    final licences = AppButton(
+      label: 'Licences',
+      variant: AppButtonVariant.secondary,
+      size: AppButtonSize.s,
+      onPressed: () => unawaited(showLicensesDialog(context)),
+    );
+
+    final top = [
+      if (onePane) ...[
+        // A phone: the mark and the words, Licences under them.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppMark(),
+            SizedBox(width: tokens.spacing.s16),
+            Expanded(child: words),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.s12),
+        Align(alignment: AlignmentDirectional.centerStart, child: licences),
+      ] else
+        Row(
+          children: [
+            const AppMark(),
+            SizedBox(width: tokens.spacing.s16),
+            Expanded(child: words),
+            SizedBox(width: tokens.spacing.s16),
+            licences,
+          ],
+        ),
+      SizedBox(height: tokens.spacing.s20),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: SegmentedControl<_View>(
+          options: const [
+            SegmentOption(value: _View.report, label: 'Diagnostics'),
+            SegmentOption(value: _View.log, label: 'Log'),
+          ],
+          value: _view,
+          onChanged: (view) => setState(() => _view = view),
+        ),
+      ),
+      SizedBox(height: tokens.spacing.s12),
+    ];
+    final view = switch (_view) {
+      _View.report => const ReportView(),
+      _View.log => const LogView(),
+    };
 
     return SettingsPanel(
       title: 'About & diagnostics',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const AppMark(),
-              SizedBox(width: tokens.spacing.s16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      aboutLine(version, defaultTargetPlatform),
-                      style: tokens.text.bodyStrong.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: tokens.spacing.s4),
-                    Text(
-                      appDescription,
-                      style: tokens.text.caption.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
+      // A phone (ADR-068): the report or the log keeps room to be read
+      // in, and the page scrolls when the screen is short.
+      body: onePane
+          ? HeadingThenBody(
+              minBodyHeight: context.scaled(_phoneViewMinHeight),
+              heading: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: top,
               ),
-              SizedBox(width: tokens.spacing.s16),
-              AppButton(
-                label: 'Licences',
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.s,
-                onPressed: () => unawaited(showLicensesDialog(context)),
-              ),
-            ],
-          ),
-          SizedBox(height: tokens.spacing.s20),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SegmentedControl<_View>(
-              options: const [
-                SegmentOption(value: _View.report, label: 'Diagnostics'),
-                SegmentOption(value: _View.log, label: 'Log'),
+              body: view,
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...top,
+                Expanded(child: view),
               ],
-              value: _view,
-              onChanged: (view) => setState(() => _view = view),
             ),
-          ),
-          SizedBox(height: tokens.spacing.s12),
-          Expanded(
-            child: switch (_view) {
-              _View.report => const ReportView(),
-              _View.log => const LogView(),
-            },
-          ),
-        ],
-      ),
     );
   }
 }

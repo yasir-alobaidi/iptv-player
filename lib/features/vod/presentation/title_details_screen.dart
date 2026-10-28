@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ import 'package:iptv_player/features/vod/domain/catalogue.dart';
 import 'package:iptv_player/features/vod/domain/next_up.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
 import 'package:iptv_player/features/vod/domain/watch_progress.dart';
+import 'package:iptv_player/features/vod/presentation/compact_layout.dart';
 import 'package:iptv_player/features/vod/presentation/details_state.dart';
 import 'package:iptv_player/features/vod/presentation/vod_text.dart';
 
@@ -134,30 +136,58 @@ class DetailsFrame extends StatelessWidget {
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): leave},
       child: FocusPane(
         debugLabel: 'title details',
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            Positioned(
-              top: tokens.spacing.s24,
-              left: tokens.spacing.s40,
-              child: ExcludeFocus(
-                excluding: loading,
-                child: _BackChip(label: back, onPressed: leave),
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Over a phone's backdrop, nearer its corner and a finger's
+            // height (ADR-068).
+            final stacked = detailsStacked(constraints.biggest);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                child,
+                Positioned(
+                  top: stacked ? tokens.spacing.s12 : tokens.spacing.s24,
+                  left: stacked ? tokens.spacing.s16 : tokens.spacing.s40,
+                  child: ExcludeFocus(
+                    excluding: loading,
+                    child: _BackChip(
+                      label: back,
+                      onPressed: leave,
+                      touch: stacked,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
+/// Whether a title's page in a [size] box is one column that scrolls
+/// (ADR-068): the backdrop across the top, the poster beside the title,
+/// the actions the page's width, the plot, and a series' seasons and
+/// episodes under them. A phone's page, upright or on its side, and a
+/// tablet's held upright; a box as wide as a desktop window's (1024 ×
+/// 640 at least) or a TV's canvas has the canvas's page.
+bool detailsStacked(Size size) =>
+    CompactLayout.fits(size) ||
+    (size.width < _stackedUprightWidth && size.width < size.height);
+
+/// A box narrower than this and taller than wide (a tablet held
+/// upright) has the stacked page.
+const _stackedUprightWidth = 840.0;
+
 class _BackChip extends StatelessWidget {
-  const new({required this.label, required this.onPressed});
+  const new({required this.label, required this.onPressed, this.touch = false});
 
   final String label;
   final VoidCallback onPressed;
+
+  /// A finger's target tall (a phone's page).
+  final bool touch;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +198,12 @@ class _BackChip extends StatelessWidget {
       borderRadius: tokens.radii.pillAll,
       semanticLabel: 'Back to $label',
       builder: (context, states) => Container(
-        height: context.scaled(tokens.details.backChipHeight),
+        height: touch
+            ? math.max(
+                context.scaled(tokens.details.backChipHeight),
+                CompactLayout.touchTarget,
+              )
+            : context.scaled(tokens.details.backChipHeight),
         padding: EdgeInsets.fromLTRB(
           tokens.spacing.s8 + 2,
           0,
@@ -245,6 +280,99 @@ class _MoviePage extends ConsumerWidget {
     final downloadFace = downloadButtonFace(download);
     final request = movieDownloadRequest(movie);
 
+    final overline = Text(
+      [
+        'MOVIE',
+        if (genre != null && genre.isNotEmpty) genre,
+      ].join('  /  ').toUpperCase(),
+      style: tokens.text.overline.copyWith(color: colors.textSecondary),
+    );
+    final meta = DetailsMetaLine(
+      year: movie.year,
+      runtime: switch (ready?.runtime ?? movie.runtime) {
+        final runtime? => formatRuntime(runtime),
+        null => null,
+      },
+      rating: movie.rating,
+      genre: ready?.genre,
+      badges: [
+        ?pictureBadge(ready?.videoHeight),
+        ?soundBadge(ready?.audioChannels),
+      ],
+      watched: mark?.completed ?? false,
+    );
+    Widget about({bool stacked = false}) => _About(
+      details: details,
+      plot: ready?.plot,
+      credits: [
+        if (ready?.director case final director?) ('Director', director),
+        if (ready?.cast case final cast?) ('Cast', cast),
+      ],
+      stacked: stacked,
+      onRetry: () =>
+          ref.invalidate(movieDetailsProvider(movie.sourceId, movie.remoteKey)),
+    );
+    Widget playButton({bool expand = false}) => AppButton(
+      label: resumable
+          ? 'Resume from '
+                '${formatPosition(mark.position)}'
+          : 'Play',
+      icon: AppIcons.play,
+      size: AppButtonSize.xl,
+      autofocus: true,
+      expand: expand,
+      onPressed: () => play(from: resumable ? mark.position : null),
+    );
+    Widget startOver({bool expand = false}) => AppButton(
+      label: 'Start over',
+      icon: AppIcons.retry,
+      variant: AppButtonVariant.secondary,
+      size: AppButtonSize.xl,
+      expand: expand,
+      onPressed: play,
+    );
+    // Sketch E: Download, its progress, or Downloaded; Enter on one under
+    // way or done opens its menu. Not on a TV or a phone.
+    Widget? downloadButton({bool expand = false}) =>
+        !ref.watch(downloadsHereProvider)
+        ? null
+        : Builder(
+            builder: (anchor) => AppButton(
+              label: downloadFace.label,
+              icon: downloadFace.icon,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.xl,
+              expand: expand,
+              onPressed: () =>
+                  unawaited(downloadPressed(anchor, download, request)),
+            ),
+          );
+    final favorite = AppIconButton(
+      icon: movie.isFavorite ? AppIcons.starFilled : AppIcons.star,
+      tooltip: movie.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      shortcut: 'F',
+      selected: movie.isFavorite,
+      bordered: true,
+      size: layout.movieActionHeight,
+      onPressed: () => unawaited(toggleFavorite()),
+    );
+    final cast = !ref.watch(castsToTvsProvider)
+        ? null
+        : AppIconButton(
+            icon: AppIcons.cast,
+            tooltip: 'Cast',
+            bordered: true,
+            size: layout.movieActionHeight,
+            onPressed: () => unawaited(
+              castFrom(
+                context,
+                item: PlayableMovie(movie),
+                from: resumable ? mark.position : null,
+              ),
+            ),
+          );
+    final cheapBlur = ref.watch(formFactorProvider).isAndroidDevice;
+
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyF): () =>
@@ -253,163 +381,123 @@ class _MoviePage extends ConsumerWidget {
           const SingleActivator(LogicalKeyboardKey.keyD): () =>
               unawaited(startDownloads(context, [request])),
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          DetailsBackdrop(
-            backdropUrl: ready?.backdropUrl,
-            posterUrl: movie.posterUrl,
-            cheapBlur: ref.watch(formFactorProvider).isAndroidDevice,
-          ),
-          Positioned(
-            left: layout.moviePadding,
-            right: layout.moviePadding,
-            bottom: layout.moviePadding,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                DetailsPoster(
-                  title: movie.name,
-                  url: movie.posterUrl,
-                  size: layout.moviePoster,
-                ),
-                SizedBox(width: layout.posterGap),
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: layout.textMaxWidth),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (detailsStacked(constraints.biggest)) {
+            final gap = tokens.spacing.s12;
+            final downloadAction = downloadButton(expand: true);
+            return SingleChildScrollView(
+              child: DetailsStackedHero(
+                title: movie.name,
+                backdropUrl: ready?.backdropUrl,
+                posterUrl: movie.posterUrl,
+                cheapBlur: cheapBlur,
+                overline: overline,
+                meta: meta,
+                below: [
+                  // Play the width of the page, the favorite beside it;
+                  // Resume, longer, alone, the favorite by Start over.
+                  Row(
+                    children: [
+                      Expanded(child: playButton(expand: true)),
+                      if (!resumable) ...[SizedBox(width: gap), favorite],
+                      if (cast != null) ...[SizedBox(width: gap), cast],
+                    ],
+                  ),
+                  if (resumable || downloadAction != null) ...[
+                    SizedBox(height: gap),
+                    Row(
                       children: [
-                        Text(
-                          [
-                            'MOVIE',
-                            if (genre != null && genre.isNotEmpty) genre,
-                          ].join('  /  ').toUpperCase(),
-                          style: tokens.text.overline.copyWith(
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                        SizedBox(height: tokens.spacing.s16),
-                        Text(
-                          movie.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.text.movieTitle.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        SizedBox(height: tokens.spacing.s16),
-                        DetailsMetaLine(
-                          year: movie.year,
-                          runtime: switch (ready?.runtime ?? movie.runtime) {
-                            final runtime? => formatRuntime(runtime),
-                            null => null,
-                          },
-                          rating: movie.rating,
-                          genre: ready?.genre,
-                          badges: [
-                            ?pictureBadge(ready?.videoHeight),
-                            ?soundBadge(ready?.audioChannels),
-                          ],
-                          watched: mark?.completed ?? false,
-                        ),
-                        SizedBox(height: tokens.spacing.s16),
-                        _About(
-                          details: details,
-                          plot: ready?.plot,
-                          credits: [
-                            if (ready?.director case final director?)
-                              ('Director', director),
-                            if (ready?.cast case final cast?) ('Cast', cast),
-                          ],
-                          onRetry: () => ref.invalidate(
-                            movieDetailsProvider(
-                              movie.sourceId,
-                              movie.remoteKey,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: tokens.spacing.s24),
-                        Wrap(
-                          spacing: tokens.spacing.s12,
-                          runSpacing: tokens.spacing.s12,
-                          children: [
-                            AppButton(
-                              label: resumable
-                                  ? 'Resume from '
-                                        '${formatPosition(mark.position)}'
-                                  : 'Play',
-                              icon: AppIcons.play,
-                              size: AppButtonSize.xl,
-                              autofocus: true,
-                              onPressed: () =>
-                                  play(from: resumable ? mark.position : null),
-                            ),
-                            if (resumable)
-                              AppButton(
-                                label: 'Start over',
-                                icon: AppIcons.retry,
-                                variant: AppButtonVariant.secondary,
-                                size: AppButtonSize.xl,
-                                onPressed: play,
-                              ),
-                            // Sketch E: Download, its progress, or
-                            // Downloaded; Enter on one under way or
-                            // done opens its menu. Not on a TV.
-                            if (ref.watch(downloadsHereProvider))
-                              Builder(
-                                builder: (anchor) => AppButton(
-                                  label: downloadFace.label,
-                                  icon: downloadFace.icon,
-                                  variant: AppButtonVariant.secondary,
-                                  size: AppButtonSize.xl,
-                                  onPressed: () => unawaited(
-                                    downloadPressed(anchor, download, request),
-                                  ),
-                                ),
-                              ),
-                            AppIconButton(
-                              icon: movie.isFavorite
-                                  ? AppIcons.starFilled
-                                  : AppIcons.star,
-                              tooltip: movie.isFavorite
-                                  ? 'Remove from favorites'
-                                  : 'Add to favorites',
-                              shortcut: 'F',
-                              selected: movie.isFavorite,
-                              bordered: true,
-                              size: layout.movieActionHeight,
-                              onPressed: () => unawaited(toggleFavorite()),
-                            ),
-                            if (ref.watch(castsToTvsProvider))
-                              AppIconButton(
-                                icon: AppIcons.cast,
-                                tooltip: 'Cast',
-                                bordered: true,
-                                size: layout.movieActionHeight,
-                                onPressed: () => unawaited(
-                                  castFrom(
-                                    context,
-                                    item: PlayableMovie(movie),
-                                    from: resumable ? mark.position : null,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (resumable) ...[
-                          SizedBox(height: tokens.spacing.s12),
-                          DetailsTimeLeft(mark: mark),
-                        ],
+                        if (resumable) Expanded(child: startOver(expand: true)),
+                        if (resumable && downloadAction != null)
+                          SizedBox(width: gap),
+                        if (downloadAction != null)
+                          Expanded(child: downloadAction),
+                        if (resumable) ...[SizedBox(width: gap), favorite],
                       ],
                     ),
-                  ),
+                  ],
+                  if (resumable) ...[
+                    SizedBox(height: gap),
+                    DetailsTimeLeft(mark: mark),
+                  ],
+                  SizedBox(height: tokens.spacing.s24),
+                  about(stacked: true),
+                ],
+              ),
+            );
+          }
+          final downloadAction = downloadButton();
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              DetailsBackdrop(
+                backdropUrl: ready?.backdropUrl,
+                posterUrl: movie.posterUrl,
+                cheapBlur: cheapBlur,
+              ),
+              Positioned(
+                left: layout.moviePadding,
+                right: layout.moviePadding,
+                bottom: layout.moviePadding,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    DetailsPoster(
+                      title: movie.name,
+                      url: movie.posterUrl,
+                      size: layout.moviePoster,
+                    ),
+                    SizedBox(width: layout.posterGap),
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: layout.textMaxWidth,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            overline,
+                            SizedBox(height: tokens.spacing.s16),
+                            Text(
+                              movie.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.text.movieTitle.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                            SizedBox(height: tokens.spacing.s16),
+                            meta,
+                            SizedBox(height: tokens.spacing.s16),
+                            about(),
+                            SizedBox(height: tokens.spacing.s24),
+                            Wrap(
+                              spacing: tokens.spacing.s12,
+                              runSpacing: tokens.spacing.s12,
+                              children: [
+                                playButton(),
+                                if (resumable) startOver(),
+                                ?downloadAction,
+                                favorite,
+                                ?cast,
+                              ],
+                            ),
+                            if (resumable) ...[
+                              SizedBox(height: tokens.spacing.s12),
+                              DetailsTimeLeft(mark: mark),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -424,12 +512,17 @@ class _About extends StatelessWidget {
     required this.plot,
     required this.credits,
     required this.onRetry,
+    this.stacked = false,
   });
 
   final Details<Object>? details;
   final String? plot;
   final List<(String, String)> credits;
   final VoidCallback onRetry;
+
+  /// On a page that scrolls as one column ([detailsStacked]): the plot
+  /// has more lines, Retry goes under the reason.
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
@@ -451,22 +544,32 @@ class _About extends StatelessWidget {
       );
     }
     if (details case DetailsFailed(:final failure)) {
+      final reason = Text(
+        "Couldn't load the details. ${failureMessage(failure)}",
+        style: tokens.text.body.copyWith(color: colors.textSecondary),
+      );
+      final retry = AppButton(
+        label: 'Retry',
+        icon: AppIcons.retry,
+        variant: stacked ? AppButtonVariant.secondary : AppButtonVariant.ghost,
+        size: stacked ? AppButtonSize.m : AppButtonSize.s,
+        onPressed: onRetry,
+      );
+      if (stacked) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            reason,
+            SizedBox(height: tokens.spacing.s12),
+            retry,
+          ],
+        );
+      }
       return Row(
         children: [
-          Flexible(
-            child: Text(
-              "Couldn't load the details. ${failureMessage(failure)}",
-              style: tokens.text.body.copyWith(color: colors.textSecondary),
-            ),
-          ),
+          Flexible(child: reason),
           SizedBox(width: tokens.spacing.s12),
-          AppButton(
-            label: 'Retry',
-            icon: AppIcons.retry,
-            variant: AppButtonVariant.ghost,
-            size: AppButtonSize.s,
-            onPressed: onRetry,
-          ),
+          retry,
         ],
       );
     }
@@ -476,7 +579,7 @@ class _About extends StatelessWidget {
       children: [
         Text(
           plot ?? 'No description from your provider.',
-          maxLines: 5,
+          maxLines: stacked ? 10 : 5,
           overflow: TextOverflow.ellipsis,
           style: tokens.text.body.copyWith(
             color: plot == null ? colors.textTertiary : colors.textSecondary,
@@ -529,21 +632,24 @@ class DetailsTimeLeft extends StatelessWidget {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final remaining = mark.remaining;
-    return SizedBox(
-      width: tokens.details.progressWidth,
-      child: Row(
-        children: [
-          Expanded(child: ProgressBar(value: mark.fraction, height: 4)),
-          if (remaining != null) ...[
-            SizedBox(width: tokens.spacing.s12),
-            Text(
-              formatTimeLeft(remaining),
-              style: tokens.text.labelSmall.copyWith(
-                color: colors.textSecondary,
+    return LayoutBuilder(
+      builder: (context, constraints) => SizedBox(
+        // The canvas's 420, or a phone's width.
+        width: math.min(tokens.details.progressWidth, constraints.maxWidth),
+        child: Row(
+          children: [
+            Expanded(child: ProgressBar(value: mark.fraction, height: 4)),
+            if (remaining != null) ...[
+              SizedBox(width: tokens.spacing.s12),
+              Text(
+                formatTimeLeft(remaining),
+                style: tokens.text.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -624,9 +730,6 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final colors = tokens.colors;
-    final layout = tokens.details;
     final state = ref
         .watch(seriesDetailsProvider(series.sourceId, series.remoteKey))
         .value;
@@ -644,7 +747,6 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
     // moves Continue to another one (the last episode of this season
     // marked watched) must not swap the list under whoever is in it.
     if (nextUp != null && marked.hasValue) {
-      _placeOn(nextUp.episode);
       _season ??= nextUp.episode.season;
     }
     final seasons = details?.seasons ?? const <Season>[];
@@ -653,70 +755,284 @@ class _SeriesPageState extends ConsumerState<_SeriesPage> {
         seasons.where((s) => s.number == wanted).firstOrNull ??
         seasons.firstOrNull;
 
+    final cheapBlur = ref.watch(formFactorProvider).isAndroidDevice;
+    final castable = ref.watch(castsToTvsProvider);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyF): () =>
             unawaited(_toggleFavorite()),
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ColoredBox(color: colors.bg),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width:
-                layout.seriesColumnFor(MediaQuery.sizeOf(context).width) +
-                tokens.spacing.s64,
-            child: DetailsBackdrop(
-              backdropUrl: details?.backdropUrl ?? series.backdropUrl,
-              posterUrl: series.posterUrl,
-              fadeRight: true,
-              cheapBlur: ref.watch(formFactorProvider).isAndroidDevice,
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (detailsStacked(constraints.biggest)) {
+            return _stacked(
+              context,
+              state: state,
+              details: details,
+              nextUp: nextUp,
+              seasons: seasons,
+              shown: shown,
+              marks: marks,
+              cheapBlur: cheapBlur,
+              castable: castable,
+            );
+          }
+          // The list opens on the episode to continue, its first Tab stop.
+          if (nextUp != null && marked.hasValue) _placeOn(nextUp.episode);
+          return _columns(
+            context,
+            state: state,
+            details: details,
+            nextUp: nextUp,
+            seasons: seasons,
+            shown: shown,
+            marks: marks,
+            cheapBlur: cheapBlur,
+            castable: castable,
+          );
+        },
+      ),
+    );
+  }
+
+  /// The canvas's page: the column on the left, the seasons and the
+  /// episodes on the right.
+  Widget _columns(
+    BuildContext context, {
+    required Details<SeriesDetails>? state,
+    required SeriesDetails? details,
+    required NextUp? nextUp,
+    required List<Season> seasons,
+    required Season? shown,
+    required Map<String, WatchMark> marks,
+    required bool cheapBlur,
+    required bool castable,
+  }) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final layout = tokens.details;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: colors.bg),
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width:
+              layout.seriesColumnFor(MediaQuery.sizeOf(context).width) +
+              tokens.spacing.s64,
+          child: DetailsBackdrop(
+            backdropUrl: details?.backdropUrl ?? series.backdropUrl,
+            posterUrl: series.posterUrl,
+            fadeRight: true,
+            cheapBlur: cheapBlur,
           ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: layout.seriesColumnFor(MediaQuery.sizeOf(context).width),
+              child: Padding(
+                padding: layout.seriesPadding,
+                child: _SeriesColumn(
+                  series: series,
+                  details: details,
+                  state: state,
+                  nextUp: nextUp,
+                  primaryFocus: _primary,
+                  onPlay: _play,
+                  onFavorite: () => unawaited(_toggleFavorite()),
+                  onRetry: () => ref.invalidate(
+                    seriesDetailsProvider(series.sourceId, series.remoteKey),
+                  ),
+                  castable: castable,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  tokens.spacing.s8,
+                  tokens.spacing.s32,
+                  tokens.spacing.s40,
+                  tokens.spacing.s32,
+                ),
+                child: _episodesArea(
+                  context,
+                  state: state,
+                  seasons: seasons,
+                  shown: shown,
+                  marks: marks,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// A phone's page, and a tablet's held upright ([detailsStacked]): one
+  /// column that scrolls — the backdrop, the poster beside the title, the
+  /// actions the page's width, the plot, the seasons as chips, and the
+  /// episodes the page's width, read as they scroll into view.
+  Widget _stacked(
+    BuildContext context, {
+    required Details<SeriesDetails>? state,
+    required SeriesDetails? details,
+    required NextUp? nextUp,
+    required List<Season> seasons,
+    required Season? shown,
+    required Map<String, WatchMark> marks,
+    required bool cheapBlur,
+    required bool castable,
+  }) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final spacing = tokens.spacing;
+    final side = CompactLayout.of(context) ? spacing.s16 : spacing.s32;
+    final count = details?.seasons.length;
+    final genre = (details?.genre ?? series.genre)?.split(',').first.trim();
+    void retry() => ref.invalidate(
+      seriesDetailsProvider(series.sourceId, series.remoteKey),
+    );
+    final hero = DetailsStackedHero(
+      title: series.name,
+      backdropUrl: details?.backdropUrl ?? series.backdropUrl,
+      posterUrl: series.posterUrl,
+      cheapBlur: cheapBlur,
+      overline: Text(
+        [
+          'SERIES',
+          if (genre != null && genre.isNotEmpty) genre,
+        ].join('  /  ').toUpperCase(),
+        style: tokens.text.overline.copyWith(color: colors.textSecondary),
+      ),
+      meta: DetailsMetaLine(
+        year: series.year,
+        runtime: switch (count) {
+          null || 0 => null,
+          1 => '1 season',
+          final n => '$n seasons',
+        },
+        rating: series.rating,
+      ),
+      below: [
+        _SeriesActions(
+          series: series,
+          state: state,
+          nextUp: nextUp,
+          primaryFocus: _primary,
+          onPlay: _play,
+          onFavorite: () => unawaited(_toggleFavorite()),
+          castable: castable,
+          expand: true,
+        ),
+        SizedBox(height: spacing.s24),
+        _About(
+          details: state,
+          plot: details?.plot ?? series.plot,
+          credits: const [],
+          stacked: true,
+          onRetry: retry,
+        ),
+      ],
+    );
+    Widget padded(Widget child) => SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: side),
+      sliver: SliverToBoxAdapter(child: child),
+    );
+    final List<Widget> episodes;
+    if (state == null || state is DetailsLoading) {
+      episodes = [
+        padded(
+          Column(
             children: [
-              SizedBox(
-                width: layout.seriesColumnFor(MediaQuery.sizeOf(context).width),
-                child: Padding(
-                  padding: layout.seriesPadding,
-                  child: _SeriesColumn(
-                    series: series,
-                    details: details,
-                    state: state,
-                    nextUp: nextUp,
-                    primaryFocus: _primary,
-                    onPlay: _play,
-                    onFavorite: () => unawaited(_toggleFavorite()),
-                    onRetry: () => ref.invalidate(
-                      seriesDetailsProvider(series.sourceId, series.remoteKey),
-                    ),
-                    castable: ref.watch(castsToTvsProvider),
+              for (var i = 0; i < 3; i++)
+                Padding(
+                  padding: EdgeInsets.only(bottom: spacing.s12),
+                  child: Row(
+                    children: [
+                      Skeleton(
+                        width: _compactStill(context).width,
+                        height: _compactStill(context).height,
+                        borderRadius: tokens.radii.smAll,
+                      ),
+                      SizedBox(width: spacing.s12),
+                      const Expanded(child: Skeleton()),
+                    ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    tokens.spacing.s8,
-                    tokens.spacing.s32,
-                    tokens.spacing.s40,
-                    tokens.spacing.s32,
-                  ),
-                  child: _episodesArea(
-                    context,
-                    state: state,
-                    seasons: seasons,
-                    shown: shown,
-                    marks: marks,
-                  ),
-                ),
-              ),
             ],
           ),
+        ),
+      ];
+    } else if (state case DetailsFailed(:final failure)) {
+      episodes = [
+        padded(
+          EmptyState(
+            compact: true,
+            icon: AppIcons.alertCircle,
+            title: "Couldn't load the episodes",
+            message: failureMessage(failure),
+            actionLabel: 'Retry',
+            onAction: retry,
+          ),
+        ),
+      ];
+    } else if (shown == null) {
+      episodes = [
+        padded(
+          EmptyState(
+            compact: true,
+            icon: AppIcons.series,
+            title: 'Your provider lists no episodes for this series yet',
+            actionLabel: 'Retry',
+            onAction: retry,
+          ),
+        ),
+      ];
+    } else {
+      episodes = [
+        padded(
+          _SeasonChips(
+            seasons: [for (final season in seasons) season.number],
+            shown: shown.number,
+            episodes: shown.episodes.length,
+            controller: _tabs,
+            onPick: (season) => setState(() => _season = season),
+          ),
+        ),
+        SliverToBoxAdapter(child: SizedBox(height: spacing.s8)),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: side - spacing.s8),
+          sliver: SliverList.builder(
+            itemCount: shown.episodes.length,
+            itemBuilder: (context, index) {
+              final episode = shown.episodes[index];
+              return _EpisodeRow(
+                key: _rowKey(episode.remoteKey),
+                episode: episode,
+                request: episodeDownloadRequest(series, episode),
+                mark: marks[episode.remoteKey],
+                focus: _rowNode(episode.remoteKey),
+                onPlay: _play,
+                compact: true,
+              );
+            },
+          ),
+        ),
+      ];
+    }
+    return ColoredBox(
+      color: colors.bg,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: hero),
+          ...episodes,
+          SliverToBoxAdapter(child: SizedBox(height: spacing.s32)),
         ],
       ),
     );
@@ -898,66 +1214,107 @@ class _SeriesColumn extends StatelessWidget {
                 onRetry: onRetry,
               ),
               SizedBox(height: tokens.spacing.s16 + 2),
-              Row(
-                children: [
-                  if (nextUp != null) ...[
-                    Flexible(
-                      child: AppButton(
-                        label: switch (nextUp.kind) {
-                          NextUpKind.again => 'Play again',
-                          NextUpKind.start =>
-                            'Play ${_episodeLabel(nextUp.episode)}',
-                          _ => 'Continue ${_episodeLabel(nextUp.episode)}',
-                        },
-                        icon: AppIcons.play,
-                        size: AppButtonSize.xl,
-                        autofocus: true,
-                        focusNode: primaryFocus,
-                        onPressed: () =>
-                            onPlay(nextUp.episode, from: nextUp.from),
-                      ),
-                    ),
-                    SizedBox(width: tokens.spacing.s12),
-                  ],
-                  AppIconButton(
-                    icon: series.isFavorite
-                        ? AppIcons.starFilled
-                        : AppIcons.star,
-                    tooltip: series.isFavorite
-                        ? 'Remove from favorites'
-                        : 'Add to favorites',
-                    shortcut: 'F',
-                    selected: series.isFavorite,
-                    bordered: true,
-                    // Only once the page knows there is nothing to play: the
-                    // Play button, arriving with the episodes, takes it then.
-                    autofocus: nextUp == null && state is DetailsReady,
-                    focusNode: nextUp == null ? primaryFocus : null,
-                    size: layout.movieActionHeight,
-                    onPressed: onFavorite,
-                  ),
-                  if (nextUp != null && castable) ...[
-                    SizedBox(width: tokens.spacing.s12),
-                    AppIconButton(
-                      icon: AppIcons.cast,
-                      tooltip: 'Cast',
-                      bordered: true,
-                      size: layout.movieActionHeight,
-                      onPressed: () => unawaited(
-                        castFrom(
-                          context,
-                          item: PlayableEpisode(series, nextUp.episode),
-                          from: nextUp.from,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              _SeriesActions(
+                series: series,
+                state: state,
+                nextUp: nextUp,
+                primaryFocus: primaryFocus,
+                onPlay: onPlay,
+                onFavorite: onFavorite,
+                castable: castable,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Play, Continue or Play again, the favorite and Cast (canvas): at the
+/// foot of the desktop's column, or the page's width on a stacked page
+/// ([expand]).
+class _SeriesActions extends StatelessWidget {
+  const new({
+    required this.series,
+    required this.state,
+    required this.nextUp,
+    required this.primaryFocus,
+    required this.onPlay,
+    required this.onFavorite,
+    required this.castable,
+    this.expand = false,
+  });
+
+  final SeriesItem series;
+  final Details<SeriesDetails>? state;
+  final NextUp? nextUp;
+  final FocusNode primaryFocus;
+  final void Function(EpisodeItem episode, {Duration? from}) onPlay;
+  final VoidCallback onFavorite;
+  final bool castable;
+
+  /// The primary action fills the row.
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final layout = tokens.details;
+    final nextUp = this.nextUp;
+    final Widget? primary = nextUp == null
+        ? null
+        : AppButton(
+            label: switch (nextUp.kind) {
+              NextUpKind.again => 'Play again',
+              NextUpKind.start => 'Play ${_episodeLabel(nextUp.episode)}',
+              _ => 'Continue ${_episodeLabel(nextUp.episode)}',
+            },
+            icon: AppIcons.play,
+            size: AppButtonSize.xl,
+            autofocus: true,
+            expand: expand,
+            focusNode: primaryFocus,
+            onPressed: () => onPlay(nextUp.episode, from: nextUp.from),
+          );
+    return Row(
+      children: [
+        if (primary != null) ...[
+          if (expand) Expanded(child: primary) else Flexible(child: primary),
+          SizedBox(width: tokens.spacing.s12),
+        ],
+        AppIconButton(
+          icon: series.isFavorite ? AppIcons.starFilled : AppIcons.star,
+          tooltip: series.isFavorite
+              ? 'Remove from favorites'
+              : 'Add to favorites',
+          shortcut: 'F',
+          selected: series.isFavorite,
+          bordered: true,
+          // Only once the page knows there is nothing to play: the Play
+          // button, arriving with the episodes, takes it then.
+          autofocus: nextUp == null && state is DetailsReady,
+          focusNode: nextUp == null ? primaryFocus : null,
+          size: layout.movieActionHeight,
+          onPressed: onFavorite,
+        ),
+        if (nextUp != null && castable) ...[
+          SizedBox(width: tokens.spacing.s12),
+          AppIconButton(
+            icon: AppIcons.cast,
+            tooltip: 'Cast',
+            bordered: true,
+            size: layout.movieActionHeight,
+            onPressed: () => unawaited(
+              castFrom(
+                context,
+                item: PlayableEpisode(series, nextUp.episode),
+                from: nextUp.from,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1141,6 +1498,7 @@ class _EpisodeRow extends ConsumerWidget {
     required this.mark,
     required this.focus,
     required this.onPlay,
+    this.compact = false,
     super.key,
   });
 
@@ -1152,11 +1510,19 @@ class _EpisodeRow extends ConsumerWidget {
   final FocusNode focus;
   final void Function(EpisodeItem episode, {Duration? from}) onPlay;
 
+  /// A stacked page's row (ADR-068): a smaller still, the title on two
+  /// lines, and the description always under them — a finger has no
+  /// focus to show it on.
+  final bool compact;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final still = tokens.details.episodeStill;
+    // A phone's still is smaller; a tablet's, the canvas's.
+    final still = compact && CompactLayout.of(context)
+        ? _compactStill(context)
+        : tokens.details.episodeStill;
     final mark = this.mark;
     final watched = mark?.completed ?? false;
     final resumable = mark != null && mark.resumable;
@@ -1245,125 +1611,225 @@ class _EpisodeRow extends ConsumerWidget {
                   : colors.surface3.withValues(alpha: 0),
               borderRadius: tokens.radii.mdAll,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: tokens.radii.smAll,
-                  child: SizedBox(
-                    width: still.width,
-                    height: still.height,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        PosterArtwork(
-                          title: '',
-                          image: artworkFor(
-                            context,
-                            episode.stillUrl,
-                            width: still.width,
-                          ),
-                        ),
-                        if (mark != null && mark.position > Duration.zero)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: ProgressBar(
-                              value: watched ? 1 : mark.fraction,
+            child: _withPlot(
+              context,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: tokens.radii.smAll,
+                    child: SizedBox(
+                      width: still.width,
+                      height: still.height,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PosterArtwork(
+                            title: '',
+                            image: artworkFor(
+                              context,
+                              episode.stillUrl,
+                              width: still.width,
                             ),
                           ),
-                      ],
+                          if (mark != null && mark.position > Duration.zero)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: ProgressBar(
+                                value: watched ? 1 : mark.fraction,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(width: tokens.spacing.s16 + 2),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: tokens.spacing.s4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'E${episode.episode}',
-                              style: tokens.text.labelSmall
-                                  .withWeight(700)
-                                  .copyWith(
-                                    color: states.focused
-                                        ? colors.accentBase
-                                        : colors.textTertiary,
+                  SizedBox(
+                    width: compact
+                        ? tokens.spacing.s12
+                        : tokens.spacing.s16 + 2,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: compact ? 0 : tokens.spacing.s4,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'E${episode.episode}',
+                                style: tokens.text.labelSmall
+                                    .withWeight(700)
+                                    .copyWith(
+                                      color: states.focused
+                                          ? colors.accentBase
+                                          : colors.textTertiary,
+                                    ),
+                              ),
+                              SizedBox(width: tokens.spacing.s8 + 2),
+                              Expanded(
+                                child: Text(
+                                  episode.title,
+                                  maxLines: compact ? 2 : 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tokens.text.bodyStrong.copyWith(
+                                    color: watched && !states.focused
+                                        ? colors.textSecondary
+                                        : colors.textPrimary,
                                   ),
-                            ),
-                            SizedBox(width: tokens.spacing.s8 + 2),
-                            Expanded(
-                              child: Text(
-                                episode.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: tokens.text.bodyStrong.copyWith(
-                                  color: watched && !states.focused
-                                      ? colors.textSecondary
-                                      : colors.textPrimary,
                                 ),
                               ),
-                            ),
-                            if (watched)
-                              AppIcon(
-                                AppIcons.check,
-                                size: 18,
-                                color: colors.success,
-                              ),
-                            SizedBox(width: tokens.spacing.s8 + 2),
-                            // The mouse's: the keyboard has D and the
-                            // row's menu.
-                            if (ref.watch(downloadsHereProvider))
-                              ExcludeFocus(
-                                child: Builder(
-                                  builder: (anchor) => _EpisodeDownload(
-                                    download: download,
-                                    onPressed: () => unawaited(
-                                      downloadPressed(
-                                        anchor,
-                                        download,
-                                        request,
+                              if (watched)
+                                AppIcon(
+                                  AppIcons.check,
+                                  size: 18,
+                                  color: colors.success,
+                                ),
+                              SizedBox(width: tokens.spacing.s8 + 2),
+                              // The mouse's: the keyboard has D and the
+                              // row's menu.
+                              if (ref.watch(downloadsHereProvider))
+                                ExcludeFocus(
+                                  child: Builder(
+                                    builder: (anchor) => _EpisodeDownload(
+                                      download: download,
+                                      onPressed: () => unawaited(
+                                        downloadPressed(
+                                          anchor,
+                                          download,
+                                          request,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                            ],
+                          ),
+                          if (line.isNotEmpty) ...[
+                            SizedBox(height: tokens.spacing.s4),
+                            Text(
+                              line,
+                              style: tokens.text.labelSmall.copyWith(
+                                color: colors.textTertiary,
                               ),
-                          ],
-                        ),
-                        if (line.isNotEmpty) ...[
-                          SizedBox(height: tokens.spacing.s4),
-                          Text(
-                            line,
-                            style: tokens.text.labelSmall.copyWith(
-                              color: colors.textTertiary,
                             ),
-                          ),
+                          ],
+                          if (!compact &&
+                              states.focused &&
+                              episode.plot != null) ...[
+                            SizedBox(height: tokens.spacing.s4 + 2),
+                            Text(
+                              episode.plot!,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.text.label
+                                  .withWeight(400)
+                                  .copyWith(color: colors.textSecondary),
+                            ),
+                          ],
                         ],
-                        if (states.focused && episode.plot != null) ...[
-                          SizedBox(height: tokens.spacing.s4 + 2),
-                          Text(
-                            episode.plot!,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.text.label
-                                .withWeight(400)
-                                .copyWith(color: colors.textSecondary),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// A compact row's description, under its still and title.
+  Widget _withPlot(BuildContext context, Widget row) {
+    final plot = episode.plot;
+    if (!compact || plot == null || plot.trim().isEmpty) return row;
+    final tokens = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        SizedBox(height: tokens.spacing.s8),
+        Text(
+          plot,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: tokens.text.label
+              .withWeight(400)
+              .copyWith(color: tokens.colors.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+/// An episode's still in a stacked page's row: two thirds of the
+/// canvas's.
+Size _compactStill(BuildContext context) =>
+    context.tokens.details.episodeStill * (2 / 3);
+
+/// A stacked page's seasons (ADR-068): chips in a row that scrolls
+/// sideways, each a finger's target, and the shown one's episode count.
+/// One Tab stop; the arrows move inside it, Enter shows a season.
+class _SeasonChips extends StatelessWidget {
+  const new({
+    required this.seasons,
+    required this.shown,
+    required this.episodes,
+    required this.controller,
+    required this.onPick,
+  });
+
+  final List<int> seasons;
+  final int shown;
+  final int episodes;
+  final FocusPaneController controller;
+  final void Function(int season) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: math.max(context.scaled(40), CompactLayout.touchTarget),
+            child: FocusPane(
+              debugLabel: 'seasons',
+              controller: controller,
+              tabStop: true,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: seasons.length,
+                separatorBuilder: (_, _) => SizedBox(width: tokens.spacing.s8),
+                itemBuilder: (context, index) {
+                  final season = seasons[index];
+                  return TouchTarget(
+                    onTap: () => onPick(season),
+                    child: AppChip(
+                      label: 'Season $season',
+                      selected: season == shown,
+                      onPressed: () => onPick(season),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: tokens.spacing.s12),
+        Text(
+          episodes == 1 ? '1 episode' : '$episodes episodes',
+          style: tokens.text.labelSmall.copyWith(
+            color: tokens.colors.textTertiary,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1487,6 +1953,7 @@ class DetailsBackdrop extends StatelessWidget {
     required this.posterUrl,
     this.fadeRight = false,
     this.cheapBlur = false,
+    this.hero = false,
     super.key,
   });
 
@@ -1494,6 +1961,11 @@ class DetailsBackdrop extends StatelessWidget {
   final String? posterUrl;
   final bool fadeRight;
   final bool cheapBlur;
+
+  /// Across the top of a stacked page ([detailsStacked]): the picture
+  /// whole, fading into the page at its foot, a little darker at its top
+  /// for the ‹ Back chip.
+  final bool hero;
 
   /// [cheapBlur]'s poster width, in logical pixels.
   static const _softWidth = 24.0;
@@ -1525,32 +1997,156 @@ class DetailsBackdrop extends StatelessWidget {
               fallback: const SizedBox.shrink(),
             ),
           ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                colors.bg,
-                colors.bg.withValues(alpha: 0.92),
-                colors.bg.withValues(alpha: 0.2),
-                colors.bg.withValues(alpha: fadeRight ? 1 : 0.35),
-              ],
-              stops: const [0, 0.38, 0.75, 1],
+        if (hero)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  colors.bg.withValues(alpha: 0.55),
+                  colors.bg.withValues(alpha: 0),
+                ],
+                stops: const [0, 0.35],
+              ),
+            ),
+          )
+        else
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colors.bg,
+                  colors.bg.withValues(alpha: 0.92),
+                  colors.bg.withValues(alpha: 0.2),
+                  colors.bg.withValues(alpha: fadeRight ? 1 : 0.35),
+                ],
+                stops: const [0, 0.38, 0.75, 1],
+              ),
             ),
           ),
-        ),
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [colors.bg, colors.bg.withValues(alpha: 0)],
-              stops: const [0, 0.45],
+              stops: [0, if (hero) 0.6 else 0.45],
             ),
           ),
         ),
       ],
     );
   }
+}
+
+/// The top of a stacked title's page ([detailsStacked], ADR-068): the
+/// backdrop across the page, 16:9 (lower on a phone on its side), the
+/// poster over its foot beside the [overline], the title and its [meta]
+/// line; then [below] (the actions, the plot), the page's width.
+class DetailsStackedHero extends StatelessWidget {
+  const new({
+    required this.title,
+    required this.backdropUrl,
+    required this.posterUrl,
+    required this.meta,
+    required this.below,
+    this.overline,
+    this.cheapBlur = false,
+    super.key,
+  });
+
+  final String title;
+  final String? backdropUrl;
+  final String? posterUrl;
+  final Widget? overline;
+  final Widget meta;
+  final List<Widget> below;
+  final bool cheapBlur;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    final spacing = tokens.spacing;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final window = MediaQuery.sizeOf(context);
+        // A phone's poster and title; a tablet held upright has room for
+        // larger ones.
+        final small = CompactLayout.fits(Size(width, window.height));
+        final poster = tokens.details.moviePoster * (small ? 0.4 : 2 / 3);
+        final side = small ? spacing.s16 : spacing.s32;
+        final heroHeight = math.min(width * 9 / 16, window.height * _heroShare);
+        // The poster's top over the backdrop's foot, clear of ‹ Back.
+        final posterTop = math.max(
+          heroHeight - poster.height * 0.6,
+          spacing.s12 * 2 + CompactLayout.touchTarget,
+        );
+        return Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: heroHeight,
+              child: DetailsBackdrop(
+                backdropUrl: backdropUrl,
+                posterUrl: posterUrl,
+                cheapBlur: cheapBlur,
+                hero: true,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(side, posterTop, side, spacing.s32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      DetailsPoster(title: title, url: posterUrl, size: poster),
+                      SizedBox(width: spacing.s16),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (overline case final overline?) ...[
+                              overline,
+                              SizedBox(height: spacing.s8),
+                            ],
+                            Text(
+                              title,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  (small ? tokens.text.h1 : tokens.text.display)
+                                      .copyWith(color: colors.textPrimary),
+                            ),
+                            SizedBox(height: spacing.s8),
+                            meta,
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: spacing.s20),
+                  ...below,
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// The backdrop's height at most, of the window's: a phone on its side
+  /// still shows the title under it.
+  static const _heroShare = 0.45;
 }
 
 /// The poster on a details page, with the canvas's drop shadow.

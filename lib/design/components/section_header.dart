@@ -30,28 +30,35 @@ class SectionHeader extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: tokens.spacing.s8),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: tokens.text.sectionTitle.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-              if (subtitle != null) ...[
-                SizedBox(height: tokens.spacing.s4 - 2),
+          // The title gives way to See all: a phone's row at a large text
+          // size wraps it, or ends it with an ellipsis (ADR-068).
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  subtitle!,
-                  style: tokens.text.labelSmall
-                      .withWeight(500)
-                      .copyWith(color: colors.textTertiary),
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.sectionTitle.copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
+                if (subtitle != null) ...[
+                  SizedBox(height: tokens.spacing.s4 - 2),
+                  Text(
+                    subtitle!,
+                    style: tokens.text.labelSmall
+                        .withWeight(500)
+                        .copyWith(color: colors.textTertiary),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-          const Spacer(),
+          if (trailing != null || onSeeAll != null)
+            SizedBox(width: tokens.spacing.s8),
           ?trailing,
           if (onSeeAll != null)
             FocusableSurface(

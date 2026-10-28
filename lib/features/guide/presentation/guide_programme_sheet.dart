@@ -9,6 +9,7 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
+import 'package:iptv_player/features/live_tv/presentation/touch_sheet.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
@@ -17,21 +18,28 @@ import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 /// programme, its channel and description, **Watch channel**, **Remind
 /// me** on one that hasn't started (Phase 9 decision 13) and the
 /// channel's favorite. Esc closes it.
+///
+/// On a phone held upright (ADR-068) it comes up from the bottom edge, a
+/// [TouchSheet], its buttons one under the other at a thumb's reach.
 Future<void> showGuideProgrammeSheet(
   BuildContext context, {
   required ChannelItem channel,
   required EpgProgramme programme,
   required DateTime now,
   required VoidCallback onWatch,
-}) => showAppDialog<void>(
-  context,
-  builder: (_) => GuideProgrammeSheet(
+}) {
+  final touch = touchSheetFits(context);
+  Widget sheet(BuildContext _) => GuideProgrammeSheet(
     channel: channel,
     programme: programme,
     now: now,
     onWatch: onWatch,
-  ),
-);
+    touch: touch,
+  );
+  return touch
+      ? showTouchSheet<void>(context, builder: sheet)
+      : showAppDialog<void>(context, builder: sheet);
+}
 
 /// A centred sheet over a scrim, focus first on Watch channel. Watch plays
 /// the channel now: it never pretends to play a programme that has ended,
@@ -43,6 +51,7 @@ class GuideProgrammeSheet extends ConsumerWidget {
     required this.programme,
     required this.now,
     required this.onWatch,
+    this.touch = false,
     super.key,
   });
 
@@ -50,6 +59,10 @@ class GuideProgrammeSheet extends ConsumerWidget {
   final EpgProgramme programme;
   final DateTime now;
   final VoidCallback onWatch;
+
+  /// A phone's sheet (ADR-068): from the bottom edge, the buttons full
+  /// width one under the other.
+  final bool touch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,6 +85,104 @@ class GuideProgrammeSheet extends ConsumerWidget {
             null;
     final subtitle = whole.subtitle?.trim() ?? '';
     final description = whole.description?.trim() ?? '';
+    final watch = AppButton(
+      label: ended ? 'Already finished' : 'Watch channel',
+      icon: AppIcons.play,
+      autofocus: !ended,
+      size: touch ? AppButtonSize.l : AppButtonSize.m,
+      expand: touch,
+      onPressed: ended
+          ? null
+          : () {
+              Navigator.of(context).pop();
+              onWatch();
+            },
+    );
+    final remind = upcoming
+        ? AppButton(
+            label: reminded ? '$reminderSetLabel · Remove' : remindMeLabel,
+            icon: reminded ? AppIcons.bellFilled : AppIcons.bell,
+            variant: AppButtonVariant.secondary,
+            size: touch ? AppButtonSize.l : AppButtonSize.m,
+            expand: touch,
+            onPressed: () => unawaited(
+              toggleReminder(
+                ProviderScope.containerOf(context, listen: false),
+                channel,
+                programme,
+              ),
+            ),
+          )
+        : null;
+    final favorite = AppButton(
+      label: fresh.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      icon: fresh.isFavorite ? AppIcons.starFilled : AppIcons.star,
+      variant: AppButtonVariant.secondary,
+      size: touch ? AppButtonSize.l : AppButtonSize.m,
+      expand: touch,
+      autofocus: ended,
+      onPressed: () => unawaited(
+        ref
+            .read(channelRepositoryProvider)
+            .setFavorite(fresh, on: !fresh.isFavorite),
+      ),
+    );
+    final about = <Widget>[
+      Text(
+        guideChannelLine(fresh.name, fresh.number),
+        style: tokens.text.label.copyWith(color: colors.textSecondary),
+      ),
+      if (subtitle.isNotEmpty) ...[
+        SizedBox(height: tokens.spacing.s12),
+        Text(
+          subtitle,
+          style: tokens.text.bodyStrong.copyWith(color: colors.textPrimary),
+        ),
+      ],
+      if (description.isNotEmpty) ...[
+        SizedBox(height: tokens.spacing.s12),
+        Flexible(
+          child: SingleChildScrollView(
+            child: Text(
+              description,
+              style: tokens.text.body.copyWith(color: colors.textEmphasis),
+            ),
+          ),
+        ),
+      ],
+    ];
+
+    if (touch) {
+      return TouchSheet(
+        title: programme.title,
+        subtitle: programmeSheetMeta(programme, now, tokens.timeStyle),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            tokens.spacing.s20,
+            0,
+            tokens.spacing.s20,
+            tokens.spacing.s16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Divider(height: 1, color: colors.border),
+              SizedBox(height: tokens.spacing.s12),
+              ...about,
+              SizedBox(height: tokens.spacing.s20),
+              watch,
+              if (remind != null) ...[
+                SizedBox(height: tokens.spacing.s8),
+                remind,
+              ],
+              SizedBox(height: tokens.spacing.s8),
+              favorite,
+            ],
+          ),
+        ),
+      );
+    }
 
     return AppDialog(
       title: programme.title,
@@ -88,32 +199,7 @@ class GuideProgrammeSheet extends ConsumerWidget {
           children: [
             Divider(height: 1, color: colors.border),
             SizedBox(height: tokens.spacing.s12),
-            Text(
-              guideChannelLine(fresh.name, fresh.number),
-              style: tokens.text.label.copyWith(color: colors.textSecondary),
-            ),
-            if (subtitle.isNotEmpty) ...[
-              SizedBox(height: tokens.spacing.s12),
-              Text(
-                subtitle,
-                style: tokens.text.bodyStrong.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-            ],
-            if (description.isNotEmpty) ...[
-              SizedBox(height: tokens.spacing.s12),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Text(
-                    description,
-                    style: tokens.text.body.copyWith(
-                      color: colors.textEmphasis,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ...about,
             SizedBox(height: tokens.spacing.s20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -124,49 +210,7 @@ class GuideProgrammeSheet extends ConsumerWidget {
                   child: Wrap(
                     spacing: tokens.spacing.s8,
                     runSpacing: tokens.spacing.s8,
-                    children: [
-                      AppButton(
-                        label: ended ? 'Already finished' : 'Watch channel',
-                        icon: AppIcons.play,
-                        autofocus: !ended,
-                        onPressed: ended
-                            ? null
-                            : () {
-                                Navigator.of(context).pop();
-                                onWatch();
-                              },
-                      ),
-                      if (upcoming)
-                        AppButton(
-                          label: reminded
-                              ? '$reminderSetLabel · Remove'
-                              : remindMeLabel,
-                          icon: reminded ? AppIcons.bellFilled : AppIcons.bell,
-                          variant: AppButtonVariant.secondary,
-                          onPressed: () => unawaited(
-                            toggleReminder(
-                              ProviderScope.containerOf(context, listen: false),
-                              channel,
-                              programme,
-                            ),
-                          ),
-                        ),
-                      AppButton(
-                        label: fresh.isFavorite
-                            ? 'Remove from favorites'
-                            : 'Add to favorites',
-                        icon: fresh.isFavorite
-                            ? AppIcons.starFilled
-                            : AppIcons.star,
-                        variant: AppButtonVariant.secondary,
-                        autofocus: ended,
-                        onPressed: () => unawaited(
-                          ref
-                              .read(channelRepositoryProvider)
-                              .setFavorite(fresh, on: !fresh.isFavorite),
-                        ),
-                      ),
-                    ],
+                    children: [watch, ?remind, favorite],
                   ),
                 ),
                 if (KeyHints.shownIn(context)) ...[

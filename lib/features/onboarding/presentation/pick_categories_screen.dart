@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/failure_message.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -293,6 +294,10 @@ class _Loading extends StatelessWidget {
   }
 }
 
+/// The least width at which the kinds, the filter and Select all / none
+/// share one row; narrower, they stack (a phone, a tablet held upright).
+const _toolbarRowFrom = 900.0;
+
 class _Picker extends StatelessWidget {
   const new({
     required this.kind,
@@ -413,7 +418,10 @@ class _Picker extends StatelessWidget {
                   ),
                   sliver: SliverGrid.builder(
                     gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 300,
+                      // A phone (ADR-068): one column of rows.
+                      maxCrossAxisExtent: onboardingOnPhone(context)
+                          ? WindowSizes.phoneWidth
+                          : 300,
                       mainAxisExtent: context.scaled(44),
                       crossAxisSpacing: spacing.s8,
                       mainAxisSpacing: spacing.s8,
@@ -431,51 +439,71 @@ class _Picker extends StatelessWidget {
       );
     }
 
+    final tabs = kinds.length > 1
+        ? SegmentedControl<CatalogueKind>(
+            options: [
+              for (final k in kinds)
+                SegmentOption(
+                  value: k,
+                  label: _kindLabel(k),
+                  count: formatCount(lists[k]!.categories.length),
+                ),
+            ],
+            value: kind,
+            onChanged: onKind,
+          )
+        : null;
+    final selectAll = AppButton(
+      label: 'Select all',
+      variant: AppButtonVariant.ghost,
+      size: AppButtonSize.s,
+      onPressed: shown.isEmpty ? null : () => onSetMany(shown, hidden: false),
+    );
+    final selectNone = AppButton(
+      label: 'Select none',
+      variant: AppButtonVariant.ghost,
+      size: AppButtonSize.s,
+      onPressed: shown.isEmpty ? null : () => onSetMany(shown, hidden: true),
+    );
+    SearchField filterField({double? width}) => SearchField(
+      key: ValueKey('filter-$kind'),
+      hint: 'Filter categories',
+      shortcut: null,
+      width: width,
+      onChanged: onFilter,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            if (kinds.length > 1) ...[
-              SegmentedControl<CatalogueKind>(
-                options: [
-                  for (final k in kinds)
-                    SegmentOption(
-                      value: k,
-                      label: _kindLabel(k),
-                      count: formatCount(lists[k]!.categories.length),
-                    ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= _toolbarRowFrom) {
+              return Row(
+                children: [
+                  if (tabs != null) ...[tabs, SizedBox(width: spacing.s12)],
+                  filterField(width: 300),
+                  const Spacer(),
+                  selectAll,
+                  selectNone,
                 ],
-                value: kind,
-                onChanged: onKind,
-              ),
-              SizedBox(width: spacing.s12),
-            ],
-            SearchField(
-              key: ValueKey('filter-$kind'),
-              hint: 'Filter categories',
-              shortcut: null,
-              width: 300,
-              onChanged: onFilter,
-            ),
-            const Spacer(),
-            AppButton(
-              label: 'Select all',
-              variant: AppButtonVariant.ghost,
-              size: AppButtonSize.s,
-              onPressed: shown.isEmpty
-                  ? null
-                  : () => onSetMany(shown, hidden: false),
-            ),
-            AppButton(
-              label: 'Select none',
-              variant: AppButtonVariant.ghost,
-              size: AppButtonSize.s,
-              onPressed: shown.isEmpty
-                  ? null
-                  : () => onSetMany(shown, hidden: true),
-            ),
-          ],
+              );
+            }
+            // A phone, a phone on its side (ADR-068): the kinds across
+            // the width, the filter under them, then Select all / none.
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (tabs != null) ...[
+                  SegmentedFill(child: tabs),
+                  SizedBox(height: spacing.s12),
+                ],
+                filterField(),
+                SizedBox(height: spacing.s4),
+                Row(children: [selectAll, selectNone]),
+              ],
+            );
+          },
         ),
         if (writeError != null) ...[
           SizedBox(height: spacing.s12),
@@ -535,8 +563,40 @@ class _GroupHeader extends StatelessWidget {
         : '$on of $all on · ${formatCount(group.visibleItemCount)} of '
               '${formatCount(group.itemCount)} $unit';
 
+    // A phone (ADR-068): the counts under the name.
+    final phone = onboardingOnPhone(context);
+    final name = Row(
+      children: [
+        Flexible(
+          child: Text(
+            group.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.text.titleSmall
+                .withWeight(on == 0 ? 700 : 800)
+                .copyWith(
+                  color: on == 0 ? colors.textEmphasis : colors.textPrimary,
+                ),
+          ),
+        ),
+        if (group.code case final code? when code != group.label) ...[
+          SizedBox(width: tokens.spacing.s12),
+          AppBadge(code),
+        ],
+      ],
+    );
+    final countsText = Text(
+      counts,
+      maxLines: phone ? 1 : null,
+      overflow: phone ? TextOverflow.ellipsis : null,
+      style: tokens.text.caption.copyWith(
+        color: on == 0 ? colors.textTertiary : colors.textSecondary,
+      ),
+    );
+
     return SizedBox(
-      height: context.scaled(56),
+      // Two lines on a phone: the name, then the counts.
+      height: context.scaled(phone ? 64 : 56),
       child: Row(
         children: [
           Padding(
@@ -569,39 +629,18 @@ class _GroupHeader extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                group.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: tokens.text.titleSmall
-                                    .withWeight(on == 0 ? 700 : 800)
-                                    .copyWith(
-                                      color: on == 0
-                                          ? colors.textEmphasis
-                                          : colors.textPrimary,
-                                    ),
-                              ),
-                            ),
-                            if (group.code case final code?
-                                when code != group.label) ...[
-                              SizedBox(width: tokens.spacing.s12),
-                              AppBadge(code),
-                            ],
-                          ],
-                        ),
+                        child: phone
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [name, countsText],
+                              )
+                            : name,
                       ),
-                      SizedBox(width: tokens.spacing.s16),
-                      Text(
-                        counts,
-                        style: tokens.text.caption.copyWith(
-                          color: on == 0
-                              ? colors.textTertiary
-                              : colors.textSecondary,
-                        ),
-                      ),
+                      if (!phone) ...[
+                        SizedBox(width: tokens.spacing.s16),
+                        countsText,
+                      ],
                       if (onExpand != null) ...[
                         SizedBox(width: tokens.spacing.s12),
                         AppIcon(

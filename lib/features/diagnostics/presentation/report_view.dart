@@ -196,15 +196,28 @@ class _ReportViewState extends ConsumerState<ReportView> {
             _ => Semantics(
               label: 'Making the report',
               container: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final width in const [520.0, 440.0, 360.0, 480.0, 300.0])
-                    Padding(
-                      padding: EdgeInsets.only(bottom: tokens.spacing.s8),
-                      child: Skeleton(width: width),
-                    ),
-                ],
+              // Cut off by a short box (a phone on its side), not past it.
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  maxHeight: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final width in const [
+                        520.0,
+                        440.0,
+                        360.0,
+                        480.0,
+                        300.0,
+                      ])
+                        Padding(
+                          padding: EdgeInsets.only(bottom: tokens.spacing.s8),
+                          child: Skeleton(width: width),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           },

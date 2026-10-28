@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/app_icon.dart';
 import 'package:iptv_player/design/components/kbd.dart';
@@ -24,6 +26,7 @@ class SearchField extends StatefulWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.width,
+    this.height,
     super.key,
   });
 
@@ -40,6 +43,10 @@ class SearchField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
   final double? width;
+
+  /// At least this tall (a phone's finger target, ADR-068); otherwise the
+  /// canvas's 40 px, growing with the text.
+  final double? height;
 
   @override
   State<SearchField> createState() => _SearchFieldState();
@@ -139,7 +146,7 @@ class _SearchFieldState extends State<SearchField> {
         duration: tokens.motion.fast,
         curve: tokens.motion.fastCurve,
         width: widget.width,
-        height: context.scaled(40),
+        height: math.max(context.scaled(40), widget.height ?? 0),
         padding: EdgeInsets.only(
           left: tokens.spacing.s12,
           right: tokens.spacing.s8,

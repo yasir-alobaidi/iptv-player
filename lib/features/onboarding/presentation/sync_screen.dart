@@ -532,31 +532,39 @@ class _StageRow extends StatelessWidget {
           children: [
             mark,
             SizedBox(width: tokens.spacing.s12 + 2),
-            Expanded(
-              child: Text(
-                label,
-                style: tokens.text.body
-                    .withWeight(active ? 800 : 700)
-                    .copyWith(
-                      color: waiting
-                          ? colors.textSecondary
-                          : colors.textPrimary,
-                    ),
-              ),
+            // The stage's name keeps its width, whole; the detail gives
+            // way, on two lines at most, at the right (a phone's "Active ·
+            // expires Oct 27, 2027" broke "Account" mid-word; ADR-068).
+            Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: tokens.text.body
+                  .withWeight(active ? 800 : 700)
+                  .copyWith(
+                    color: waiting ? colors.textSecondary : colors.textPrimary,
+                  ),
             ),
-            if (text != null)
-              Text(
-                text,
-                style: tokens.text.label
-                    .withWeight(waiting ? 500 : 700)
-                    .copyWith(
-                      color: waiting
-                          ? colors.textTertiary
-                          : active
-                          ? colors.textPrimary
-                          : colors.textEmphasis,
+            SizedBox(width: tokens.spacing.s12),
+            Expanded(
+              child: text == null
+                  ? const SizedBox.shrink()
+                  : Text(
+                      text,
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.label
+                          .withWeight(waiting ? 500 : 700)
+                          .copyWith(
+                            color: waiting
+                                ? colors.textTertiary
+                                : active
+                                ? colors.textPrimary
+                                : colors.textEmphasis,
+                          ),
                     ),
-              ),
+            ),
           ],
         ),
       ),

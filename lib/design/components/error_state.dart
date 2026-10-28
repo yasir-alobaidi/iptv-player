@@ -79,8 +79,12 @@ class _ErrorStateState extends State<ErrorState> {
               ),
             ],
             SizedBox(height: tokens.spacing.s20),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            // On two lines rather than past the edge of a narrow screen.
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: tokens.spacing.s8,
+              runSpacing: tokens.spacing.s8,
               children: [
                 if (widget.onRetry != null)
                   AppButton(
@@ -88,8 +92,6 @@ class _ErrorStateState extends State<ErrorState> {
                     icon: AppIcons.retry,
                     onPressed: widget.onRetry,
                   ),
-                if (widget.onRetry != null && widget.details != null)
-                  SizedBox(width: tokens.spacing.s8),
                 if (widget.details != null)
                   AppButton(
                     label: _showDetails ? 'Hide details' : 'Details',

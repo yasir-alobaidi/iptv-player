@@ -260,6 +260,10 @@ class SourceCard extends ConsumerWidget {
   final ValueChanged<int> onMove;
   final VoidCallback onRemove;
 
+  /// Narrower than this (a phone's card), the type and account go under
+  /// the name.
+  static const _headlineBesideFrom = 420.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
@@ -399,62 +403,90 @@ class SourceCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: dot,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: tokens.spacing.s8 + 2),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  source.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: tokens.text.bodyStrong.copyWith(
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final name = Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: dot,
+                                shape: BoxShape.circle,
                               ),
-                              if (isCurrent) ...[
-                                SizedBox(width: tokens.spacing.s8),
-                                const AppBadge(
-                                  'Browsing',
-                                  tone: AppBadgeTone.accent,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: tokens.spacing.s12),
-                        // Inflexible, so it sits at the right edge; the
-                        // name gives way first.
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 360),
-                          child: Text(
-                            headline,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
-                            style: tokens.text.caption.copyWith(
-                              color: account == null
-                                  ? colors.textSecondary
-                                  : dot == colors.danger
-                                  ? colors.danger
-                                  : dot == colors.warning
-                                  ? colors.warning
-                                  : colors.textSecondary,
                             ),
-                          ),
-                        ),
-                      ],
+                            SizedBox(width: tokens.spacing.s8 + 2),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      source.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: tokens.text.bodyStrong.copyWith(
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isCurrent) ...[
+                                    SizedBox(width: tokens.spacing.s8),
+                                    const AppBadge(
+                                      'Browsing',
+                                      tone: AppBadgeTone.accent,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                        final headlineStyle = tokens.text.caption.copyWith(
+                          color: account == null
+                              ? colors.textSecondary
+                              : dot == colors.danger
+                              ? colors.danger
+                              : dot == colors.warning
+                              ? colors.warning
+                              : colors.textSecondary,
+                        );
+                        // A phone's card (ADR-068): the type and account
+                        // on a line of their own under the name.
+                        if (constraints.maxWidth <
+                            SourceCard._headlineBesideFrom) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              name,
+                              SizedBox(height: tokens.spacing.s4),
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  left: tokens.spacing.s16 + 2,
+                                ),
+                                child: Text(headline, style: headlineStyle),
+                              ),
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            Expanded(child: name),
+                            SizedBox(width: tokens.spacing.s12),
+                            // Inflexible, so it sits at the right edge;
+                            // the name gives way first.
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 360),
+                              child: Text(
+                                headline,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                                style: headlineStyle,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     SizedBox(height: tokens.spacing.s4 + 2),
                     Padding(
@@ -462,51 +494,61 @@ class SourceCard extends ConsumerWidget {
                       child: detail,
                     ),
                     SizedBox(height: tokens.spacing.s12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (running)
+                    // On a phone's card the buttons wrap onto a second
+                    // line rather than leave the card (ADR-068).
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: tokens.spacing.s8,
+                        runSpacing: tokens.spacing.s8,
+                        children: [
+                          if (running)
+                            AppButton(
+                              label: 'Cancel sync',
+                              size: AppButtonSize.s,
+                              variant: AppButtonVariant.ghost,
+                              onPressed: () =>
+                                  unawaited(sync.cancel(source.id)),
+                            )
+                          else
+                            AppButton(
+                              label: lastFailed
+                                  ? 'Retry'
+                                  : never
+                                  ? 'Sync now'
+                                  : 'Refresh',
+                              icon: AppIcons.retry,
+                              size: AppButtonSize.s,
+                              variant: AppButtonVariant.secondary,
+                              onPressed: () => unawaited(sync.sync(source.id)),
+                            ),
                           AppButton(
-                            label: 'Cancel sync',
-                            size: AppButtonSize.s,
-                            variant: AppButtonVariant.ghost,
-                            onPressed: () => unawaited(sync.cancel(source.id)),
-                          )
-                        else
-                          AppButton(
-                            label: lastFailed
-                                ? 'Retry'
-                                : never
-                                ? 'Sync now'
-                                : 'Refresh',
-                            icon: AppIcons.retry,
+                            label: 'Edit',
+                            icon: AppIcons.edit,
                             size: AppButtonSize.s,
                             variant: AppButtonVariant.secondary,
-                            onPressed: () => unawaited(sync.sync(source.id)),
+                            onPressed: () => unawaited(
+                              context.push<void>(editSourcePath(source.id)),
+                            ),
                           ),
-                        SizedBox(width: tokens.spacing.s8),
-                        AppButton(
-                          label: 'Edit',
-                          icon: AppIcons.edit,
-                          size: AppButtonSize.s,
-                          variant: AppButtonVariant.secondary,
-                          onPressed: () => unawaited(
-                            context.push<void>(editSourcePath(source.id)),
+                          Builder(
+                            builder: (anchor) => AppIconButton(
+                              icon: AppIcons.more,
+                              tooltip: 'More for ${source.name}',
+                              size: TouchTargets.of(context)
+                                  ? touchTargetSize
+                                  : 36,
+                              iconSize: 18,
+                              bordered: true,
+                              onPressed: () => unawaited(
+                                _more(anchor, ref, running: running),
+                              ),
+                            ),
                           ),
-                        ),
-                        SizedBox(width: tokens.spacing.s8),
-                        Builder(
-                          builder: (anchor) => AppIconButton(
-                            icon: AppIcons.more,
-                            tooltip: 'More for ${source.name}',
-                            size: 36,
-                            iconSize: 18,
-                            bordered: true,
-                            onPressed: () =>
-                                unawaited(_more(anchor, ref, running: running)),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

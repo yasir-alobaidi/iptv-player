@@ -85,6 +85,11 @@ void main() {
         initialLocation: AppDestination.settings.path,
         overrides: [...sketch().overrides, ...sourceShellOverrides],
       );
+      // A phone's Settings opens on its list of sections (ADR-068).
+      if (find.text('Add source').evaluate().isEmpty) {
+        await tapShown(tester, find.text('Sources').first);
+        await settleApp(tester);
+      }
 
       await golden(tester, 'images/settings_sources.png');
     });
@@ -330,6 +335,19 @@ void main() {
 
     sceneTest('Data: what Clear watch history clears', (tester) async {
       await data(tester);
+      // On a phone its row is past what the list has built yet.
+      if (find.text('Clear…').evaluate().isEmpty) {
+        await tester.scrollUntilVisible(
+          find.text('Clear…'),
+          120,
+          scrollable: find
+              .descendant(
+                of: find.byType(DataSection),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+      }
       await tapShown(tester, find.text('Clear…'));
       await settleApp(tester);
       await settleApp(tester);

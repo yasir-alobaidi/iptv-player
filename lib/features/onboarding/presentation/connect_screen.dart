@@ -687,6 +687,17 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     final tokens = context.tokens;
     final spacing = tokens.spacing;
     final gap = SizedBox(height: spacing.s20 + 2);
+    // A phone (ADR-068): the type cards one under the other, at full width.
+    final phone = onboardingOnPhone(context);
+    final cards = [
+      for (final type in _types)
+        ChoiceCard(
+          title: _typeTitle(type),
+          subtitle: _typeSubtitle(type),
+          selected: type == _type,
+          onPressed: () => _selectType(type),
+        ),
+    ];
 
     return FocusTraversalGroup(
       policy: appTraversalPolicy(),
@@ -695,21 +706,20 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!_isEdit) ...[
-              Row(
-                children: [
-                  for (final (index, type) in _types.indexed) ...[
-                    if (index > 0) SizedBox(width: spacing.s8 + 2),
-                    Expanded(
-                      child: ChoiceCard(
-                        title: _typeTitle(type),
-                        subtitle: _typeSubtitle(type),
-                        selected: type == _type,
-                        onPressed: () => _selectType(type),
-                      ),
-                    ),
+              if (phone)
+                for (final (index, card) in cards.indexed) ...[
+                  if (index > 0) SizedBox(height: spacing.s8),
+                  card,
+                ]
+              else
+                Row(
+                  children: [
+                    for (final (index, card) in cards.indexed) ...[
+                      if (index > 0) SizedBox(width: spacing.s8 + 2),
+                      Expanded(child: card),
+                    ],
                   ],
-                ],
-              ),
+                ),
               gap,
             ],
             ..._fields(context, problems),
@@ -750,6 +760,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     Map<DraftField, DraftProblem> problems,
   ) {
     final spacing = context.tokens.spacing;
+    final phone = onboardingOnPhone(context);
     final url = AppTextField(
       key: ValueKey('url-${_type.name}'),
       controller: _urlController,
@@ -774,41 +785,48 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       onSubmitted: (_) => _submit(),
     );
 
+    final username = AppTextField(
+      controller: _username,
+      focusNode: _usernameNode,
+      label: 'Username',
+      errorText: problems.containsKey(DraftField.username)
+          ? 'Enter your username.'
+          : null,
+      onSubmitted: (_) => _submit(),
+    );
+    final password = AppTextField(
+      controller: _password,
+      focusNode: _passwordNode,
+      label: 'Password',
+      obscure: true,
+      showClear: false,
+      hint: _isEdit && _storedPassword != null
+          ? 'Saved; leave empty to keep it'
+          : null,
+      errorText: problems.containsKey(DraftField.password)
+          ? 'Enter your password.'
+          : null,
+      onSubmitted: (_) => _submit(),
+    );
+
     return switch (_type) {
+      // A phone (ADR-068): each field across the width.
+      SourceType.xtream when phone => [
+        url,
+        SizedBox(height: spacing.s16 - 2),
+        username,
+        SizedBox(height: spacing.s16 - 2),
+        password,
+      ],
       SourceType.xtream => [
         url,
         SizedBox(height: spacing.s16 - 2),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: AppTextField(
-                controller: _username,
-                focusNode: _usernameNode,
-                label: 'Username',
-                errorText: problems.containsKey(DraftField.username)
-                    ? 'Enter your username.'
-                    : null,
-                onSubmitted: (_) => _submit(),
-              ),
-            ),
+            Expanded(child: username),
             SizedBox(width: spacing.s16 - 2),
-            Expanded(
-              child: AppTextField(
-                controller: _password,
-                focusNode: _passwordNode,
-                label: 'Password',
-                obscure: true,
-                showClear: false,
-                hint: _isEdit && _storedPassword != null
-                    ? 'Saved; leave empty to keep it'
-                    : null,
-                errorText: problems.containsKey(DraftField.password)
-                    ? 'Enter your password.'
-                    : null,
-                onSubmitted: (_) => _submit(),
-              ),
-            ),
+            Expanded(child: password),
           ],
         ),
       ],
@@ -935,33 +953,42 @@ class _AdvancedToggle extends StatelessWidget {
         child: FocusableSurface(
           onPressed: onPressed,
           semanticLabel: label,
-          builder: (context, states) => Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: tokens.spacing.s4,
-              vertical: tokens.spacing.s4,
+          builder: (context, states) => ConstrainedBox(
+            // A finger's height on a phone (ADR-068).
+            constraints: BoxConstraints(
+              minHeight: onboardingOnPhone(context) ? touchTargetSize : 0,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppIcon(
-                  open ? AppIcons.chevronDown : AppIcons.chevronRight,
-                  size: 14,
-                  color: states.highlighted
-                      ? colors.textPrimary
-                      : colors.textSecondary,
-                ),
-                SizedBox(width: tokens.spacing.s8),
-                Text(
-                  label,
-                  style: tokens.text.caption
-                      .withWeight(700)
-                      .copyWith(
-                        color: states.highlighted
-                            ? colors.textPrimary
-                            : colors.textSecondary,
-                      ),
-                ),
-              ],
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: tokens.spacing.s4,
+                vertical: tokens.spacing.s4,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(
+                    open ? AppIcons.chevronDown : AppIcons.chevronRight,
+                    size: 14,
+                    color: states.highlighted
+                        ? colors.textPrimary
+                        : colors.textSecondary,
+                  ),
+                  SizedBox(width: tokens.spacing.s8),
+                  // Wraps on a phone rather than leave the screen.
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: tokens.text.caption
+                          .withWeight(700)
+                          .copyWith(
+                            color: states.highlighted
+                                ? colors.textPrimary
+                                : colors.textSecondary,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

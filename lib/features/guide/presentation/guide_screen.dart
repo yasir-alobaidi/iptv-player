@@ -7,6 +7,7 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
@@ -191,7 +192,58 @@ class _GuideViewState extends ConsumerState<_GuideView> {
     final failed =
         value.lastImport?.outcome == GuideImportOutcome.failed &&
         !value.isImporting;
-    final spacing = tokens.spacing;
+    final status = value.isImporting
+        ? _Status(line: importProgressLine(progress))
+        : failed
+        ? _Status(
+            line: guideStaleLine(
+              value,
+              now,
+              offline: ref.watch(appOfflineProvider).value ?? false,
+            ),
+            warning: true,
+          )
+        : null;
+    // Narrower than a phone held upright (ADR-068): the margins of a
+    // phone, and the toolbar's choices as menus.
+    return LayoutBuilder(
+      builder: (context, screen) {
+        final compact = screen.maxWidth < WindowSizes.phoneWidth;
+        return _layout(
+          side: compact ? tokens.spacing.s12 : tokens.spacing.s24,
+          query: query,
+          timeline: timeline,
+          value: value,
+          progress: progress,
+          toolbar: compact
+              ? _CompactToolbar(
+                  grid: _grid,
+                  timeline: timeline,
+                  now: now,
+                  query: query,
+                  status: status,
+                )
+              : _Toolbar(
+                  grid: _grid,
+                  timeline: timeline,
+                  now: now,
+                  query: query,
+                  status: status,
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _layout({
+    required double side,
+    required ChannelQuery query,
+    required GuideTimeline timeline,
+    required GuideCoverage value,
+    required EpgImportProgress? progress,
+    required Widget toolbar,
+  }) {
+    final spacing = context.tokens.spacing;
     // Built bottom-up so the grid comes first in the tree: a jump to the
     // Guide (Ctrl+7, G) focuses the first control, which should be the
     // grid. Tab still goes by position: the toolbar, then the grid.
@@ -201,12 +253,7 @@ class _GuideViewState extends ConsumerState<_GuideView> {
       children: [
         Expanded(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              spacing.s24,
-              spacing.s12,
-              spacing.s24,
-              spacing.s16,
-            ),
+            padding: EdgeInsets.fromLTRB(side, spacing.s12, side, spacing.s16),
             child: GuideGrid(
               query: query,
               timeline: timeline,
@@ -220,12 +267,7 @@ class _GuideViewState extends ConsumerState<_GuideView> {
         ),
         if (_error case final error?)
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              spacing.s24,
-              spacing.s12,
-              spacing.s24,
-              0,
-            ),
+            padding: EdgeInsets.fromLTRB(side, spacing.s12, side, 0),
             child: AppBanner(
               message: error,
               tone: BannerTone.error,
@@ -233,30 +275,8 @@ class _GuideViewState extends ConsumerState<_GuideView> {
             ),
           ),
         Padding(
-          padding: EdgeInsets.fromLTRB(
-            spacing.s24,
-            spacing.s16,
-            spacing.s24,
-            0,
-          ),
-          child: _Toolbar(
-            grid: _grid,
-            timeline: timeline,
-            now: now,
-            query: query,
-            status: value.isImporting
-                ? _Status(line: importProgressLine(progress))
-                : failed
-                ? _Status(
-                    line: guideStaleLine(
-                      value,
-                      now,
-                      offline: ref.watch(appOfflineProvider).value ?? false,
-                    ),
-                    warning: true,
-                  )
-                : null,
-          ),
+          padding: EdgeInsets.fromLTRB(side, spacing.s16, side, 0),
+          child: toolbar,
         ),
       ],
     );
@@ -417,14 +437,16 @@ class _Toolbar extends ConsumerWidget {
 /// The bell, with how many reminders are set: it opens their list
 /// (Phase 9 decision 13). Drawn as the toolbar's other buttons are.
 class _RemindersButton extends ConsumerWidget {
-  const new();
+  const new({this.size = AppButtonSize.s});
+
+  /// A phone's is a touch's size (ADR-068).
+  final AppButtonSize size;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final colors = tokens.colors;
     final count = ref.watch(remindersProvider).value?.length ?? 0;
-    const size = AppButtonSize.s;
     return AppTooltip(
       message: 'Reminders',
       child: FocusableSurface(
@@ -504,9 +526,12 @@ class _Status extends StatelessWidget {
 
 /// Which channels the grid lists: all, favorites, a category.
 class _CategoryFilter extends ConsumerWidget {
-  const new({required this.query});
+  const new({required this.query, this.compact = false});
 
   final ChannelQuery query;
+
+  /// A phone's: the choice ellipsized in a touch-sized button.
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -532,26 +557,186 @@ class _CategoryFilter extends ConsumerWidget {
       checked: query.filter == filter,
       onPressed: () => notifier.showFilter(filter),
     );
+    void open(BuildContext anchor) => unawaited(
+      showAppMenu(
+        anchor,
+        width: 260,
+        items: [
+          item('All channels', const AllChannels()),
+          item('Favorites', const FavoriteChannels()),
+          if (categories.isNotEmpty) const AppMenuItem.separator(),
+          for (final category in categories)
+            item(category.name, CategoryChannels(category.id)),
+          if ((list?.uncategorized ?? 0) > 0)
+            item('Uncategorized', const UncategorizedChannels()),
+        ],
+      ),
+    );
     return Builder(
-      builder: (anchor) => AppButton(
-        label: label,
-        trailingIcon: AppIcons.chevronDown,
-        variant: AppButtonVariant.secondary,
-        size: AppButtonSize.s,
-        onPressed: () => unawaited(
-          showAppMenu(
-            anchor,
-            width: 260,
-            items: [
-              item('All channels', const AllChannels()),
-              item('Favorites', const FavoriteChannels()),
-              if (categories.isNotEmpty) const AppMenuItem.separator(),
-              for (final category in categories)
-                item(category.name, CategoryChannels(category.id)),
-              if ((list?.uncategorized ?? 0) > 0)
-                item('Uncategorized', const UncategorizedChannels()),
+      builder: (anchor) => compact
+          ? _MenuButton(
+              label: label,
+              semanticLabel: 'Channels: $label',
+              onPressed: () => open(anchor),
+            )
+          : AppButton(
+              label: label,
+              trailingIcon: AppIcons.chevronDown,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.s,
+              onPressed: () => open(anchor),
+            ),
+    );
+  }
+}
+
+/// A phone's toolbar (ADR-068): the day as a menu, Now, the reminders'
+/// bell and the channels' filter as a menu, a touch's size each; under
+/// them the running import or a refresh that failed.
+class _CompactToolbar extends StatelessWidget {
+  const new({
+    required this.grid,
+    required this.timeline,
+    required this.now,
+    required this.query,
+    this.status,
+  });
+
+  final GuideGridController grid;
+  final GuideTimeline timeline;
+  final DateTime now;
+  final ChannelQuery query;
+  final Widget? status;
+
+  String _dayLabel(DateTime day) => switch (day) {
+    _ when day == startOfDay(now) => 'Today',
+    _ when day == nextDay(startOfDay(now)) => 'Tomorrow',
+    _ => formatDayPill(day),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.tokens.spacing;
+    final days = timeline.days(now);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, bar) => Row(
+            children: [
+              // The day is short ("Today", "Thu 17"): at most a third of
+              // the bar, the channels' filter takes what is left.
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: bar.maxWidth / 3),
+                child: ListenableBuilder(
+                  listenable: grid,
+                  builder: (context, _) {
+                    final shown = grid.day ?? startOfDay(now);
+                    return Builder(
+                      builder: (anchor) => _MenuButton(
+                        label: _dayLabel(shown),
+                        semanticLabel: 'Day: ${_dayLabel(shown)}',
+                        onPressed: () => unawaited(
+                          showAppMenu(
+                            anchor,
+                            width: 200,
+                            items: [
+                              for (final day in days)
+                                AppMenuItem(
+                                  label: _dayLabel(day),
+                                  checked: day == shown,
+                                  onPressed: () => grid.showDay(day),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: spacing.s8),
+              AppButton(
+                label: 'Now',
+                variant: AppButtonVariant.secondary,
+                onPressed: grid.jumpToNow,
+              ),
+              SizedBox(width: spacing.s8),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const _RemindersButton(size: AppButtonSize.m),
+                    SizedBox(width: spacing.s8),
+                    Flexible(
+                      child: _CategoryFilter(query: query, compact: true),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
+        ),
+        if (status case final status?) ...[
+          SizedBox(height: spacing.s8),
+          status,
+        ],
+      ],
+    );
+  }
+}
+
+/// A phone's menu button: its choice, ellipsized when long, and a
+/// chevron; a touch's height (ADR-068).
+class _MenuButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.semanticLabel,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String semanticLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    const size = AppButtonSize.m;
+    return FocusableSurface(
+      onPressed: onPressed,
+      background: colors.surface2,
+      hoverBackground: colors.surface3,
+      borderRadius: tokens.radii.controlAll,
+      semanticLabel: semanticLabel,
+      builder: (context, states) => Container(
+        height: context.scaled(size.height),
+        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.s12),
+        decoration: BoxDecoration(
+          borderRadius: tokens.radii.controlAll,
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.buttonSmall.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            SizedBox(width: size.gap),
+            AppIcon(
+              AppIcons.chevronDown,
+              size: 16,
+              color: colors.textSecondary,
+            ),
+          ],
         ),
       ),
     );

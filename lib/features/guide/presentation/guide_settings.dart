@@ -24,6 +24,7 @@ import 'package:iptv_player/features/onboarding/presentation/onboarding_state.da
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 import 'package:iptv_player/features/reminders/presentation/reminders_dialog.dart';
+import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 import 'package:iptv_player/features/sources/data/source_providers.dart';
@@ -553,7 +554,10 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
         // Tall enough: the settings on top, the list takes the rest. A
         // short window scrolls the whole page with the list at a fixed
         // height instead.
-        if (constraints.maxHeight >= _fixedLayoutFrom) {
+        // A phone's rows stack, each two or three lines high: its page
+        // always scrolls (ADR-068).
+        if (!SettingsOnePane.of(context) &&
+            constraints.maxHeight >= _fixedLayoutFrom) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -566,16 +570,25 @@ class _GuideBodyState extends ConsumerState<_GuideBody> {
             ],
           );
         }
-        return ListView(
-          children: [
-            ...rows,
-            SizedBox(height: tokens.spacing.s16),
-            ...channels,
-            SizedBox(height: 320, child: list),
-            SizedBox(height: tokens.spacing.s12),
-            footer,
-          ],
-        );
+        final page = [
+          ...rows,
+          SizedBox(height: tokens.spacing.s16),
+          ...channels,
+          SizedBox(height: 320, child: list),
+          SizedBox(height: tokens.spacing.s12),
+          footer,
+        ];
+        // A phone's page is a few rows and the list: all built, so the
+        // keyboard's ↑/↓ always find the row they go to.
+        if (SettingsOnePane.of(context)) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: page,
+            ),
+          );
+        }
+        return ListView(children: page);
       },
     );
   }
@@ -872,6 +885,15 @@ class _Setting extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    // A phone (ADR-068): the control under the words.
+    if (SettingsOnePane.of(context)) {
+      return StackedSetting(
+        title: title,
+        description: description,
+        control: control,
+        padding: tokens.spacing.s12 + 2,
+      );
+    }
     return Container(
       padding: EdgeInsets.symmetric(vertical: tokens.spacing.s12 + 2),
       decoration: BoxDecoration(
@@ -1068,7 +1090,8 @@ class _ChannelsToolbar extends StatelessWidget {
         SearchField(
           hint: 'Filter channels',
           shortcut: null,
-          width: 240,
+          // Across the row on a phone (ADR-068).
+          width: SettingsOnePane.of(context) ? null : 240,
           onChanged: onQuery,
         ),
       ],

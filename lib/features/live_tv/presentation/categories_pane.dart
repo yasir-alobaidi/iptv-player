@@ -28,6 +28,9 @@ class CategoriesPane extends ConsumerWidget {
     required this.controller,
     this.onEnterList,
     this.onChosen,
+    this.framed = true,
+    this.nameFilter = '',
+    this.onLeaving,
     super.key,
   });
 
@@ -38,6 +41,18 @@ class CategoriesPane extends ConsumerWidget {
 
   /// A category was chosen: the list takes the focus once it has loaded.
   final VoidCallback? onChosen;
+
+  /// False in a phone's sheet (ADR-068), which has its own surface and
+  /// title: the list without the pane's card and its CATEGORIES heading.
+  final bool framed;
+
+  /// Only the entries whose name has this in it, whatever the case (a
+  /// phone's sheet, where 146 categories are a long way to scroll).
+  final String nameFilter;
+
+  /// Manage is about to open Settings: a sheet the pane is in closes
+  /// first.
+  final VoidCallback? onLeaving;
 
   static const width = 248.0;
 
@@ -166,17 +181,14 @@ class CategoriesPane extends ConsumerWidget {
     ];
     final hidden = categories.length - visible.length;
     final uncategorized = list.value?.uncategorized ?? 0;
+    final wanted = nameFilter.trim().toLowerCase();
+    bool shows(String label) =>
+        wanted.isEmpty || label.toLowerCase().contains(wanted);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface1,
-        borderRadius: tokens.radii.lgAll,
-        border: Border.all(color: colors.borderSubtle),
-      ),
-      padding: EdgeInsets.all(tokens.spacing.s12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final column = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (framed)
           Padding(
             padding: EdgeInsets.fromLTRB(
               tokens.spacing.s8 + 2,
@@ -189,24 +201,25 @@ class CategoriesPane extends ConsumerWidget {
               style: tokens.text.overline.copyWith(color: colors.textTertiary),
             ),
           ),
-          Expanded(
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.arrowRight):
-                    ?onEnterList,
-              },
-              child: FocusPane(
-                debugLabel: 'live-categories',
-                controller: controller,
-                tabStop: true,
-                child: list.hasError
-                    ? const EmptyState(
-                        compact: true,
-                        icon: AppIcons.alertCircle,
-                        title: "Couldn't load the categories",
-                      )
-                    : ListView(
-                        children: [
+        Expanded(
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.arrowRight):
+                  ?onEnterList,
+            },
+            child: FocusPane(
+              debugLabel: 'live-categories',
+              controller: controller,
+              tabStop: true,
+              child: list.hasError
+                  ? const EmptyState(
+                      compact: true,
+                      icon: AppIcons.alertCircle,
+                      title: "Couldn't load the categories",
+                    )
+                  : ListView(
+                      children: [
+                        if (shows('Favorites'))
                           _CategoryItem(
                             label: 'Favorites',
                             icon: AppIcons.star,
@@ -214,9 +227,10 @@ class CategoriesPane extends ConsumerWidget {
                             selected: current is FavoriteChannels,
                             onPressed: () => show(const FavoriteChannels()),
                           ),
-                          // Each group is a list of its own to zap
-                          // through, in the user's order (decision 7).
-                          for (final group in groups)
+                        // Each group is a list of its own to zap
+                        // through, in the user's order (decision 7).
+                        for (final group in groups)
+                          if (shows(group.name))
                             _CategoryItem(
                               label: group.name,
                               count: group.count,
@@ -227,12 +241,14 @@ class CategoriesPane extends ConsumerWidget {
                               onPressed: () =>
                                   show(FavoriteGroupChannels(group.id)),
                             ),
+                        if (shows('All channels'))
                           _CategoryItem(
                             label: 'All channels',
                             count: all,
                             selected: current is AllChannels,
                             onPressed: () => show(const AllChannels()),
                           ),
+                        if (wanted.isEmpty)
                           Padding(
                             padding: EdgeInsets.symmetric(
                               vertical: tokens.spacing.s8,
@@ -240,13 +256,14 @@ class CategoriesPane extends ConsumerWidget {
                             ),
                             child: Divider(height: 1, color: colors.surface3),
                           ),
-                          if (list.isLoading && !list.hasValue)
-                            for (var i = 0; i < 6; i++)
-                              Padding(
-                                padding: EdgeInsets.all(tokens.spacing.s8),
-                                child: const Skeleton(height: 20),
-                              ),
-                          for (final (i, category) in visible.indexed)
+                        if (list.isLoading && !list.hasValue)
+                          for (var i = 0; i < 6; i++)
+                            Padding(
+                              padding: EdgeInsets.all(tokens.spacing.s8),
+                              child: const Skeleton(height: 20),
+                            ),
+                        for (final (i, category) in visible.indexed)
+                          if (shows(category.name))
                             _CategoryItem(
                               // Keyed, so the focus moves with a moved one.
                               key: ValueKey('category-${category.id}'),
@@ -263,74 +280,84 @@ class CategoriesPane extends ConsumerWidget {
                                 categoryMenu(anchor, categories, visible, i),
                               ),
                             ),
-                          if (uncategorized > 0)
-                            _CategoryItem(
-                              label: 'Uncategorized',
-                              count: uncategorized,
-                              selected: current is UncategorizedChannels,
-                              onPressed: () =>
-                                  show(const UncategorizedChannels()),
-                            ),
-                        ],
-                      ),
-              ),
+                        if (uncategorized > 0 && shows('Uncategorized'))
+                          _CategoryItem(
+                            label: 'Uncategorized',
+                            count: uncategorized,
+                            selected: current is UncategorizedChannels,
+                            onPressed: () =>
+                                show(const UncategorizedChannels()),
+                          ),
+                      ],
+                    ),
             ),
           ),
-          if (hidden > 0 || hiddenChannels > 0)
-            Container(
-              padding: EdgeInsets.fromLTRB(
-                tokens.spacing.s8 + 2,
-                tokens.spacing.s4,
-                tokens.spacing.s4,
-                0,
-              ),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: colors.surface3)),
-              ),
-              // Side by side where the pane has room; in a narrow pane
-              // or at a larger text size Manage goes under the note,
-              // which would otherwise break in the middle of a word.
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4),
-                    child: Text(
-                      hiddenLine(categories: hidden, channels: hiddenChannels),
-                      style: tokens.text.labelSmall.copyWith(
-                        color: colors.textTertiary,
-                      ),
+        ),
+        if (hidden > 0 || hiddenChannels > 0)
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              tokens.spacing.s8 + 2,
+              tokens.spacing.s4,
+              tokens.spacing.s4,
+              0,
+            ),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.surface3)),
+            ),
+            // Side by side where the pane has room; in a narrow pane
+            // or at a larger text size Manage goes under the note,
+            // which would otherwise break in the middle of a word.
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: tokens.spacing.s4),
+                  child: Text(
+                    hiddenLine(categories: hidden, channels: hiddenChannels),
+                    style: tokens.text.labelSmall.copyWith(
+                      color: colors.textTertiary,
                     ),
                   ),
-                  AppButton(
-                    label: 'Manage',
-                    variant: AppButtonVariant.ghost,
-                    size: AppButtonSize.s,
-                    onPressed: () {
-                      final location = ref.read(
-                        settingsLocationProvider.notifier,
+                ),
+                AppButton(
+                  label: 'Manage',
+                  variant: AppButtonVariant.ghost,
+                  size: AppButtonSize.s,
+                  onPressed: () {
+                    onLeaving?.call();
+                    final location = ref.read(
+                      settingsLocationProvider.notifier,
+                    );
+                    // Only channels hidden: straight to where they
+                    // come back.
+                    if (hidden == 0) {
+                      openHiddenChannels(
+                        GoRouter.of(context),
+                        location,
+                        ref.read(hiddenChannelsRequestProvider.notifier),
+                        sourceId: sourceId,
                       );
-                      // Only channels hidden: straight to where they
-                      // come back.
-                      if (hidden == 0) {
-                        openHiddenChannels(
-                          GoRouter.of(context),
-                          location,
-                          ref.read(hiddenChannelsRequestProvider.notifier),
-                          sourceId: sourceId,
-                        );
-                        return;
-                      }
-                      location.showCategories(sourceId);
-                      context.go(AppDestination.settings.path);
-                    },
-                  ),
-                ],
-              ),
+                      return;
+                    }
+                    location.showCategories(sourceId);
+                    context.go(AppDestination.settings.path);
+                  },
+                ),
+              ],
             ),
-        ],
+          ),
+      ],
+    );
+    if (!framed) return column;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface1,
+        borderRadius: tokens.radii.lgAll,
+        border: Border.all(color: colors.borderSubtle),
       ),
+      padding: EdgeInsets.all(tokens.spacing.s12),
+      child: column,
     );
   }
 }

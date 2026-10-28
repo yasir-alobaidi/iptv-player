@@ -125,35 +125,43 @@ void main() {
     // window still holds the list, its hints and Close. Opened by its
     // second door: the Guide's own rows don't grow with the text until
     // the audit (step 7).
-    sceneTest('the list at 130 % in the smallest window, from Settings → '
-        'Guide', (tester) async {
-      await open(
-        tester,
-        size: const Size(1024, 640),
-        look: const AppearanceSettings(textSize: TextSizeChoice.s130),
-        inSettings: true,
-      );
-      expect(tester.takeException(), isNull, reason: 'Settings → Guide');
-      // The page scrolls as a whole in this window, and its list builds
-      // only what is near the screen: the row is scrolled to.
-      await tester.scrollUntilVisible(
-        find.widgetWithText(AppButton, 'Manage'),
-        100,
-        scrollable: find
-            .descendant(
-              of: find.byType(GuideSettingsSection),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await _settle(tester);
-      await tester.tap(find.widgetWithText(AppButton, 'Manage'));
-      await _settle(tester);
-      await settleApp(tester);
+    //
+    // A phone's Settings is its own layout, drawn in its own scenes
+    // (ADR-068): this is the desktop's door to the list. The list itself
+    // is drawn on a phone by the Guide's bell, above.
+    sceneTest(
+      'the list at 130 % in the smallest window, from Settings → '
+      'Guide',
+      phone: false,
+      (tester) async {
+        await open(
+          tester,
+          size: const Size(1024, 640),
+          look: const AppearanceSettings(textSize: TextSizeChoice.s130),
+          inSettings: true,
+        );
+        expect(tester.takeException(), isNull, reason: 'Settings → Guide');
+        // The page scrolls as a whole in this window, and its list builds
+        // only what is near the screen: the row is scrolled to.
+        await tester.scrollUntilVisible(
+          find.widgetWithText(AppButton, 'Manage'),
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(GuideSettingsSection),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await _settle(tester);
+        await tester.tap(find.widgetWithText(AppButton, 'Manage'));
+        await _settle(tester);
+        await settleApp(tester);
 
-      expect(tester.takeException(), isNull);
-      await golden(tester, 'images/reminders_list_130_1024x640.png');
-    });
+        expect(tester.takeException(), isNull);
+        await golden(tester, 'images/reminders_list_130_1024x640.png');
+      },
+    );
   }, skip: goldenSkipReason);
 }
 

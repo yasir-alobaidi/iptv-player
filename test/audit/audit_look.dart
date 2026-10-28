@@ -93,21 +93,20 @@ const auditLooks = [
   ),
 ];
 
-/// The looks this run draws: with `AUDIT_LOOKS=phone` only the phone's
-/// and tablet's, `AUDIT_LOOKS=all` every one of [auditLooks], otherwise
-/// the desktop's. The phone's join the default once every screen has its
-/// phone layout (ADR-068, in progress).
+/// The looks this run draws: every one of [auditLooks]; with
+/// `AUDIT_LOOKS=phone` only the phone's and tablet's, `AUDIT_LOOKS=desktop`
+/// only the rest (a sweep of one kind).
 List<AuditLook> get auditLooksToRun =>
     switch (Platform.environment['AUDIT_LOOKS']) {
       'phone' => [
         for (final look in auditLooks)
           if (look.formFactor == FormFactor.mobile) look,
       ],
-      'all' => auditLooks,
-      _ => [
+      'desktop' => [
         for (final look in auditLooks)
           if (look.formFactor != FormFactor.mobile) look,
       ],
+      _ => auditLooks,
     };
 
 /// The look the audit is drawing in right now; null in every other test.

@@ -1,12 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:iptv_player/design/text_scale.dart';
+import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
+
+/// Whether Settings shows one pane at a time (a phone's width, ADR-068):
+/// a section's rows then put their control under their words, and its
+/// segmented controls fill the width at a touch target's height.
+class SettingsOnePane extends InheritedWidget {
+  const new({required this.onePane, required super.child, super.key});
+
+  final bool onePane;
+
+  /// False outside Settings' one pane: the desktop's and the TV's rows.
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SettingsOnePane>()?.onePane ??
+      false;
+
+  @override
+  bool updateShouldNotify(SettingsOnePane oldWidget) =>
+      oldWidget.onePane != onePane;
+}
 
 /// One setting: its name and what it does on the left, the control on
 /// the right (Settings → Playback's layout). Where the two no longer fit
 /// side by side, at larger text or in a narrow window, the control goes
-/// under the words; it never clips (Phase 9 decision 3).
+/// under the words; it never clips (Phase 9 decision 3). In Settings' one
+/// pane (a phone) the control is always under them ([StackedSetting]).
 class SettingRow extends StatelessWidget {
   const new({
     required this.title,
@@ -27,6 +46,16 @@ class SettingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
+    if (SettingsOnePane.of(context)) {
+      return StackedSetting(
+        title: title,
+        description: Text(
+          description,
+          style: tokens.text.caption.copyWith(color: colors.textTertiary),
+        ),
+        control: control,
+      );
+    }
     final words = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -52,6 +81,55 @@ class SettingRow extends StatelessWidget {
         stackedGap: tokens.spacing.s12,
         first: words,
         second: control,
+      ),
+    );
+  }
+}
+
+/// A setting on a phone's width (Settings' one pane, ADR-068): its title
+/// and what it does, then its control under them, at the left and never
+/// wider than the row; a segmented control fills the row
+/// ([SegmentedFill]), its options all in sight.
+class StackedSetting extends StatelessWidget {
+  const new({
+    required this.title,
+    required this.description,
+    required this.control,
+    this.padding,
+    super.key,
+  });
+
+  final String title;
+  final Widget description;
+  final Widget control;
+
+  /// Above and below the row; 16 px unless given.
+  final double? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final colors = tokens.colors;
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: padding ?? tokens.spacing.s16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.surface3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: tokens.text.label.copyWith(color: colors.textPrimary),
+          ),
+          SizedBox(height: tokens.spacing.s4),
+          description,
+          SizedBox(height: tokens.spacing.s12),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SegmentedFill(child: control),
+          ),
+        ],
       ),
     );
   }

@@ -34,6 +34,7 @@ import 'package:iptv_player/features/sources/domain/sync.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
 import 'package:iptv_player/features/sources/presentation/sync_wait.dart';
 import 'package:iptv_player/features/vod/domain/titles.dart';
+import 'package:iptv_player/features/vod/presentation/compact_layout.dart';
 
 /// The Ctrl+K / `/` search overlay (canvas `Search`, Phase 6 step 4): a
 /// scrim over the shell and a 760 px panel — the query, the results in
@@ -81,6 +82,21 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   /// How many rows a page is, from the body's height.
   var _pageRows = 8;
+
+  /// The whole screen, a phone's (ADR-068): a recent search has its ×.
+  var _full = false;
+
+  /// A phone has no Library (ADR-068): its group, and its hits in the
+  /// count, are left out.
+  bool get _noLibrary => ref.watch(formFactorProvider) == FormFactor.mobile;
+
+  /// How many results show; null for none.
+  int? _shownCount(SearchResults? results) {
+    if (results == null) return null;
+    final count =
+        results.count - (_noLibrary ? results.library.hits.length : 0);
+    return count == 0 ? null : count;
+  }
 
   /// A TV types with the remote's keyboard (docs/07): it opens with the
   /// overlay, and again from the field.
@@ -638,6 +654,19 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         explicitChildNodes: true,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // A phone's search is the whole screen (ADR-068).
+            _full = !_onTv && CompactLayout.fits(constraints.biggest);
+            if (_full) {
+              return _fullScreen(
+                context,
+                view: view,
+                results: results,
+                source: source,
+                firstSync: firstSync,
+                staged: staged,
+                loading: loading,
+              );
+            }
             // The bars and the rows hold text, and grow with it.
             final bars =
                 context.scaled(search.queryBarHeight) +
@@ -701,9 +730,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                                   child: _QueryBar(
                                     controller: _query,
                                     focusNode: _field,
-                                    count: results == null || results.isEmpty
-                                        ? null
-                                        : results.count,
+                                    count: _shownCount(results),
                                     onChanged: _session.setText,
                                     onSubmitted: _submit,
                                     onActivated: _onFieldActivated,
@@ -751,6 +778,71 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     return _onTv
         ? BackButtonListener(onBackButtonPressed: _onBack, child: overlay)
         : overlay;
+  }
+
+  /// A phone's search, upright or on its side (ADR-068): the whole
+  /// screen, clear of the system's bars — ‹ and the field at the top, the
+  /// system's keyboard under it, the results in one column. No legend of
+  /// keys: a finger taps a row, and holds it for its menu.
+  Widget _fullScreen(
+    BuildContext context, {
+    required SearchView view,
+    required SearchResults? results,
+    required Object? source,
+    required SyncProgress? firstSync,
+    required bool staged,
+    required bool loading,
+  }) {
+    final colors = context.tokens.colors;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rowHeight = searchRowHeight(context);
+        _pageRows = math.max(
+          1,
+          (constraints.maxHeight / rowHeight).floor() - 2,
+        );
+        final body = _body(
+          context,
+          view,
+          results,
+          source,
+          firstSync: firstSync,
+        );
+        return ColoredBox(
+          color: colors.surface1,
+          child: SafeArea(
+            child: FocusPane(
+              debugLabel: 'search-overlay',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
+                    onKeyEvent: _onKey,
+                    child: _QueryBar(
+                      controller: _query,
+                      focusNode: _field,
+                      count: _shownCount(results),
+                      onChanged: _session.setText,
+                      onSubmitted: _submit,
+                      onActivated: _onFieldActivated,
+                      onBack: widget.onClose,
+                    ),
+                  ),
+                  if (firstSync != null && !staged) const _StillArriving(),
+                  Expanded(
+                    child: body is ListView
+                        ? body
+                        : SingleChildScrollView(child: body),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// The remote's keyboard, down the left side (ADR-026's addendum): it
@@ -903,7 +995,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
         ),
       );
     }
-    if (results.isEmpty) {
+    if (_shownCount(results) == null) {
       _entries = const [];
       return _NoResults(
         text: results.text,
@@ -916,7 +1008,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
       ..._group(SearchGroupKind.programmes, results.programmes),
       ..._group(SearchGroupKind.movies, results.movies),
       ..._group(SearchGroupKind.series, results.series),
-      ..._group(SearchGroupKind.library, results.library),
+      if (!_noLibrary) ..._group(SearchGroupKind.library, results.library),
     ];
     return _list(context, padding);
   }
@@ -976,7 +1068,13 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
               return _EntryRow(
                 key: atCursor ? _cursorRow : null,
                 entry: entry,
-                selected: atCursor && shown,
+                // Under a finger the rows rest: a tap opens one (ADR-068).
+                selected:
+                    atCursor &&
+                    shown &&
+                    !(_full &&
+                        FocusManager.instance.highlightMode ==
+                            FocusHighlightMode.touch),
                 words: words,
                 now: now,
                 sources: sources,
@@ -989,6 +1087,20 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                 onOpen: () {
                   setState(() => _cursor = at);
                   unawaited(_open(entry));
+                },
+                // A touch's menu: the row held (ADR-068).
+                onMenu: switch (entry) {
+                  _HitEntry(:final hit) => (anchor) {
+                    setState(() => _cursor = at);
+                    unawaited(_showMenu(anchor, hit));
+                  },
+                  _ => null,
+                },
+                onRemove: switch (entry) {
+                  _RecentEntry(:final text) when _full => () => unawaited(
+                    _session.forget(text),
+                  ),
+                  _ => null,
                 },
               );
             }(),
@@ -1085,6 +1197,7 @@ class _QueryBar extends StatelessWidget {
     required this.onChanged,
     required this.onSubmitted,
     required this.onActivated,
+    this.onBack,
   });
 
   final TextEditingController controller;
@@ -1096,6 +1209,10 @@ class _QueryBar extends StatelessWidget {
   /// OK on the field, on a TV.
   final VoidCallback onActivated;
 
+  /// A phone's ‹ in place of the magnifier: it closes search, as Back
+  /// does (ADR-068).
+  final VoidCallback? onBack;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -1105,7 +1222,7 @@ class _QueryBar extends StatelessWidget {
     return Container(
       height: context.scaled(search.queryBarHeight),
       padding: EdgeInsets.only(
-        left: tokens.spacing.s20,
+        left: onBack == null ? tokens.spacing.s20 : tokens.spacing.s4,
         right: tokens.spacing.s16,
       ),
       decoration: BoxDecoration(
@@ -1113,12 +1230,26 @@ class _QueryBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppIcon(
-            AppIcons.search,
-            size: search.queryIconSize,
-            color: colors.textSecondary,
+          // A finger's: the keys stay in the field, and Esc closes.
+          if (onBack case final back?)
+            ExcludeFocus(
+              child: AppIconButton(
+                icon: AppIcons.chevronLeft,
+                tooltip: 'Close search',
+                size: CompactLayout.touchTarget,
+                iconSize: search.queryIconSize,
+                onPressed: back,
+              ),
+            )
+          else
+            AppIcon(
+              AppIcons.search,
+              size: search.queryIconSize,
+              color: colors.textSecondary,
+            ),
+          SizedBox(
+            width: onBack == null ? tokens.spacing.s12 : tokens.spacing.s4,
           ),
-          SizedBox(width: tokens.spacing.s12),
           Expanded(
             child: RemoteTextEntry(
               onOpen: onActivated,
@@ -1259,8 +1390,16 @@ class _EntryRow extends StatefulWidget {
     required this.guide,
     required this.sameName,
     required this.onOpen,
+    this.onMenu,
+    this.onRemove,
     super.key,
   });
+
+  /// The row's menu, from a long press.
+  final void Function(BuildContext anchor)? onMenu;
+
+  /// A recent search's ×, on a phone: it forgets it (Delete's).
+  final VoidCallback? onRemove;
 
   final _Entry entry;
   final bool selected;
@@ -1292,6 +1431,9 @@ class _EntryRowState extends State<_EntryRow> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onOpen,
+        onLongPress: widget.onMenu == null
+            ? null
+            : () => widget.onMenu!(context),
         child: Semantics(
           button: true,
           selected: selected,
@@ -1529,6 +1671,17 @@ class _EntryRowState extends State<_EntryRow> {
             style: tokens.text.label.copyWith(color: colors.textEmphasis),
           ),
         ),
+        // A finger's: the keyboard has Delete.
+        if (widget.onRemove case final remove?)
+          ExcludeFocus(
+            child: AppIconButton(
+              icon: AppIcons.close,
+              tooltip: 'Remove "$text"',
+              size: CompactLayout.touchTarget,
+              iconSize: 16,
+              onPressed: remove,
+            ),
+          ),
         ..._enterKey(context),
       ],
     );

@@ -258,6 +258,7 @@ class HomeRow extends StatefulWidget {
     required this.gap,
     required this.card,
     required this.inset,
+    this.edge,
     this.onSeeAll,
     super.key,
   });
@@ -282,6 +283,11 @@ class HomeRow extends StatefulWidget {
 
   /// Room round the cards for a focused card's growth and ring: [insetFor].
   final double inset;
+
+  /// The room before the first card and after the last, and before the
+  /// title: a phone's row runs to the screen's edges, its first card at
+  /// the page's margin (ADR-068). Null: [inset].
+  final double? edge;
 
   /// The room a focused card [longest] px at its longest side needs round
   /// it, so the row's edge never cuts its ring (ADR-029); 8 px at least.
@@ -342,6 +348,7 @@ class _HomeRowState extends State<HomeRow> {
   @override
   Widget build(BuildContext context) {
     final inset = widget.inset;
+    final edge = widget.edge ?? inset;
     final onSeeAll = widget.onSeeAll;
     final seeAllCard = TvMode.of(context) && onSeeAll != null;
     final items = _keys.length;
@@ -356,7 +363,7 @@ class _HomeRowState extends State<HomeRow> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: inset),
+            padding: EdgeInsets.symmetric(horizontal: edge),
             child: SectionHeader(
               title: widget.title,
               onSeeAll: widget.onSeeAll,
@@ -369,7 +376,7 @@ class _HomeRowState extends State<HomeRow> {
               controller: widget.controller.scroll,
               height: widget.cardHeight + inset * 2,
               spacing: widget.gap,
-              padding: EdgeInsets.all(inset),
+              padding: EdgeInsets.fromLTRB(edge, inset, edge, inset),
               itemCount: count,
               findItemIndexCallback: (key) => switch (key) {
                 ValueKey<Object>(value: _seeAll) => seeAllCard ? items : null,
