@@ -5,6 +5,32 @@ part 'cast_device.freezed.dart';
 /// The port a Cast device listens on (Cast v2 over TLS).
 const castPort = 8009;
 
+/// How a device is cast to (ADR-067).
+enum CastProtocol {
+  /// Google Cast: Chromecasts, Google TVs, TVs with Chromecast built in
+  /// (docs/04).
+  googleCast,
+
+  /// AirPlay: Apple TVs, and the Samsung, LG, Sony, Vizio, Hisense and
+  /// Roku TVs that receive AirPlay 2.
+  airPlay,
+}
+
+/// What an AirPlay device's id starts with: `airplay:` and its own
+/// `deviceid` (`airplay:D1:3C:2C:48:B5:B5`). The id says the protocol, so
+/// a device kept in `cast_devices` needs no column for it.
+const airPlayIdPrefix = 'airplay:';
+
+/// The protocol of the device whose id is [id].
+CastProtocol castProtocolOf(String id) => id.startsWith(airPlayIdPrefix)
+    ? CastProtocol.airPlay
+    : CastProtocol.googleCast;
+
+/// The protocol a device speaks, from its id.
+extension CastDeviceProtocol on CastDevice {
+  CastProtocol get protocol => castProtocolOf(id);
+}
+
 /// A Cast device with a screen that can be cast to now: found on the
 /// network, or added by the user by its address.
 @freezed

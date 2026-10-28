@@ -1004,6 +1004,91 @@ void main() {
     });
   });
 
+  group('AirPlay plays HLS with H.264 and AAC (ADR-067)', () {
+    const airPlay = CastDeviceProfile(
+      model: 'G204X',
+      protocol: CastProtocol.airPlay,
+    );
+    const hevcHd = VideoFacts(
+      codec: 'hevc',
+      profile: 'Main',
+      width: 1920,
+      height: 1080,
+      fps: 25,
+      interlaced: false,
+      bitDepth: 8,
+    );
+
+    test('a live MPEG-TS channel: copied into HLS through the relay', () {
+      final p = plan(facts(), device: airPlay);
+      expect(p.delivery, CastDelivery.relayHls);
+      expect(p.video, isA<CastVideoCopy>());
+    });
+
+    test("a provider's own HLS with H.264 and AAC: direct", () {
+      expect(
+        plan(facts(), source: liveHls, device: airPlay).delivery,
+        CastDelivery.directHls,
+      );
+    });
+
+    test('HEVC is re-encoded to H.264, into HLS, never one continuous '
+        'stream; whatever the HEVC setting says', () {
+      for (final device in [
+        airPlay,
+        const CastDeviceProfile(
+          protocol: CastProtocol.airPlay,
+          hevc: HevcSupport.yes,
+        ),
+      ]) {
+        final p = plan(facts(video: hevcHd), device: device);
+        expect(p.delivery, CastDelivery.relayHls);
+        expect(p.video, isA<CastVideoTranscode>());
+        expect(p.output.videoCodec, 'h264');
+      }
+    });
+
+    test('Low-latency mode is still HLS', () {
+      expect(
+        plan(
+          facts(),
+          device: airPlay,
+          settings: const CastSettings(lowLatency: true),
+        ).delivery,
+        CastDelivery.relayHls,
+      );
+    });
+
+    test('a film, even an MP4, goes through the relay as HLS', () {
+      expect(
+        plan(
+          facts(container: MediaContainer.mp4),
+          source: mp4File,
+          device: airPlay,
+        ).delivery,
+        CastDelivery.relayHls,
+      );
+    });
+
+    test('a kept device is AirPlay by its id', () {
+      expect(
+        CastDeviceProfile.fromKnown(
+          const KnownCastDevice(
+            id: '${airPlayIdPrefix}D1:3C:2C:48:B5:B5',
+            name: '58in Hisense Roku TV',
+            host: '192.168.1.162',
+            port: 7000,
+            manual: false,
+            hevc: HevcSupport.auto,
+            learned: CastLearned(),
+          ),
+        ).protocol,
+        CastProtocol.airPlay,
+      );
+      expect(tv4k.protocol, CastProtocol.googleCast);
+    });
+  });
+
   group('missing facts', () {
     test('neither a picture nor a sound: nothing to play', () {
       final result = planCast(

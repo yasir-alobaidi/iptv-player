@@ -175,6 +175,9 @@ CastPlanResult planCast(CastPlanRequest request) {
   };
 
   final CastDelivery delivery;
+  // AirPlay plays HLS and nothing else (ADR-067): a film too, through the
+  // relay unless it is HLS already.
+  final airPlay = device.protocol == CastProtocol.airPlay;
   final direct =
       !source.customUserAgent &&
       !device.learned.directRefusedSources.contains(source.sourceId) &&
@@ -191,8 +194,16 @@ CastPlanResult planCast(CastPlanRequest request) {
         (track == null || track.codec == 'aac');
     delivery = directHls
         ? CastDelivery.directHls
-        : outVideoCodec == 'hevc' || settings.lowLatency
+        : !airPlay && (outVideoCodec == 'hevc' || settings.lowLatency)
         ? CastDelivery.relayContinuous
+        : CastDelivery.relayHls;
+  } else if (airPlay) {
+    delivery =
+        direct &&
+            source.hls &&
+            outVideoCodec == 'h264' &&
+            (track == null || track.codec == 'aac')
+        ? CastDelivery.directHls
         : CastDelivery.relayHls;
   } else {
     final directFile =

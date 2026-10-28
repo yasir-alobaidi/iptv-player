@@ -12,6 +12,7 @@ final class CastDeviceProfile {
     this.model,
     this.hevc = HevcSupport.auto,
     this.learned = const CastLearned(),
+    this.protocol = CastProtocol.googleCast,
   });
 
   /// A kept device, with its setting and what it taught the app.
@@ -19,7 +20,13 @@ final class CastDeviceProfile {
     model: device.model,
     hevc: device.hevc,
     learned: device.learned,
+    protocol: castProtocolOf(device.id),
   );
+
+  /// An AirPlay receiver plays HLS with H.264 and AAC, whatever else it
+  /// says it plays (ADR-067): a Roku TV's AirPlay is a web engine's HLS
+  /// player, which takes no HEVC in MPEG-TS and no stream but HLS.
+  final CastProtocol protocol;
 
   /// TXT `md`, such as "Chromecast".
   final String? model;
@@ -34,6 +41,7 @@ final class CastDeviceProfile {
   /// Whether it plays HEVC: true, false, or null when not known, which the
   /// planner tries (a refusal teaches it).
   bool? get playsHevc => switch (hevc) {
+    _ when protocol == CastProtocol.airPlay => false,
     HevcSupport.yes => true,
     HevcSupport.no => false,
     HevcSupport.auto when learned.refusedCodecs.contains('hevc') => false,
