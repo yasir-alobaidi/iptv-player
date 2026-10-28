@@ -196,7 +196,26 @@ final class MulticastDnsCastBrowser implements CastBrowser {
 /// bonsoir: the system's own resolver (Avahi here, DNS-SD on Windows).
 /// A device goes when the resolver says it is lost.
 final class BonsoirCastBrowser implements CastBrowser {
-  new({this.log, this._create, this._lookup});
+  new({
+    this.log,
+    this._create,
+    this._lookup,
+    this.serviceType = castServiceType,
+    this.readService = readCastService,
+  });
+
+  /// `_googlecast._tcp`, or AirPlay's `_airplay._tcp` with its own
+  /// [readService] (ADR-067).
+  final String serviceType;
+
+  /// A resolved service as a device: `readCastService`, or AirPlay's.
+  final CastAddressAnswer? Function({
+    required String instance,
+    required Map<String, String> txt,
+    required Iterable<String> hosts,
+    int? port,
+  })
+  readService;
 
   final AppLog? log;
   final BonsoirDiscovery Function()? _create;
@@ -211,7 +230,8 @@ final class BonsoirCastBrowser implements CastBrowser {
   static const _tag = 'cast.bonsoir';
 
   @override
-  String get name => 'bonsoir';
+  String get name =>
+      serviceType == castServiceType ? 'bonsoir' : 'bonsoir $serviceType';
 
   @override
   Stream<List<CastDevice>> watch() {
@@ -225,7 +245,7 @@ final class BonsoirCastBrowser implements CastBrowser {
       if (out.isClosed) return;
       final devices = <String, CastDevice>{};
       for (final service in services.values) {
-        final answer = readCastService(
+        final answer = readService(
           instance: service.name,
           txt: parseTxtStrings([
             for (final MapEntry(:key, :value) in service.attributes.entries)
@@ -288,7 +308,9 @@ final class BonsoirCastBrowser implements CastBrowser {
 
     Future<void> start() async {
       try {
-        final created = (_create ?? _discovery)();
+        final created =
+            _create?.call() ??
+            BonsoirDiscovery(type: serviceType, printLogs: false);
         discovery = created;
         await created.initialize();
         if (!running) return;
@@ -348,7 +370,4 @@ final class BonsoirCastBrowser implements CastBrowser {
       return null;
     }
   }
-
-  static BonsoirDiscovery _discovery() =>
-      BonsoirDiscovery(type: castServiceType, printLogs: false);
 }

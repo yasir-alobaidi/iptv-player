@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
 import 'package:iptv_player/core/logging/app_log.dart';
@@ -96,6 +97,8 @@ final class CastV2Receivers implements CastReceivers {
   Future<CastJoinResult> join(
     CastAddress address, {
     void Function(String localAddress)? onConnected,
+    CastProtocol protocol = CastProtocol.googleCast,
+    String? deviceId,
   }) async {
     final clock = Stopwatch()..start();
     final (channel, error) = await openCastChannel(

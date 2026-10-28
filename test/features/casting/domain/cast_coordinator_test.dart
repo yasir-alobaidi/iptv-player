@@ -198,6 +198,25 @@ void main() {
       expect(rig.state.problem!.kind, CastProblemKind.receiverRefused);
     });
 
+    test('an AirPlay TV is joined as AirPlay, by its id; one that wants '
+        'pairing says so (ADR-067)', () async {
+      const roku = CastDevice(
+        id: '${airPlayIdPrefix}D1:3C:2C:48:B5:B5',
+        name: '58in Hisense Roku TV',
+        host: '192.168.1.162',
+        port: 7000,
+      );
+      rig.receivers.answer = () =>
+          const CastJoinFailed(CastJoinFailure.needsPairing);
+      await rig.coordinator.connect(roku);
+      await rig.phase(CastPhase.failed);
+      expect(rig.state.problem!.kind, CastProblemKind.needsPairing);
+      expect(rig.receivers.joinedAs.single, (
+        CastProtocol.airPlay,
+        '${airPlayIdPrefix}D1:3C:2C:48:B5:B5',
+      ));
+    });
+
     test('a play while the join fails: the relay is let go', () async {
       final launching = rig.receivers.launching = Completer<void>();
       rig.receivers.answer = () =>

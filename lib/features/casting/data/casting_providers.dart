@@ -6,6 +6,7 @@ import 'package:iptv_player/core/cast/cast_device_store.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 import 'package:iptv_player/core/cast/cast_encoders.dart';
 import 'package:iptv_player/core/cast/cast_mp4_copies.dart';
+import 'package:iptv_player/core/cast/cast_pairing.dart';
 import 'package:iptv_player/core/cast/cast_planner.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/core/cast/cast_receiver.dart';
@@ -14,6 +15,9 @@ import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/core/cast/stream_probe.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/result.dart';
+import 'package:iptv_player/data/airplay/airplay_browser.dart';
+import 'package:iptv_player/data/airplay/airplay_features.dart';
+import 'package:iptv_player/data/airplay/airplay_receivers.dart';
 import 'package:iptv_player/data/cast/cast_browsers.dart';
 import 'package:iptv_player/data/cast/cast_connection_check.dart';
 import 'package:iptv_player/data/cast/cast_v2_receivers.dart';
@@ -66,6 +70,12 @@ CastDiscovery castDiscovery(Ref ref) {
     browsers: [
       BonsoirCastBrowser(log: log),
       MulticastDnsCastBrowser(log: log),
+      // AirPlay TVs (ADR-067), through the system's resolver only.
+      BonsoirCastBrowser(
+        log: log,
+        serviceType: airPlayServiceType,
+        readService: readAirPlayService,
+      ),
     ],
     store: ref.watch(castDeviceStoreProvider),
     addressCheck: ref.watch(castAddressCheckProvider),
@@ -79,10 +89,23 @@ CastDiscovery castDiscovery(Ref ref) {
 Stream<List<CastDevice>> castDevices(Ref ref) =>
     ref.watch(castDiscoveryProvider).devices;
 
-/// Our own Cast v2 client (docs/04).
+/// Our own Cast v2 client (docs/04), and our own AirPlay client for the
+/// TVs that speak AirPlay (ADR-067).
 @Riverpod(keepAlive: true)
-CastReceivers castReceivers(Ref ref) =>
-    CastV2Receivers(log: ref.watch(appLogProvider));
+CastReceivers castReceivers(Ref ref) => ProtocolCastReceivers(
+  googleCast: CastV2Receivers(log: ref.watch(appLogProvider)),
+  airPlay: AirPlayReceivers(
+    credentials: AirPlayCredentials(ref.watch(credentialStoreProvider)),
+    log: ref.watch(appLogProvider),
+  ),
+);
+
+/// Pairing with an AirPlay TV that shows a code (ADR-067).
+@Riverpod(keepAlive: true)
+CastPairing castPairing(Ref ref) => AirPlayCastPairing(
+  credentials: AirPlayCredentials(ref.watch(credentialStoreProvider)),
+  log: ref.watch(appLogProvider),
+);
 
 /// The bundled FFmpeg and ffprobe; null when this build has none.
 @Riverpod(keepAlive: true)

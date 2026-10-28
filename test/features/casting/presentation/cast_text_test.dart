@@ -1,9 +1,38 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_subtitles.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/casting/presentation/cast_text.dart';
 
 void main() {
+  test("an AirPlay TV's line names AirPlay; a Chromecast's is as it was", () {
+    expect(
+      castModelLine(
+        const CastDevice(
+          id: '${airPlayIdPrefix}D1:3C',
+          name: 'Bedroom Roku',
+          host: '192.168.1.162',
+          port: 7000,
+          model: 'Hisense G204X',
+        ),
+        null,
+      ),
+      'Hisense G204X · AirPlay',
+    );
+    expect(
+      castModelLine(
+        const CastDevice(
+          id: 'tv1',
+          name: 'TV',
+          host: '192.168.1.155',
+          model: 'Chromecast',
+        ),
+        null,
+      ),
+      'Chromecast',
+    );
+  });
+
   group('the casting view on subtitles', () {
     const subtitles = [
       CastSubtitle(language: 'en', beside: true),

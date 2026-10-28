@@ -14,8 +14,13 @@ import 'package:iptv_player/features/playback/presentation/playback_text.dart';
 const castPortRange = '$castRelayFirstPort–$castRelayLastPort';
 
 /// The picker's model line: "Chromecast · 1080p · H.264 only", from what
-/// the device says and what it taught the app.
+/// the device says and what it taught the app; "Hisense G204X · AirPlay".
 String castModelLine(CastDevice device, KnownCastDevice? known) {
+  // AirPlay plays H.264 only, and says so by its name (ADR-067): a TV that
+  // speaks both is listed twice, once for each.
+  if (device.protocol == CastProtocol.airPlay) {
+    return [?device.model, 'AirPlay'].join(' · ');
+  }
   final learned = known?.learned;
   final hevc = known?.hevc ?? HevcSupport.auto;
   return [
@@ -109,6 +114,12 @@ String? castSubtitlesLine(CastingState state) {
   CastProblemKind.receiverRefused => (
     title: "$deviceName didn't start casting",
     message: 'It may be busy or updating. Try again in a moment.',
+  ),
+  CastProblemKind.needsPairing => (
+    title: '$deviceName wants this computer paired',
+    message:
+        'Choose it again: it shows a code on its screen, and you type it '
+        'here once.',
   ),
   CastProblemKind.computerUnreachable => (
     title: "$deviceName couldn't reach this computer",

@@ -192,13 +192,29 @@ final class AirPlayPairing {
   Future<void> cancel() => _connection.close();
 }
 
+/// What a session plays and how it goes, as the casting side sees it.
+abstract interface class AirPlayPlayback {
+  /// This computer's address on the connection.
+  String get localAddress;
+
+  /// The receiver's playback states, lower-cased; ends when the control
+  /// connection does.
+  Stream<String> get states;
+
+  Future<AirPlayResult<void>> play(String url, {double position});
+
+  Future<AirPlayResult<void>> setRate(double rate);
+
+  Future<void> close();
+}
+
 /// One AirPlay 2 session with a receiver, playing a URL (ADR-067), as
 /// pyatv's AirPlayV2 does since tvOS 26: pair-verify (or transient
 /// pairing) on the control connection, then everything sealed; SETUP with
 /// the timing port, which names the event port; the event channel; a
 /// feedback every 2 s; INFO, RECORD, a SETUP of the remote-control stream
 /// (type 130), and the play queue's commands on `/command`.
-final class AirPlaySession {
+final class AirPlaySession implements AirPlayPlayback {
   new _(this._connection, this._secret, this._timing);
 
   /// Connects to [host]:[port] and verifies: with [credentials] kept from
@@ -263,6 +279,7 @@ final class AirPlaySession {
 
   /// This computer's address on the connection: where the receiver can
   /// reach the relay.
+  @override
   String get localAddress => _connection.localAddress;
 
   /// The playback's state as the receiver names it ("loading", "playing",
@@ -270,6 +287,7 @@ final class AirPlaySession {
   String? get state => _state;
 
   /// Every change of [state].
+  @override
   Stream<String> get states => _states.stream;
 
   /// Whether the control connection broke.
@@ -277,6 +295,7 @@ final class AirPlaySession {
 
   /// Plays [url] from [position] (seconds). Done when the receiver took
   /// every command; whether it plays shows in [states].
+  @override
   Future<AirPlayResult<void>> play(String url, {double position = 0}) async {
     if (_streamId == null) {
       final ready = await _setUp();
@@ -309,10 +328,12 @@ final class AirPlaySession {
   }
 
   /// Pauses (rate 0) or plays on (rate 1).
+  @override
   Future<AirPlayResult<void>> setRate(double rate) =>
       _command({'type': 'setRate', 'rate': rate});
 
   /// Ends the session: the receiver stops what it plays for it.
+  @override
   Future<void> close() async {
     _feedback?.cancel();
     _feedback = null;

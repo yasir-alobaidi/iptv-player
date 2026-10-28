@@ -7,9 +7,11 @@ import 'package:iptv_player/core/cast/cast_readiness.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/casting/data/casting_providers.dart';
+import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/casting/presentation/add_cast_device_dialog.dart';
 import 'package:iptv_player/features/casting/presentation/cast_actions.dart';
 import 'package:iptv_player/features/casting/presentation/cast_help.dart';
+import 'package:iptv_player/features/casting/presentation/cast_pairing_dialog.dart';
 import 'package:iptv_player/features/casting/presentation/cast_text.dart';
 import 'package:iptv_player/features/casting/presentation/casting_view_state.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
@@ -75,8 +77,22 @@ class _CastPickerState extends ConsumerState<CastPicker> {
 
   void _castTo(CastDevice device) {
     final container = ProviderScope.containerOf(context, listen: false);
+    // The navigator outlives the picker: the pairing dialog opens there.
+    final navigator = Navigator.of(context);
     _close();
-    unawaited(castTo(container, device, item: widget.item, from: widget.from));
+    unawaited(() async {
+      // An AirPlay TV that shows a code is paired once, first (ADR-067);
+      // one that asked for it after a cast that tried without is too.
+      if (device.protocol == CastProtocol.airPlay &&
+          (device.needsPairing ||
+              container.read(castCoordinatorProvider).state.problem?.kind ==
+                  CastProblemKind.needsPairing) &&
+          !await container.read(castPairingProvider).isPaired(device)) {
+        if (!navigator.mounted) return;
+        if (!await showCastPairingDialog(navigator.context, device)) return;
+      }
+      await castTo(container, device, item: widget.item, from: widget.from);
+    }());
   }
 
   Future<void> _stop() async {

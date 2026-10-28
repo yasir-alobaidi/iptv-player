@@ -243,14 +243,20 @@ final class FakeReceivers implements CastReceivers {
   /// Holds a join after its connection is up (the TV launching).
   Completer<void>? launching;
   final joins = <CastAddress>[];
+
+  /// Each join's protocol and device id, in order.
+  final joinedAs = <(CastProtocol, String?)>[];
   bool joined = false;
 
   @override
   Future<CastJoinResult> join(
     CastAddress address, {
     void Function(String localAddress)? onConnected,
+    CastProtocol protocol = CastProtocol.googleCast,
+    String? deviceId,
   }) async {
     joins.add(address);
+    joinedAs.add((protocol, deviceId));
     final result = answer?.call() ?? CastJoined(tv, launched: true);
     if (result is CastJoined) onConnected?.call(tv.localAddress);
     if (launching case final wait?) await wait.future;

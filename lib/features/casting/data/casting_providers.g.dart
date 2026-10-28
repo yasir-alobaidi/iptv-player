@@ -149,7 +149,7 @@ final class CastDiscoveryProvider
   }
 }
 
-String _$castDiscoveryHash() => r'165ebd4f88aec7c435991a8f2abc30bf9d11b12c';
+String _$castDiscoveryHash() => r'530bfed8b378aa810e9aeb185c19b90b0e1aca0c';
 
 /// The Cast devices on the network and the ones added by address.
 /// Discovery runs only while something shows them.
@@ -198,17 +198,20 @@ final class CastDevicesProvider
 
 String _$castDevicesHash() => r'ab3934d44cdc3480df63de9e7a7e4eefa44a477e';
 
-/// Our own Cast v2 client (docs/04).
+/// Our own Cast v2 client (docs/04), and our own AirPlay client for the
+/// TVs that speak AirPlay (ADR-067).
 
 @ProviderFor(castReceivers)
 final castReceiversProvider = CastReceiversProvider._();
 
-/// Our own Cast v2 client (docs/04).
+/// Our own Cast v2 client (docs/04), and our own AirPlay client for the
+/// TVs that speak AirPlay (ADR-067).
 
 final class CastReceiversProvider
     extends $FunctionalProvider<CastReceivers, CastReceivers, CastReceivers>
     with $Provider<CastReceivers> {
-  /// Our own Cast v2 client (docs/04).
+  /// Our own Cast v2 client (docs/04), and our own AirPlay client for the
+  /// TVs that speak AirPlay (ADR-067).
   CastReceiversProvider._()
     : super(
         from: null,
@@ -242,7 +245,53 @@ final class CastReceiversProvider
   }
 }
 
-String _$castReceiversHash() => r'0cc828b349476f3509d08347b59ab750c13465ea';
+String _$castReceiversHash() => r'89bb1f80ce766d60fe98bbef27da23daa5332e1b';
+
+/// Pairing with an AirPlay TV that shows a code (ADR-067).
+
+@ProviderFor(castPairing)
+final castPairingProvider = CastPairingProvider._();
+
+/// Pairing with an AirPlay TV that shows a code (ADR-067).
+
+final class CastPairingProvider
+    extends $FunctionalProvider<CastPairing, CastPairing, CastPairing>
+    with $Provider<CastPairing> {
+  /// Pairing with an AirPlay TV that shows a code (ADR-067).
+  CastPairingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'castPairingProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$castPairingHash();
+
+  @$internal
+  @override
+  $ProviderElement<CastPairing> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CastPairing create(Ref ref) {
+    return castPairing(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CastPairing value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CastPairing>(value),
+    );
+  }
+}
+
+String _$castPairingHash() => r'97dc4d2df682541446dd027c6050614b3140878a';
 
 /// The bundled FFmpeg and ffprobe; null when this build has none.
 

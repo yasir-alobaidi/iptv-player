@@ -29,7 +29,9 @@ mixin _$CastDevice {
 /// doesn't see it (another subnet, multicast blocked).
  bool get manual;/// False for a device added by address that didn't answer the last
 /// check. Found devices always answer: they drop out when they stop.
- bool get answering;
+ bool get answering;/// An AirPlay TV that shows a code to pair with before anything plays
+/// (its TXT `flags`, ADR-067); a Cast device never does.
+ bool get needsPairing;
 /// Create a copy of CastDevice
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -41,20 +43,20 @@ $CastDeviceCopyWith<CastDevice> get copyWith => _$CastDeviceCopyWithImpl<CastDev
 @override
 bool operator ==(Object other) {
   final _this = this as CastDevice;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastDevice&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.host, _this.host) || other.host == _this.host)&&(identical(other.port, _this.port) || other.port == _this.port)&&(identical(other.model, _this.model) || other.model == _this.model)&&(identical(other.capabilities, _this.capabilities) || other.capabilities == _this.capabilities)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.manual, _this.manual) || other.manual == _this.manual)&&(identical(other.answering, _this.answering) || other.answering == _this.answering));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CastDevice&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.host, _this.host) || other.host == _this.host)&&(identical(other.port, _this.port) || other.port == _this.port)&&(identical(other.model, _this.model) || other.model == _this.model)&&(identical(other.capabilities, _this.capabilities) || other.capabilities == _this.capabilities)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.manual, _this.manual) || other.manual == _this.manual)&&(identical(other.answering, _this.answering) || other.answering == _this.answering)&&(identical(other.needsPairing, _this.needsPairing) || other.needsPairing == _this.needsPairing));
 }
 
 
 @override
 int get hashCode {
   final _this = this as CastDevice;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.host,_this.port,_this.model,_this.capabilities,_this.status,_this.manual,_this.answering);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.host,_this.port,_this.model,_this.capabilities,_this.status,_this.manual,_this.answering,_this.needsPairing);
 }
 
 @override
 String toString() {
   final _this = this as CastDevice;
-  return 'CastDevice(id: ${_this.id}, name: ${_this.name}, host: ${_this.host}, port: ${_this.port}, model: ${_this.model}, capabilities: ${_this.capabilities}, status: ${_this.status}, manual: ${_this.manual}, answering: ${_this.answering})';
+  return 'CastDevice(id: ${_this.id}, name: ${_this.name}, host: ${_this.host}, port: ${_this.port}, model: ${_this.model}, capabilities: ${_this.capabilities}, status: ${_this.status}, manual: ${_this.manual}, answering: ${_this.answering}, needsPairing: ${_this.needsPairing})';
 }
 
 
@@ -65,7 +67,7 @@ abstract mixin class $CastDeviceCopyWith<$Res>  {
   factory $CastDeviceCopyWith(CastDevice value, $Res Function(CastDevice) _then) = _$CastDeviceCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String host, int port, String? model, int? capabilities, String? status, bool manual, bool answering
+ String id, String name, String host, int port, String? model, int? capabilities, String? status, bool manual, bool answering, bool needsPairing
 });
 
 
@@ -82,7 +84,7 @@ class _$CastDeviceCopyWithImpl<$Res>
 
 /// Create a copy of CastDevice
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? host = null,Object? port = null,Object? model = freezed,Object? capabilities = freezed,Object? status = freezed,Object? manual = null,Object? answering = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? host = null,Object? port = null,Object? model = freezed,Object? capabilities = freezed,Object? status = freezed,Object? manual = null,Object? answering = null,Object? needsPairing = null,}) {
   return _then(CastDevice(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -93,6 +95,7 @@ as String?,capabilities: freezed == capabilities ? _self.capabilities : capabili
 as int?,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String?,manual: null == manual ? _self.manual : manual // ignore: cast_nullable_to_non_nullable
 as bool,answering: null == answering ? _self.answering : answering // ignore: cast_nullable_to_non_nullable
+as bool,needsPairing: null == needsPairing ? _self.needsPairing : needsPairing // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -178,10 +181,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering,  bool needsPairing)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CastDevice() when $default != null:
-return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering);case _:
+return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering,_that.needsPairing);case _:
   return orElse();
 
 }
@@ -199,10 +202,10 @@ return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capa
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering,  bool needsPairing)  $default,) {final _that = this;
 switch (_that) {
 case _CastDevice():
-return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering);case _:
+return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering,_that.needsPairing);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -219,10 +222,10 @@ return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capa
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String host,  int port,  String? model,  int? capabilities,  String? status,  bool manual,  bool answering,  bool needsPairing)?  $default,) {final _that = this;
 switch (_that) {
 case _CastDevice() when $default != null:
-return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering);case _:
+return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capabilities,_that.status,_that.manual,_that.answering,_that.needsPairing);case _:
   return null;
 
 }
@@ -234,7 +237,7 @@ return $default(_that.id,_that.name,_that.host,_that.port,_that.model,_that.capa
 
 
 class _CastDevice implements CastDevice {
-  const _CastDevice({required this.id, required this.name, required this.host, this.port = castPort, this.model, this.capabilities, this.status, this.manual = false, this.answering = true});
+  const _CastDevice({required this.id, required this.name, required this.host, this.port = castPort, this.model, this.capabilities, this.status, this.manual = false, this.answering = true, this.needsPairing = false});
   
 
 /// The device's own id (TXT `id`, 32 hex digits), the same whichever
@@ -260,6 +263,9 @@ class _CastDevice implements CastDevice {
 /// False for a device added by address that didn't answer the last
 /// check. Found devices always answer: they drop out when they stop.
 @override@JsonKey() final  bool answering;
+/// An AirPlay TV that shows a code to pair with before anything plays
+/// (its TXT `flags`, ADR-067); a Cast device never does.
+@override@JsonKey() final  bool needsPairing;
 
 /// Create a copy of CastDevice
 /// with the given fields replaced by the non-null parameter values.
@@ -271,18 +277,18 @@ _$CastDeviceCopyWith<_CastDevice> get copyWith => __$CastDeviceCopyWithImpl<_Cas
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastDevice&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.host, host) || other.host == host)&&(identical(other.port, port) || other.port == port)&&(identical(other.model, model) || other.model == model)&&(identical(other.capabilities, capabilities) || other.capabilities == capabilities)&&(identical(other.status, status) || other.status == status)&&(identical(other.manual, manual) || other.manual == manual)&&(identical(other.answering, answering) || other.answering == answering));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CastDevice&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.host, host) || other.host == host)&&(identical(other.port, port) || other.port == port)&&(identical(other.model, model) || other.model == model)&&(identical(other.capabilities, capabilities) || other.capabilities == capabilities)&&(identical(other.status, status) || other.status == status)&&(identical(other.manual, manual) || other.manual == manual)&&(identical(other.answering, answering) || other.answering == answering)&&(identical(other.needsPairing, needsPairing) || other.needsPairing == needsPairing));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,host,port,model,capabilities,status,manual,answering);
+    return Object.hash(runtimeType,id,name,host,port,model,capabilities,status,manual,answering,needsPairing);
 }
 
 @override
 String toString() {
-    return 'CastDevice(id: $id, name: $name, host: $host, port: $port, model: $model, capabilities: $capabilities, status: $status, manual: $manual, answering: $answering)';
+    return 'CastDevice(id: $id, name: $name, host: $host, port: $port, model: $model, capabilities: $capabilities, status: $status, manual: $manual, answering: $answering, needsPairing: $needsPairing)';
 }
 
 
@@ -293,7 +299,7 @@ abstract mixin class _$CastDeviceCopyWith<$Res> implements $CastDeviceCopyWith<$
   factory _$CastDeviceCopyWith(_CastDevice value, $Res Function(_CastDevice) _then) = __$CastDeviceCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String host, int port, String? model, int? capabilities, String? status, bool manual, bool answering
+ String id, String name, String host, int port, String? model, int? capabilities, String? status, bool manual, bool answering, bool needsPairing
 });
 
 
@@ -310,7 +316,7 @@ class __$CastDeviceCopyWithImpl<$Res>
 
 /// Create a copy of CastDevice
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? host = null,Object? port = null,Object? model = freezed,Object? capabilities = freezed,Object? status = freezed,Object? manual = null,Object? answering = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? host = null,Object? port = null,Object? model = freezed,Object? capabilities = freezed,Object? status = freezed,Object? manual = null,Object? answering = null,Object? needsPairing = null,}) {
   return _then(_CastDevice(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -321,6 +327,7 @@ as String?,capabilities: freezed == capabilities ? _self.capabilities : capabili
 as int?,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String?,manual: null == manual ? _self.manual : manual // ignore: cast_nullable_to_non_nullable
 as bool,answering: null == answering ? _self.answering : answering // ignore: cast_nullable_to_non_nullable
+as bool,needsPairing: null == needsPairing ? _self.needsPairing : needsPairing // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

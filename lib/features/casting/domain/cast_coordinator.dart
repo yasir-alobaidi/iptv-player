@@ -463,6 +463,8 @@ final class CastCoordinator implements RemotePlayback {
         onConnected: (address) {
           if (!local.isCompleted) local.complete(address);
         },
+        protocol: device.protocol,
+        deviceId: device.id,
       );
       if (again) await Future<void>.delayed(timings.relaunchAfter);
       final clock = Stopwatch()..start();
@@ -499,13 +501,12 @@ final class CastCoordinator implements RemotePlayback {
           if (!local.isCompleted) local.complete(null);
           joined.complete(null);
           await _joinFailedWith(
-            CastProblem(
-              reason == CastJoinFailure.unreachable ||
-                      reason == CastJoinFailure.noAnswer
-                  ? CastProblemKind.deviceUnreachable
-                  : CastProblemKind.receiverRefused,
-              detail: detail,
-            ),
+            CastProblem(switch (reason) {
+              CastJoinFailure.unreachable ||
+              CastJoinFailure.noAnswer => CastProblemKind.deviceUnreachable,
+              CastJoinFailure.needsPairing => CastProblemKind.needsPairing,
+              _ => CastProblemKind.receiverRefused,
+            }, detail: detail),
           );
         case CastJoined(:final session, :final launched, :final woke):
           _log.info(

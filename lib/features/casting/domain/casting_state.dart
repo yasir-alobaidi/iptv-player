@@ -115,6 +115,10 @@ enum CastProblemKind {
   /// The device didn't start the receiver.
   receiverRefused,
 
+  /// An AirPlay TV wants this computer paired, with the code it shows
+  /// (ADR-067); choosing it again pairs.
+  needsPairing,
+
   /// The provider's stream failed ([CastProblem.stream] says how).
   stream,
 

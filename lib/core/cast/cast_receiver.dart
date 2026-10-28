@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
 
 part 'cast_receiver.freezed.dart';
@@ -15,9 +16,14 @@ abstract interface class CastReceivers {
   /// [onConnected] hears this computer's address on the connection as
   /// soon as it is up, before the receiver starts: the relay can listen
   /// there while the TV launches (Phase 7 step 6).
+  ///
+  /// [protocol] and [deviceId] pick the receiver's kind and, for AirPlay,
+  /// the pairing kept for it (ADR-067).
   Future<CastJoinResult> join(
     CastAddress address, {
     void Function(String localAddress)? onConnected,
+    CastProtocol protocol = CastProtocol.googleCast,
+    String? deviceId,
   });
 }
 
@@ -67,6 +73,10 @@ enum CastJoinFailure {
 
   /// The receiver didn't start in time.
   launchTimedOut,
+
+  /// An AirPlay TV wants this computer paired first, with the code it
+  /// shows on its screen (ADR-067).
+  needsPairing,
 }
 
 /// One connection to a device's media receiver. It follows the receiver

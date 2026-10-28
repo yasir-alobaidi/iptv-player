@@ -66,6 +66,10 @@ abstract class CastDevice with _$CastDevice {
     /// False for a device added by address that didn't answer the last
     /// check. Found devices always answer: they drop out when they stop.
     @Default(true) bool answering,
+
+    /// An AirPlay TV that shows a code to pair with before anything plays
+    /// (its TXT `flags`, ADR-067); a Cast device never does.
+    @Default(false) bool needsPairing,
   }) = _CastDevice;
 }
 

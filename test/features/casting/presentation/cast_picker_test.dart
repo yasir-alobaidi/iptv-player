@@ -6,9 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/cast/cast_device.dart';
 import 'package:iptv_player/core/cast/cast_discovery.dart';
+import 'package:iptv_player/core/cast/cast_pairing.dart';
 import 'package:iptv_player/core/cast/cast_readiness.dart';
+import 'package:iptv_player/features/casting/data/casting_providers.dart';
 import 'package:iptv_player/features/casting/domain/casting_state.dart';
 import 'package:iptv_player/features/casting/presentation/add_cast_device_dialog.dart';
+import 'package:iptv_player/features/casting/presentation/cast_pairing_dialog.dart';
 import 'package:iptv_player/features/casting/presentation/cast_picker.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 
@@ -124,6 +127,76 @@ void main() {
     await tester.tap(find.text('Living Room TV'));
     await settleCast(tester);
     expect(ui.cast.receivers.joins, isEmpty);
+  });
+
+  group('an AirPlay TV that shows a code (ADR-067)', () {
+    const roku = CastDevice(
+      id: '${airPlayIdPrefix}D1:3C:2C:48:B5:B5',
+      name: 'Bedroom Roku',
+      host: '192.168.1.162',
+      port: 7000,
+      model: 'Hisense G204X',
+      needsPairing: true,
+    );
+
+    Future<_FakePairing> pumpWithPairing(WidgetTester tester) async {
+      final pairing = _FakePairing();
+      ui = CastUi();
+      addTearDown(() => tester.runAsync(ui.live.db.close));
+      addTearDown(ui.dispose);
+      await tester.runAsync(ui.live.seed);
+      await pumpApp(
+        tester,
+        initialLocation: AppDestination.liveTv.path,
+        overrides: [
+          ...ui.overrides,
+          castPairingProvider.overrideWithValue(pairing),
+        ],
+      );
+      await settleCast(tester);
+      ui.devices = [roku];
+      await openPicker(tester);
+      await tester.tap(find.text('Bedroom Roku'));
+      await settleCast(tester);
+      return pairing;
+    }
+
+    testWidgets('is paired first: the code typed once, then the cast '
+        'goes on', (tester) async {
+      final pairing = await pumpWithPairing(tester);
+      expect(find.text('Pair with Bedroom Roku'), findsOneWidget);
+      expect(pairing.started, 1);
+      expect(ui.cast.receivers.joins, isEmpty);
+
+      await tester.enterText(_codeField, '1234');
+      await tester.tap(find.text('Pair'));
+      await settleCast(tester);
+      expect(pairing.codes, ['1234']);
+      expect(find.text('Pair with Bedroom Roku'), findsNothing);
+      expect(ui.cast.receivers.joins, hasLength(1));
+      await stopCasting(tester);
+    });
+
+    testWidgets("a wrong code: said, and the TV's new code is asked for; "
+        'Cancel casts nothing', (tester) async {
+      final pairing = await pumpWithPairing(tester)
+        ..result = CastPairingResult.wrongCode;
+      await tester.enterText(_codeField, '9999');
+      await tester.tap(find.text('Pair'));
+      await settleCast(tester);
+      expect(
+        find.text(
+          "That code didn't match. Bedroom Roku shows a new one: "
+          'type it.',
+        ),
+        findsOneWidget,
+      );
+      expect(pairing.started, 2);
+      await tester.tap(find.text('Cancel'));
+      await settleCast(tester);
+      expect(pairing.cancelled, isTrue);
+      expect(ui.cast.receivers.joins, isEmpty);
+    });
   });
 
   testWidgets('no network: says so', (tester) async {
@@ -256,4 +329,44 @@ void main() {
     expect(find.text('Casting troubleshooting'), findsOneWidget);
     expect(find.textContaining('38400–38499'), findsWidgets);
   });
+}
+
+/// The pairing dialog's code field.
+final Finder _codeField = find.descendant(
+  of: find.byType(CastPairingDialog),
+  matching: find.byType(EditableText),
+);
+
+final class _FakePairing implements CastPairing {
+  int started = 0;
+  final List<String> codes = [];
+  bool cancelled = false;
+  CastPairingResult result = CastPairingResult.paired;
+
+  @override
+  Future<bool> isPaired(CastDevice device) async => false;
+
+  @override
+  Future<CastPairingStart> start(CastDevice device) async {
+    started++;
+    return CastPairingShown(_FakeAttempt(this));
+  }
+
+  @override
+  Future<void> forget(CastDevice device) async {}
+}
+
+final class _FakeAttempt implements CastPairingAttempt {
+  const new(this._pairing);
+
+  final _FakePairing _pairing;
+
+  @override
+  Future<CastPairingResult> finish(String code) async {
+    _pairing.codes.add(code);
+    return _pairing.result;
+  }
+
+  @override
+  Future<void> cancel() async => _pairing.cancelled = true;
 }
