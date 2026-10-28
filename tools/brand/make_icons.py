@@ -36,7 +36,12 @@ Writes, from the repository's root (`python3 tools/brand/make_icons.py`):
   <name>_foreground.png); and drawable-xhdpi/<banner>.png, the 320 x 180
   banner a leanback launcher's app cards show;
 - the Android launch splash's mark (drawable-<density>/splash_mark.png,
-  240 dp: Android 12 and up would show the launcher's icon there).
+  240 dp: Android 12 and up would show the launcher's icon there);
+- Google Play's store graphics (docs/play/README.md), in
+  design/brand/play/: icon-512.png (the tile edge to edge; Play rounds
+  it), feature-graphic-1024x500.png (the name, "Your own little cinema"
+  and the jewel) and tv-banner-1280x720.png (the TV banner's drawing at
+  Play's size).
 
 Needs Pillow; nothing else. Re-run it after changing the drawing or the
 photo.
@@ -282,14 +287,17 @@ BANNER_TOP = (0x1A, 0x20, 0x2C)
 BANNER_BOTTOM = (0x0A, 0x0C, 0x10)
 
 
-def banner(beta=False):
+def banner(beta=False, size=BANNER):
     """The 320 x 180 banner a leanback launcher's app cards show (Google
     TV's "Your apps" row shows the adaptive icon in a circle instead,
     ADR-028): the round icon and the name, white, centred as one on the
     dark background, edge to edge (the launcher rounds the card's
-    corners)."""
+    corners). At another [size], the same drawing scaled (Play's TV
+    banner)."""
     k = 4
-    w, h = BANNER[0] * k, BANNER[1] * k
+    w, h = size[0] * k, size[1] * k
+    # The sizes below are the 320 px banner's.
+    unit = k * size[0] / BANNER[0]
     image = Image.new("RGBA", (w, h))
     d = ImageDraw.Draw(image)
     for y in range(h):
@@ -299,11 +307,11 @@ def banner(beta=False):
     # until the two fit with a margin each side.
     scale = 1.0
     while True:
-        badge_side = round(112 * k * scale)
-        font = ImageFont.truetype(_font_path(), round(50 * k * scale))
+        badge_side = round(112 * unit * scale)
+        font = ImageFont.truetype(_font_path(), round(50 * unit * scale))
         font.set_variation_by_axes([700])
         text_left, _, text_right, _ = d.textbbox((0, 0), name, font=font, anchor="ls")
-        gap = round(20 * k * scale)
+        gap = round(20 * unit * scale)
         group = badge_side + gap + (text_right - text_left)
         if group <= w * 0.84 or scale < 0.5:
             break
@@ -321,7 +329,7 @@ def banner(beta=False):
         fill=WHITE,
         anchor="ls",
     )
-    return image.resize(BANNER, Image.LANCZOS)
+    return image.resize(size, Image.LANCZOS)
 
 
 # The cover (the user: "I want it to be the cover image of the app on the
@@ -463,6 +471,112 @@ def cover_banner(photo, beta=False):
     return image.resize(BANNER, Image.LANCZOS)
 
 
+# Google Play's store graphics (docs/play/README.md), in design/brand/play/:
+# the icon (512 px, 32-bit), the feature graphic (1024 x 500) and the
+# Android TV banner (1280 x 720), the last two with no alpha, as Play asks.
+PLAY_ICON = 512
+FEATURE = (1024, 500)
+TV_BANNER = (1280, 720)
+
+# The feature graphic's ground: the dark look's background lifted toward
+# the deep accent, darker under the name, lighter behind the jewel. Play's
+# guide asks for no near-black field (it melts into the store's dark
+# theme) and for branding that extends the icon rather than repeats it:
+# the jewel large and free of its tile.
+FEATURE_DARK = (0x14, 0x1B, 0x33)
+FEATURE_LIGHT = DEEP
+# The tagline (AppColors.textSecondary), and the name (textPrimary).
+TEXT_PRIMARY = (0xF3, 0xF5, 0xF9)
+TEXT_SECONDARY = (0xA7, 0xAF, 0xBD)
+
+
+def play_icon(n=PLAY_ICON):
+    """Play's store icon: [draw]'s tile edge to edge, square, the jewel
+    as large on it as on the tile. Play rounds the corners itself and
+    wants no mask or shadow of ours."""
+    k = 4
+    s = n * k
+    image = gradient(s, s).convert("RGBA")
+    d = ImageDraw.Draw(image)
+    scale = s / (TILE[2] - TILE[0])
+
+    def pt(p):
+        return ((p[0] - TILE[0]) * scale, (p[1] - TILE[1]) * scale)
+
+    for corners, shade in facets("full"):
+        d.polygon([pt(p) for p in corners], fill=mix(WHITE, DEEP, shade))
+    return image.resize((n, n), Image.LANCZOS)
+
+
+def feature_graphic():
+    """Play's 1024 x 500 feature graphic: the name and "Your own little
+    cinema" on the left, the jewel on the right in the accent's glow, on
+    the dark ground lifted toward the accent. Everything inside Play's
+    safe margins (it may crop the edges); no screenshots, no one's
+    pictures."""
+    k = 2
+    w, h = FEATURE[0] * k, FEATURE[1] * k
+    image = Image.new("RGB", (w, h))
+    d = ImageDraw.Draw(image)
+    for x in range(w):
+        t = x / (w - 1)
+        d.line([(x, 0), (x, h)], fill=mix(FEATURE_DARK, FEATURE_LIGHT, t**1.6 * 0.9))
+
+    # The jewel: 320 px tall, its middle at 3/4 of the width.
+    jewel_h = 320 * k
+    scale = jewel_h / (CORNERS[2][1] - CORNERS[0][1])
+    jewel_w = (CORNERS[1][0] - CORNERS[0][0]) * scale
+    left = w * 0.74 - jewel_w / 2
+    top = (h - jewel_h) / 2
+
+    def pt(p):
+        return (left + (p[0] - CORNERS[0][0]) * scale, top + (p[1] - CORNERS[0][1]) * scale)
+
+    glow = Image.new("L", (w, h), 0)
+    middle = (left + jewel_w * 0.42, h / 2)
+    radius = jewel_h * 0.62
+    ImageDraw.Draw(glow).ellipse(
+        [middle[0] - radius, middle[1] - radius, middle[0] + radius, middle[1] + radius],
+        fill=150,
+    )
+    glow = glow.filter(ImageFilter.GaussianBlur(radius * 0.45))
+    image.paste(Image.new("RGB", (w, h), ACCENT), (0, 0), glow)
+    d = ImageDraw.Draw(image)
+    for corners, shade in facets("full"):
+        d.polygon([pt(p) for p in corners], fill=mix(WHITE, DEEP, shade))
+
+    # The name and the tagline, one block, its middle on the jewel's.
+    name_font = ImageFont.truetype(_font_path(), 132 * k)
+    name_font.set_variation_by_axes([700])
+    tag_font = ImageFont.truetype(_font_path(), 38 * k)
+    tag_font.set_variation_by_axes([500])
+    _, cap_top, _, _ = d.textbbox((0, 0), "B", font=name_font, anchor="ls")
+    _, tag_top, _, tag_bottom = d.textbbox((0, 0), "Your own little cinema", font=tag_font, anchor="ls")
+    gap = 30 * k
+    block = -cap_top + gap + (tag_bottom - tag_top)
+    x = 96 * k
+    name_base = (h - block) / 2 - cap_top
+    d.text((x, name_base), "Bijou", font=name_font, fill=TEXT_PRIMARY, anchor="ls")
+    d.text(
+        (x + 6 * k, name_base + gap - tag_top),
+        "Your own little cinema",
+        font=tag_font,
+        fill=TEXT_SECONDARY,
+        anchor="ls",
+    )
+    return image.resize(FEATURE, Image.LANCZOS)
+
+
+def play_graphics(out):
+    """Writes Play's three graphics with [out] (the path maker in [main])."""
+    play_icon().save(out("design", "brand", "play", "icon-512.png"))
+    feature_graphic().save(out("design", "brand", "play", "feature-graphic-1024x500.png"))
+    # The launcher banner's drawing at Play's size, with no alpha.
+    banner(size=TV_BANNER).convert("RGB").save(
+        out("design", "brand", "play", "tv-banner-1280x720.png")
+    )
+
+
 def main():
     root = os.getcwd()
     if not os.path.exists(os.path.join(root, "pubspec.yaml")):
@@ -540,6 +654,9 @@ def main():
     # unless told otherwise): the jewel, on the accent's circle.
     for density, n in SPLASH_ICONS.items():
         foreground(n).save(out(*res, f"drawable-{density}", "splash_mark.png"))
+
+    # Google Play's listing (docs/play/README.md).
+    play_graphics(out)
 
 
 if __name__ == "__main__":

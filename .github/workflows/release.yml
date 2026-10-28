@@ -10,6 +10,8 @@
 #   Bijou-TV.apk                        Google TV, Android TV, Fire TV
 #                                       (docs/install/android-tv.md)
 #   SHA256SUMS.txt
+# Google Play's bundle (Bijou-Play.aab, docs/play/README.md) isn't one of
+# them: it stays this run's artifact, uploaded to Play by hand.
 # Every job checks out the tag with its whole history: the build number is
 # the commit count (`git rev-list --count HEAD`), which is also the TV's
 # version code; a shallow clone would count 1 and the TVs would refuse the
@@ -309,6 +311,92 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  play:
+    # The bundle for Google Play (docs/play/README.md): phones, tablets,
+    # Chromebooks and TVs, 32- and 64-bit ARM and 64-bit Intel, signed with
+    # the Play upload key (Play refuses the TVs' debug key) and checked by
+    # tools/play_bundle.sh. It is kept as this run's artifact, to upload by
+    # hand in the Play Console: not a release file, and nothing goes to
+    # Play from here. Until the Play secrets are set the job only says so,
+    # and the release goes on without it (Publish doesn't wait for it).
+    name: Google Play bundle
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Version
+        run: |
+          case "$TAG" in stable-*) ;; *) echo "::error::'$TAG' is not a stable-* tag"; exit 1 ;; esac
+          echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+
+      - name: The upload key
+        id: key
+        env:
+          BIJOU_PLAY_KEYSTORE_BASE64: ${{ secrets.BIJOU_PLAY_KEYSTORE_BASE64 }}
+          BIJOU_PLAY_KEYSTORE_PASSWORD: ${{ secrets.BIJOU_PLAY_KEYSTORE_PASSWORD }}
+          BIJOU_PLAY_KEY_ALIAS: ${{ secrets.BIJOU_PLAY_KEY_ALIAS }}
+          BIJOU_PLAY_KEY_PASSWORD: ${{ secrets.BIJOU_PLAY_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in BIJOU_PLAY_KEYSTORE_BASE64 BIJOU_PLAY_KEYSTORE_PASSWORD BIJOU_PLAY_KEY_ALIAS BIJOU_PLAY_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=No Google Play bundle::Repository secrets not set:$missing (docs/play/README.md, 'Play App Signing and the upload key'). Nothing else changes: the release is made without the bundle."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$BIJOU_PLAY_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/bijou-play.jks"
+          echo "BIJOU_PLAY_KEYSTORE=$RUNNER_TEMP/bijou-play.jks" >> "$GITHUB_ENV"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      # The JDK the laptop builds with (ci.yml).
+      - uses: actions/setup-java@v4
+        if: steps.key.outputs.ready == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        if: steps.key.outputs.ready == 'true'
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        if: steps.key.outputs.ready == 'true'
+        run: flutter pub get
+
+      - name: Build and check the bundle
+        # The version code is the commit count, as the TVs' APK's; the
+        # script refuses a debug key, the wrong app id and a library not
+        # aligned for 16 KB pages, and prints the upload certificate's
+        # SHA-256.
+        if: steps.key.outputs.ready == 'true'
+        env:
+          BIJOU_PLAY_KEYSTORE_PASSWORD: ${{ secrets.BIJOU_PLAY_KEYSTORE_PASSWORD }}
+          BIJOU_PLAY_KEY_ALIAS: ${{ secrets.BIJOU_PLAY_KEY_ALIAS }}
+          BIJOU_PLAY_KEY_PASSWORD: ${{ secrets.BIJOU_PLAY_KEY_PASSWORD }}
+        run: tools/play_bundle.sh
+
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/bijou-play.jks"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.ready == 'true'
+        with:
+          name: google-play
+          path: dist/Bijou-Play.aab
+          if-no-files-found: error
+          # Longer than the release's files: it waits for a hand upload.
+          retention-days: 30
+
   release:
     name: Publish
     needs: [linux, windows, android]
@@ -332,6 +420,9 @@ jobs:
 
       - name: The Linux installer and the checksums
         run: |
+          # Google Play's bundle (the play job's artifact, downloaded with
+          # the rest) is uploaded to Play by hand, never a release file.
+          rm -f dist/Bijou-Play.aab
           cp tools/install_linux.sh dist/install-linux.sh
           cd dist
           files=(Bijou-Setup.exe install-linux.sh Bijou-TV.apk

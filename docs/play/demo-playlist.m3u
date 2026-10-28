@@ -1,0 +1,30 @@
+#EXTM3U
+# Bijou's demo playlist, for Google Play's reviewers (docs/play/README.md,
+# "App access"). Only test media its owners publish openly for anyone to
+# play: test signals, and the Blender Foundation's open movies (Creative
+# Commons Attribution). Each item's source and licence: docs/play/README.md,
+# "The demo playlist". Checked 2026-10-27.
+#
+# Streams (.m3u8) show under Live TV, files (.mp4, .mov, .mkv) under Movies.
+#EXTINF:-1 tvg-id="test-card" tvg-name="Test Card (live)" group-title="Test signals",Test Card (live)
+https://demo.unified-streaming.com/k8s/live/stable/live.isml/.m3u8
+#EXTINF:-1 tvg-id="bip-bop-16x9" tvg-name="Bip-Bop 16:9" group-title="Test signals",Bip-Bop 16:9
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8
+#EXTINF:-1 tvg-id="bip-bop-4x3" tvg-name="Bip-Bop 4:3" group-title="Test signals",Bip-Bop 4:3
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
+#EXTINF:-1 tvg-id="bip-bop-tracks" tvg-name="Bip-Bop with surround and subtitles" group-title="Test signals",Bip-Bop with surround and subtitles
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8
+#EXTINF:-1 tvg-id="big-buck-bunny-stream" tvg-name="Big Buck Bunny (stream)" group-title="Open movies (streams)",Big Buck Bunny (stream)
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+#EXTINF:-1 tvg-id="tears-of-steel-stream" tvg-name="Tears of Steel (stream)" group-title="Open movies (streams)",Tears of Steel (stream)
+https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+#EXTINF:-1 tvg-name="Big Buck Bunny (2008)" group-title="Blender open movies",Big Buck Bunny (2008)
+https://media.w3.org/2010/05/bunny/movie.mp4
+#EXTINF:-1 tvg-name="Elephants Dream (2006)" group-title="Blender open movies",Elephants Dream (2006)
+https://download.blender.org/ED/elephantsdream-720-h264-st-aac.mov
+#EXTINF:-1 tvg-name="Sintel (2010)" group-title="Blender open movies",Sintel (2010)
+https://download.blender.org/durian/movies/Sintel.2010.1080p.mkv
+#EXTINF:-1 tvg-name="Sintel (trailer)" group-title="Blender open movies",Sintel (trailer)
+https://media.w3.org/2010/05/sintel/trailer.mp4
+#EXTINF:-1 tvg-name="Tears of Steel (2012)" group-title="Blender open movies",Tears of Steel (2012)
+https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov

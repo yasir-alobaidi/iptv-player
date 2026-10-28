@@ -62,9 +62,25 @@ val releaseKeystore: File? =
         ?.takeIf { it.isNotBlank() }
         ?.let { file(it) }
 
-fun signingSecret(name: String): String =
-    providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
-        ?: throw GradleException("BIJOU_KEYSTORE is set but $name is not (docs/install.md)")
+// Google Play's upload key (docs/play/README.md): a key of its own, made
+// by tools/play_upload_key.sh, since Play refuses a bundle signed with a
+// debug key. tools/play_bundle.sh and the release workflow's "Google
+// Play bundle" job name it in BIJOU_PLAY_KEYSTORE, with
+// BIJOU_PLAY_KEYSTORE_PASSWORD, BIJOU_PLAY_KEY_ALIAS and
+// BIJOU_PLAY_KEY_PASSWORD; set, it signs the release instead of
+// BIJOU_KEYSTORE's. Play signs what it hands out with a key of its own
+// (Play App Signing), so a Bijou from Play and a sideloaded one can't
+// update each other: one is uninstalled first.
+val playKeystore: File? =
+    providers.environmentVariable("BIJOU_PLAY_KEYSTORE").orNull
+        ?.takeIf { it.isNotBlank() }
+        ?.let { file(it) }
+
+fun signingSecret(name: String, keystore: String = "BIJOU_KEYSTORE"): String {
+    val guide = if (keystore == "BIJOU_PLAY_KEYSTORE") "docs/play/README.md" else "docs/install.md"
+    return providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
+        ?: throw GradleException("$keystore is set but $name is not ($guide)")
+}
 
 android {
     // The Google TV app's own id (docs/07, ADR-020): the desktop's
@@ -121,7 +137,19 @@ android {
     }
 
     signingConfigs {
-        releaseKeystore?.let { keystore ->
+        playKeystore?.let { keystore ->
+            if (!keystore.isFile) {
+                throw GradleException("BIJOU_PLAY_KEYSTORE: no keystore at $keystore")
+            }
+            create("play") {
+                storeFile = keystore
+                storePassword = signingSecret("BIJOU_PLAY_KEYSTORE_PASSWORD", "BIJOU_PLAY_KEYSTORE")
+                keyAlias = signingSecret("BIJOU_PLAY_KEY_ALIAS", "BIJOU_PLAY_KEYSTORE")
+                keyPassword = signingSecret("BIJOU_PLAY_KEY_PASSWORD", "BIJOU_PLAY_KEYSTORE")
+            }
+        }
+        // Play's key wins: the TVs' secrets aren't asked for beside it.
+        releaseKeystore?.takeIf { playKeystore == null }?.let { keystore ->
             if (!keystore.isFile) {
                 throw GradleException("BIJOU_KEYSTORE: no keystore at $keystore")
             }
@@ -136,10 +164,17 @@ android {
 
     buildTypes {
         release {
-            // Sideloaded (docs/07, docs/install/android-tv.md): the
+            // Google Play's upload key from BIJOU_PLAY_KEYSTORE; else,
+            // sideloaded (docs/07, docs/install/android-tv.md), the
             // release's key from BIJOU_KEYSTORE, else the debug key.
             signingConfig =
-                signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
+                signingConfigs.getByName(
+                    when {
+                        playKeystore != null -> "play"
+                        releaseKeystore != null -> "release"
+                        else -> "debug"
+                    },
+                )
         }
     }
 }
