@@ -48,15 +48,19 @@ class VodOsdTop extends ConsumerWidget {
         ?.channels;
     final badges = [?pictureBadge(size?.$2), ?soundBadge(channelCount(sound))];
     final (title, line) = playableTitleLines(item);
+    // A phone held upright: the badges under the title, which keeps the
+    // room (ADR-068).
+    final narrow = OsdRoom.of(context).narrow;
+    final badgeRow = [
+      for (final (i, badge) in badges.indexed) ...[
+        if (i > 0 || !narrow) SizedBox(width: tokens.spacing.s8),
+        AppBadge(badge, tone: AppBadgeTone.outline),
+      ],
+    ];
     return OsdShade(
       top: true,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          tokens.spacing.s32,
-          tokens.spacing.s24,
-          tokens.spacing.s32,
-          tokens.spacing.s48,
-        ),
+        padding: OsdRoom.of(context).topPadding(context),
         child: Row(
           children: [
             OsdBack(onPressed: onBack),
@@ -82,13 +86,14 @@ class VodOsdTop extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (narrow && badgeRow.isNotEmpty) ...[
+                    SizedBox(height: tokens.spacing.s4),
+                    Row(children: badgeRow),
+                  ],
                 ],
               ),
             ),
-            for (final badge in badges) ...[
-              SizedBox(width: tokens.spacing.s8),
-              AppBadge(badge, tone: AppBadgeTone.outline),
-            ],
+            if (!narrow) ...badgeRow,
             SizedBox(width: tokens.spacing.s16),
             OsdClock(remaining: remaining, speed: speed),
           ],
@@ -164,6 +169,7 @@ class VodOsdBottom extends StatelessWidget {
     this.playFocusNode,
     this.seekFocusNode,
     this.rowFocusNode,
+    this.homeKey = true,
     super.key,
   });
 
@@ -203,6 +209,11 @@ class VodOsdBottom extends StatelessWidget {
   /// remote is on one of them (↑ from any of them is the seek bar).
   final FocusNode? rowFocusNode;
 
+  /// "Resumed from 24:10" names the Home key that starts over; false
+  /// where nobody has one to press (a phone, a tablet: Start over is the
+  /// button beside the seek buttons).
+  final bool homeKey;
+
   static const step = Duration(seconds: 10);
 
   @override
@@ -238,12 +249,7 @@ class VodOsdBottom extends StatelessWidget {
     return OsdShade(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          tokens.spacing.s32,
-          tokens.spacing.s48,
-          tokens.spacing.s32,
-          tokens.spacing.s24,
-        ),
+        padding: OsdRoom.of(context).bottomPadding(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,7 +258,8 @@ class VodOsdBottom extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(bottom: tokens.spacing.s8),
                 child: Text(
-                  'Resumed from ${formatPosition(from)} · Home starts over',
+                  'Resumed from ${formatPosition(from)}'
+                  '${homeKey ? ' · Home starts over' : ''}',
                   style: tokens.text.body.copyWith(color: colors.textEmphasis),
                 ),
               ),
@@ -287,7 +294,7 @@ class VodOsdBottom extends StatelessWidget {
             ),
             SizedBox(height: tokens.spacing.s8),
             _row(
-              OsdControlRow(
+              OsdControls(
                 leading: [
                   OsdButton(
                     icon: timeline.paused ? AppIcons.play : AppIcons.pause,
@@ -362,6 +369,8 @@ class NextEpisodeCard extends StatefulWidget {
     this.playFocusNode,
     this.autofocus = true,
     this.arrowsMove = true,
+    this.compact = false,
+    this.touch = false,
     super.key,
   });
 
@@ -388,6 +397,13 @@ class NextEpisodeCard extends StatefulWidget {
   /// ←/→ move between the two buttons (a TV's); otherwise they are the
   /// player's, which seeks with them.
   final bool arrowsMove;
+
+  /// A phone on its side (ADR-068): one row, the words beside the
+  /// buttons and no still, low enough to sit between the OSD's bars.
+  final bool compact;
+
+  /// Pressed with a finger (a phone, a tablet): buttons a size up, 44 px.
+  final bool touch;
 
   static const width = 440.0;
 
@@ -456,15 +472,120 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
         'Hide',
       ),
     };
+    final size = widget.touch ? AppButtonSize.m : AppButtonSize.s;
+    final buttons = Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _onKey,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        // The two buttons on one line, the count's bar under the first.
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // The count's bar is as wide as the button above it.
+          IntrinsicWidth(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppButton(
+                  label: play,
+                  icon: AppIcons.play,
+                  size: size,
+                  focusNode: _play,
+                  onPressed: widget.onPlay,
+                ),
+                if (widget.phase != NextCardPhase.end) ...[
+                  SizedBox(height: tokens.spacing.s4),
+                  // The bar's room is kept: the card never changes size.
+                  Visibility.maintain(
+                    visible: countdown != null,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        end:
+                            (countdown ?? widget.countdownLength) /
+                            widget.countdownLength,
+                      ),
+                      duration: const Duration(seconds: 1),
+                      builder: (context, value, _) => ProgressBar(value: value),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(width: tokens.spacing.s8),
+          AppButton(
+            label: secondary,
+            variant: AppButtonVariant.secondary,
+            size: size,
+            focusNode: _secondary,
+            onPressed: widget.onSecondary,
+          ),
+        ],
+      ),
+    );
+    final title = episode.title.isEmpty
+        ? 'Episode ${episode.episode ?? ''}'.trim()
+        : episode.title;
+    final decoration = BoxDecoration(
+      color: colors.surface2.withValues(alpha: 0.92),
+      borderRadius: tokens.radii.lgAll,
+      border: Border.all(color: colors.border),
+    );
+    if (widget.compact) {
+      return Container(
+        constraints: const BoxConstraints(maxWidth: NextEpisodeCard.width),
+        padding: EdgeInsets.all(tokens.spacing.s12),
+        decoration: decoration,
+        child: FocusTraversalGroup(
+          policy: appTraversalPolicy(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'NEXT EPISODE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.overline.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                    SizedBox(height: tokens.spacing.s4),
+                    // "S1 · E2 · Ledger": the episode's place, then its
+                    // name, on the one line there is.
+                    Text(
+                      [
+                        if (episode.season != null && episode.episode != null)
+                          'S${episode.season} · E${episode.episode}',
+                        title,
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.bodyStrong.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: tokens.spacing.s12),
+              buttons,
+            ],
+          ),
+        ),
+      );
+    }
     const still = Size(144, 81);
     return Container(
       width: NextEpisodeCard.width,
       padding: EdgeInsets.all(tokens.spacing.s16),
-      decoration: BoxDecoration(
-        color: colors.surface2.withValues(alpha: 0.92),
-        borderRadius: tokens.radii.lgAll,
-        border: Border.all(color: colors.border),
-      ),
+      decoration: decoration,
       child: FocusTraversalGroup(
         policy: appTraversalPolicy(),
         child: Column(
@@ -506,9 +627,7 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
                           ),
                         ),
                       Text(
-                        episode.title.isEmpty
-                            ? 'Episode ${episode.episode ?? ''}'.trim()
-                            : episode.title,
+                        title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: tokens.text.bodyStrong.copyWith(
@@ -528,60 +647,7 @@ class _NextEpisodeCardState extends State<NextEpisodeCard> {
               ],
             ),
             SizedBox(height: tokens.spacing.s16),
-            Focus(
-              canRequestFocus: false,
-              skipTraversal: true,
-              onKeyEvent: _onKey,
-              child: Row(
-                // The two buttons on one line, the count's bar under the
-                // first.
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // The count's bar is as wide as the button above it.
-                  IntrinsicWidth(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        AppButton(
-                          label: play,
-                          icon: AppIcons.play,
-                          size: AppButtonSize.s,
-                          focusNode: _play,
-                          onPressed: widget.onPlay,
-                        ),
-                        if (widget.phase != NextCardPhase.end) ...[
-                          SizedBox(height: tokens.spacing.s4),
-                          // The bar's room is kept: the card never changes
-                          // size.
-                          Visibility.maintain(
-                            visible: countdown != null,
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(
-                                end:
-                                    (countdown ?? widget.countdownLength) /
-                                    widget.countdownLength,
-                              ),
-                              duration: const Duration(seconds: 1),
-                              builder: (context, value, _) =>
-                                  ProgressBar(value: value),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: tokens.spacing.s8),
-                  AppButton(
-                    label: secondary,
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.s,
-                    focusNode: _secondary,
-                    onPressed: widget.onSecondary,
-                  ),
-                ],
-              ),
-            ),
+            buttons,
           ],
         ),
       ),

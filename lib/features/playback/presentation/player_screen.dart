@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/player/player_providers.dart';
@@ -28,6 +29,7 @@ import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_overlays.dart';
 import 'package:iptv_player/features/playback/presentation/player_sound.dart';
 import 'package:iptv_player/features/playback/presentation/player_surface.dart';
+import 'package:iptv_player/features/playback/presentation/player_system_ui.dart';
 import 'package:iptv_player/features/playback/presentation/time_corner.dart';
 import 'package:iptv_player/features/playback/presentation/track_text.dart';
 import 'package:iptv_player/features/playback/presentation/vod_osd.dart';
@@ -61,6 +63,14 @@ import 'package:iptv_player/features/vod/presentation/title_routes.dart';
 /// the focus on Channels, a file's after pausing or playing it; ↑/↓ in a
 /// file show them too, on Play. While a control has the focus the arrows
 /// and OK are the control's, and Back gives the picture the focus again.
+///
+/// On a phone or a tablet (ADR-068) the player has the whole screen (the
+/// system's bars hidden) and a phone turns it on its side
+/// ([PlayerSystemUi]). A tap on the picture shows the controls and the
+/// next hides them, a film's too; a double tap on a film's left or right
+/// third goes back or on [skipStep], the sum said there for a moment
+/// ("+20 s"); spreading two fingers fills the screen with the picture
+/// (cropped) and pinching fits it again. The keyboard's keys still work.
 class PlayerScreen extends ConsumerStatefulWidget {
   const new({this.zapQuery, super.key});
 
@@ -79,6 +89,21 @@ class PlayerScreen extends ConsumerStatefulWidget {
   static const zapDebounce = Duration(milliseconds: 350);
   static const numberTimeout = Duration(milliseconds: 1500);
   static const bannerTime = Duration(seconds: 3);
+
+  /// A double tap on a film's side, on a phone: back or on this much.
+  static const skipStep = Duration(seconds: 10);
+
+  /// How long "+10 s" stays after the last double tap; one within it on
+  /// the same side adds to it. Longer than the seek bar's bubble stays
+  /// ([VodPlayerController.seekShownFor]), which it stands in for.
+  static const skipNoteTime = Duration(seconds: 1);
+
+  /// How long the picture's size stays said after a pinch.
+  static const pinchNoteTime = Duration(milliseconds: 1500);
+
+  /// How far two fingers spread (or pinch, 1 / this) before the picture
+  /// fills the screen (or fits it).
+  static const pinchStep = 1.15;
 
   @override
   ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
@@ -145,6 +170,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   double _speed = 1;
 
   WindowControls? _window;
+
+  /// A phone's or a tablet's screen, asked once the player knows its size
+  /// ([_enterScreen]); null elsewhere, and until then.
+  PlayerSystemUi? _systemUi;
+  bool _screenAsked = false;
+
+  /// A phone's double taps on a film's side: which side (-1 back, 1 on)
+  /// and the seconds they add up to, while its note shows.
+  ({int side, int seconds})? _skip;
+  Timer? _skipTimer;
+
+  /// Where across the picture the last double tap came down (0–1).
+  double _doubleTapAcross = 0.5;
+
+  /// The picture's size, said after a pinch; the pinch has done its one
+  /// step ([_pinched]) until the fingers lift.
+  String? _pinchNote;
+  Timer? _pinchTimer;
+  bool _pinched = false;
+
   late final PlayerEngine _engine;
   late final PlaybackCoordinator _coordinator;
   late final VodPlayerController _vod;
@@ -220,6 +265,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _route = ModalRoute.of(context);
+    if (!_screenAsked) _enterScreen();
+  }
+
+  /// A phone or a tablet (ADR-068): the system's bars go, and a phone,
+  /// whose screen is narrower than [WindowSizes.phoneWidth] one way,
+  /// turns the picture on its side; a tablet stays as it is held. Asked
+  /// once; [dispose] gives the screen back.
+  void _enterScreen() {
+    _screenAsked = true;
+    if (!_onMobile) return;
+    final ui = ref.read(playerSystemUiProvider);
+    _systemUi = ui;
+    final phone =
+        MediaQuery.sizeOf(context).shortestSide < WindowSizes.phoneWidth;
+    unawaited(ui.enter(landscape: phone));
   }
 
   /// While the player is the page on top the keyboard is its own: a page
@@ -252,6 +312,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _zapTimer?.cancel();
     _bannerTimer?.cancel();
     _numberTimer?.cancel();
+    _skipTimer?.cancel();
+    _pinchTimer?.cancel();
+    // Every orientation and the system's bars again (a phone, a tablet).
+    if (_systemUi case final ui?) unawaited(ui.leave());
     _vod
       ..removeListener(_onVod)
       ..dispose();
@@ -288,7 +352,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         _vod.item != null &&
         (_vod.timeline.paused ||
             _vod.preparing ||
-            _vod.showsSeek ||
+            // A phone's double tap says its seek on the picture, quietly:
+            // it brings no controls up (ADR-068).
+            (_vod.showsSeek && _skip == null) ||
             _vod.ended),
     card: _vod.card,
     countdown: _vod.countdown,
@@ -370,6 +436,95 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         }
       },
     );
+  }
+
+  /// A phone, a tablet, a Chromebook: touch first (ADR-068).
+  bool get _onMobile => ref.read(formFactorProvider) == FormFactor.mobile;
+
+  /// A tap on the picture on a phone: the controls come, or go if they are
+  /// up; a film's too, which a tap never pauses (Play is on the controls).
+  /// What holds them up everywhere (a file paused or opening, a menu, a
+  /// failure) holds them here too. An open channel panel closes, as a
+  /// sheet does when its picture is tapped.
+  void _onTouchTap() {
+    if (_panel) {
+      _closePanel();
+      return;
+    }
+    final held =
+        _pinned ||
+        _menu ||
+        ref.read(playbackStateProvider).value is PlaybackFailed;
+    if (!_osd || held) {
+      _showOsd();
+      return;
+    }
+    _osdTimer?.cancel();
+    setState(() => _osd = false);
+    if (_onControl) _focus.requestFocus();
+  }
+
+  /// A double tap on a film's picture on a phone: on its left third back
+  /// [PlayerScreen.skipStep], on its right third on, the seek at once and
+  /// said where the finger is ("−10 s"); another on the same side while
+  /// that shows adds to it ("−20 s"). The middle third is a tap.
+  void _onTouchDoubleTap() {
+    final across = _doubleTapAcross;
+    final side = across < 1 / 3
+        ? -1
+        : across > 2 / 3
+        ? 1
+        : 0;
+    if (side == 0 || _coordinator.state is! PlaybackPlaying) {
+      _onTouchTap();
+      return;
+    }
+    final skip = _skip;
+    final seconds =
+        (skip != null && skip.side == side ? skip.seconds : 0) +
+        PlayerScreen.skipStep.inSeconds;
+    // Before the seek: what it changes reads the note as up.
+    setState(() => _skip = (side: side, seconds: seconds));
+    _skipTimer?.cancel();
+    _skipTimer = Timer(PlayerScreen.skipNoteTime, () {
+      if (!mounted) return;
+      setState(() => _skip = null);
+      _onVod();
+    });
+    _vod
+      ..nudge(PlayerScreen.skipStep * side)
+      ..release();
+  }
+
+  /// "−20 s" or "+10 s", while [_skip] shows on [side].
+  String? _skipText(int side) => switch (_skip) {
+    (side: final shown, :final seconds) when shown == side =>
+      '${side < 0 ? '−' : '+'}$seconds s',
+    _ => null,
+  };
+
+  void _onPinchStart() => _pinched = false;
+
+  /// Two fingers on the picture on a phone: spread, the picture fills the
+  /// screen (cropped, as Picture size's Fill); pinched, it fits again.
+  /// One step a gesture, said on the picture in Picture size's words.
+  void _onPinch(double scale) {
+    if (_pinched) return;
+    final AspectMode mode;
+    if (scale >= PlayerScreen.pinchStep) {
+      mode = AspectMode.fill;
+    } else if (scale <= 1 / PlayerScreen.pinchStep) {
+      mode = AspectMode.fit;
+    } else {
+      return;
+    }
+    _pinched = true;
+    if (mode != _aspect) _setAspect(mode);
+    setState(() => _pinchNote = 'Picture size: ${_aspectName(mode)}');
+    _pinchTimer?.cancel();
+    _pinchTimer = Timer(PlayerScreen.pinchNoteTime, () {
+      if (mounted) setState(() => _pinchNote = null);
+    });
   }
 
   void _play(ChannelItem channel) {
@@ -562,6 +717,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   /// key, its key-up went on to Android as a second back, which left the
   /// app from a section's root (the user, on the Bedroom TV).
   Future<bool> _onBack() async {
+    // A menu over the player (Audio, Speed, …): the router closes it, and
+    // the player stays.
+    if (_route?.isCurrent == false) return false;
     if (_panel) {
       _closePanel();
     } else if (_info) {
@@ -938,6 +1096,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     (AspectMode.ratio4x3, '4:3'),
   ];
 
+  static String _aspectName(AspectMode mode) =>
+      _aspects.firstWhere((a) => a.$1 == mode).$2;
+
+  void _setAspect(AspectMode mode) {
+    setState(() => _aspect = mode);
+    unawaited(_engine.setAspect(mode));
+  }
+
   Future<void> _aspectMenu(BuildContext anchor) => _holdingOsd(
     () => showAppMenu(
       anchor,
@@ -946,10 +1112,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           AppMenuItem(
             label: name,
             checked: mode == _aspect,
-            onPressed: () {
-              setState(() => _aspect = mode);
-              unawaited(_engine.setAspect(mode));
-            },
+            onPressed: () => _setAspect(mode),
           ),
       ],
     ),
@@ -1028,9 +1191,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       Builder(
         builder: (anchor) => OsdButton(
           icon: AppIcons.aspectRatio,
-          tooltip:
-              'Picture size: '
-              '${_aspects.firstWhere((a) => a.$1 == _aspect).$2}',
+          tooltip: 'Picture size: ${_aspectName(_aspect)}',
           selected: _aspect != AspectMode.fit,
           onPressed: () => unawaited(_aspectMenu(anchor)),
         ),
@@ -1119,6 +1280,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final timeOnScreen = ref.watch(
       playbackSettingsControllerProvider.select((s) => s.timeOnScreen),
     );
+    final mobile = ref.watch(formFactorProvider) == FormFactor.mobile;
+    // A phone's screen lays the OSD out tighter, clear of its bars and
+    // cutout (ADR-068); a desktop's and a TV's are as they were.
+    final room = OsdRoom.of(context);
+    final safe = MediaQuery.paddingOf(context);
+    final edge = room.edge(tokens) + safe.top;
+    final side = room.side(tokens) + safe.left;
+    // Under the top bar: the banner, the number, the stream info.
+    final belowTop = room.compact
+        ? edge + tokens.player.controlSize + tokens.spacing.s16
+        : tokens.spacing.s48 * 2 + tokens.spacing.s16;
+    final infoInFrame = room.compact && (vod || channel != null);
 
     Widget osd(Widget child) => AnimatedOpacity(
       opacity: showOsd ? 1 : 0,
@@ -1175,9 +1348,23 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       // with no wait for a second click.
                       PlayerSurface(
                         badges: false,
-                        onPictureTap: vod ? _vod.togglePause : _showOsd,
-                        onPictureDoubleTap: () =>
-                            unawaited(_toggleWindowFullScreen()),
+                        // A phone's finger shows and hides the controls,
+                        // seeks a film by its sides and pinches the
+                        // picture's size; the mouse pauses and goes full
+                        // screen (ADR-068).
+                        onPictureTap: mobile
+                            ? _onTouchTap
+                            : vod
+                            ? _vod.togglePause
+                            : _showOsd,
+                        onPictureDoubleTap: mobile
+                            ? (vod ? _onTouchDoubleTap : null)
+                            : () => unawaited(_toggleWindowFullScreen()),
+                        onPictureDoubleTapDown: mobile && vod
+                            ? (across) => _doubleTapAcross = across
+                            : null,
+                        onPinchStart: mobile ? _onPinchStart : null,
+                        onPinch: mobile ? _onPinch : null,
                         onNext: !vod
                             ? () => unawaited(_zap(1))
                             : _hasNext
@@ -1204,36 +1391,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                                 listenable: !showOsd && _osdFaded
                                     ? _still
                                     : _vod,
-                                builder: (context, _) =>
-                                    _vodOsd(item, tracks, sound, fade: osd),
+                                builder: (context, _) => _vodOsd(
+                                  item,
+                                  tracks,
+                                  sound,
+                                  room: room,
+                                  fade: osd,
+                                ),
                               )
                             else if (channel != null)
-                              osd(
-                                Column(
-                                  children: [
-                                    OsdTop(channel: channel, onBack: _exit),
-                                    const Spacer(),
-                                    OsdBottom(
-                                      channel: channel,
-                                      leading: _channelControls(sound),
-                                      trailing: [
-                                        OsdButton(
-                                          icon: channel.isFavorite
-                                              ? AppIcons.starFilled
-                                              : AppIcons.star,
-                                          tooltip: channel.isFavorite
-                                              ? 'Remove from favorites'
-                                              : 'Add to favorites',
-                                          selected: channel.isFavorite,
-                                          onPressed: () => unawaited(
-                                            _toggleFavorite(channel),
-                                          ),
-                                        ),
-                                        ..._controls(tracks, vod: false),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                              _channelOsd(
+                                channel,
+                                tracks,
+                                sound,
+                                room: room,
+                                fade: osd,
                               ),
                             // The clock while the OSD is hidden and the
                             // picture plays (not while it opens, has
@@ -1242,8 +1414,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                             // middle of the top bar's row (ADR-053).
                             if (timeOnScreen == TimeOnScreen.always)
                               Positioned(
-                                top: tokens.spacing.s24,
-                                left: tokens.spacing.s32,
+                                top: edge,
+                                left: side,
                                 child: SizedBox(
                                   height: tokens.player.controlSize,
                                   child: Align(
@@ -1258,8 +1430,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                               ),
                             if (_banner case final banner? when !_panel)
                               Positioned(
-                                top:
-                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
+                                top: belowTop,
                                 left: 0,
                                 right: 0,
                                 child: Center(
@@ -1268,21 +1439,37 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                               ),
                             if (_digits.isNotEmpty)
                               Positioned(
-                                top:
-                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                                right: tokens.spacing.s32,
+                                top: belowTop,
+                                right: room.side(tokens) + safe.right,
                                 child: NumberEntry(
                                   digits: _digits,
                                   match: _numberMatch,
                                 ),
                               ),
-                            if (_info)
+                            // On a phone's screen the OSD's frame has it,
+                            // between its bars.
+                            if (_info && !infoInFrame)
                               Positioned(
-                                top:
-                                    tokens.spacing.s48 * 2 + tokens.spacing.s16,
-                                left: tokens.spacing.s32,
+                                top: belowTop,
+                                left: side,
                                 child: const StreamInfoOverlay(),
                               ),
+                            // What a finger did, said on the picture.
+                            if (mobile) ...[
+                              for (final note in [-1, 1])
+                                Positioned.fill(
+                                  child: Align(
+                                    alignment: Alignment(note * 2 / 3, 0),
+                                    child: PictureNote(text: _skipText(note)),
+                                  ),
+                                ),
+                              Positioned.fill(
+                                child: Align(
+                                  alignment: const Alignment(0, -0.4),
+                                  child: PictureNote(text: _pinchNote),
+                                ),
+                              ),
+                            ],
                             if (_panel)
                               Positioned(
                                 top: 0,
@@ -1327,19 +1514,136 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     );
   }
 
+  /// A channel's OSD: the top and the bottom, faded in and out together.
+  /// On a phone's screen ([OsdRoom.compact]) in an [OsdFrame], with the
+  /// stream info between them.
+  Widget _channelOsd(
+    ChannelItem channel,
+    PlayerTracks? tracks,
+    PlayerSound sound, {
+    required OsdRoom room,
+    required Widget Function(Widget child) fade,
+  }) {
+    final top = OsdTop(channel: channel, onBack: _exit);
+    final bottom = OsdBottom(
+      channel: channel,
+      leading: _channelControls(sound),
+      trailing: [
+        OsdButton(
+          icon: channel.isFavorite ? AppIcons.starFilled : AppIcons.star,
+          tooltip: channel.isFavorite
+              ? 'Remove from favorites'
+              : 'Add to favorites',
+          selected: channel.isFavorite,
+          onPressed: () => unawaited(_toggleFavorite(channel)),
+        ),
+        ..._controls(tracks, vod: false),
+      ],
+    );
+    if (!room.compact) {
+      return fade(Column(children: [top, const Spacer(), bottom]));
+    }
+    return OsdFrame(
+      top: fade(top),
+      bottom: _byFailure ? const SizedBox.shrink() : fade(bottom),
+      info: _info ? _infoPanel(room) : null,
+    );
+  }
+
+  /// A phone's screen has no room for the failure card beside the OSD's
+  /// bottom, which would cover its buttons: the card has it alone, with
+  /// Back above it (ADR-068).
+  bool get _byFailure =>
+      ref.read(playbackStateProvider).value is PlaybackFailed;
+
+  /// The stream info in a phone's [OsdFrame]: under the top bar at the
+  /// left, as elsewhere, and scrolling in the room the bars leave.
+  Widget _infoPanel(OsdRoom room) {
+    final tokens = context.tokens;
+    final safe = MediaQuery.paddingOf(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        room.side(tokens) + safe.left,
+        tokens.spacing.s8,
+        room.side(tokens) + safe.right,
+        tokens.spacing.s8,
+      ),
+      child: const StreamInfoOverlay(),
+    );
+  }
+
   /// A file's OSD, each part [fade]d in and out on its own, and the
   /// next-episode card between them, which isn't (ADR-033): the bottom is
-  /// laid out shown or not, so the card never moves when the OSD does.
+  /// laid out shown or not, so the card never moves when the OSD does. On
+  /// a phone's screen ([OsdRoom.compact]) the parts are in an [OsdFrame],
+  /// the card over the bars' shades if it must, and on a phone on its
+  /// side the card is its one-row self.
   Widget _vodOsd(
     Playable item,
     PlayerTracks? tracks,
     PlayerSound sound, {
+    required OsdRoom room,
     required Widget Function(Widget child) fade,
   }) {
     final tokens = context.tokens;
     final next = _vod.next;
     final phase = _vod.card;
     final card = next != null && phase != NextCardPhase.none;
+    final mobile = _onMobile;
+    final top = VodOsdTop(
+      item: item,
+      onBack: _exit,
+      remaining: _vod.preparing || _vod.ended ? null : _vod.timeline.remaining,
+      speed: _speed,
+    );
+    final nextCard = card
+        ? Focus(
+            focusNode: _cardNode,
+            child: NextEpisodeCard(
+              key: ValueKey(next.item.remoteKey),
+              next: next,
+              phase: phase,
+              countdown: _vod.countdown,
+              countdownLength: _vod.countdownLength,
+              playFocusNode: _cardPlay,
+              // The desktop's picture keeps the focus (←/→ seek and Space
+              // pauses, as everywhere in the player; Tab reaches the
+              // card). A TV's card takes it unless the remote is on one
+              // of the OSD's controls: it goes to the card when the OSD
+              // hides. The end card, with nothing left playing and the
+              // OSD held up, takes it on both.
+              autofocus: phase == NextCardPhase.end || (_onTv && !_onControl),
+              arrowsMove: _onTv,
+              compact: room.short,
+              touch: mobile,
+              onPlay: _vod.playNext,
+              onSecondary: phase == NextCardPhase.end
+                  ? _backToSeries
+                  : _vod.hideNext,
+            ),
+          )
+        : null;
+    final bottom = VodOsdBottom(
+      timeline: _vod.timeline,
+      seeking: _vod.showsSeek,
+      resumedFrom: _vod.resumedFrom,
+      preparing: _vod.preparing,
+      onTogglePause: _vod.togglePause,
+      // A button's press is done when it is pressed.
+      onNudge: (delta) => _vod
+        ..nudge(delta)
+        ..release(),
+      onDrag: _vod.dragTo,
+      onStartOver: _vod.startOver,
+      onNext: next == null ? null : _vod.playNext,
+      playFocusNode: _entry,
+      seekFocusNode: _onTv ? _seekBar : null,
+      rowFocusNode: _onTv ? _controlRow : null,
+      homeKey: !mobile,
+      leading: [if (ref.watch(formFactorProvider).isDesktop) _volume(sound)],
+      trailing: _controls(tracks, vod: true),
+    );
+    final safe = MediaQuery.paddingOf(context);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -1347,76 +1651,42 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         // or under the next-episode card.
         if (_vod.timeline.paused && !_vod.preparing && !card)
           fade(Center(child: OsdCenterPlay(onPressed: _vod.togglePause))),
-        Column(
-          children: [
-            fade(
-              VodOsdTop(
-                item: item,
-                onBack: _exit,
-                remaining: _vod.preparing || _vod.ended
-                    ? null
-                    : _vod.timeline.remaining,
-                speed: _speed,
-              ),
-            ),
-            const Spacer(),
-            if (card)
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: EdgeInsets.only(right: tokens.spacing.s32),
-                  child: Focus(
-                    focusNode: _cardNode,
-                    child: NextEpisodeCard(
-                      key: ValueKey(next.item.remoteKey),
-                      next: next,
-                      phase: phase,
-                      countdown: _vod.countdown,
-                      countdownLength: _vod.countdownLength,
-                      playFocusNode: _cardPlay,
-                      // The desktop's picture keeps the focus (←/→ seek
-                      // and Space pauses, as everywhere in the player;
-                      // Tab reaches the card). A TV's card takes it
-                      // unless the remote is on one of the OSD's
-                      // controls: it goes to the card when the OSD hides.
-                      // The end card, with nothing left playing and the
-                      // OSD held up, takes it on both.
-                      autofocus:
-                          phase == NextCardPhase.end || (_onTv && !_onControl),
-                      arrowsMove: _onTv,
-                      onPlay: _vod.playNext,
-                      onSecondary: phase == NextCardPhase.end
-                          ? _backToSeries
-                          : _vod.hideNext,
+        if (room.compact)
+          OsdFrame(
+            top: fade(top),
+            // While the file opens its opening screen says how it goes, and
+            // a failure's card what went wrong: a phone's screen has room
+            // for them alone, under Back (ADR-068).
+            bottom: _vod.preparing || _byFailure
+                ? const SizedBox.shrink()
+                : fade(bottom),
+            card: nextCard == null
+                ? null
+                : Padding(
+                    padding: EdgeInsets.only(
+                      left: room.side(tokens) + safe.left,
+                      right: room.side(tokens) + safe.right,
                     ),
+                    child: nextCard,
+                  ),
+            info: _info ? _infoPanel(room) : null,
+          )
+        else
+          Column(
+            children: [
+              fade(top),
+              const Spacer(),
+              if (nextCard != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: EdgeInsets.only(right: tokens.spacing.s32),
+                    child: nextCard,
                   ),
                 ),
-              ),
-            fade(
-              VodOsdBottom(
-                timeline: _vod.timeline,
-                seeking: _vod.showsSeek,
-                resumedFrom: _vod.resumedFrom,
-                preparing: _vod.preparing,
-                onTogglePause: _vod.togglePause,
-                // A button's press is done when it is pressed.
-                onNudge: (delta) => _vod
-                  ..nudge(delta)
-                  ..release(),
-                onDrag: _vod.dragTo,
-                onStartOver: _vod.startOver,
-                onNext: next == null ? null : _vod.playNext,
-                playFocusNode: _entry,
-                seekFocusNode: _onTv ? _seekBar : null,
-                rowFocusNode: _onTv ? _controlRow : null,
-                leading: [
-                  if (ref.watch(formFactorProvider).isDesktop) _volume(sound),
-                ],
-                trailing: _controls(tracks, vod: true),
-              ),
-            ),
-          ],
-        ),
+              fade(bottom),
+            ],
+          ),
       ],
     );
   }

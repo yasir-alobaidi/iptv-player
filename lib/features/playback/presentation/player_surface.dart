@@ -32,6 +32,9 @@ class PlayerSurface extends ConsumerWidget {
     this.onFileRemoved,
     this.onPictureTap,
     this.onPictureDoubleTap,
+    this.onPictureDoubleTapDown,
+    this.onPinchStart,
+    this.onPinch,
     super.key,
   });
 
@@ -45,6 +48,17 @@ class PlayerSurface extends ConsumerWidget {
   /// at once instead of waiting to see whether a second click follows.
   final VoidCallback? onPictureTap;
   final VoidCallback? onPictureDoubleTap;
+
+  /// Where across the picture a double tap's second touch came down: 0 at
+  /// the left edge, 1 at the right (a phone's seek by the side, ADR-068).
+  /// [onPictureDoubleTap] follows when it ends a double tap.
+  final ValueChanged<double>? onPictureDoubleTapDown;
+
+  /// A touch gesture on the picture starts (again, as a finger joins or
+  /// leaves it), and, while two fingers are on it, how far apart they
+  /// have moved since: above 1 spread, under 1 pinched (ADR-068).
+  final VoidCallback? onPinchStart;
+  final ValueChanged<double>? onPinch;
 
   /// A file that can't be read (Phase 8 decision 8): what happens before
   /// its folder opens (the full-screen player leaves full screen, so the
@@ -159,11 +173,33 @@ class PlayerSurface extends ConsumerWidget {
             ),
           // Under the picture's clicks, which it never takes.
           if (opening) PlayerOpeningScreen(state: state, tv: tv),
-          if (onPictureTap != null || onPictureDoubleTap != null)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onPictureTap,
-              onDoubleTap: onPictureDoubleTap,
+          if (onPictureTap != null ||
+              onPictureDoubleTap != null ||
+              onPinch != null)
+            LayoutBuilder(
+              builder: (context, constraints) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onPictureTap,
+                onDoubleTap: onPictureDoubleTap,
+                onDoubleTapDown: switch (onPictureDoubleTapDown) {
+                  final down? => (details) => down(
+                    constraints.maxWidth > 0
+                        ? details.localPosition.dx / constraints.maxWidth
+                        : 0.5,
+                  ),
+                  null => null,
+                },
+                // A finger more or fewer starts the gesture again.
+                onScaleStart: onPinch == null
+                    ? null
+                    : (_) => onPinchStart?.call(),
+                onScaleUpdate: switch (onPinch) {
+                  final pinch? => (details) {
+                    if (details.pointerCount >= 2) pinch(details.scale);
+                  },
+                  null => null,
+                },
+              ),
             ),
           if (compact)
             ...overlays

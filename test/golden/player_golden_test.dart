@@ -4,6 +4,8 @@
 @Tags(['golden'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,13 +17,22 @@ import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/design/theme.dart';
+import 'package:iptv_player/features/live_tv/data/db_channel_repository.dart';
+import 'package:iptv_player/features/live_tv/domain/channels.dart';
 import 'package:iptv_player/features/live_tv/domain/now_next.dart';
+import 'package:iptv_player/features/live_tv/presentation/live_tv_screen.dart';
 import 'package:iptv_player/features/playback/domain/playback_state.dart';
 import 'package:iptv_player/features/playback/presentation/player_screen.dart';
+import 'package:iptv_player/features/playback/presentation/player_system_ui.dart';
 import 'package:iptv_player/features/playback/presentation/time_corner.dart';
+import 'package:iptv_player/features/playback/presentation/vod_launch.dart';
+import 'package:iptv_player/features/vod/data/db_movie_repository.dart';
+import 'package:iptv_player/features/vod/domain/titles.dart';
 
 import '../app/app_harness.dart';
+import '../audit/audit_look.dart';
 import '../features/live_tv/live_tv_fakes.dart';
+import '../features/playback/support/system_ui_fakes.dart';
 import '../features/playback/support/vod_player_rig.dart';
 import '../features/vod/vod_fakes.dart';
 import 'golden_harness.dart';
@@ -32,6 +43,12 @@ import 'golden_harness.dart';
 const _playerIsOneStop = {
   'no focus ring on "player"': 'the player is one stop; its keys are its own',
 };
+
+/// The audit draws the scene as a phone or a tablet (ADR-068). There the
+/// player is opened by itself, with nothing under it: the screens it is
+/// opened from have phone layouts and scenes of their own, and their
+/// findings are theirs, not the player's.
+bool get _onPhone => currentAuditLook?.formFactor == FormFactor.mobile;
 
 void main() {
   group('player', () {
@@ -54,6 +71,27 @@ void main() {
           end: now.add(const Duration(minutes: 98)),
         ),
       );
+      if (_onPhone) {
+        ChannelItem? channel;
+        await tester.runAsync(() async {
+          channel = (await DbChannelRepository(
+            live.db,
+            clock: () => now,
+          ).byNumber('src-1', 201)).valueOrNull;
+        });
+        await pumpApp(
+          tester,
+          initialLocation: playerRoutePath,
+          overrides: [
+            ...live.overrides,
+            playerSystemUiProvider.overrideWithValue(RecordedPlayerSystemUi()),
+          ],
+        );
+        await _settle(tester);
+        unawaited(live.rig.coordinator.playLive(channel!));
+        await _settle(tester);
+        return live;
+      }
       await pumpApp(
         tester,
         size: const Size(1280, 800),
@@ -96,6 +134,36 @@ void main() {
       await _settle(tester);
     });
 
+    /// The movie [t] has, opened in the player as Play opens it, with
+    /// nothing under it (a phone's look, [_onPhone]).
+    Future<void> openMovieOnPhone(
+      WidgetTester tester,
+      VodPlayerRig t, {
+      List<Override> extra = const [],
+    }) async {
+      MovieItem? movie;
+      await t.open(
+        tester,
+        playerRoutePath,
+        extra: [
+          ...extra,
+          playerSystemUiProvider.overrideWithValue(RecordedPlayerSystemUi()),
+        ],
+        before: () async {
+          movie = (await DbMovieRepository(
+            t.vod.db,
+            t.vod.details,
+            clock: () => t.vod.now,
+          ).byRemoteKey('src-1', '501')).valueOrNull;
+        },
+      );
+      final app = ProviderScope.containerOf(
+        tester.element(find.byType(PlayerScreen)),
+      );
+      unawaited(app.read(vodLauncherProvider).playMovie(movie!));
+      await settle(tester);
+    }
+
     /// A movie or an episode in the player: its own face (ADR-017).
     Future<VodPlayerRig> play(
       WidgetTester tester,
@@ -108,9 +176,13 @@ void main() {
       hideDebugBanner();
       final t = VodPlayerRig();
       t.vod.fakes.now = goldenNow();
-      await t.open(tester, location, size: size, extra: extra);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await settle(tester);
+      if (_onPhone) {
+        await openMovieOnPhone(tester, t, extra: extra);
+      } else {
+        await t.open(tester, location, size: size, extra: extra);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await settle(tester);
+      }
       await t.firstFrame(tester, length: length);
       t.rig.engine
         ..emit(const PlayerVideoChanged(width: 3840, height: 2160))
@@ -137,9 +209,17 @@ void main() {
         hideDebugBanner();
         final t = VodPlayerRig();
         t.vod.fakes.now = goldenNow();
-        await t.open(tester, '/movies/src-1/501', size: const Size(1280, 800));
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-        await settle(tester);
+        if (_onPhone) {
+          await openMovieOnPhone(tester, t);
+        } else {
+          await t.open(
+            tester,
+            '/movies/src-1/501',
+            size: const Size(1280, 800),
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await settle(tester);
+        }
         // No picture 12 s on (a file has 30): the provider is slow. The
         // poster can't load in a test: the app's own dark surface.
         await tester.pump(const Duration(seconds: 12));
