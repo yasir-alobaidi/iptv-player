@@ -66,7 +66,7 @@ final class PlayerSoundControllerProvider
 }
 
 String _$playerSoundControllerHash() =>
-    r'644de69ddbb180ce42fcf7caa771b05ed5d5e10c';
+    r'61ff77f7745e9e6e850648efb6ca01f42e41115a';
 
 /// How loud the player is (ADR-017): one engine, so one volume for the
 /// full-screen player and the preview alike, kept across restarts. The
