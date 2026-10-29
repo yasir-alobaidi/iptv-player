@@ -14,7 +14,9 @@ on Apple TV, or on the **Fire TV Stick 4K Select** (its new system
 doesn't run Android apps). For those TVs, plug in a Google TV streamer or
 a Fire TV stick and install Bijou there.
 
-Bijou isn't in the Play Store: it is one file, **`Bijou-TV.apk`**
+Bijou isn't in the Play Store yet (it is being readied: docs/play/,
+ADR-068; a copy from Play and one installed by hand can't update each
+other, so one is removed first): it is one file, **`Bijou-TV.apk`**
 (about 95 MB), installed on the TV by hand. **None of the ways below
 needs Developer options' "wireless debugging" or "USB debugging"**, only
 permission for one app to install apps. It takes about ten minutes the

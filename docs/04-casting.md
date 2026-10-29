@@ -7,6 +7,9 @@ Most IPTV URLs can't be played by the receiver directly: raw MPEG-TS, no CORS he
 
 Phase 0 proved this end to end on a Chromecast with Google TV (4K) with our own Cast v2 client and the bundled FFmpeg (ADR-004). The receiver plays HLS with Shaka Player, the Web Receiver's default HLS player since SDK 3.0.0150.
 
+## AirPlay (ADR-067)
+The same Cast button also lists **AirPlay TVs** (Apple TV; Samsung, LG, Sony, Vizio, Hisense and Roku TVs with AirPlay 2), found on `_airplay._tcp` and named "<maker> <model> · AirPlay". Our own client (`lib/data/airplay/`, pyatv's protocol read, never run): HAP pair-setup with the code the TV shows (once, from the picker; the key in the keychain as `airplay.<device id>`) or transient pairing; pair-verify; the encrypted AirPlay 2 session (SETUP with an NTP timing port, the event channel, `/feedback`, RECORD, SETUP of stream type 130) and the play queue's `/command` (`insertPlayQueueItem`, `setRate`). The planner sends AirPlay **HLS with H.264 and AAC only** through the same relay. Not yet over AirPlay: seek, subtitles, volume, position. `tools/airplay_probe.dart` tries a TV by hand. **Not yet run on a real TV** (ADR-067's first-run steps).
+
 ## Components (lib/data/cast/)
 | Component | Responsibility |
 |---|---|

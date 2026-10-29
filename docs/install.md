@@ -191,11 +191,12 @@ release's, so the two update each other.
   casting, and either an Apple developer account (about $99 a year) to
   sign it or a one-time "Open anyway" in System Settings. Roughly a
   phase of work, mostly packaging and testing.
-- **Android phones and tablets:** the closest of all: the TV app is
-  already an Android app, so the APK installs on a phone today, but its
-  screens are made for a remote and a 16:9 screen. A phone version needs
-  touch-first layouts (portrait, bottom navigation, gestures in the
-  player). A phase of work, like the TV's.
+- **Android phones, tablets and Chromebooks:** in progress (ADR-068).
+  The same APK knows a phone from a TV and gives it a touch layout: the
+  bottom bar on a phone held upright, the rail on a tablet, a touch
+  player. Google Play's bundle, listing and policy pages are in
+  docs/play/; publishing waits for the remaining screens and the
+  developer account.
 - **iPhone and iPad:** the most work. It needs the touch layouts above,
   a Mac with Xcode, and an Apple developer account to install it for
   more than 7 days at a time (or App Store review). iOS doesn't let an
