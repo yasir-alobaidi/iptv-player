@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/shell/bottom_bar.dart';
 import 'package:iptv_player/app/shell/nav_rail.dart';
@@ -90,6 +90,18 @@ void main() {
       expect(find.text(gone), findsNothing, reason: gone);
     }
     expect(find.text('Playback'), findsWidgets);
+  });
+
+  testWidgets("the compact bar's title is never cut for the source's "
+      'chip', (tester) async {
+    await open(tester, size: const Size(360, 780), location: '/settings');
+    final title = tester.renderObject<RenderParagraph>(
+      find.descendant(
+        of: find.byType(ShellTopBar),
+        matching: find.text('Settings'),
+      ),
+    );
+    expect(title.didExceedMaxLines, isFalse);
   });
 
   testWidgets('wider (a tablet, a phone on its side): the rail and the top '

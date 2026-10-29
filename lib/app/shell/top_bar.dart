@@ -134,47 +134,52 @@ class ShellTopBar extends StatelessWidget {
   Widget _compactRow(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.text.h2.copyWith(color: colors.textPrimary),
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        children: [
+          // The title first: the source's chip gives way before it does
+          // ("Settin…" beside a chip that had room to spare).
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth / 2),
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.text.h2.copyWith(color: colors.textPrimary),
+            ),
           ),
-        ),
-        SizedBox(width: tokens.spacing.s12),
-        Flexible(
-          child: _SourceChip(
-            source: source,
-            choices: sourceChoices,
-            onManage: onOpenSource,
+          SizedBox(width: tokens.spacing.s12),
+          Flexible(
+            child: _SourceChip(
+              source: source,
+              choices: sourceChoices,
+              onManage: onOpenSource,
+            ),
           ),
-        ),
-        const Spacer(),
-        AppIconButton(
-          icon: AppIcons.search,
-          tooltip: 'Search',
-          onPressed: onOpenSearch,
-        ),
-        if (onOpenGuide != null) ...[
-          SizedBox(width: tokens.spacing.s4),
+          const Spacer(),
           AppIconButton(
-            icon: AppIcons.guide,
-            tooltip: 'Guide',
-            onPressed: onOpenGuide,
+            icon: AppIcons.search,
+            tooltip: 'Search',
+            onPressed: onOpenSearch,
           ),
+          if (onOpenGuide != null) ...[
+            SizedBox(width: tokens.spacing.s4),
+            AppIconButton(
+              icon: AppIcons.guide,
+              tooltip: 'Guide',
+              onPressed: onOpenGuide,
+            ),
+          ],
+          if (onOpenSettings != null) ...[
+            SizedBox(width: tokens.spacing.s4),
+            AppIconButton(
+              icon: AppIcons.settings,
+              tooltip: 'Settings',
+              onPressed: onOpenSettings,
+            ),
+          ],
         ],
-        if (onOpenSettings != null) ...[
-          SizedBox(width: tokens.spacing.s4),
-          AppIconButton(
-            icon: AppIcons.settings,
-            tooltip: 'Settings',
-            onPressed: onOpenSettings,
-          ),
-        ],
-      ],
+      ),
     );
   }
 
