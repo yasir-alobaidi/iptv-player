@@ -14,7 +14,7 @@ Data layer (Xtream/M3U/XMLTV, sync, drift DB) · domain interfaces · Riverpod p
 | Casting | Excluded via conditional imports / feature flag — the TV is the player |
 | Downloads & library | Not on the TV in v2 (Chromecast with Google TV has 8 GB of storage). Downloads and local files reach the TV by casting from the desktop app |
 | Performance | Low-end target: Chromecast with Google TV (2 GB RAM). Smaller image caches, shorter EPG retention (−2 h to +3 days), gradients instead of blurs, cheap list items |
-| Lifecycle | Stop playback when the app goes to background (Home); restore state on return; handle audio focus |
+| Lifecycle | Stop playback when the app goes to background (Home); restore state on return; handle audio focus. (A phone, tablet or Chromebook instead shrinks the full-screen player to picture-in-picture, ADR-069; never a TV.) |
 | Manifest | LEANBACK_LAUNCHER intent category, an adaptive icon (Google TV's "Your apps" row shows it in a circle; the version code is the commit count, so an update's icon shows, ADR-028), 320×180 banner, `android.software.leanback` and `android.hardware.touchscreen` declared `required="false"` |
 | Distribution | Sideloaded APK via adb for personal use: **"Bijou"** (stable, from `main`) and **"Bijou Beta"** (`….bijou.beta`, from `dev`) side by side, each with its own data; `tools/tv_apk.sh stable\|beta` (ADR-034) |
 
