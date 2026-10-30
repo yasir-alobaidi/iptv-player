@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:iptv_player/design/components/app_menu.dart';
@@ -111,7 +112,11 @@ class _MenuRoute extends PopupRoute<void> {
     return FadeTransition(
       opacity: animation,
       child: CustomSingleChildLayout(
-        delegate: _MenuLayout(anchor: anchor, gap: context.tokens.spacing.s4),
+        delegate: _MenuLayout(
+          anchor: anchor,
+          gap: context.tokens.spacing.s4,
+          system: MediaQuery.viewPaddingOf(context),
+        ),
         child: Material(
           type: MaterialType.transparency,
           child: AppMenu(items: closing, width: width, autofocus: true),
@@ -122,39 +127,49 @@ class _MenuRoute extends PopupRoute<void> {
 }
 
 /// Below the anchor, left edges aligned; flipped above or pulled in
-/// wherever the window's edge is in the way.
+/// wherever the window's edge, or the system's bars over it ([system]: a
+/// phone's status bar, gesture bar and camera cutout), is in the way.
 class _MenuLayout extends SingleChildLayoutDelegate {
-  const new({required this.anchor, required this.gap});
+  const new({required this.anchor, required this.gap, required this.system});
 
   final Rect anchor;
   final double gap;
+  final EdgeInsets system;
 
-  /// Never taller than the window, less a gap at each edge.
+  /// Never taller than the window between the system's bars, less a gap
+  /// at each edge.
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
     final loose = constraints.loosen();
     return loose.copyWith(
-      maxHeight: (loose.maxHeight - gap * 2).clamp(0, loose.maxHeight),
+      maxHeight: (loose.maxHeight - system.vertical - gap * 2).clamp(
+        0,
+        loose.maxHeight,
+      ),
     );
   }
 
   @override
   Offset getPositionForChild(Size size, Size child) {
+    final left = system.left + gap;
+    final right = size.width - system.right - gap;
+    final top = system.top + gap;
+    final bottom = size.height - system.bottom - gap;
     var x = anchor.left;
-    if (x + child.width > size.width - gap) {
+    if (x + child.width > right) {
       x = anchor.right - child.width;
     }
     var y = anchor.bottom + gap;
-    if (y + child.height > size.height - gap) {
+    if (y + child.height > bottom) {
       y = anchor.top - gap - child.height;
     }
     return Offset(
-      x.clamp(gap, (size.width - child.width - gap).clamp(gap, size.width)),
-      y.clamp(gap, (size.height - child.height - gap).clamp(gap, size.height)),
+      x.clamp(left, math.max(left, right - child.width)),
+      y.clamp(top, math.max(top, bottom - child.height)),
     );
   }
 
   @override
   bool shouldRelayout(_MenuLayout old) =>
-      old.anchor != anchor || old.gap != gap;
+      old.anchor != anchor || old.gap != gap || old.system != system;
 }

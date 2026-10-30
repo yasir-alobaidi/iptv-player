@@ -6,6 +6,7 @@ export 'package:iptv_player/design/app_icon.dart';
 export 'package:iptv_player/design/components/app_backdrop.dart';
 export 'package:iptv_player/design/components/app_badge.dart';
 export 'package:iptv_player/design/components/app_banner.dart';
+export 'package:iptv_player/design/components/app_bottom_sheet.dart';
 export 'package:iptv_player/design/components/app_button.dart';
 export 'package:iptv_player/design/components/app_checkbox.dart';
 export 'package:iptv_player/design/components/app_chip.dart';

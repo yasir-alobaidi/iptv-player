@@ -9,7 +9,6 @@ import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/live_tv/presentation/categories_pane.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_list_pane.dart';
 import 'package:iptv_player/features/live_tv/presentation/preview_pane.dart';
-import 'package:iptv_player/features/live_tv/presentation/touch_sheet.dart';
 
 import '../../app/app_harness.dart';
 import 'live_tv_fakes.dart';
@@ -60,13 +59,13 @@ void main() {
 
     await tester.tap(categoryButton());
     await _settle(tester);
-    expect(find.byType(TouchSheet), findsOneWidget);
+    expect(find.byType(AppBottomSheet), findsOneWidget);
     expect(find.byType(CategoriesPane), findsOneWidget);
 
     // The filter keeps the categories that match.
     await tester.enterText(
       find.descendant(
-        of: find.byType(TouchSheet),
+        of: find.byType(AppBottomSheet),
         matching: find.byType(EditableText),
       ),
       'spo',
@@ -87,7 +86,7 @@ void main() {
       ),
     );
     await _settle(tester);
-    expect(find.byType(TouchSheet), findsNothing);
+    expect(find.byType(AppBottomSheet), findsNothing);
     expect(
       tester.widget<FocusableSurface>(categoryButton()).semanticLabel,
       'Category: Sports, 3 channels',

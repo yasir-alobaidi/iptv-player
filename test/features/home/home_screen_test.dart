@@ -257,6 +257,50 @@ void main() {
       expect(find.text('No guide information'), findsOneWidget);
     });
 
+    testWidgets("on a phone held upright: the rows run to the screen's "
+        'edge with the next card peeking: Continue 1.2 across, channels '
+        '1.6, posters 2.6', (tester) async {
+      const phone = Size(390, 844);
+      await open(
+        tester,
+        history: true,
+        size: phone,
+        extra: [formFactorProvider.overrideWithValue(FormFactor.mobile)],
+      );
+
+      double widthOf(Finder card) => tester.getSize(card.first).width;
+      // Each across count, from the cards' widths (16 px margin, 12 px
+      // between): the width of the room over one card and its gap.
+      double across(Finder card) =>
+          (phone.width - 16 + 12) / (widthOf(card) + 12);
+      expect(across(find.byType(LandscapeCard)), closeTo(1.2, 0.05));
+      expect(across(find.byType(ChannelTile)), closeTo(1.6, 0.05));
+      await tester.scrollUntilVisible(
+        find.byType(PosterCard).first,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(across(find.byType(PosterCard)), closeTo(2.6, 0.05));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('on a phone with nothing watched: the hero stacked, its '
+        'buttons across it', (tester) async {
+      await open(
+        tester,
+        size: const Size(390, 844),
+        extra: [formFactorProvider.overrideWithValue(FormFactor.mobile)],
+      );
+
+      expect(find.text('Start watching'), findsOneWidget);
+      final live = tester.getRect(findByLabel('Open Live TV'));
+      final browse = tester.getRect(findByLabel('Browse movies'));
+      expect(live.width, greaterThan(390 - 2 * 16 - 64));
+      expect(browse.width, closeTo(live.width, 1));
+      expect(browse.top, greaterThan(live.bottom));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Ctrl+1 lands on the first card', (tester) async {
       final (_, app) = await open(tester, history: true);
       app.router.go(AppDestination.movies.path);

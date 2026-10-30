@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/app/destinations.dart';
+import 'package:iptv_player/core/core_providers.dart';
+import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/data/db/app_database.dart' show ChannelsCompanion;
@@ -38,6 +40,8 @@ void main() {
     bool guide = true,
     bool offline = false,
     bool reduceMotion = false,
+    Size size = const Size(1440, 900),
+    FormFactor? formFactor,
     Future<void> Function(GuideFixture fixture)? before,
   }) async {
     final fixture = GuideFixture();
@@ -51,9 +55,12 @@ void main() {
       tester,
       initialLocation: AppDestination.guide.path,
       withAppearance: reduceMotion,
+      size: size,
       overrides: [
         ...fixture.overrides,
         appOfflineProvider.overrideWith((ref) => Stream.value(offline)),
+        if (formFactor != null)
+          formFactorProvider.overrideWithValue(formFactor),
         if (reduceMotion)
           ...appearanceOverrides(
             settings: const AppearanceSettings(reduceMotion: SystemSwitch.on),
@@ -383,6 +390,61 @@ void main() {
         findsOneWidget,
       );
       await _key(tester, LogicalKeyboardKey.escape);
+      await _finish(tester);
+    });
+
+    testWidgets('on a phone held upright it is a bottom sheet: the '
+        "programme's title, its buttons across the sheet one under another "
+        'at 48 px; a drag down closes it', (tester) async {
+      await pump(
+        tester,
+        size: const Size(390, 844),
+        formFactor: FormFactor.mobile,
+      );
+
+      // On now since 8: its title is under the channels' column, its
+      // block runs on past it.
+      final title = tester.getRect(_inGrid('Continental Cup · Semi-final'));
+      await tester.tapAt(Offset(240, title.center.dy));
+      await _settle(tester);
+
+      final sheet = find.byType(AppBottomSheet);
+      expect(sheet, findsOneWidget);
+      expect(find.byType(GuideProgrammeSheet), findsOneWidget);
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.text('Continental Cup · Semi-final'),
+        ),
+        findsOneWidget,
+      );
+      final buttons = [
+        for (final element
+            in find
+                .descendant(of: sheet, matching: find.byType(AppButton))
+                .evaluate())
+          tester.getRect(find.byWidget(element.widget)),
+      ];
+      expect(buttons, hasLength(greaterThanOrEqualTo(2)));
+      final sheetBox = tester.getRect(sheet);
+      for (final (index, button) in buttons.indexed) {
+        expect(button.height, greaterThanOrEqualTo(48));
+        expect(button.width, greaterThan(sheetBox.width - 64));
+        if (index > 0) {
+          expect(button.top, greaterThanOrEqualTo(buttons[index - 1].bottom));
+        }
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.drag(
+        find.descendant(
+          of: sheet,
+          matching: find.text('Continental Cup · Semi-final'),
+        ),
+        const Offset(0, AppBottomSheet.closeDistance + 20),
+      );
+      await _settle(tester);
+      expect(find.byType(AppBottomSheet), findsNothing);
       await _finish(tester);
     });
 

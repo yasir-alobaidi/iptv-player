@@ -232,6 +232,167 @@ void main() {
     });
   });
 
+  group('AppMenu on a phone', () {
+    testWidgets("a long menu keeps clear of the system's bars and the "
+        "camera's cutout (a phone on its side)", (tester) async {
+      tester.view
+        ..physicalSize = const Size(780, 360)
+        ..devicePixelRatio = 1
+        ..viewPadding = const FakeViewPadding(top: 24, left: 48, bottom: 20);
+      addTearDown(tester.view.reset);
+      await pumpDesign(
+        tester,
+        Builder(
+          builder: (anchor) => AppButton(
+            label: 'Channel',
+            onPressed: () => showAppMenu(
+              anchor,
+              items: [
+                for (var i = 1; i <= 12; i++)
+                  AppMenuItem(label: 'Item $i', onPressed: () {}),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Channel'));
+      await tester.pumpAndSettle();
+
+      final menu = tester.getRect(find.byType(AppMenu));
+      expect(menu.top, greaterThanOrEqualTo(24));
+      expect(menu.bottom, lessThanOrEqualTo(360 - 20));
+      expect(menu.left, greaterThanOrEqualTo(48));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('AppBottomSheet', () {
+    Future<void> openSheet(
+      WidgetTester tester, {
+      Size window = const Size(390, 844),
+      FakeViewPadding system = const FakeViewPadding(top: 48, bottom: 24),
+      bool tall = false,
+    }) async {
+      tester.view
+        ..physicalSize = window
+        ..devicePixelRatio = 1
+        ..viewPadding = system;
+      addTearDown(tester.view.reset);
+      await pumpDesign(
+        tester,
+        Builder(
+          builder: (context) => AppButton(
+            label: 'Open',
+            onPressed: () => showAppBottomSheet<void>(
+              context,
+              builder: (_) => AppBottomSheet(
+                title: 'Categories',
+                subtitle: '146 categories',
+                tall: tall,
+                child: const SizedBox(height: 120, child: Text('Body')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+    }
+
+    Rect sheet(WidgetTester tester) => tester.getRect(
+      find
+          .descendant(
+            of: find.byType(AppBottomSheet),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+
+    testWidgets('across the bottom, its title, a close button at least '
+        '44 px, above the gesture bar', (tester) async {
+      await openSheet(tester);
+
+      expect(find.text('Categories'), findsOneWidget);
+      expect(find.text('146 categories'), findsOneWidget);
+      final box = sheet(tester);
+      expect(box.width, 390);
+      expect(box.bottom, 844);
+      final body = tester.getRect(find.text('Body'));
+      expect(body.bottom, lessThanOrEqualTo(844 - 24));
+      final close = tester.getRect(
+        find.descendant(
+          of: find.byType(AppBottomSheet),
+          matching: find.byType(AppIconButton),
+        ),
+      );
+      expect(close.height, greaterThanOrEqualTo(touchTargetSize));
+    });
+
+    testWidgets('above the keyboard while it is up', (tester) async {
+      await openSheet(tester);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.text('Body')).bottom,
+        lessThanOrEqualTo(844 - 300),
+      );
+    });
+
+    testWidgets('640 px at most, centred, in a wider window; a tall one '
+        'takes most of the height', (tester) async {
+      await openSheet(tester, window: const Size(1024, 768), tall: true);
+
+      final box = sheet(tester);
+      expect(box.width, AppBottomSheet.maxWidth);
+      expect(box.center.dx, closeTo(512, 0.5));
+      expect(box.height, greaterThan(768 * 0.7));
+    });
+
+    testWidgets('a drag down past the line closes it; a short one springs '
+        'back', (tester) async {
+      await openSheet(tester);
+
+      await tester.drag(find.text('Categories'), const Offset(0, 40));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomSheet), findsOneWidget);
+      expect(sheet(tester).bottom, 844, reason: 'back in place');
+
+      await tester.drag(
+        find.text('Categories'),
+        const Offset(0, AppBottomSheet.closeDistance + 20),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomSheet), findsNothing);
+    });
+
+    testWidgets('Esc, the close button and the scrim each close it', (
+      tester,
+    ) async {
+      await openSheet(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomSheet), findsNothing);
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBottomSheet),
+          matching: find.byType(AppIconButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomSheet), findsNothing);
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(195, 100));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomSheet), findsNothing);
+    });
+  });
+
   group('AppSlider', () {
     testWidgets('reports changes', (tester) async {
       double? value;

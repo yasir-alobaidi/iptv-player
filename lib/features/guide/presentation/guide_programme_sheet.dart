@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
@@ -9,7 +10,6 @@ import 'package:iptv_player/features/guide/domain/epg.dart';
 import 'package:iptv_player/features/guide/presentation/guide_text.dart';
 import 'package:iptv_player/features/live_tv/data/live_tv_providers.dart';
 import 'package:iptv_player/features/live_tv/domain/channels.dart';
-import 'package:iptv_player/features/live_tv/presentation/touch_sheet.dart';
 import 'package:iptv_player/features/reminders/data/reminder_providers.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_actions.dart';
 import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
@@ -20,7 +20,7 @@ import 'package:iptv_player/features/reminders/presentation/reminder_text.dart';
 /// channel's favorite. Esc closes it.
 ///
 /// On a phone held upright (ADR-068) it comes up from the bottom edge, a
-/// [TouchSheet], its buttons one under the other at a thumb's reach.
+/// [AppBottomSheet], its buttons one under the other at a thumb's reach.
 Future<void> showGuideProgrammeSheet(
   BuildContext context, {
   required ChannelItem channel,
@@ -28,7 +28,7 @@ Future<void> showGuideProgrammeSheet(
   required DateTime now,
   required VoidCallback onWatch,
 }) {
-  final touch = touchSheetFits(context);
+  final touch = MediaQuery.sizeOf(context).width < WindowSizes.phoneWidth;
   Widget sheet(BuildContext _) => GuideProgrammeSheet(
     channel: channel,
     programme: programme,
@@ -37,7 +37,7 @@ Future<void> showGuideProgrammeSheet(
     touch: touch,
   );
   return touch
-      ? showTouchSheet<void>(context, builder: sheet)
+      ? showAppBottomSheet<void>(context, builder: sheet)
       : showAppDialog<void>(context, builder: sheet);
 }
 
@@ -153,7 +153,7 @@ class GuideProgrammeSheet extends ConsumerWidget {
     ];
 
     if (touch) {
-      return TouchSheet(
+      return AppBottomSheet(
         title: programme.title,
         subtitle: programmeSheetMeta(programme, now, tokens.timeStyle),
         child: Padding(

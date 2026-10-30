@@ -16,7 +16,6 @@ import 'package:iptv_player/features/live_tv/presentation/categories_pane.dart';
 import 'package:iptv_player/features/live_tv/presentation/channel_list_pane.dart';
 import 'package:iptv_player/features/live_tv/presentation/live_tv_state.dart';
 import 'package:iptv_player/features/live_tv/presentation/preview_pane.dart';
-import 'package:iptv_player/features/live_tv/presentation/touch_sheet.dart';
 import 'package:iptv_player/features/playback/data/playback_providers.dart';
 import 'package:iptv_player/features/playback/domain/playable.dart';
 import 'package:iptv_player/features/sources/presentation/current_source.dart';
@@ -142,7 +141,7 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
 
   /// A phone's categories (ADR-068): a sheet with the categories pane and
   /// a filter over it; a choice closes it, and the list takes the focus.
-  Future<void> _pickCategory() => showTouchSheet<void>(
+  Future<void> _pickCategory() => showAppBottomSheet<void>(
     context,
     builder: (sheet) => _CategorySheet(
       controller: _categories,
@@ -354,7 +353,7 @@ class _CategorySheetState extends State<_CategorySheet> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return TouchSheet(
+    return AppBottomSheet(
       title: 'Categories',
       tall: true,
       child: Padding(
