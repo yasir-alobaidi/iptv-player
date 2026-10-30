@@ -1,6 +1,28 @@
-# Handoff — 2026-10-29, the thirty-third session (Android phones, tablets and Chromebooks; Google Play's kit; our own AirPlay sender; all on `dev`, not yet on a TV); before it, the thirty-second (FAISAL TV 358 on the Living Room TV); start with "Start here"
+# Handoff — 2026-10-30, the thirty-fourth session (the phone's remaining items and picture-in-picture, on `dev`; no TV: the laptop was away from home); before it, the thirty-third (Android phones and Google Play's kit, our own AirPlay sender); start with "Start here"
 
 ## Start here (the next session)
+**The user's words:** "lets continue the work" (after the thirty-third session's handoff). The laptop was on 192.168.26.x: no TV reachable, so nothing of AirPlay ran and no TV was touched or asked about.
+
+**Where everything is:**
+- **`dev`** (7 commits after 7fb235f, then this docs commit): ADR-069 (picture-in-picture) and ADR-068's addendum in docs/decisions.md; `main` unchanged (`stable-358`). Nothing installed on any device but the phone emulator.
+- **Fixed first:** `dev`'s suite was red after 9c7248d (six phone looks in the audit: the compact bar's source chip overflowing beside the Guide's button) — the thirty-third session's last code commit had come after its full run.
+- **Done:** the source chip → Settings → Sources; Settings in Settings → the list; `TouchTargets` at the root on mobile; Settings → About → **Privacy** (docs/privacy-policy.md bundled: fill its placeholders and it changes in the app too); Favorites' Move up/down on every device; `AppBottomSheet` in lib/design; menus clear of the system's bars; the audit's `_describe` crash; tests for the sheet, the Guide's phone sheet, Home's rows on a phone. **Picture-in-picture (ADR-069)** on phones, tablets and Chromebooks: `PictureInPicture.kt` over `bijou/pip`, `lib/core/platform/picture_in_picture.dart`, `AndroidPictureInPicture`, `PlayerSurface.pictureOnly`, `PlaybackCoordinator.endAway()`.
+- **Checks at the end:** analyze and format clean; the full suite under `TZ=UTC` **6,235 passed, 22 skipped** (with `dart` on PATH: without it 5 more skip); the phone audit's looks: no findings; the Android 12 phone emulator with the fake panel: PiP entered, expanded (stream uninterrupted), closed (no connection left), a film paused from the window. The emulator **drew the picture** this time (the video layer). Not run: the integration walks (nothing on the desktop's paths changed but the source chip's section and Favorites' menu, both covered by widget tests).
+- **Ready to test:** `build/phone/bijou-beta-all-<build>.apk` (this session's build, PiP included): a phone, a tablet, a Chromebook; on the Bedroom TV it would replace Beta 352.
+
+**First, at home with a TV on:** AirPlay's first run, exactly as the thirty-third session's "Start here" below says (the Hisense Roku, the user reads the 4-digit code once). Ask before any TV, as ever.
+
+**Then:** a real phone (the user's, if they install the APK): PiP on Android 13+ (the flagged receiver) and the layouts by hand; a TV check of Bijou Beta before merging `dev` into `main` (Favorites' channel menu now has Move up/down on the TV; nothing else of the TV changed); Play's internal test track once the user has the account and the key. Left of ADR-068: background audio (a media-playback foreground service; Play wants it declared and justified), casting from a phone (no FFmpeg there: only streams a Chromecast plays directly), Android 16's predictive back.
+
+**Before you start the next session (user):**
+1. **Push:** `git push origin --all && git push origin --tags` (dev's new commits; no new tag).
+2. **For AirPlay's first run:** be home with the Hisense Roku on (and the Samsung if free), at the TV to read its 4-digit code once.
+3. **Google Play, when you're ready:** as in the list below (the account, `tools/play_upload_key.sh`, the four secrets, the contact email and developer name in docs/play/listing.md and docs/privacy-policy.md — the app's Privacy dialog shows the same file —, the feature graphic's tile, the 12-tester closed test).
+4. **Optional:** install `build/phone/bijou-beta-all-<build>.apk` on your phone; try picture-in-picture (play a channel full screen, press Home).
+
+**How it was done:** inline, no agents (the items were small); the phone emulator after the APK build with Gradle stopped first (its daemon outlived `./gradlew --stop` until run with its own JDK: `JAVA_HOME=$HOME/develop/jdk-21.0.12.1+1 ./gradlew --stop`), headless and `-no-audio` while the desktop Bijou was open. PiP's menu on the emulator: one `input tap` shows the system's controls, and the next must follow within about a second or the menu has hidden again.
+
+## The thirty-third session's "Start here" (kept for its details: AirPlay's first-run steps, Play's list)
 **The user's words:** "I need u to work on the android standard to support every possible device we might need to work on, to be ready to publish on google play, and also start working on the air play support on the major brands and devices to support them, and if u got bugs fix them and if u got design enhancments also do them"; mid-session "the samsung and ruko living room and bed room all free to use and work on", then "only the bedroom and Roku tv are available now", then "no tv is avaialbe now, so get things ready and we will test later and stop on a clear point with a proper hand off".
 
 **Where everything is:**
