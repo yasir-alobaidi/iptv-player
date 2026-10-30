@@ -101,6 +101,9 @@ flutter:
     # The licences of the programs the app runs or loads (FFmpeg, mpv),
     # added to LicenseRegistry at startup.
     - assets/licenses/
+    # The privacy policy, shown in Settings → About as Google Play asks
+    # (ADR-068); the same file is the page Play links to.
+    - docs/privacy-policy.md
 
   # Variable fonts (wght axis). Weights are selected with FontVariation('wght')
   # alongside FontWeight; see lib/design/tokens.dart.

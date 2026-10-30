@@ -13,6 +13,7 @@ import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_store.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/licenses.dart';
+import 'package:iptv_player/core/platform/privacy_policy.dart';
 import 'package:iptv_player/design/appearance.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/diagnostics/domain/log_lines.dart';
@@ -395,6 +396,30 @@ void main() {
           appVersionProvider.overrideWith(
             (ref) async => const AppVersion(version: '0.1.0', build: '1'),
           ),
+          // A copy of the policy's start, so filling in its contact
+          // details doesn't change the picture.
+          privacyPolicyProvider.overrideWith(
+            (ref) async => parsePrivacyPolicy('''
+*Effective 27 October 2026.*
+
+Bijou is a video player for Android (phones, tablets, Chromebooks and
+TVs), Linux and Windows. It comes with nothing to watch of its own: it
+plays the playlists, program guides and services you add to it. In
+short: **it stays on your device, and nothing is ever sent to us.**
+
+## What Bijou keeps on your device
+
+- **The sources you add:** their names and addresses, and for a server
+  you sign in to, your username and password. The password is stored
+  encrypted (on Android, with a key held in the Android Keystore).
+- **What those sources contain**, as Bijou downloads it for you: the
+  lists of channels, movies and series, the program guide, artwork.
+
+## What leaves your device
+
+Bijou connects only to the addresses you give it, because you gave them.
+'''),
+          ),
           licensesProvider.overrideWith(
             (ref) async => const [
               PackageLicenses('FFmpeg', [
@@ -451,6 +476,16 @@ void main() {
       await settleApp(tester);
 
       await golden(tester, 'images/settings_licences.png');
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    sceneTest('Privacy policy', (tester) async {
+      await about(tester);
+      await tapShown(tester, find.text('Privacy'));
+      await settleApp(tester);
+      await settleApp(tester);
+
+      await golden(tester, 'images/settings_privacy.png');
       debugDefaultTargetPlatformOverride = null;
     });
 

@@ -168,8 +168,9 @@ https://github.com/yasir-alobaidi/iptv-player/blob/main/docs/privacy-policy.md
 (It works once the file is on `main` and pushed. GitHub Pages gives a
 plainer page if you turn it on for `docs/`; either is accepted: public,
 not a PDF, not editable by others.) Play's User Data policy also wants
-**a link to it inside the app**: Settings → About is the place (the app
-work, not this kit).
+**it inside the app**: Settings → About & diagnostics → **Privacy** shows
+this same file (bundled with the app, so they can't differ) and the
+address above; a TV has no browser to open a link in.
 
 ## 8. App access
 

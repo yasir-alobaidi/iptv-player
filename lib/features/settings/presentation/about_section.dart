@@ -12,6 +12,7 @@ import 'package:iptv_player/features/diagnostics/presentation/log_view.dart';
 import 'package:iptv_player/features/diagnostics/presentation/report_view.dart';
 import 'package:iptv_player/features/settings/presentation/heading_then_body.dart';
 import 'package:iptv_player/features/settings/presentation/licenses_dialog.dart';
+import 'package:iptv_player/features/settings/presentation/privacy_dialog.dart';
 import 'package:iptv_player/features/settings/presentation/setting_row.dart';
 import 'package:iptv_player/features/settings/presentation/settings_screen.dart';
 
@@ -60,16 +61,30 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
         ),
       ],
     );
-    final licences = AppButton(
-      label: 'Licences',
-      variant: AppButtonVariant.secondary,
-      size: AppButtonSize.s,
-      onPressed: () => unawaited(showLicensesDialog(context)),
+    // Privacy first: Google Play asks for the policy inside the app
+    // (ADR-068).
+    final buttons = Wrap(
+      spacing: tokens.spacing.s8,
+      runSpacing: tokens.spacing.s8,
+      children: [
+        AppButton(
+          label: 'Privacy',
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.s,
+          onPressed: () => unawaited(showPrivacyDialog(context)),
+        ),
+        AppButton(
+          label: 'Licences',
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.s,
+          onPressed: () => unawaited(showLicensesDialog(context)),
+        ),
+      ],
     );
 
     final top = [
       if (onePane) ...[
-        // A phone: the mark and the words, Licences under them.
+        // A phone: the mark and the words, the buttons under them.
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -79,7 +94,7 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
           ],
         ),
         SizedBox(height: tokens.spacing.s12),
-        Align(alignment: AlignmentDirectional.centerStart, child: licences),
+        Align(alignment: AlignmentDirectional.centerStart, child: buttons),
       ] else
         Row(
           children: [
@@ -87,7 +102,7 @@ class _AboutSectionState extends ConsumerState<AboutSection> {
             SizedBox(width: tokens.spacing.s16),
             Expanded(child: words),
             SizedBox(width: tokens.spacing.s16),
-            licences,
+            buttons,
           ],
         ),
       SizedBox(height: tokens.spacing.s20),

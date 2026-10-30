@@ -8,9 +8,11 @@ import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/app_version.dart';
 import 'package:iptv_player/core/platform/licenses.dart';
+import 'package:iptv_player/core/platform/privacy_policy.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/features/settings/presentation/about_section.dart';
 import 'package:iptv_player/features/settings/presentation/licenses_dialog.dart';
+import 'package:iptv_player/features/settings/presentation/privacy_dialog.dart';
 import 'package:iptv_player/features/sources/presentation/source_shell_slots.dart';
 
 import '../../../app/app_harness.dart';
@@ -33,11 +35,22 @@ void main() {
     ]),
   ];
 
+  const policy = [
+    PolicyNote([PolicyRun('Effective 27 October 2026.')]),
+    PolicyParagraph([
+      PolicyRun('In short: '),
+      PolicyRun('it stays on your device.', strong: true),
+    ]),
+    PolicyHeading([PolicyRun('What Bijou keeps on your device')]),
+    PolicyBullet([PolicyRun('The sources you add.')]),
+  ];
+
   /// Settings → About & diagnostics. [licenses] null never answers.
   Future<void> open(
     WidgetTester tester, {
     AppVersion version = const AppVersion(version: '0.1.0', build: '1'),
     FutureOr<List<PackageLicenses>> Function()? licenses,
+    FutureOr<List<PolicyBlock>> Function()? privacy,
   }) async {
     final fakes = OnboardingFakes()..sources.seed();
     await pumpApp(
@@ -53,6 +66,9 @@ void main() {
         appVersionProvider.overrideWith((ref) async => version),
         licensesProvider.overrideWith(
           (ref) async => licenses == null ? packages : await licenses(),
+        ),
+        privacyPolicyProvider.overrideWith(
+          (ref) async => privacy == null ? policy : await privacy(),
         ),
       ],
     );
@@ -136,6 +152,72 @@ void main() {
     expect(find.byType(LicensesDialog), findsNothing);
     // Back where it was opened from.
     expect(focusedLabelOf(tester), 'Licences');
+  });
+
+  testWidgets('Privacy, by keyboard: the policy Google Play links to, its '
+      'headings, items and bold words, and where it is published; its text '
+      'is a Tab stop; Esc closes', (tester) async {
+    await open(tester);
+    await tabTo(tester, 'Privacy');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settleApp(tester);
+
+    expect(find.byType(PrivacyDialog), findsOneWidget);
+    expect(find.text('Privacy policy'), findsOneWidget);
+    expect(find.text('Effective 27 October 2026.'), findsOneWidget);
+    expect(find.text('What Bijou keeps on your device'), findsOneWidget);
+    expect(find.text('The sources you add.'), findsOneWidget);
+    final strong = tester.widget<RichText>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText &&
+            widget.text.toPlainText() == 'In short: it stays on your device.',
+      ),
+    );
+    final runs = (strong.text as TextSpan).children!.single as TextSpan;
+    expect(
+      (runs.children!.last as TextSpan).style!.fontWeight,
+      FontWeight.w700,
+    );
+    expect(
+      find.text('Also published at $privacyPolicyAddress'),
+      findsOneWidget,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(
+      FocusManager.instance.primaryFocus!.context!
+          .findAncestorWidgetOfExactType<ScrollPane>(),
+      isNotNull,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settleApp(tester);
+    expect(find.byType(PrivacyDialog), findsNothing);
+    expect(focusedLabelOf(tester), 'Privacy');
+  });
+
+  testWidgets("a policy that can't be read: a plain line and Try again, "
+      'which reads it again', (tester) async {
+    var reads = 0;
+    await open(
+      tester,
+      privacy: () {
+        reads++;
+        if (reads == 1) throw StateError('no asset');
+        return policy;
+      },
+    );
+    await tabTo(tester, 'Privacy');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settleApp(tester);
+
+    expect(find.text("The privacy policy couldn't be read"), findsOneWidget);
+    expect(find.textContaining('no asset'), findsNothing);
+    await tester.tap(find.text('Try again'));
+    await settleApp(tester);
+    expect(find.text('What Bijou keeps on your device'), findsOneWidget);
   });
 
   testWidgets('while the licences are read the dialog says so', (tester) async {
