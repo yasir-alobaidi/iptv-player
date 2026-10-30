@@ -169,6 +169,48 @@ void main() {
     expect(find.text('Add source'), findsOneWidget);
   });
 
+  testWidgets("the top bar's Settings, in Settings, returns to the list", (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.tap(row('Appearance'));
+    await settleApp(tester);
+    expect(backChip(), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ShellTopBar),
+        matching: findByLabel('Settings'),
+      ),
+    );
+    await settleApp(tester);
+
+    expect(backChip(), findsNothing);
+    expect(row('Sources'), findsOneWidget);
+    expect(row('About & diagnostics'), findsOneWidget);
+  });
+
+  testWidgets("the source's chip opens Sources, whichever section was "
+      'open last', (tester) async {
+    final app = await open(tester);
+    await tester.tap(row('Appearance'));
+    await settleApp(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ShellBottomBar),
+        matching: findByLabel('Home'),
+      ),
+    );
+    await settleApp(tester);
+
+    await tester.tap(findByLabel('Source: Northwind TV'));
+    await settleApp(tester);
+
+    expect(app.location, '/settings');
+    expect(backChip(), findsOneWidget);
+    expect(find.text('Add source'), findsOneWidget);
+  });
+
   testWidgets('a tablet keeps the two panes', (tester) async {
     await open(tester, size: const Size(1024, 768));
 

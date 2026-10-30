@@ -18,6 +18,7 @@ import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/design/components.dart';
 import 'package:iptv_player/design/tokens.dart';
 import 'package:iptv_player/features/guide/data/guide_providers.dart';
+import 'package:iptv_player/features/settings/presentation/settings_section.dart';
 
 /// The desktop shell (docs/05): nav rail, top bar, the current
 /// destination and the casting bar. Toasts show over every route
@@ -199,6 +200,23 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
     initialLocation: destination.index == widget.navigationShell.currentIndex,
   );
 
+  /// The source's chip: Settings on Sources, whichever section was open
+  /// last (on a phone, Sources itself rather than the list).
+  void _openSources() {
+    ref.read(settingsLocationProvider.notifier).show(SettingsSection.sources);
+    _go(AppDestination.settings);
+  }
+
+  /// The compact bar's Settings: Settings as it was left, or its list
+  /// when Settings is already shown, as a destination chosen again goes
+  /// back to its root.
+  void _openSettings() {
+    if (_current == AppDestination.settings) {
+      ref.read(settingsLocationProvider.notifier).showList();
+    }
+    _go(AppDestination.settings);
+  }
+
   @override
   void didUpdateWidget(DesktopShell oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -370,8 +388,7 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                                 syncStatus: syncStatus,
                                 downloads: downloads,
                                 onOpenSearch: widget.onOpenSearch ?? () {},
-                                onOpenSource: () =>
-                                    _go(AppDestination.settings),
+                                onOpenSource: _openSources,
                                 onOpenDownloads: () {
                                   ref.read(shellShowDownloadsProvider)?.call();
                                   _go(AppDestination.library);
@@ -515,8 +532,8 @@ class DesktopShellState extends ConsumerState<DesktopShell> {
                   source: source,
                   sourceChoices: sourceChoices,
                   onOpenSearch: widget.onOpenSearch ?? () {},
-                  onOpenSource: () => _go(AppDestination.settings),
-                  onOpenSettings: () => _go(AppDestination.settings),
+                  onOpenSource: _openSources,
+                  onOpenSettings: _openSettings,
                   onOpenGuide: destinations.contains(AppDestination.guide)
                       ? () => _go(AppDestination.guide)
                       : null,
