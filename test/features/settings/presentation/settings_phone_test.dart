@@ -211,12 +211,24 @@ void main() {
     expect(find.text('Add source'), findsOneWidget);
   });
 
-  testWidgets('a tablet keeps the two panes', (tester) async {
+  testWidgets("a tablet keeps the two panes, with a finger's buttons", (
+    tester,
+  ) async {
     await open(tester, size: const Size(1024, 768));
 
     expect(find.text('SETTINGS'), findsOneWidget);
     expect(backChip(), findsNothing);
     expect(find.text('Add source'), findsOneWidget);
+    final buttons = find.byType(AppButton);
+    expect(buttons, findsWidgets);
+    for (final button in buttons.evaluate()) {
+      final size = (button.renderObject! as RenderBox).size;
+      expect(
+        size.height,
+        greaterThanOrEqualTo(touchTargetSize),
+        reason: (button.widget as AppButton).label,
+      );
+    }
     expect(tester.takeException(), isNull);
   });
 }

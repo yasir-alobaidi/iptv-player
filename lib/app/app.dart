@@ -55,10 +55,15 @@ class IptvPlayerApp extends ConsumerWidget {
           final app = AppTextScale(
             // A TV's text is larger, to read from across a room (ADR-026).
             scale: look.textScale * (onTv ? TvCanvas.textScale : 1),
-            child: FocusTraversalGroup(
-              policy: appTraversalPolicy(),
-              child: AppGlobalShortcuts(
-                child: AppToasts(child: child ?? const SizedBox.shrink()),
+            // Every button a finger's size on a phone, a tablet and a
+            // Chromebook (ADR-068), wide layouts and dialogs included.
+            child: TouchTargets(
+              on: formFactor == FormFactor.mobile,
+              child: FocusTraversalGroup(
+                policy: appTraversalPolicy(),
+                child: AppGlobalShortcuts(
+                  child: AppToasts(child: child ?? const SizedBox.shrink()),
+                ),
               ),
             ),
           );

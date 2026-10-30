@@ -149,14 +149,18 @@ class ShellTopBar extends StatelessWidget {
             ),
           ),
           SizedBox(width: tokens.spacing.s12),
-          Flexible(
-            child: _SourceChip(
-              source: source,
-              choices: sourceChoices,
-              onManage: onOpenSource,
+          // All the room the buttons leave, not half of it beside a
+          // Spacer: the dot and the chevron fit even when the name can't.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _SourceChip(
+                source: source,
+                choices: sourceChoices,
+                onManage: onOpenSource,
+              ),
             ),
           ),
-          const Spacer(),
           AppIconButton(
             icon: AppIcons.search,
             tooltip: 'Search',

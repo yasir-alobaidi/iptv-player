@@ -112,11 +112,17 @@ Future<AppUnderTest> pumpApp(
               // and the design system's TV mode.
               builder: (context, child) => Consumer(
                 builder: (context, ref, _) {
-                  final onTv = ref.watch(formFactorProvider) == FormFactor.tv;
-                  final app = FocusTraversalGroup(
-                    policy: appTraversalPolicy(),
-                    child: AppGlobalShortcuts(
-                      child: AppToasts(child: child ?? const SizedBox.shrink()),
+                  final formFactor = ref.watch(formFactorProvider);
+                  final onTv = formFactor == FormFactor.tv;
+                  final app = TouchTargets(
+                    on: formFactor == FormFactor.mobile,
+                    child: FocusTraversalGroup(
+                      policy: appTraversalPolicy(),
+                      child: AppGlobalShortcuts(
+                        child: AppToasts(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
+                      ),
                     ),
                   );
                   return TvMode(

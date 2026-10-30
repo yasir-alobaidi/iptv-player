@@ -495,7 +495,9 @@ bool _overlap(Rect a, Rect b) =>
 /// A control by its label, else by what it is.
 String _describe(FocusNode node) {
   final context = node.context;
-  if (context == null) return '${node.debugLabel ?? node}';
+  // A control gone by the time it is named (a menu closed as the focus
+  // left it) has no ancestors left to ask.
+  if (context == null || !context.mounted) return '${node.debugLabel ?? node}';
   final surface = context.widget is FocusableSurface
       ? context.widget as FocusableSurface
       : context.findAncestorWidgetOfExactType<FocusableSurface>();
