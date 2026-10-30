@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/app/destinations.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
+import 'package:iptv_player/core/platform/picture_in_picture.dart';
 import 'package:iptv_player/core/platform/window_bounds.dart';
 import 'package:iptv_player/core/platform/window_controls.dart';
 import 'package:iptv_player/core/player/player_engine.dart';
@@ -176,6 +177,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   PlayerSystemUi? _systemUi;
   bool _screenAsked = false;
 
+  /// The small window as the app is left (ADR-069): a phone's, a tablet's
+  /// and a Chromebook's; null elsewhere.
+  PictureInPicture? _pip;
+  StreamSubscription<PictureInPictureEvent>? _pipEvents;
+
+  /// What the system was last told; sent again only when it changes.
+  PictureInPictureWish? _pipWish;
+
   /// A phone's double taps on a film's side: which side (-1 back, 1 on)
   /// and the seconds they add up to, while its note shows.
   ({int side, int seconds})? _skip;
@@ -275,11 +284,56 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void _enterScreen() {
     _screenAsked = true;
     if (!_onMobile) return;
+    final pip = ref.read(pictureInPictureProvider);
+    _pip = pip;
+    _pipEvents = pip.events.listen(_onPictureInPicture);
     final ui = ref.read(playerSystemUiProvider);
     _systemUi = ui;
     final phone =
         MediaQuery.sizeOf(context).shortestSide < WindowSizes.phoneWidth;
     unawaited(ui.enter(landscape: phone));
+  }
+
+  /// The small window closed: what played is over (it stops, and coming
+  /// back plays nothing) and the player is left. Its Play/Pause pauses a
+  /// file.
+  void _onPictureInPicture(PictureInPictureEvent event) {
+    if (!mounted) return;
+    switch (event) {
+      case PictureInPictureClosed():
+        unawaited(_coordinator.endAway());
+        _exit();
+      case PictureInPicturePlayPause() when _isVod:
+        _vod.togglePause();
+      case PictureInPicturePlayPause() ||
+          PictureInPictureEntered() ||
+          PictureInPictureExpanded():
+        break;
+    }
+  }
+
+  /// While something opens or plays, leaving the app shrinks it to the
+  /// picture; a failure, or nothing, leaves as ever. Told after the frame,
+  /// and only when it changes (its shape, a pause).
+  void _wishPictureInPicture(PlaybackState? state, (int, int)? size) {
+    final pip = _pip;
+    if (pip == null) return;
+    final item = state?.item;
+    final wish = switch (state) {
+      PlaybackOpening() ||
+      PlaybackPlaying() ||
+      PlaybackReconnecting() when item != null => PictureInPictureWish(
+        size: size,
+        pauseButton: !item.live,
+        paused: !item.live && _coordinator.timeline.paused,
+      ),
+      _ => null,
+    };
+    if (wish == _pipWish) return;
+    _pipWish = wish;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(pip.allow(wish));
+    });
   }
 
   /// While the player is the page on top the keyboard is its own: a page
@@ -314,8 +368,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _numberTimer?.cancel();
     _skipTimer?.cancel();
     _pinchTimer?.cancel();
-    // Every orientation and the system's bars again (a phone, a tablet).
+    // Every orientation and the system's bars again (a phone, a tablet),
+    // and the app leaves as ever.
     if (_systemUi case final ui?) unawaited(ui.leave());
+    unawaited(_pipEvents?.cancel());
+    if (_pip case final pip? when _pipWish != null) unawaited(pip.allow(null));
     _vod
       ..removeListener(_onVod)
       ..dispose();
@@ -1281,6 +1338,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       playbackSettingsControllerProvider.select((s) => s.timeOnScreen),
     );
     final mobile = ref.watch(formFactorProvider) == FormFactor.mobile;
+    // The small window (ADR-069): the picture alone.
+    final inCorner = mobile && ref.watch(inPictureInPictureProvider);
+    if (mobile) {
+      _wishPictureInPicture(state, ref.watch(videoSizeProvider).value);
+    }
     // A phone's screen lays the OSD out tighter, clear of its bars and
     // cutout (ADR-068); a desktop's and a TV's are as they were.
     final room = OsdRoom.of(context);
@@ -1348,6 +1410,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       // with no wait for a second click.
                       PlayerSurface(
                         badges: false,
+                        pictureOnly: inCorner,
                         // A phone's finger shows and hides the controls,
                         // seeks a film by its sides and pinches the
                         // picture's size; the mouse pauses and goes full
@@ -1377,132 +1440,134 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           if (mounted) _exit();
                         },
                       ),
-                      OsdScale(
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            if (vod)
-                              ListenableBuilder(
-                                // Still built while hidden (a TV focuses
-                                // its controls before they fade in), but
-                                // not rebuilt: a show catches it up. The
-                                // next-episode card, which doesn't fade,
-                                // follows its count through [_onVod].
-                                listenable: !showOsd && _osdFaded
-                                    ? _still
-                                    : _vod,
-                                builder: (context, _) => _vodOsd(
-                                  item,
+                      if (!inCorner)
+                        OsdScale(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              if (vod)
+                                ListenableBuilder(
+                                  // Still built while hidden (a TV focuses
+                                  // its controls before they fade in), but
+                                  // not rebuilt: a show catches it up. The
+                                  // next-episode card, which doesn't fade,
+                                  // follows its count through [_onVod].
+                                  listenable: !showOsd && _osdFaded
+                                      ? _still
+                                      : _vod,
+                                  builder: (context, _) => _vodOsd(
+                                    item,
+                                    tracks,
+                                    sound,
+                                    room: room,
+                                    fade: osd,
+                                  ),
+                                )
+                              else if (channel != null)
+                                _channelOsd(
+                                  channel,
                                   tracks,
                                   sound,
                                   room: room,
                                   fade: osd,
                                 ),
-                              )
-                            else if (channel != null)
-                              _channelOsd(
-                                channel,
-                                tracks,
-                                sound,
-                                room: room,
-                                fade: osd,
-                              ),
-                            // The clock while the OSD is hidden and the
-                            // picture plays (not while it opens, has
-                            // failed, or anything holds the OSD up): top
-                            // left, where Back is when the OSD shows, in the
-                            // middle of the top bar's row (ADR-053).
-                            if (timeOnScreen == TimeOnScreen.always)
-                              Positioned(
-                                top: edge,
-                                left: side,
-                                child: SizedBox(
-                                  height: tokens.player.controlSize,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: 1,
-                                    child: PlayerTimeCorner(
-                                      shown:
-                                          !showOsd && state is PlaybackPlaying,
+                              // The clock while the OSD is hidden and the
+                              // picture plays (not while it opens, has
+                              // failed, or anything holds the OSD up): top
+                              // left, where Back is when the OSD shows, in the
+                              // middle of the top bar's row (ADR-053).
+                              if (timeOnScreen == TimeOnScreen.always)
+                                Positioned(
+                                  top: edge,
+                                  left: side,
+                                  child: SizedBox(
+                                    height: tokens.player.controlSize,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: 1,
+                                      child: PlayerTimeCorner(
+                                        shown:
+                                            !showOsd &&
+                                            state is PlaybackPlaying,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            if (_banner case final banner? when !_panel)
-                              Positioned(
-                                top: belowTop,
-                                left: 0,
-                                right: 0,
-                                child: Center(
-                                  child: ChannelBanner(channel: banner),
+                              if (_banner case final banner? when !_panel)
+                                Positioned(
+                                  top: belowTop,
+                                  left: 0,
+                                  right: 0,
+                                  child: Center(
+                                    child: ChannelBanner(channel: banner),
+                                  ),
                                 ),
-                              ),
-                            if (_digits.isNotEmpty)
-                              Positioned(
-                                top: belowTop,
-                                right: room.side(tokens) + safe.right,
-                                child: NumberEntry(
-                                  digits: _digits,
-                                  match: _numberMatch,
+                              if (_digits.isNotEmpty)
+                                Positioned(
+                                  top: belowTop,
+                                  right: room.side(tokens) + safe.right,
+                                  child: NumberEntry(
+                                    digits: _digits,
+                                    match: _numberMatch,
+                                  ),
                                 ),
-                              ),
-                            // On a phone's screen the OSD's frame has it,
-                            // between its bars.
-                            if (_info && !infoInFrame)
-                              Positioned(
-                                top: belowTop,
-                                left: side,
-                                child: const StreamInfoOverlay(),
-                              ),
-                            // What a finger did, said on the picture.
-                            if (mobile) ...[
-                              for (final note in [-1, 1])
+                              // On a phone's screen the OSD's frame has it,
+                              // between its bars.
+                              if (_info && !infoInFrame)
+                                Positioned(
+                                  top: belowTop,
+                                  left: side,
+                                  child: const StreamInfoOverlay(),
+                                ),
+                              // What a finger did, said on the picture.
+                              if (mobile) ...[
+                                for (final note in [-1, 1])
+                                  Positioned.fill(
+                                    child: Align(
+                                      alignment: Alignment(note * 2 / 3, 0),
+                                      child: PictureNote(text: _skipText(note)),
+                                    ),
+                                  ),
                                 Positioned.fill(
                                   child: Align(
-                                    alignment: Alignment(note * 2 / 3, 0),
-                                    child: PictureNote(text: _skipText(note)),
+                                    alignment: const Alignment(0, -0.4),
+                                    child: PictureNote(text: _pinchNote),
                                   ),
                                 ),
-                              Positioned.fill(
-                                child: Align(
-                                  alignment: const Alignment(0, -0.4),
-                                  child: PictureNote(text: _pinchNote),
-                                ),
-                              ),
-                            ],
-                            if (_panel)
-                              Positioned(
-                                top: 0,
-                                bottom: 0,
-                                left: 0,
-                                child: CallbackShortcuts(
-                                  bindings: {
-                                    const SingleActivator(
-                                      LogicalKeyboardKey.arrowRight,
-                                    ): _closePanel,
-                                    const SingleActivator(
-                                      LogicalKeyboardKey.escape,
-                                    ): _closePanel,
-                                  },
-                                  child: ChannelPanel(
-                                    query:
-                                        _query ??
-                                        ChannelQuery(
-                                          sourceId: channel?.sourceId ?? '',
-                                        ),
-                                    current: channel,
-                                    onPlay: (c) {
-                                      _closePanel();
-                                      _showBanner(c);
-                                      _play(c);
+                              ],
+                              if (_panel)
+                                Positioned(
+                                  top: 0,
+                                  bottom: 0,
+                                  left: 0,
+                                  child: CallbackShortcuts(
+                                    bindings: {
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.arrowRight,
+                                      ): _closePanel,
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.escape,
+                                      ): _closePanel,
                                     },
-                                    onClose: _closePanel,
+                                    child: ChannelPanel(
+                                      query:
+                                          _query ??
+                                          ChannelQuery(
+                                            sourceId: channel?.sourceId ?? '',
+                                          ),
+                                      current: channel,
+                                      onPlay: (c) {
+                                        _closePanel();
+                                        _showBanner(c);
+                                        _play(c);
+                                      },
+                                      onClose: _closePanel,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),

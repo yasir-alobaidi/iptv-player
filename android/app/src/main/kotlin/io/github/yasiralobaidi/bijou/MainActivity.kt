@@ -1,5 +1,6 @@
 package io.github.yasiralobaidi.bijou
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Process
 import android.util.Log
@@ -23,6 +24,9 @@ class MainActivity : FlutterActivity() {
 
     // The TV and each run's own log, for the report (ADR-059).
     private var systemInfo: SystemInfo? = null
+
+    // The player in a corner as the app is left: a phone's, a tablet's, a Chromebook's (ADR-069).
+    private var pictureInPicture: PictureInPicture? = null
 
     // The remotes and keyboards already named in this run's log.
     private val keyDevices = mutableSetOf<Int>()
@@ -56,6 +60,9 @@ class MainActivity : FlutterActivity() {
         lifecycle.addObserver(DisplayModes(this, flutterEngine.dartExecutor.binaryMessenger))
         lastExits = LastExits(this, flutterEngine.dartExecutor.binaryMessenger)
         systemInfo = SystemInfo(this, flutterEngine.dartExecutor.binaryMessenger)
+        if (DeviceKind.formFactor(this) == "mobile") {
+            pictureInPicture = PictureInPicture(this, flutterEngine.dartExecutor.binaryMessenger)
+        }
         if (BuildConfig.VIDEO_LAYER) {
             videoLayer = VideoLayer(this, flutterEngine.dartExecutor.binaryMessenger)
         }
@@ -103,6 +110,17 @@ class MainActivity : FlutterActivity() {
         Log.i(TAG, "Window focus ${if (hasFocus) "gained" else "lost"}")
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        pictureInPicture?.onUserLeaveHint()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        Log.i(TAG, "Picture-in-picture ${if (isInPictureInPictureMode) "entered" else "left"}")
+        pictureInPicture?.onModeChanged(isInPictureInPictureMode, lifecycle)
+    }
+
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         Log.i(TAG, "Memory: trim level $level")
@@ -113,6 +131,8 @@ class MainActivity : FlutterActivity() {
         lastExits = null
         systemInfo?.release()
         systemInfo = null
+        pictureInPicture?.release()
+        pictureInPicture = null
         videoLayer?.release()
         videoLayer = null
         super.cleanUpFlutterEngine(flutterEngine)

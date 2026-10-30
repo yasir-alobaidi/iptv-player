@@ -48,6 +48,47 @@ void main() {
     });
   });
 
+  group('the small window closed (ADR-069)', () {
+    test('after the app left the screen: nothing plays on return', () {
+      fakeAsync((async) {
+        final rig = Rig();
+        rig.coordinator.playLive(channel(1));
+        async.flushMicrotasks();
+        rig.engine.firstFrame();
+
+        rig.coordinator.stopWhileAway();
+        async.flushMicrotasks();
+        rig.coordinator.endAway();
+        async.flushMicrotasks();
+        rig.coordinator.resumeAfterAway();
+        async.flushMicrotasks();
+
+        expect(rig.engine.opened, hasLength(1));
+        expect(rig.state, isA<PlaybackIdle>());
+      });
+    });
+
+    test('before it: it stops, and leaving after it is nothing to resume', () {
+      fakeAsync((async) {
+        final rig = Rig();
+        rig.coordinator.playVod(PlayableMovie(movie(1)));
+        async.flushMicrotasks();
+        films(async, rig, seconds: 30);
+
+        rig.coordinator.endAway();
+        async.flushMicrotasks();
+        expect(rig.state, isA<PlaybackIdle>());
+        rig.coordinator.stopWhileAway();
+        async.flushMicrotasks();
+        rig.coordinator.resumeAfterAway();
+        async.flushMicrotasks();
+
+        expect(rig.engine.opened, hasLength(1));
+        expect(rig.state, isA<PlaybackIdle>());
+      });
+    });
+  });
+
   test('a film plays again from where it was', () {
     fakeAsync((async) {
       final rig = Rig();

@@ -426,6 +426,14 @@ final class PlaybackCoordinator {
     }
   }
 
+  /// The small window the player was in was closed (ADR-069): what plays
+  /// is over, not away. It stops, and coming back plays nothing, whether
+  /// the system said the app left the screen before or after.
+  Future<void> endAway() {
+    _away = null;
+    return stop();
+  }
+
   /// What [stopWhileAway] stopped: the item, a file's place, and whether
   /// it was paused.
   (Playable, Duration?, bool)? _away;

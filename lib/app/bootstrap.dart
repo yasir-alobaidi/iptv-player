@@ -25,6 +25,7 @@ import 'package:iptv_player/core/platform/file_reveal.dart';
 import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/platform/last_exits.dart';
 import 'package:iptv_player/core/platform/network_status.dart';
+import 'package:iptv_player/core/platform/picture_in_picture.dart';
 import 'package:iptv_player/core/platform/run_logs.dart';
 import 'package:iptv_player/core/platform/system_facts.dart';
 import 'package:iptv_player/core/platform/system_notifier.dart';
@@ -43,6 +44,7 @@ import 'package:iptv_player/data/images/cached_artwork_store.dart';
 import 'package:iptv_player/data/library/download_folder.dart';
 import 'package:iptv_player/data/platform/android_display_modes.dart';
 import 'package:iptv_player/data/platform/android_last_exits.dart';
+import 'package:iptv_player/data/platform/android_picture_in_picture.dart';
 import 'package:iptv_player/data/platform/android_run_logs.dart';
 import 'package:iptv_player/data/platform/android_system_facts.dart';
 import 'package:iptv_player/data/platform/file_reveals.dart';
@@ -204,6 +206,12 @@ Future<void> bootstrap({List<String> args = const []}) async {
       // the laptop's `FORM_FACTOR=tv` and a phone's have none to ask.
       if (formFactor.isTv && Platform.isAndroid)
         displayModesProvider.overrideWithValue(AndroidDisplayModes(log: log)),
+      // The player in a corner as the app is left (ADR-069): a phone's,
+      // a tablet's and a Chromebook's; never a TV's.
+      if (formFactor == FormFactor.mobile && Platform.isAndroid)
+        pictureInPictureProvider.overrideWithValue(
+          AndroidPictureInPicture(log: log),
+        ),
       // Why the last runs ended, and how the screen is drawn (ADR-058).
       if (!onDesktop && Platform.isAndroid)
         lastExitsProvider.overrideWithValue(AndroidLastExits(log: log)),

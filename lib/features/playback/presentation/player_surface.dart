@@ -35,8 +35,14 @@ class PlayerSurface extends ConsumerWidget {
     this.onPictureDoubleTapDown,
     this.onPinchStart,
     this.onPinch,
+    this.pictureOnly = false,
     super.key,
   });
+
+  /// The small window's (picture-in-picture, ADR-069): the picture alone,
+  /// a small spinner while it opens or waits, and a quiet mark if it
+  /// fails. Nothing to press: the system's own buttons are over it.
+  final bool pictureOnly;
 
   /// The preview pane's size; false is the full-screen player's, where
   /// the spinner and the failure card are larger and grow with the
@@ -91,6 +97,7 @@ class PlayerSurface extends ConsumerWidget {
     // no room for one: the spinner alone.
     final opening =
         !compact &&
+        !pictureOnly &&
         !showPicture &&
         (state is PlaybackOpening || state is PlaybackReconnecting);
     // Settings → Playback → Subtitle size, on what plays at once: a change
@@ -106,6 +113,23 @@ class PlayerSurface extends ConsumerWidget {
             state.problem.kind == PlaybackProblemKind.fileUnreadable
         ? ref.watch(failedFileProvider(state.item)).value
         : null;
+
+    // The small window's: as the picture's own tree below, so the picture
+    // carries on as the window shrinks and grows.
+    final inCorner = [
+      if (state is PlaybackOpening ||
+          state is PlaybackReconnecting ||
+          (state is PlaybackPlaying && state.buffering))
+        const Center(child: PlayerSpinner())
+      else if (state is PlaybackFailed)
+        Center(
+          child: AppIcon(
+            AppIcons.alertCircle,
+            size: tokens.player.previewSpinnerSize,
+            color: colors.textSecondary,
+          ),
+        ),
+    ];
 
     final overlays = [
       if ((state is PlaybackOpening && !opening) ||
@@ -173,9 +197,10 @@ class PlayerSurface extends ConsumerWidget {
             ),
           // Under the picture's clicks, which it never takes.
           if (opening) PlayerOpeningScreen(state: state, tv: tv),
-          if (onPictureTap != null ||
-              onPictureDoubleTap != null ||
-              onPinch != null)
+          if (!pictureOnly &&
+              (onPictureTap != null ||
+                  onPictureDoubleTap != null ||
+                  onPinch != null))
             LayoutBuilder(
               builder: (context, constraints) => GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -201,7 +226,9 @@ class PlayerSurface extends ConsumerWidget {
                 },
               ),
             ),
-          if (compact)
+          if (pictureOnly)
+            ...inCorner
+          else if (compact)
             ...overlays
           else
             OsdScale(
