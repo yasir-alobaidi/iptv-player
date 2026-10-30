@@ -9,7 +9,6 @@ import 'package:iptv_player/app/router.dart';
 import 'package:iptv_player/core/core_providers.dart';
 import 'package:iptv_player/core/images/artwork_scope.dart';
 import 'package:iptv_player/core/notices/app_notices.dart';
-import 'package:iptv_player/core/platform/form_factor.dart';
 import 'package:iptv_player/core/result.dart';
 import 'package:iptv_player/core/text/format.dart';
 import 'package:iptv_player/design/components.dart';
@@ -448,18 +447,17 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
     ChannelItem channel,
     List<FavoriteEntry> entries,
   ) {
-    // A finger has no Alt+↑/↓ (ADR-068): the menu moves the channel.
-    final touch = ref.read(formFactorProvider) == FormFactor.mobile;
-    void move({required bool down}) {
-      final groups = ref.read(favoriteGroupsProvider(widget.sourceId)).value;
-      final place = keyboardMove(
-        groups ?? const [],
-        _channels ?? const [],
-        channel,
-        down: down,
-      );
-      if (place != null) unawaited(_move(channel, place));
-    }
+    // Alt+↑/↓ in the menu too: a finger and a remote have no Alt
+    // (ADR-068). Dimmed where the channel can't go further.
+    final groups = ref.read(favoriteGroupsProvider(widget.sourceId)).value;
+    FavoritePlace? placeFor({required bool down}) => keyboardMove(
+      groups ?? const [],
+      _channels ?? const [],
+      channel,
+      down: down,
+    );
+    final up = placeFor(down: false);
+    final down = placeFor(down: true);
 
     return showChannelMenu(
       anchor,
@@ -468,18 +466,20 @@ class _ChannelsPanelState extends ConsumerState<_ChannelsPanel> {
       onWatch: () => unawaited(_watch(channel)),
       onFavorite: () => unawaited(_remove(channel, entries)),
       after: [
-        if (touch) ...[
-          AppMenuItem(
-            label: 'Move up',
-            icon: AppIcons.arrowUp,
-            onPressed: () => move(down: false),
-          ),
-          AppMenuItem(
-            label: 'Move down',
-            icon: AppIcons.arrowDown,
-            onPressed: () => move(down: true),
-          ),
-        ],
+        AppMenuItem(
+          label: 'Move up',
+          icon: AppIcons.arrowUp,
+          shortcut: 'Alt ↑',
+          onPressed: up == null ? null : () => unawaited(_move(channel, up)),
+        ),
+        AppMenuItem(
+          label: 'Move down',
+          icon: AppIcons.arrowDown,
+          shortcut: 'Alt ↓',
+          onPressed: down == null
+              ? null
+              : () => unawaited(_move(channel, down)),
+        ),
       ],
     );
   }

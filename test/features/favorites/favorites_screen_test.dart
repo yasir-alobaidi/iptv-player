@@ -162,6 +162,43 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets("a channel's menu moves it too (a remote has no Alt), dimmed "
+      'at either end of the list', (tester) async {
+    await open(tester);
+    AppMenuItem item(String label) => tester
+        .widget<AppMenu>(find.byType(AppMenu))
+        .items
+        .firstWhere((item) => item.label == label);
+
+    await focusRow(tester, 'Arena Sports 2');
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settle(tester);
+    expect(item('Move up').onPressed, isNull, reason: 'the first');
+    expect(item('Move up').shortcut, 'Alt ↑');
+    await tester.tap(find.text('Move down'));
+    await settle(tester);
+    expect(rows(tester), [
+      'Velocity Motors',
+      'Arena Sports 2',
+      'Arena Sports 1',
+      'Zebra TV',
+    ]);
+
+    await focusRow(tester, 'Zebra TV');
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settle(tester);
+    expect(item('Move down').onPressed, isNull, reason: 'the last');
+    await tester.tap(find.text('Move up'));
+    await settle(tester);
+    expect(rows(tester), [
+      'Velocity Motors',
+      'Arena Sports 2',
+      'Zebra TV',
+      'Arena Sports 1',
+    ]);
+    await finish(tester);
+  });
+
   testWidgets('F removes with Undo, which puts it back where it was', (
     tester,
   ) async {
