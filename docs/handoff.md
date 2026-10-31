@@ -1,6 +1,8 @@
 # Handoff — 2026-10-30, the thirty-fourth session (the phone's remaining items and picture-in-picture, on `dev`; no TV: the laptop was away from home); before it, the thirty-third (Android phones and Google Play's kit, our own AirPlay sender); start with "Start here"
 
 ## Start here (the next session)
+**Thirty-fifth session (2026-10-31): `main` = `dev` = `stable-382`** (7e68c81, tagged locally: the user pushes `git push origin --all && git push origin --tags`). Installed: this laptop (stable-382), the Bedroom TV's stable (328 -> 382; Beta 380 beside it). Still open: AirPlay's first run at the Roku (the user reads the code), FAISAL TV 382 on the Living Room TV when it is free (`tools/tv_apk.sh stable cover` in a detached worktree with `appLabel` = FAISAL TV, as the thirty-second session did), the TV key's four secrets, `dev` added to CI's branches, `dist/Bijou-TV.apk` still 349 (`tools/dist_apk.sh`).
+
 **The user's words:** "lets continue the work" (after the thirty-third session's handoff). The laptop was on 192.168.26.x: no TV reachable, so nothing of AirPlay ran and no TV was touched or asked about.
 
 **Where everything is:**
